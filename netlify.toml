@@ -3,10 +3,10 @@
 # =====================================================
 
 [build]
-  # Build the React frontend
-  command   = "npm run build"
+  # Build the React frontend (runs from repo root)
+  command   = "npm install && npm run build"
   publish   = "client/dist"
-  # Netlify Functions directory (dedicated folder, not the server dir)
+  # Netlify Functions directory
   functions = "netlify/functions"
 
 [build.environment]
@@ -15,7 +15,6 @@
 # Bundle functions with esbuild to include all server dependencies
 [functions]
   node_bundler = "esbuild"
-  included_files = ["server/**"]
 
 # =====================================================
 # Redirect all /api/* requests to the serverless function
