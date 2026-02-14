@@ -56,8 +56,36 @@ async function runTests() {
                 throw err;
             }
             // Use the first real tenant for subsequent tests
+            console.log('      DEBUG: Tenants data:', JSON.stringify(data));
             const realTenant = data.find(t => t.code !== 'superadmin');
-            if (realTenant) tenantId = realTenant.id;
+            if (realTenant) {
+                tenantId = realTenant.id;
+                console.log('      DEBUG: Selected tenantId:', tenantId);
+            } else {
+                console.log('      DEBUG: No real tenant found, using:', tenantId);
+            }
+        });
+
+        let providerId = '00000000-0000-0000-0000-000000000000';
+
+        // 3b. Fetch Provider (Doctor)
+        await testStep('Fetch Provider', async () => {
+            const res = await fetch(`${BASE_URL}/users?tenantId=${tenantId}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'x-tenant-id': tenantId
+                }
+            });
+            const data = await res.json();
+            console.log('      DEBUG: Users data:', JSON.stringify(data));
+            const doctor = data.find(u => u.role === 'Doctor' || u.role === 'Admin');
+            if (doctor) {
+                providerId = doctor.id;
+                console.log('      DEBUG: Selected providerId:', providerId);
+            } else {
+                console.log('      DEBUG: No doctor found, using placeholder:', providerId);
+            }
         });
 
         // 4. Create Patient
@@ -97,7 +125,7 @@ async function runTests() {
                 },
                 body: JSON.stringify({
                     patientId,
-                    providerId: '00000000-0000-0000-0000-000000000000', // System/Placeholder
+                    providerId,
                     type: 'OPD',
                     complaint: 'Testing pharmacy workflow',
                     diagnosis: 'Healthy'

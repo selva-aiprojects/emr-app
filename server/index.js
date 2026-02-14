@@ -134,6 +134,10 @@ app.post('/api/login', async (req, res) => {
 app.get('/api/tenants', async (_req, res) => {
   try {
     const tenants = await repo.getTenants();
+    if (tenants.length > 1) {
+      console.log('DEBUG: Second tenant ID type:', typeof tenants[1].id);
+      console.log('DEBUG: Second tenant ID value:', tenants[1].id);
+    }
     res.json(tenants);
   } catch (error) {
     console.error('Error fetching tenants:', error);
@@ -231,6 +235,7 @@ app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
 app.get('/api/users', async (req, res) => {
   try {
     const { tenantId } = req.query;
+    console.log('DEBUG: tenantId from query:', tenantId, 'Type:', typeof tenantId);
     const users = await repo.getUsers(tenantId || null);
     res.json(users);
   } catch (error) {
@@ -747,6 +752,17 @@ app.post('/api/prescriptions', requireTenant, requirePermission('emr'), async (r
   }
 });
 
+app.get('/api/prescriptions', requireTenant, async (req, res) => {
+  try {
+    const { status, patientId } = req.query;
+    const prescriptions = await repo.getPrescriptions(req.tenantId, { status, patientId });
+    res.json(prescriptions);
+  } catch (error) {
+    console.error('Error fetching prescriptions:', error);
+    res.status(500).json({ error: 'Failed to fetch prescriptions' });
+  }
+});
+
 app.patch('/api/prescriptions/:id/status', requireTenant, requirePermission('inventory'), async (req, res) => {
   try {
     const { status } = req.body;
@@ -820,6 +836,16 @@ app.post('/api/inventory-items', requireTenant, requirePermission('inventory'), 
       return res.status(409).json({ error: 'Item code already exists' });
     }
     res.status(500).json({ error: 'Failed to create inventory item' });
+  }
+});
+
+app.get('/api/inventory-items', requireTenant, requirePermission('inventory'), async (req, res) => {
+  try {
+    const items = await repo.getInventoryItems(req.tenantId);
+    res.json(items);
+  } catch (error) {
+    console.error('Error fetching inventory items:', error);
+    res.status(500).json({ error: 'Failed to fetch inventory items' });
   }
 });
 

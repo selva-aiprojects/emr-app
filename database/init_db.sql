@@ -13,7 +13,7 @@ VALUES (
   '00000000-0000-0000-0000-000000000001'::uuid,
   NULL, -- Superadmin has no tenant
   'superadmin@emr.local',
-  '$2a$10$qVEQHwCfYj7zV9LQwY6qHO6W0P4PJ2X6K3BQj9.FEpN7E8AJxQ5Ay', -- Admin@123
+  '$2b$10$RQ/2010sUHDLNH2k.sE25.fJLK23MzLmvcFV6O9kc7Ip1krJkSQtG', -- Admin@123
   'Platform Superadmin',
   'Superadmin',
   true
@@ -43,7 +43,7 @@ INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'anita@sch.local',
-  '$2a$10$7hGHQj3zK9Kv8W5nQ6EgmeL8Y.PJf7LXwN0vH9V0j3qK8L1wO9E7u', -- Anita@123
+  '$2b$10$RGnFeEHlbfAa2BNwbuPJVOcG84fRDcuiDPAH4RDL4AHq/vFsXsa9S', -- Anita@123
   'Dr. Anita Sharma',
   'Admin',
   true
@@ -54,7 +54,7 @@ INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'rajesh@sch.local',
-  '$2a$10$hY8vK5.WqL0pM4nR7sT9uOcF3dG6jH8kL1mN0o2pQ5rS7tU9vW1xY', -- Rajesh@123
+  '$2b$10$UF9ctn6umKOAHtEA3I2r7ut4r0Wtbk7ygP0SGfgXTMzAnGy5rLUS.', -- Rajesh@123
   'Dr. Rajesh Kumar',
   'Doctor',
   true
@@ -126,7 +126,7 @@ INSERT INTO emr.users (tenant_id, email, password_hash, name, role, patient_id, 
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'meena@sch.local',
-  '$2a$10$rB4cN1.AtP6sR8qV0wX1ySeJ7hK0mL2oP5qR4s6tU9vW1xY3zA5bC', -- Meena@123
+  '$2b$10$1Uluxd3zONd/X6SuFHw4zuj6LWbUmwiSGVdOBodpVK5XPNaZmIGQ2', -- Meena@123
   'Meena Krishnan',
   'Patient',
   '20000000-0000-0000-0000-000000000001'::uuid,
@@ -237,8 +237,86 @@ VALUES (
   (SELECT id FROM emr.users WHERE email = 'anita@sch.local' LIMIT 1),
   'Dr. Anita Sharma',
   'system.initialization',
-  '{"message": "Initial data setup completed", "timestamp": "' || now()::text || '"}'::jsonb
+  '{"message": "Initial data setup completed"}'::jsonb
 );
+
+-- =====================================================
+-- TENANT 2: Nila Health Center (NHC)
+-- =====================================================
+INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, status)
+VALUES (
+  '10000000-0000-0000-0000-000000000002'::uuid,
+  'Nila Health Center',
+  'NHC',
+  'nilahealth',
+  '{"primary": "#1b5e20", "accent": "#ef6c00"}'::jsonb,
+  '{"inventory": true, "telehealth": false}'::jsonb,
+  'active'
+) ON CONFLICT (code) DO NOTHING;
+
+-- NHC Admin & Doctor
+INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+VALUES 
+  ('10000000-0000-0000-0000-000000000002'::uuid, 'admin@nhc.local', '$2b$10$RQ/2010sUHDLNH2k.sE25.fJLK23MzLmvcFV6O9kc7Ip1krJkSQtG', 'Nila Admin', 'Admin', true),
+  ('10000000-0000-0000-0000-000000000002'::uuid, 'doctor@nhc.local', '$2b$10$UF9ctn6umKOAHtEA3I2r7ut4r0Wtbk7ygP0SGfgXTMzAnGy5rLUS.', 'Dr. Balan', 'Doctor', true)
+ON CONFLICT (tenant_id, email) DO NOTHING;
+
+-- NHC Patient
+INSERT INTO emr.patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email)
+VALUES ('20000000-0000-0000-0000-000000000002'::uuid, '10000000-0000-0000-0000-000000000002'::uuid, 'NHC-1001', 'Arjun', 'Das', '1992-05-20', 'Male', '+91-9998887771', 'arjun@example.com')
+ON CONFLICT (tenant_id, mrn) DO NOTHING;
+
+-- =====================================================
+-- TENANT 3: Riverway Community Clinic (RCC)
+-- =====================================================
+INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, status)
+VALUES (
+  '10000000-0000-0000-0000-000000000003'::uuid,
+  'Riverway Community Clinic',
+  'RCC',
+  'riverway',
+  '{"primary": "#6a1b9a", "accent": "#00897b"}'::jsonb,
+  '{"inventory": false, "telehealth": false}'::jsonb,
+  'active'
+) ON CONFLICT (code) DO NOTHING;
+
+-- RCC Admin & Nurse
+INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+VALUES 
+  ('10000000-0000-0000-0000-000000000003'::uuid, 'admin@rcc.local', '$2b$10$RQ/2010sUHDLNH2k.sE25.fJLK23MzLmvcFV6O9kc7Ip1krJkSQtG', 'Riverway Admin', 'Admin', true),
+  ('10000000-0000-0000-0000-000000000003'::uuid, 'nurse@rcc.local', '$2b$10$4x0lLYEnSvkLpDR52zACVOQfi1DdxfP8tYDVMt83N9xhkvvc65ES6', 'Nurse Sarah', 'Nurse', true)
+ON CONFLICT (tenant_id, email) DO NOTHING;
+
+-- RCC Patient
+INSERT INTO emr.patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email)
+VALUES ('20000000-0000-0000-0000-000000000003'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'RCC-1001', 'Priya', 'Sundar', '1988-11-12', 'Female', '+91-9998887772', 'priya.s@example.com')
+ON CONFLICT (tenant_id, mrn) DO NOTHING;
+
+-- =====================================================
+-- TENANT 4: Omega Hospitals (OH)
+-- =====================================================
+INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, status)
+VALUES (
+  '10000000-0000-0000-0000-000000000004'::uuid,
+  'Omega Hospitals',
+  'OH',
+  'omega',
+  '{"primary": "#c62828", "accent": "#283593"}'::jsonb,
+  '{"inventory": true, "telehealth": true}'::jsonb,
+  'active'
+) ON CONFLICT (code) DO NOTHING;
+
+-- OH Admin & Doctor
+INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+VALUES 
+  ('10000000-0000-0000-0000-000000000004'::uuid, 'admin@omega.local', '$2b$10$RQ/2010sUHDLNH2k.sE25.fJLK23MzLmvcFV6O9kc7Ip1krJkSQtG', 'Omega Admin', 'Admin', true),
+  ('10000000-0000-0000-0000-000000000004'::uuid, 'doctor@omega.local', '$2b$10$UF9ctn6umKOAHtEA3I2r7ut4r0Wtbk7ygP0SGfgXTMzAnGy5rLUS.', 'Dr. Vikram', 'Doctor', true)
+ON CONFLICT (tenant_id, email) DO NOTHING;
+
+-- OH Patient
+INSERT INTO emr.patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email)
+VALUES ('20000000-0000-0000-0000-000000000004'::uuid, '10000000-0000-0000-0000-000000000004'::uuid, 'OH-1001', 'Kiran', 'Varma', '1975-08-30', 'Male', '+91-9998887773', 'kiran.v@example.com')
+ON CONFLICT (tenant_id, mrn) DO NOTHING;
 
 COMMIT;
 

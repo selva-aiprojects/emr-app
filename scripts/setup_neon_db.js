@@ -30,22 +30,22 @@ if (!DATABASE_URL) {
 
 async function testConnection() {
   console.log('🔍 Testing database connection...\n');
-  
+
   const client = new Client({
     connectionString: DATABASE_URL,
     ssl: { rejectUnauthorized: false }
   });
-  
+
   try {
     await client.connect();
     console.log('✅ Successfully connected to Neon database!');
-    
+
     // Get database info
     const dbInfo = await client.query('SELECT current_database(), current_user, version()');
     console.log(`   Database: ${dbInfo.rows[0].current_database}`);
     console.log(`   User: ${dbInfo.rows[0].current_user}`);
     console.log(`   PostgreSQL: ${dbInfo.rows[0].version.split(',')[0]}\n`);
-    
+
     return client;
   } catch (error) {
     console.error('❌ Connection failed:', error.message);
@@ -55,14 +55,14 @@ async function testConnection() {
 
 async function checkSchemaExists(client) {
   console.log('🔍 Checking if EMR schema exists...\n');
-  
+
   const result = await client.query(
     "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'emr'"
   );
-  
+
   if (result.rows.length > 0) {
     console.log('✅ EMR schema already exists!');
-    
+
     // List existing tables
     const tables = await client.query(`
       SELECT table_name 
@@ -70,7 +70,7 @@ async function checkSchemaExists(client) {
       WHERE table_schema = 'emr'
       ORDER BY table_name
     `);
-    
+
     if (tables.rows.length > 0) {
       console.log(`   Found ${tables.rows.length} tables in EMR schema:`);
       tables.rows.forEach(row => {
@@ -79,7 +79,7 @@ async function checkSchemaExists(client) {
     } else {
       console.log('   ⚠️  Schema exists but no tables found');
     }
-    
+
     return true;
   } else {
     console.log('⚠️  EMR schema does not exist yet');
@@ -89,17 +89,17 @@ async function checkSchemaExists(client) {
 
 async function createSchema(client) {
   console.log('\n🏗️  Creating EMR schema and tables...\n');
-  
+
   try {
     // Read schema file
     const schemaPath = path.resolve(__dirname, '../database/schema_enhanced.sql');
     const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-    
+
     // Execute schema
     await client.query(schemaSql);
-    
+
     console.log('✅ EMR schema created successfully!');
-    
+
     // Verify tables were created
     const tables = await client.query(`
       SELECT table_name 
@@ -107,12 +107,12 @@ async function createSchema(client) {
       WHERE table_schema = 'emr'
       ORDER BY table_name
     `);
-    
+
     console.log(`\n✅ Created ${tables.rows.length} tables:`);
     tables.rows.forEach(row => {
       console.log(`   ✓ emr.${row.table_name}`);
     });
-    
+
     return true;
   } catch (error) {
     console.error('❌ Error creating schema:', error.message);
@@ -122,17 +122,17 @@ async function createSchema(client) {
 
 async function loadInitialData(client) {
   console.log('\n📦 Loading initial test data...\n');
-  
+
   try {
     // Read init file
     const initPath = path.resolve(__dirname, '../database/init_db.sql');
     const initSql = fs.readFileSync(initPath, 'utf8');
-    
+
     // Execute init data
     await client.query(initSql);
-    
+
     console.log('✅ Initial data loaded successfully!');
-    
+
     // Show summary
     const summary = await client.query(`
       SELECT 
@@ -142,7 +142,7 @@ async function loadInitialData(client) {
         (SELECT COUNT(*) FROM emr.employees) as employees,
         (SELECT COUNT(*) FROM emr.inventory_items) as inventory_items
     `);
-    
+
     const counts = summary.rows[0];
     console.log('\n📊 Data Summary:');
     console.log(`   Tenants: ${counts.tenants}`);
@@ -150,7 +150,7 @@ async function loadInitialData(client) {
     console.log(`   Patients: ${counts.patients}`);
     console.log(`   Employees: ${counts.employees}`);
     console.log(`   Inventory Items: ${counts.inventory_items}`);
-    
+
     return true;
   } catch (error) {
     console.error('❌ Error loading initial data:', error.message);
@@ -184,17 +184,25 @@ async function showTestCredentials() {
 }
 
 async function main() {
+  const arg = process.argv[2] || 'keep';
   console.log('🚀 Neon Database Setup\n');
   console.log('Database URL:', DATABASE_URL.replace(/:[^:@]+@/, ':****@'), '\n');
-  
+  console.log('Option:', arg, '\n');
+
   // Test connection
   const client = await testConnection();
-  
+
   try {
+    if (arg === 'recreate') {
+      console.log('⚠️  Recreating schema as requested...');
+      await client.query('DROP SCHEMA IF EXISTS emr CASCADE');
+      console.log('✅ Schema dropped.');
+    }
+
     // Check if schema exists
     const schemaExists = await checkSchemaExists(client);
-    
-    if (schemaExists) {
+
+    if (schemaExists && arg !== 'recreate') {
       console.log('\n✅ Your Neon database is already set up with EMR schema!');
       console.log('\n💡 What would you like to do?');
       console.log('   1. Keep existing schema (recommended if you have data)');
@@ -203,18 +211,18 @@ async function main() {
       console.log('   Default: keep\n');
     } else {
       console.log('\n📝 Schema does not exist. Creating...');
-      
+
       const schemaCreated = await createSchema(client);
       if (!schemaCreated) {
         console.error('\n❌ Failed to create schema. Exiting.');
         process.exit(1);
       }
-      
+
       console.log('\n📝 Loading initial test data...');
       await loadInitialData(client);
-      
+
       showTestCredentials();
-      
+
       console.log('\n✅ Setup complete! Your database is ready to use.');
       console.log('\n🚀 Next steps:');
       console.log('   1. Run: npm run dev:server');
