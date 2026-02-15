@@ -1,34 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <defs>
-    <linearGradient id="mainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#34d399;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
-    </linearGradient>
-    <filter id="dropshadow" height="130%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-      <feOffset dx="2" dy="2" result="offsetblur"/>
-      <feComponentTransfer>
-        <feFuncA type="linear" slope="0.3"/>
-      </feComponentTransfer>
-      <feMerge> 
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/> 
-      </feMerge>
+    <filter id="shadow">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.2"/>
     </filter>
   </defs>
   
-  <!-- Background Circle (Soft White/Blue) -->
-  <circle cx="200" cy="200" r="190" fill="#f0fdf9" stroke="#34d399" stroke-width="8"/>
-  
-  <!-- Medical Cross with Rounded Edges -->
-  <g filter="url(#dropshadow)">
-    <rect x="160" y="80" width="80" height="240" rx="40" fill="url(#mainGrad)"/>
-    <rect x="80" y="160" width="240" height="80" rx="40" fill="url(#mainGrad)"/>
+  <!-- Content Group -->
+  <g transform="translate(100, 100) scale(0.8)" filter="url(#shadow)">
+    <!-- Top Heart (Pink) -->
+    <path d="M0 -20 q-25 -25 -40 0 t 40 50 q 25 -50 40 -50 t -40 0" fill="#f43f5e" stroke="#fff" stroke-width="2" transform="translate(0, -40)"/>
+    
+    <!-- Right Heart (Blue) -->
+    <path d="M0 -20 q-25 -25 -40 0 t 40 50 q 25 -50 40 -50 t -40 0" fill="#3b82f6" stroke="#fff" stroke-width="2" transform="rotate(90) translate(0, -40)"/>
+    
+    <!-- Bottom Heart (Green) -->
+    <path d="M0 -20 q-25 -25 -40 0 t 40 50 q 25 -50 40 -50 t -40 0" fill="#10b981" stroke="#fff" stroke-width="2" transform="rotate(180) translate(0, -40)"/>
+    
+    <!-- Left Heart (Yellow) -->
+    <path d="M0 -20 q-25 -25 -40 0 t 40 50 q 25 -50 40 -50 t -40 0" fill="#f59e0b" stroke="#fff" stroke-width="2" transform="rotate(270) translate(0, -40)"/>
+    
+    <!-- Center Cross (Subtle) -->
+    <path d="M-10 0 h20 M0 -10 v20" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="0.8"/>
   </g>
-  
-  <!-- Child Element (Subtle Heart) -->
-  <path d="M200 210 q-30-40 -50-20 t 50 60 q 30-80 50-60 t -50 20" fill="white" stroke="white" stroke-width="5" transform="translate(0, -10)"/>
-
-  <!-- Text -->
-  <text x="50%" y="320" dominant-baseline="middle" text-anchor="middle" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="0" font-weight="bold" fill="#064e3b">KIDZ CLINIC</text>
 </svg>
