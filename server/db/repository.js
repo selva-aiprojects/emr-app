@@ -635,6 +635,13 @@ export async function getInvoices(tenantId) {
   return result.rows.map(row => ({
     ...row,
     number: row.invoice_number,
+    patientId: row.patient_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    subtotal: parseFloat(row.subtotal),
+    tax: parseFloat(row.tax),
+    total: parseFloat(row.total),
+    paid: parseFloat(row.paid),
   }));
 }
 
@@ -674,6 +681,13 @@ export async function createInvoice({ tenantId, userId, patientId, description, 
   return {
     ...invoice,
     number: invoice.invoice_number,
+    patientId: invoice.patient_id,
+    createdAt: invoice.created_at,
+    updatedAt: invoice.updated_at,
+    subtotal: parseFloat(invoice.subtotal),
+    tax: parseFloat(invoice.tax),
+    total: parseFloat(invoice.total),
+    paid: parseFloat(invoice.paid),
   };
 }
 
@@ -703,6 +717,13 @@ export async function payInvoice({ invoiceId, tenantId, userId }) {
   return {
     ...invoice,
     number: invoice.invoice_number,
+    patientId: invoice.patient_id,
+    createdAt: invoice.created_at,
+    updatedAt: invoice.updated_at,
+    subtotal: parseFloat(invoice.subtotal),
+    tax: parseFloat(invoice.tax),
+    total: parseFloat(invoice.total),
+    paid: parseFloat(invoice.paid),
   };
 }
 
