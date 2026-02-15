@@ -304,6 +304,7 @@ export default function App() {
           <EmrPage
             patients={patients}
             providers={providers}
+            encounters={encounters}
             onCreateEncounter={(e) => {
               e.preventDefault();
               const fd = new FormData(e.target);

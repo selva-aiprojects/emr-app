@@ -924,6 +924,35 @@ tbody tr:last-child td {
   color: #b45309;
 }
 
+.status-badge.encounter-opd {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.encounter-ipd {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-badge.encounter-emergency {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.action-btn.print-btn {
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.1rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid transparent;
+}
+
+.action-btn.print-btn:hover {
+  background: var(--bg);
+  color: var(--primary-600);
+  border-color: var(--border);
+}
+
 /* ============================================
    RESPONSIVE
    ============================================ */

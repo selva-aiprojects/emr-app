@@ -1,5 +1,5 @@
 export function currency(value) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value || 0);
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value || 0);
 }
 
 export function patientName(patientId, patients) {
