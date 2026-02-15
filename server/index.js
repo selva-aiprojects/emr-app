@@ -16,10 +16,7 @@ const PORT = Number(process.env.PORT || 4000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Only start listening when running directly (not when imported as a module)
-const isDirectRun = process.argv[1] && (
-  process.argv[1].endsWith('index.js') ||
-  process.argv[1].endsWith('server/index.js')
-);
+const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url);
 
 app.use(cors());
 app.use(express.json());
@@ -998,6 +995,33 @@ app.get('/api/realtime-tick', requireTenant, async (req, res) => {
   }
 });
 
+
+if (isDirectRun) {
+  // =====================================================
+  // SERVE FRONTEND (Production)
+  // =====================================================
+
+  // Handle 404 for API routes specifically
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({ error: 'API route not found' });
+  });
+
+  // Serve static files from the React app
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+
+  // The "catchall" handler: for any request that doesn't
+  // match one above, send back React's index.html file.
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  });
+
+  // Start server
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
+  });
+}
+
 // =====================================================
 // ERROR HANDLING
 // =====================================================
@@ -1028,28 +1052,4 @@ export default app;
 
 
 
-if (isDirectRun) {
-  // =====================================================
-  // SERVE FRONTEND (Production)
-  // =====================================================
 
-  // Handle 404 for API routes specifically
-  app.all('/api/*', (req, res) => {
-    res.status(404).json({ error: 'API route not found' });
-  });
-
-  // Serve static files from the React app
-  app.use(express.static(path.join(__dirname, '../client/dist')));
-
-  // The "catchall" handler: for any request that doesn't
-  // match one above, send back React's index.html file.
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-  });
-
-  // Start server
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV}`);
-  });
-}
