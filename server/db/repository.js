@@ -741,6 +741,8 @@ export async function getInventoryItems(tenantId) {
     code: row.item_code,
     stock: parseFloat(row.current_stock),
     reorder: parseFloat(row.reorder_level),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }));
 }
 
@@ -833,6 +835,9 @@ export async function getEmployees(tenantId) {
     ...row,
     salary: parseFloat(row.salary),
     leaveBalance: parseFloat(row.leave_balance),
+    joinDate: row.join_date,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }));
 }
 
@@ -859,6 +864,9 @@ export async function createEmployee({ tenantId, name, code, department, designa
     ...employee,
     salary: parseFloat(employee.salary),
     leaveBalance: parseFloat(employee.leave_balance),
+    joinDate: employee.join_date,
+    createdAt: employee.created_at,
+    updatedAt: employee.updated_at,
   };
 }
 
@@ -873,6 +881,8 @@ export async function getEmployeeLeaves(tenantId) {
     to: row.to_date,
     type: row.leave_type,
     employeeId: row.employee_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }));
 }
 
@@ -904,6 +914,8 @@ export async function createEmployeeLeave({ tenantId, employeeId, from, to, type
     to: leave.to_date,
     type: leave.leave_type,
     employeeId: leave.employee_id,
+    createdAt: leave.created_at,
+    updatedAt: leave.updated_at,
   };
 }
 
