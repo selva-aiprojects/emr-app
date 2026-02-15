@@ -18,7 +18,11 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
     <div id="app">
       <aside className="sidebar">
         <div className="brand-block">
-          <img src="/kidz_logo.svg" alt="Logo" className="tenant-logo-img" />
+          {tenant?.name === 'Kidz Clinic' ? (
+            <img src="/kidz_logo.svg" alt="Kidz Clinic" className="tenant-logo-img" />
+          ) : (
+            <div className="tenant-logo">{tenant?.code || 'SYS'}</div>
+          )}
           <div>
             <h1>{tenant?.name || 'Superadmin'}</h1>
             <p>{activeUser.name} · {activeUser.role}</p>

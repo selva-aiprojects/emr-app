@@ -4,10 +4,9 @@ export default function LoginPage({ tenants, onLogin, loading, error }) {
       <div className="login-card">
         <div className="login-brand">
           <div className="login-brand-icon">
-            <img src="/kidz_logo.svg" alt="Kidz Clinic" style={{ width: '80px', height: '80px' }} />
+            <img src="/logo.svg" alt="MedFlow EMR" style={{ width: '180px', height: '60px', objectFit: 'contain' }} />
           </div>
-          <h2>Kidz Clinic</h2>
-          <p>Children's Hospital EMR</p>
+          <p style={{ marginTop: '0.5rem', color: '#64748b' }}>Enterprise Multi-Tenant Platform</p>
         </div>
 
         <form className="login-form" onSubmit={onLogin}>
