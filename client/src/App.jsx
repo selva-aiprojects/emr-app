@@ -13,6 +13,7 @@ import InventoryPage from './pages/InventoryPage.jsx';
 import EmployeesPage from './pages/EmployeesPage.jsx';
 import ReportsPage from './pages/ReportsPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
+import Chatbot from './components/Chatbot.jsx';
 
 export default function App() {
   const [tenants, setTenants] = useState([]);
@@ -185,221 +186,228 @@ export default function App() {
   };
 
   return (
-    <AppLayout
-      tenant={tenant}
-      activeUser={activeUser}
-      allowedViews={allowedViews}
-      view={view}
-      setView={setView}
-      onLogout={logout}
-      error={error}
-    >
-      {view === 'superadmin' && (
-        <SuperadminPage
-          superOverview={superOverview}
-          tenants={tenants}
-          onCreateTenant={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.createTenant({
-              name: fd.get('name'), code: fd.get('code'), subdomain: fd.get('subdomain'),
-              primaryColor: fd.get('primaryColor'), accentColor: fd.get('accentColor')
-            }));
-            e.target.reset();
-          }}
-          onCreateUser={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.createUser({
-              tenantId: fd.get('tenantId'), name: fd.get('name'), email: fd.get('email'), role: fd.get('role')
-            }));
-          }}
-        />
-      )}
+    <>
+      <AppLayout
+        tenant={tenant}
+        activeUser={activeUser}
+        allowedViews={allowedViews}
+        view={view}
+        setView={setView}
+        onLogout={logout}
+        error={error}
+      >
+        {view === 'superadmin' && (
+          <SuperadminPage
+            superOverview={superOverview}
+            tenants={tenants}
+            onCreateTenant={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.createTenant({
+                name: fd.get('name'), code: fd.get('code'), subdomain: fd.get('subdomain'),
+                primaryColor: fd.get('primaryColor'), accentColor: fd.get('accentColor')
+              }));
+              e.target.reset();
+            }}
+            onCreateUser={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.createUser({
+                tenantId: fd.get('tenantId'), name: fd.get('name'), email: fd.get('email'), role: fd.get('role')
+              }));
+            }}
+          />
+        )}
 
-      {view === 'dashboard' && <DashboardPage metrics={metrics} activeUser={activeUser} />}
+        {view === 'dashboard' && <DashboardPage metrics={metrics} activeUser={activeUser} />}
 
-      {view === 'patients' && (
-        <PatientsPage
-          activeUser={activeUser}
-          session={session}
-          patients={patients}
-          activePatient={activePatient}
-          activePatientId={activePatientId}
-          setActivePatientId={setActivePatientId}
-          onCreatePatient={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addPatient({
-              tenantId: session.tenantId, userId: activeUser.id,
-              firstName: fd.get('firstName'), lastName: fd.get('lastName'), dob: fd.get('dob'),
-              gender: fd.get('gender'), phone: fd.get('phone'), email: fd.get('email'),
-              address: fd.get('address'), bloodGroup: fd.get('bloodGroup'),
-              emergencyContact: fd.get('emergencyContact'), insurance: fd.get('insurance'),
-              chronicConditions: fd.get('chronicConditions'), allergies: fd.get('allergies'),
-              surgeries: fd.get('surgeries'), familyHistory: fd.get('familyHistory')
-            }));
-          }}
-          onAddClinical={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addPatientClinical(activePatient.id, {
-              tenantId: session.tenantId, userId: activeUser.id, section: fd.get('section'),
-              payload: { date: new Date().toISOString().slice(0, 10), text: fd.get('text') }
-            }));
-          }}
-          onPrint={printPatientDoc}
-        />
-      )}
+        {view === 'patients' && (
+          <PatientsPage
+            activeUser={activeUser}
+            session={session}
+            patients={patients}
+            activePatient={activePatient}
+            activePatientId={activePatientId}
+            setActivePatientId={setActivePatientId}
+            onCreatePatient={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addPatient({
+                tenantId: session.tenantId, userId: activeUser.id,
+                firstName: fd.get('firstName'), lastName: fd.get('lastName'), dob: fd.get('dob'),
+                gender: fd.get('gender'), phone: fd.get('phone'), email: fd.get('email'),
+                address: fd.get('address'), bloodGroup: fd.get('bloodGroup'),
+                emergencyContact: fd.get('emergencyContact'), insurance: fd.get('insurance'),
+                chronicConditions: fd.get('chronicConditions'), allergies: fd.get('allergies'),
+                surgeries: fd.get('surgeries'), familyHistory: fd.get('familyHistory')
+              }));
+            }}
+            onAddClinical={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addPatientClinical(activePatient.id, {
+                tenantId: session.tenantId, userId: activeUser.id, section: fd.get('section'),
+                payload: { date: new Date().toISOString().slice(0, 10), text: fd.get('text') }
+              }));
+            }}
+            onPrint={printPatientDoc}
+          />
+        )}
 
-      {view === 'appointments' && (
-        <AppointmentsPage
-          activeUser={activeUser}
-          session={session}
-          patients={patients}
-          providers={providers}
-          walkins={walkins}
-          appointments={appointments}
-          users={users}
-          onCreateAppointment={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addAppointment({
-              tenantId: session.tenantId, userId: activeUser.id,
-              patientId: fd.get('patientId'), providerId: fd.get('providerId'),
-              start: fd.get('start'), end: fd.get('end'), reason: fd.get('reason')
-            }));
-          }}
-          onCreateWalkin={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addWalkin({
-              tenantId: session.tenantId, userId: activeUser.id,
-              name: fd.get('name'), phone: fd.get('phone'), reason: fd.get('reason')
-            }));
-          }}
-          onSelfAppointment={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addSelfAppointment({
-              tenantId: session.tenantId, userId: activeUser.id, patientId: activeUser.patientId,
-              providerId: fd.get('providerId'), start: fd.get('start'), end: fd.get('end'), reason: fd.get('reason')
-            }));
-          }}
-          onConvertWalkin={(walkinId) => withRefresh(() => api.convertWalkin(walkinId, { tenantId: session.tenantId, userId: activeUser.id }))}
-          onSetAppointmentStatus={(appointmentId, status) => withRefresh(() => api.setAppointmentStatus(appointmentId, { tenantId: session.tenantId, userId: activeUser.id, status }))}
-          onReschedule={(appointment) => {
-            const start = window.prompt('New start (YYYY-MM-DDTHH:mm)', appointment.start);
-            if (!start) return;
-            const end = window.prompt('New end (YYYY-MM-DDTHH:mm)', appointment.end);
-            if (!end) return;
-            withRefresh(() => api.rescheduleAppointment(appointment.id, { tenantId: session.tenantId, userId: activeUser.id, start, end }));
-          }}
-        />
-      )}
+        {view === 'appointments' && (
+          <AppointmentsPage
+            activeUser={activeUser}
+            session={session}
+            patients={patients}
+            providers={providers}
+            walkins={walkins}
+            appointments={appointments}
+            users={users}
+            onCreateAppointment={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addAppointment({
+                tenantId: session.tenantId, userId: activeUser.id,
+                patientId: fd.get('patientId'), providerId: fd.get('providerId'),
+                start: fd.get('start'), end: fd.get('end'), reason: fd.get('reason')
+              }));
+            }}
+            onCreateWalkin={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addWalkin({
+                tenantId: session.tenantId, userId: activeUser.id,
+                name: fd.get('name'), phone: fd.get('phone'), reason: fd.get('reason')
+              }));
+            }}
+            onSelfAppointment={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addSelfAppointment({
+                tenantId: session.tenantId, userId: activeUser.id, patientId: activeUser.patientId,
+                providerId: fd.get('providerId'), start: fd.get('start'), end: fd.get('end'), reason: fd.get('reason')
+              }));
+            }}
+            onConvertWalkin={(walkinId) => withRefresh(() => api.convertWalkin(walkinId, { tenantId: session.tenantId, userId: activeUser.id }))}
+            onSetAppointmentStatus={(appointmentId, status) => withRefresh(() => api.setAppointmentStatus(appointmentId, { tenantId: session.tenantId, userId: activeUser.id, status }))}
+            onReschedule={(appointment) => {
+              const start = window.prompt('New start (YYYY-MM-DDTHH:mm)', appointment.start);
+              if (!start) return;
+              const end = window.prompt('New end (YYYY-MM-DDTHH:mm)', appointment.end);
+              if (!end) return;
+              withRefresh(() => api.rescheduleAppointment(appointment.id, { tenantId: session.tenantId, userId: activeUser.id, start, end }));
+            }}
+          />
+        )}
 
-      {view === 'emr' && (
-        <EmrPage
-          patients={patients}
-          providers={providers}
-          onCreateEncounter={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addEncounter({
-              tenantId: session.tenantId, userId: activeUser.id,
-              patientId: fd.get('patientId'), providerId: fd.get('providerId'), type: fd.get('type'),
-              complaint: fd.get('complaint'), diagnosis: fd.get('diagnosis'), notes: fd.get('notes')
-            }));
-          }}
-        />
-      )}
+        {view === 'emr' && (
+          <EmrPage
+            patients={patients}
+            providers={providers}
+            onCreateEncounter={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addEncounter({
+                tenantId: session.tenantId, userId: activeUser.id,
+                patientId: fd.get('patientId'), providerId: fd.get('providerId'), type: fd.get('type'),
+                complaint: fd.get('complaint'), diagnosis: fd.get('diagnosis'), notes: fd.get('notes')
+              }));
+            }}
+          />
+        )}
 
-      {view === 'billing' && (
-        <BillingPage
-          patients={patients}
-          invoices={invoices}
-          onIssueInvoice={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addInvoice({
-              tenantId: session.tenantId, userId: activeUser.id,
-              patientId: fd.get('patientId'), description: fd.get('description'),
-              amount: Number(fd.get('amount')), taxPercent: Number(fd.get('taxPercent') || 0)
-            }));
-          }}
-          onMarkPaid={(invoiceId) => withRefresh(() => api.markInvoicePaid(invoiceId, { tenantId: session.tenantId, userId: activeUser.id }))}
-        />
-      )}
+        {view === 'billing' && (
+          <BillingPage
+            patients={patients}
+            invoices={invoices}
+            onIssueInvoice={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addInvoice({
+                tenantId: session.tenantId, userId: activeUser.id,
+                patientId: fd.get('patientId'), description: fd.get('description'),
+                amount: Number(fd.get('amount')), taxPercent: Number(fd.get('taxPercent') || 0)
+              }));
+            }}
+            onMarkPaid={(invoiceId) => withRefresh(() => api.markInvoicePaid(invoiceId, { tenantId: session.tenantId, userId: activeUser.id }))}
+          />
+        )}
 
-      {view === 'inventory' && (
-        <InventoryPage
-          inventory={inventory}
-          onAddItem={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addInventory({
-              tenantId: session.tenantId, userId: activeUser.id,
-              code: fd.get('code'), name: fd.get('name'), category: fd.get('category'),
-              stock: Number(fd.get('stock')), reorder: Number(fd.get('reorder'))
-            }));
-          }}
-          onRestock={(itemId) => withRefresh(() => api.updateInventoryStock(itemId, { tenantId: session.tenantId, userId: activeUser.id, delta: 10 }))}
-        />
-      )}
+        {view === 'inventory' && (
+          <InventoryPage
+            inventory={inventory}
+            onAddItem={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addInventory({
+                tenantId: session.tenantId, userId: activeUser.id,
+                code: fd.get('code'), name: fd.get('name'), category: fd.get('category'),
+                stock: Number(fd.get('stock')), reorder: Number(fd.get('reorder'))
+              }));
+            }}
+            onRestock={(itemId) => withRefresh(() => api.updateInventoryStock(itemId, { tenantId: session.tenantId, userId: activeUser.id, delta: 10 }))}
+          />
+        )}
 
-      {view === 'employees' && (
-        <EmployeesPage
-          employees={employees}
-          employeeLeaves={employeeLeaves}
-          onCreateEmployee={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addEmployee({
-              tenantId: session.tenantId,
-              name: fd.get('name'), code: fd.get('code'), department: fd.get('department'),
-              designation: fd.get('designation'), joinDate: fd.get('joinDate'), shift: fd.get('shift'),
-              salary: Number(fd.get('salary'))
-            }));
-          }}
-          onApplyLeave={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.addEmployeeLeave(fd.get('employeeId'), {
-              tenantId: session.tenantId, from: fd.get('from'), to: fd.get('to'), type: fd.get('type')
-            }));
-          }}
-        />
-      )}
+        {view === 'employees' && (
+          <EmployeesPage
+            employees={employees}
+            employeeLeaves={employeeLeaves}
+            onCreateEmployee={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addEmployee({
+                tenantId: session.tenantId,
+                name: fd.get('name'), code: fd.get('code'), department: fd.get('department'),
+                designation: fd.get('designation'), joinDate: fd.get('joinDate'), shift: fd.get('shift'),
+                salary: Number(fd.get('salary'))
+              }));
+            }}
+            onApplyLeave={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addEmployeeLeave(fd.get('employeeId'), {
+                tenantId: session.tenantId, from: fd.get('from'), to: fd.get('to'), type: fd.get('type')
+              }));
+            }}
+          />
+        )}
 
-      {view === 'reports' && <ReportsPage reportSummary={reportSummary} />}
+        {view === 'reports' && <ReportsPage reportSummary={reportSummary} />}
 
-      {view === 'admin' && (
-        <AdminPage
-          tenant={tenant}
-          patients={patients}
-          onSaveSettings={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.updateTenantSettings(session.tenantId, {
-              userId: activeUser.id,
-              displayName: fd.get('displayName'),
-              primaryColor: fd.get('primaryColor'),
-              accentColor: fd.get('accentColor'),
-              featureInventory: fd.get('featureInventory') === 'on',
-              featureTelehealth: fd.get('featureTelehealth') === 'on'
-            }));
-          }}
-          onCreateUser={(e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            withRefresh(() => api.createUser({
-              tenantId: session.tenantId,
-              name: fd.get('name'), email: fd.get('email'), role: fd.get('role'),
-              patientId: fd.get('patientId') || null
-            }));
-          }}
-        />
-      )}
-    </AppLayout>
+        {view === 'admin' && (
+          <AdminPage
+            tenant={tenant}
+            patients={patients}
+            onSaveSettings={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.updateTenantSettings(session.tenantId, {
+                userId: activeUser.id,
+                displayName: fd.get('displayName'),
+                primaryColor: fd.get('primaryColor'),
+                accentColor: fd.get('accentColor'),
+                featureInventory: fd.get('featureInventory') === 'on',
+                featureTelehealth: fd.get('featureTelehealth') === 'on'
+              }));
+            }}
+            onCreateUser={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.createUser({
+                tenantId: session.tenantId,
+                name: fd.get('name'), email: fd.get('email'), role: fd.get('role'),
+                patientId: fd.get('patientId') || null
+              }));
+            }}
+          />
+        )}
+      </AppLayout>
+
+      <Chatbot context={{
+        patients, appointments, walkins, encounters, invoices, inventory,
+        employees, employeeLeaves, tenant, activeUser, setView
+      }} />
+    </>
   );
 }
