@@ -10,7 +10,8 @@
     "build": "vite build --config client/vite.config.js",
     "preview": "vite preview --config client/vite.config.js",
     "start": "node server/index.js",
-    "test:integration": "node scripts/ensure_server.js && node scripts/integration_test.js"
+    "test:integration": "node scripts/ensure_server.js && node scripts/integration_test.js",
+    "serve": "npm run build && npm start"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
