@@ -445,6 +445,8 @@ export async function getAppointments(tenantId) {
   );
   return result.rows.map(row => ({
     ...row,
+    patientId: row.patient_id,
+    providerId: row.provider_id,
     start: row.scheduled_start,
     end: row.scheduled_end,
   }));
@@ -480,6 +482,8 @@ export async function createAppointment({ tenantId, userId, patientId, providerI
 
   return {
     ...appointment,
+    patientId: appointment.patient_id,
+    providerId: appointment.provider_id,
     start: appointment.scheduled_start,
     end: appointment.scheduled_end,
   };
@@ -520,6 +524,8 @@ export async function updateAppointmentStatus({ appointmentId, tenantId, userId,
   const appointment = result.rows[0];
   return {
     ...appointment,
+    patientId: appointment.patient_id,
+    providerId: appointment.provider_id,
     start: appointment.scheduled_start,
     end: appointment.scheduled_end,
   };
@@ -553,6 +559,8 @@ export async function rescheduleAppointment({ appointmentId, tenantId, userId, s
   const appointment = result.rows[0];
   return {
     ...appointment,
+    patientId: appointment.patient_id,
+    providerId: appointment.provider_id,
     start: appointment.scheduled_start,
     end: appointment.scheduled_end,
   };
@@ -569,6 +577,8 @@ export async function getEncounters(tenantId) {
   );
   return result.rows.map(row => ({
     ...row,
+    patientId: row.patient_id,
+    providerId: row.provider_id,
     type: row.encounter_type,
     complaint: row.chief_complaint,
   }));
