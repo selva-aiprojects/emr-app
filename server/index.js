@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { testConnection } from './db/connection.js';
 import { hashPassword, comparePassword, generateToken } from './services/auth.service.js';
 import { authenticate, requireRole, requireTenant, requirePermission, restrictPatientAccess } from './middleware/auth.middleware.js';
@@ -11,6 +13,7 @@ dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 app.use(cors());
 app.use(express.json());
@@ -149,8 +152,8 @@ app.get('/api/tenants', async (_req, res) => {
 // PROTECTED ROUTES (Authentication required)
 // =====================================================
 
-// Apply authentication to all routes below this point
-app.use(authenticate);
+// Apply authentication to all /api routes below this point
+app.use('/api', authenticate);
 
 app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
   try {
@@ -1022,10 +1025,22 @@ const isDirectRun = process.argv[1] && (
 );
 
 if (isDirectRun) {
-  app.listen(PORT, () => {
-    console.log(`✅ EMR API v2.0 listening on http://localhost:${PORT}`);
-    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`   Database: PostgreSQL`);
-    console.log(`   Authentication: JWT`);
+  // =====================================================
+  // SERVE FRONTEND (Production)
+  // =====================================================
+
+  // Serve static files from the React app
+  app.use(express.static(path.join(__dirname, '../client/dist')));
+
+  // The "catchall" handler: for any request that doesn't
+  // match one above, send back React's index.html file.
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+  });
+
+  // Start server
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
   });
 }

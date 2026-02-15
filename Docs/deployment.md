@@ -55,3 +55,32 @@ The app is deployed to Netlify at **[https://emr-sys.netlify.app/](https://emr-s
 | Build fails (vite not found) | Use `npm install --include=dev` in build command |
 | API calls fail | Check `VITE_API_URL` is not set in Netlify (frontend uses relative `/api`) |
 | DB connection fails | Verify `DATABASE_URL` in Netlify environment variables |
+
+## Alternative: Vercel Deployment
+
+If Netlify quota is exceeded, deploy to Vercel:
+
+1. Install Vercel CLI: `npm i -g vercel`
+2. Run `vercel` in the project root.
+3. Set Environment Variables in Vercel dashboard:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+   - `JWT_EXPIRES_IN`
+4. The project includes `vercel.json` and `api/index.js` for seamless deployment.
+
+## Alternative: Render Deployment
+
+Render is a robust alternative for Node.js applications.
+
+1. Create a new **Web Service** on Render connected to your repository.
+2. Use the following settings:
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+3. Add Environment Variables:
+   - `DATABASE_URL`
+   - `JWT_SECRET`
+   - `JWT_EXPIRES_IN`
+   - `NODE_VERSION`: `20`
+
+This works because the app is now configured to serve the frontend statically via the Express server.
+
