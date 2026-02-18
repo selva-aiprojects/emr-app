@@ -95,7 +95,20 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'tenantId is required for tenant login' });
     }
 
-    user = await repo.getUserByEmail(email, tenantId);
+    // Resolve tenant code to UUID if needed
+    let resolvedTenantId = tenantId;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!uuidRegex.test(tenantId)) {
+      const tenant = await repo.getTenantByCode(tenantId);
+      if (!tenant) {
+        console.log(`[LOGIN] Invalid tenant code: ${tenantId}`);
+        return res.status(400).json({ error: 'Invalid tenant' });
+      }
+      resolvedTenantId = tenant.id;
+    }
+
+    user = await repo.getUserByEmail(email, resolvedTenantId);
 
     if (!user) {
       console.log(`[LOGIN] User not found: ${email} for tenant: ${tenantId}`);
@@ -340,14 +353,14 @@ app.get('/api/admin/kill-switches', requireRole('Superadmin'), async (req, res) 
 app.post('/api/admin/kill-switches', requireRole('Superadmin'), async (req, res) => {
   try {
     const { featureFlag, enabled, reason } = req.body;
-    
+
     if (!featureFlag || typeof enabled !== 'boolean') {
       return res.status(400).json({ error: 'featureFlag and enabled are required' });
     }
 
     const { setGlobalKillSwitch } = await import('./services/featureFlag.service.js');
     const success = await setGlobalKillSwitch(featureFlag, enabled, req.user.id, reason);
-    
+
     if (!success) {
       return res.status(500).json({ error: 'Failed to update kill switch' });
     }
@@ -420,20 +433,20 @@ app.get('/api/admin/subscription-catalog', requireRole('Superadmin'), async (req
 app.post('/api/admin/subscription-catalog', requireRole('Superadmin'), async (req, res) => {
   try {
     const { subscription } = req.body;
-    
+
     if (!subscription || !subscription.id) {
       return res.status(400).json({ error: 'Subscription data is required' });
     }
 
     // In a real implementation, this would save to database
     console.log('Saving subscription:', subscription);
-    
+
     // Simulate saving
     await new Promise(resolve => setTimeout(resolve, 500));
-    
-    res.json({ 
-      message: 'Subscription saved successfully', 
-      subscription 
+
+    res.json({
+      message: 'Subscription saved successfully',
+      subscription
     });
   } catch (error) {
     console.error('Error saving subscription:', error);
@@ -444,29 +457,29 @@ app.post('/api/admin/subscription-catalog', requireRole('Superadmin'), async (re
 app.post('/api/admin/apply-subscription-bundle', requireRole('Superadmin'), async (req, res) => {
   try {
     const { subscriptionId, features } = req.body;
-    
+
     if (!subscriptionId || !features) {
       return res.status(400).json({ error: 'subscriptionId and features are required' });
     }
 
     // Get all tenants
     const tenants = await repo.getTenants();
-    
+
     let updatedCount = 0;
-    
+
     for (const tenant of tenants) {
       // Update tenant subscription tier based on the bundle
       await repo.updateTenantSettings({
         tenantId: tenant.id,
         subscriptionTier: subscriptionId
       });
-      
+
       // Clear existing custom features and add the bundle features
       await query(`
         DELETE FROM emr.tenant_features 
         WHERE tenant_id = $1
       `, [tenant.id]);
-      
+
       // Insert new features from the bundle
       for (const feature of features) {
         await query(`
@@ -474,7 +487,7 @@ app.post('/api/admin/apply-subscription-bundle', requireRole('Superadmin'), asyn
           VALUES ($1, $2, true, NOW(), NOW())
         `, [tenant.id, feature]);
       }
-      
+
       updatedCount++;
     }
 
@@ -484,15 +497,15 @@ app.post('/api/admin/apply-subscription-bundle', requireRole('Superadmin'), asyn
       action: 'subscription_bundle.apply',
       entityName: 'subscription',
       entityId: subscriptionId,
-      details: { 
-        features, 
+      details: {
+        features,
         tenantsUpdated: updatedCount,
         tenantIds: tenants.map(t => t.id)
       }
     });
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: `Subscription bundle applied to ${updatedCount} tenants`,
       tenantsUpdated: updatedCount
     });

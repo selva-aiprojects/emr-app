@@ -3,7 +3,7 @@ import { currency } from '../utils/format.js';
 import { useState, useEffect } from 'react';
 import { api } from '../api.js';
 
-export default function SuperadminPage({ superOverview, tenants, onCreateTenant, onCreateUser }) {
+export default function SuperadminPage({ superOverview = {}, tenants = [], onCreateTenant, onCreateUser }) {
   const [killSwitches, setKillSwitches] = useState({});
   const [featureFlags, setFeatureFlags] = useState({});
   const [selectedTenant, setSelectedTenant] = useState(null);
@@ -41,12 +41,12 @@ export default function SuperadminPage({ superOverview, tenants, onCreateTenant,
         enabled,
         reason: enabled ? 'Manual enable via admin panel' : 'Manual disable via admin panel'
       });
-      
+
       setKillSwitches(prev => ({
         ...prev,
         [featureFlag]: enabled
       }));
-      
+
       // Refresh tenant features if a tenant is selected
       if (selectedTenant) {
         fetchTenantFeatures(selectedTenant);
@@ -66,7 +66,7 @@ export default function SuperadminPage({ superOverview, tenants, onCreateTenant,
         // Note: This would need to be implemented in the backend
         subscriptionTier: tier
       });
-      
+
       alert(`Tenant updated to ${tier} tier`);
       // Refresh data
       window.location.reload();
@@ -144,8 +144,8 @@ export default function SuperadminPage({ superOverview, tenants, onCreateTenant,
                         </div>
                       </td>
                       <td>
-                        <span 
-                          className="tier-badge" 
+                        <span
+                          className="tier-badge"
                           style={{ backgroundColor: getTierBadgeColor(t.subscriptionTier || 'Basic') }}
                         >
                           {t.subscriptionTier || 'Basic'}
@@ -154,7 +154,7 @@ export default function SuperadminPage({ superOverview, tenants, onCreateTenant,
                       <td><span className="count-pill">{t.users}</span></td>
                       <td><span className="yield-text">{currency(t.revenue)}</span></td>
                       <td>
-                        <button 
+                        <button
                           className="action-btn"
                           onClick={() => fetchTenantFeatures(t.tenantId)}
                         >
@@ -186,7 +186,7 @@ export default function SuperadminPage({ superOverview, tenants, onCreateTenant,
                     <div className="feature-flag">{flag}</div>
                   </div>
                   <div className="switch-control">
-                    <button 
+                    <button
                       className={`kill-switch-btn ${enabled ? 'active' : 'inactive'}`}
                       onClick={() => toggleKillSwitch(flag, !enabled)}
                       disabled={loading}

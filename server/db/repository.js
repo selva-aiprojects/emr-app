@@ -55,7 +55,7 @@ export async function setGlobalKillSwitch(featureFlag, enabled, userId, reason) 
       updated_at = NOW()
     RETURNING *
   `;
-  
+
   const result = await query(sql, [featureFlag, enabled, userId, reason]);
   return result.rows[0];
 }
@@ -66,7 +66,7 @@ export async function setGlobalKillSwitch(featureFlag, enabled, userId, reason) 
 export async function getTenantFeatureStatus(tenantId) {
   const sql = 'SELECT * FROM emr.tenant_feature_status WHERE tenant_id = $1';
   const result = await query(sql, [tenantId]);
-  
+
   const flags = {};
   result.rows.forEach(row => {
     flags[row.feature_flag] = {
@@ -75,7 +75,7 @@ export async function getTenantFeatureStatus(tenantId) {
       customEnabled: row.custom_enabled
     };
   });
-  
+
   return flags;
 }
 
@@ -285,7 +285,69 @@ export async function updateUserLastLogin(userId) {
 // PATIENTS
 // =====================================================
 
-export async function getPatients(tenantId) {
+/**
+ * Helper to mask sensitive PHI based on role
+ */
+function maskPatientData(patient, role) {
+  if (!role) return patient; // Default to full access if no role specified (backward compat, but risky)
+
+  const clinicalRoles = ['Doctor', 'Nurse', 'Superadmin']; // Superadmin getting data means Break Glass
+  if (clinicalRoles.includes(role)) return patient;
+
+  // Clone to avoid mutation
+  const p = { ...patient };
+
+  // 1. Pharmacy: Needs Prescriptions, Allergies. NO Notes, Lab Results, History.
+  if (role === 'Pharmacy') {
+    p.medicalHistory = undefined;
+    p.caseHistory = undefined;
+    p.recommendations = undefined;
+    p.feedbacks = undefined;
+    p.testReports = undefined; // Hide labs
+    // Keep: medications, prescriptions, allergies (in medicalHistory? No, separate)
+    if (p.medicalHistory) {
+      const { allergies } = p.medicalHistory;
+      p.medicalHistory = { allergies }; // Only keep allergies
+    }
+  }
+
+  // 2. Lab: Needs Test Requests. NO Notes, Prescriptions.
+  else if (role === 'Lab') {
+    p.medicalHistory = undefined;
+    p.caseHistory = undefined;
+    p.medications = undefined;
+    p.prescriptions = undefined;
+    p.recommendations = undefined;
+    p.feedbacks = undefined;
+    // Keep: testReports (results) and demographics
+  }
+
+  // 3. Billing/Accounts/Insurance/HR/Operations: Needs Demographics for invoicing. NO Clinical.
+  else if (['Billing', 'Accounts', 'Insurance', 'Front Office', 'Support Staff', 'HR', 'Operations'].includes(role)) {
+    p.medicalHistory = undefined;
+    p.caseHistory = undefined;
+    p.medications = undefined;
+    p.prescriptions = undefined;
+    p.recommendations = undefined;
+    p.feedbacks = undefined;
+    p.testReports = undefined;
+  }
+
+  // 4. Management: Aggregated only found in other reports, but if they access patient list:
+  else if (role === 'Management') {
+    // Hide mostly everything personal
+    p.medicalHistory = undefined;
+    p.caseHistory = undefined;
+    p.medications = undefined;
+    p.prescriptions = undefined;
+    p.testReports = undefined;
+  }
+
+  return p;
+}
+
+// Updated signature to accept userRole
+export async function getPatients(tenantId, userRole = null) {
   const sql = `
     SELECT p.*, 
            json_agg(DISTINCT cr.*) FILTER (WHERE cr.id IS NOT NULL) as clinical_records
@@ -299,10 +361,9 @@ export async function getPatients(tenantId) {
 
   const result = await query(sql, [tenantId]);
 
-  // Transform clinical records into separate arrays by section
   return result.rows.map(patient => {
     const records = patient.clinical_records || [];
-    return {
+    const patientObj = {
       ...patient,
       firstName: patient.first_name,
       lastName: patient.last_name,
@@ -316,8 +377,10 @@ export async function getPatients(tenantId) {
       recommendations: records.filter(r => r.section === 'recommendations').map(r => r.content),
       feedbacks: records.filter(r => r.section === 'feedbacks').map(r => r.content),
       testReports: records.filter(r => r.section === 'testReports').map(r => r.content),
-      clinical_records: undefined, // Remove the aggregated field
+      clinical_records: undefined,
     };
+
+    return maskPatientData(patientObj, userRole);
   });
 }
 
@@ -388,7 +451,8 @@ export async function searchPatients(tenantId, { text, date, type, status, limit
   }));
 }
 
-export async function getPatientById(id, tenantId) {
+// Updated signature
+export async function getPatientById(id, tenantId, userRole = null) {
   const sql = `
     SELECT p.*,
            json_agg(DISTINCT cr.*) FILTER (WHERE cr.id IS NOT NULL) as clinical_records
@@ -405,7 +469,7 @@ export async function getPatientById(id, tenantId) {
   const patient = result.rows[0];
   const records = patient.clinical_records || [];
 
-  return {
+  const patientObj = {
     ...patient,
     firstName: patient.first_name,
     lastName: patient.last_name,
@@ -422,6 +486,8 @@ export async function getPatientById(id, tenantId) {
     },
     clinical_records: undefined,
   };
+
+  return maskPatientData(patientObj, userRole);
 }
 
 export async function createPatient({ tenantId, userId, firstName, lastName, dob, gender, phone, email, address, bloodGroup, emergencyContact, insurance, medicalHistory }) {
@@ -1263,130 +1329,11 @@ export async function getSuperadminOverview() {
   };
 }
 
-// =====================================================
-// BOOTSTRAP (Initial data load)
-// =====================================================
 
-export async function getBootstrapData(tenantId, userId) {
-  const tenant = await getTenantById(tenantId);
 
-  if (!tenant) {
-    throw new Error('Tenant not found');
-  }
 
-  let patients = await getPatients(tenantId);
-  let appointments = await getAppointments(tenantId);
-  let encounters = await getEncounters(tenantId);
-  let invoices = await getInvoices(tenantId);
-  const users = await getUsers(tenantId);
-  const walkins = await getWalkins(tenantId);
-  const employees = await getEmployees(tenantId);
-  const employeeLeaves = await getEmployeeLeaves(tenantId);
-  const inventory = await getInventoryItems(tenantId);
 
-  // Get user role
-  const user = await getUserById(userId);
 
-  // If user is a patient, filter data to only their records
-  if (user && user.role === 'Patient' && user.patient_id) {
-    const patientId = user.patient_id;
-    patients = patients.filter(p => p.id === patientId);
-    appointments = appointments.filter(a => a.patient_id === patientId);
-    encounters = encounters.filter(e => e.patient_id === patientId);
-    invoices = invoices.filter(i => i.patient_id === patientId);
-  }
-
-  return {
-    tenant,
-    users,
-    patients,
-    appointments,
-    encounters,
-    invoices,
-    walkins,
-    employees,
-    employeeLeaves,
-    inventory,
-    permissions: {
-      Superadmin: ['superadmin', 'dashboard', 'reports', 'tenants', 'users', 'patients', 'appointments', 'emr', 'inventory', 'billing'],
-      Admin: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy', 'billing', 'inventory', 'employees', 'reports', 'accounts', 'admin', 'users'],
-      Doctor: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy', 'reports'],
-      Nurse: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy'],
-      Lab: ['dashboard', 'patients', 'reports'],
-      Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports'],
-      'Support Staff': ['dashboard', 'patients', 'appointments'],
-      'Front Office': ['dashboard', 'patients', 'appointments'],
-      Billing: ['dashboard', 'billing', 'accounts', 'reports'],
-      Inventory: ['dashboard', 'inventory', 'pharmacy', 'reports'],
-      Patient: ['dashboard', 'appointments', 'patients'],
-    },
-  };
-}
-
-export default {
-  // Tenants
-  getTenants,
-  getTenantById,
-  createTenant,
-  updateTenantSettings,
-
-  // Users
-  getUsers,
-  getUserById,
-  getUserByEmail,
-  createUser,
-  updateUserLastLogin,
-
-  // Patients
-  getPatients,
-  getPatientById,
-  createPatient,
-  addClinicalRecord,
-
-  // Walk-ins
-  getWalkins,
-  createWalkin,
-  convertWalkinToPatient,
-
-  // Appointments
-  getAppointments,
-  createAppointment,
-  updateAppointmentStatus,
-  rescheduleAppointment,
-
-  // Encounters
-  getEncounters,
-  createEncounter,
-  dischargePatient,
-
-  // Invoices
-  getInvoices,
-  createInvoice,
-  payInvoice,
-
-  // Inventory
-  getInventoryItems,
-  createInventoryItem,
-  updateInventoryStock,
-
-  // Employees
-  getEmployees,
-  createEmployee,
-  getEmployeeLeaves,
-  createEmployeeLeave,
-
-  // Reports
-  getReportSummary,
-
-  // Superadmin
-  getSuperadminOverview,
-
-  // Bootstrap
-  getBootstrapData,
-
-  // Audit
-  createAuditLog,
-};
 
 // =====================================================
 // PRESCRIPTIONS & PHARMACY
@@ -1525,4 +1472,167 @@ export async function dispensePrescription({ id, tenantId, userId, itemId, quant
   return prescription;
 }
 
-export * from './repo_financials.js';
+// =====================================================
+// BOOTSTRAP
+// =====================================================
+
+export async function getBootstrapData(tenantId, userId) {
+  // Parallel fetch for speed
+  const [
+    user,
+    patients,
+    appointments,
+    walkins,
+    encounters,
+    invoices,
+    inventory,
+    employees,
+    employeesLeaves
+  ] = await Promise.all([
+    getUserById(userId),
+    // Placeholder for other data to be fetched below
+    Promise.resolve([]),
+    getAppointments(tenantId),
+    getWalkins(tenantId),
+    getEncounters(tenantId),
+    getInvoices(tenantId),
+    getInventoryItems(tenantId),
+    getEmployees(tenantId),
+    getEmployeeLeaves(tenantId)
+  ]);
+
+  if (!user) throw new Error('User not found');
+  const userRole = user.role;
+
+  // Securely fetch patients with masking
+  // Only some roles should see patients list at all? 
+  // For now, consistent with PERMISSIONS, we let them fetch but mask.
+  const securePatients = await getPatients(tenantId, userRole);
+
+  // Filter permissions
+  const { getPermissions } = await import('../middleware/auth.middleware.js');
+  const allPermissions = getPermissions();
+  const permissions = allPermissions[userRole] || [];
+
+  return {
+    user,
+    permissions: { [userRole]: permissions },
+    patients: securePatients,
+    appointments,
+    walkins,
+    encounters,
+    invoices,
+    inventory,
+    employees,
+    employeeLeaves: employeesLeaves
+  };
+}
+
+// =====================================================
+// EXPORTS
+// =====================================================
+
+
+
+
+
+export async function getTenantByCode(code) {
+  const sql = 'SELECT * FROM emr.tenants WHERE code = $1';
+  const result = await query(sql, [code]);
+  return result.rows[0];
+}
+
+export async function recordAttendance({ tenantId, employeeId, date, status, checkIn, checkOut }) {
+  const sql = `
+    INSERT INTO emr.employee_attendance(tenant_id, employee_id, date, status, check_in, check_out)
+    VALUES($1, $2, $3, $4, $5, $6)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, employeeId, date, status, checkIn, checkOut]);
+  return result.rows[0];
+}
+
+export async function addEmployeeLeave({ tenantId, employeeId, type, startDate, endDate, reason, status }) {
+  const sql = `
+    INSERT INTO emr.employee_leaves(tenant_id, employee_id, leave_type, start_date, end_date, reason, status)
+    VALUES($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, employeeId, type, startDate, endDate, reason, status || 'Pending']);
+  return result.rows[0];
+}
+
+export default {
+  // Tenants
+  getTenants,
+  getTenants,
+  getTenantById,
+  getTenantByCode,
+  createTenant,
+  createTenant,
+  updateTenantSettings,
+
+  // Users
+  getUsers,
+  getUserById,
+  getUserByEmail,
+  createUser,
+  updateUserLastLogin,
+
+  // Patients
+  getPatients,
+  getPatientById,
+  createPatient,
+  addClinicalRecord,
+  searchPatients,
+
+  // Walk-ins
+  getWalkins,
+  createWalkin,
+  convertWalkinToPatient,
+
+  // Appointments
+  getAppointments,
+  createAppointment,
+  updateAppointmentStatus,
+  rescheduleAppointment,
+
+  // Encounters
+  getEncounters,
+  createEncounter,
+  dischargePatient,
+
+  // Invoices
+  getInvoices,
+  createInvoice,
+  payInvoice,
+
+  // Inventory
+  getInventoryItems,
+  createInventoryItem,
+  updateInventoryStock,
+
+  // Employees
+  getEmployees,
+  getEmployeeLeaves,
+  createEmployee,
+  recordAttendance,
+  addEmployeeLeave,
+
+
+  // Bootstrap
+  getBootstrapData,
+
+  // Superadmin
+  getSuperadminOverview,
+
+  // Prescriptions
+  getPrescriptions,
+  getPrescriptionById,
+  createPrescription,
+  updatePrescriptionStatus,
+  dispensePrescription,
+
+  // Doctor Payouts
+  getDoctorPayouts
+};

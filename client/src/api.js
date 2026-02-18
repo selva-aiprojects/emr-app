@@ -537,6 +537,13 @@ apiClient.addEmployee = createEmployee;
 apiClient.addEmployeeLeave = createEmployeeLeave;
 apiClient.getBootstrap = getBootstrapData;
 
+// Generic HTTP methods (for direct usage)
+apiClient.get = (url) => apiRequest(url);
+apiClient.post = (url, body) => apiRequest(url, { method: 'POST', body: JSON.stringify(body) });
+apiClient.patch = (url, body) => apiRequest(url, { method: 'PATCH', body: JSON.stringify(body) });
+apiClient.put = (url, body) => apiRequest(url, { method: 'PUT', body: JSON.stringify(body) });
+apiClient.del = (url) => apiRequest(url, { method: 'DELETE' });
+
 // Export as both default and named export for compatibility
 export default apiClient;
 export { apiClient as api };

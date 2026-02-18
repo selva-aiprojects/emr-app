@@ -21,7 +21,7 @@ export default function DashboardPage({ metrics, activeUser, setView }) {
 
   async function loadReportData() {
     try {
-      const session = JSON.parse(sessionStorage.getItem('emr_session') || '{}');
+      const session = api.getStoredSession() || {};
       const tenantId = session.tenantId;
       if (tenantId) {
         const data = await api.getReportSummary(tenantId);

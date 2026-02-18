@@ -111,8 +111,24 @@ export function requireTenant(req, res, next) {
     });
   }
 
-  // Verify user belongs to this tenant (except Superadmin)
-  if (req.user.role !== 'Superadmin' && req.user.tenantId !== tenantId) {
+  // Verify user belongs to this tenant
+  // CRITICAL SECURITY FIX: Superadmin cannot access tenant data by default. 
+  // Must use "Break Glass" or dedicated superadmin endpoints.
+  const isSuperadmin = req.user.role === 'Superadmin';
+  const isBreakGlass = req.headers['x-break-glass'] === 'true' && req.headers['x-break-glass-reason'];
+
+  if (isSuperadmin) {
+    // Superadmin is BLOCKED from tenant context unless breaking glass
+    if (!isBreakGlass) {
+      return res.status(403).json({
+        error: 'Forbidden',
+        message: 'Superadmin cannot access tenant context without Break Glass protocol.',
+        code: 'REQUIRES_BREAK_GLASS'
+      });
+    }
+    // If break glass, log it (audit log happens in controller or separate middleware, but good to note)
+    console.warn(`[SECURITY] Superadmin BROKE GLASS for tenant ${tenantId}. Reason: ${req.headers['x-break-glass-reason']}`);
+  } else if (req.user.tenantId !== tenantId) {
     return res.status(403).json({
       error: 'Forbidden',
       message: 'You do not have access to this tenant'
@@ -127,17 +143,22 @@ export function requireTenant(req, res, next) {
  * Permission definitions by role
  */
 const PERMISSIONS = {
-  Superadmin: ['superadmin', 'dashboard', 'reports', 'tenants', 'users', 'patients', 'appointments', 'emr', 'inventory', 'billing'],
+  Superadmin: ['superadmin', 'tenants', 'users', 'inventory', 'billing', 'reports'], // REMOVED: 'dashboard', 'patients', 'appointments', 'emr'
   Admin: ['dashboard', 'patients', 'appointments', 'emr', 'billing', 'inventory', 'employees', 'reports', 'admin', 'users'],
   Doctor: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy', 'reports'],
   Nurse: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy'],
   Lab: ['dashboard', 'patients', 'reports'],
-  Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports'],
+  Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports'], // Can see patients but only for prescriptions
   'Support Staff': ['dashboard', 'patients', 'appointments'],
   'Front Office': ['dashboard', 'patients', 'appointments'],
   Billing: ['dashboard', 'billing', 'reports'],
   Inventory: ['dashboard', 'inventory', 'reports'],
   Patient: ['dashboard', 'appointments', 'patients'],
+  // New Roles
+  Insurance: ['dashboard', 'billing', 'reports'],
+  Management: ['dashboard', 'reports', 'users', 'billing', 'inventory'],
+  HR: ['dashboard', 'employees', 'reports', 'users'],
+  Operations: ['dashboard', 'reports', 'inventory', 'users', 'billing'],
 };
 
 /**

@@ -88,14 +88,14 @@ const permissions = {
 };
 
 const moduleMeta = {
-  dashboard: { title: "Dashboard", subtitle: "Operational overview" },
-  patients: { title: "Patients", subtitle: "Registration and demographics" },
-  appointments: { title: "Appointments", subtitle: "Scheduling and queue" },
-  emr: { title: "EMR", subtitle: "Encounter and charting" },
-  billing: { title: "Billing", subtitle: "Invoice and payment operations" },
-  inventory: { title: "Inventory", subtitle: "Stock and reorder tracking" },
-  reports: { title: "Reports", subtitle: "KPIs and audit intelligence" },
-  admin: { title: "Admin", subtitle: "Tenant configuration and RBAC" }
+  dashboard: { title: "Dashboard", subtitle: "Operational overview", icon: "fa-solid fa-chart-line" },
+  patients: { title: "Patients", subtitle: "Registration and demographics", icon: "fa-solid fa-user-injured" },
+  appointments: { title: "Appointments", subtitle: "Scheduling and queue", icon: "fa-solid fa-calendar-check" },
+  emr: { title: "EMR", subtitle: "Encounter and charting", icon: "fa-solid fa-notes-medical" },
+  billing: { title: "Billing", subtitle: "Invoice and payment operations", icon: "fa-solid fa-file-invoice-dollar" },
+  inventory: { title: "Inventory", subtitle: "Stock and reorder tracking", icon: "fa-solid fa-box-open" },
+  reports: { title: "Reports", subtitle: "KPIs and audit intelligence", icon: "fa-solid fa-chart-pie" },
+  admin: { title: "Admin", subtitle: "Tenant configuration and RBAC", icon: "fa-solid fa-shield-halved" }
 };
 
 const el = {
@@ -216,7 +216,10 @@ function renderNav() {
   const allowed = getAllowedViews();
   el.moduleNav.innerHTML = allowed
     .map(
-      (view) => `<button class="${view === state.activeView ? "active" : ""}" data-view="${view}">${moduleMeta[view].title}</button>`
+      (view) => `<button class="${view === state.activeView ? "active" : ""}" data-view="${view}">
+        <i class="${moduleMeta[view].icon}"></i>
+        <span>${moduleMeta[view].title}</span>
+      </button>`
     )
     .join("");
 
@@ -277,20 +280,20 @@ function renderDashboard() {
   const openInvoices = invoices.filter((i) => i.status !== "paid").length;
 
   renderCards(el.dashboardCards, [
-    ["Patients", patients.length],
-    ["Appointments", appointments.length],
-    ["Open Encounters", encounters.filter((e) => e.status === "open").length],
-    ["Revenue", currency(totalRevenue)],
-    ["Open Invoices", openInvoices],
-    ["Low Stock", inventory.filter((x) => x.stock <= x.reorder).length]
+    ["Patients", patients.length, "fa-solid fa-users"],
+    ["Appointments", appointments.length, "fa-solid fa-calendar-day"],
+    ["Open Encounters", encounters.filter((e) => e.status === "open").length, "fa-solid fa-user-doctor"],
+    ["Revenue", currency(totalRevenue), "fa-solid fa-dollar-sign"],
+    ["Open Invoices", openInvoices, "fa-solid fa-file-invoice"],
+    ["Low Stock", inventory.filter((x) => x.stock <= x.reorder).length, "fa-solid fa-boxes-stacked"]
   ]);
 
   const today = dayKey(new Date().toISOString());
   const todaysAppointments = appointments.filter((a) => dayKey(a.start) === today);
   el.todayAppointments.innerHTML = todaysAppointments.length
     ? todaysAppointments
-        .map((a) => `<li>${patientName(a.patientId)} with ${userName(a.providerId)} at ${timeOnly(a.start)} (${a.status})</li>`)
-        .join("")
+      .map((a) => `<li>${patientName(a.patientId)} with ${userName(a.providerId)} at ${timeOnly(a.start)} (${a.status})</li>`)
+      .join("")
     : "<li>No appointments today.</li>";
 
   const lowStock = inventory.filter((item) => item.stock <= item.reorder);
@@ -385,10 +388,10 @@ function renderReports() {
     : 0;
 
   renderCards(el.reportMetrics, [
-    ["Completed Visits", encounters.filter((e) => e.status === "closed").length],
-    ["Scheduled vs Completed", `${appointments.length} / ${appointments.filter((a) => a.status === "completed").length}`],
-    ["Cancellation Rate", `${cancelledRate}%`],
-    ["Outstanding AR", currency(invoices.reduce((s, i) => s + (i.total - i.paid), 0))]
+    ["Completed Visits", encounters.filter((e) => e.status === "closed").length, "fa-solid fa-check-double"],
+    ["Scheduled vs Completed", `${appointments.length} / ${appointments.filter((a) => a.status === "completed").length}`, "fa-solid fa-calendar-check"],
+    ["Cancellation Rate", `${cancelledRate}%`, "fa-solid fa-ban"],
+    ["Outstanding AR", currency(invoices.reduce((s, i) => s + (i.total - i.paid), 0)), "fa-solid fa-hand-holding-dollar"]
   ]);
 
   el.auditList.innerHTML = getTenantAudits()
@@ -676,10 +679,28 @@ function logAudit(action) {
 function renderCards(container, entries) {
   const template = byId("cardTemplate");
   container.innerHTML = "";
-  entries.forEach(([label, value]) => {
+  entries.forEach(([label, value, icon]) => {
     const node = template.content.cloneNode(true);
     node.querySelector("h4").textContent = label;
     node.querySelector("p").textContent = value;
+    if (icon) {
+      // Create header wrapper if not exists or prepend icon
+      const header = document.createElement("div");
+      header.className = "metric-card-header";
+
+      const iconDiv = document.createElement("div");
+      iconDiv.className = "metric-card-icon";
+      iconDiv.innerHTML = `<i class="${icon}"></i>`;
+
+      const title = node.querySelector("h4");
+      // Remove title from normal flow to put in header
+      title.parentNode.removeChild(title);
+
+      header.appendChild(title);
+      header.appendChild(iconDiv);
+
+      node.querySelector("article").prepend(header);
+    }
     container.appendChild(node);
   });
 }

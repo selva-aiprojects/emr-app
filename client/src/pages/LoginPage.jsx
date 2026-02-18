@@ -37,12 +37,15 @@ export default function LoginPage({ onLogin }) {
     setError('');
 
     try {
-      const response = await axios.post('/api/login', credentials);
-      const { token, user, tenantId, role } = response.data;
-      
-      onLogin({ token, user, tenantId, role });
+      // Use api.login to ensure token is stored correctly in localStorage
+      // and consistent with api.js internal logic
+      const data = await import('../api').then(m => m.api.login(credentials.tenantId, credentials.email, credentials.password));
+
+      // onLogin will handle state update in App.jsx
+      onLogin(data);
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -74,16 +77,16 @@ export default function LoginPage({ onLogin }) {
         <div className="login-branding">
           <div className="brand-content">
             <div className="logo-section">
-              <img 
-                src="/Medflow-logo.jpg" 
-                alt="MedFlow EMR" 
+              <img
+                src="/Medflow-logo.jpg"
+                alt="MedFlow EMR"
                 className="medflow-logo"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'block';
                 }}
               />
-              <div className="medflow-logo-fallback" style={{display: 'none'}}>
+              <div className="medflow-logo-fallback" style={{ display: 'none' }}>
                 <svg width="120" height="120" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect width="24" height="24" rx="4" fill="url(#gradient)" />
                   <path d="M8 12h8M12 8v8" stroke="white" strokeWidth="2" strokeLinecap="round" />
@@ -175,8 +178,8 @@ export default function LoginPage({ onLogin }) {
                     <span>🔑 Demo Credentials</span>
                     <span className="demo-role">
                       {credentials.tenantId === 'superadmin' ? 'Superadmin' :
-                       credentials.tenantId === 'EHS' ? 'Enterprise' :
-                       credentials.tenantId === 'PMC' ? 'Professional' : 'Basic'}
+                        credentials.tenantId === 'EHS' ? 'Enterprise' :
+                          credentials.tenantId === 'PMC' ? 'Professional' : 'Basic'}
                     </span>
                     <span>{showDemoCredentials ? '▲' : '▼'}</span>
                   </button>
@@ -207,7 +210,7 @@ export default function LoginPage({ onLogin }) {
                         type="button"
                         onClick={useDemoCredentials}
                         className="demo-toggle"
-                        style={{background: 'var(--success-green)', color: 'white', border: 'none'}}
+                        style={{ background: 'var(--success-green)', color: 'white', border: 'none' }}
                       >
                         🚀 Use Demo Login
                       </button>

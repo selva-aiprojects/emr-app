@@ -28,8 +28,8 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
   const accessibleModules = getAccessibleModules(allowedViews);
 
   // Dynamic colors from tenant settings
-  const primaryColor = tenant?.theme?.primary || 'var(--medical-navy)';
-  const accentColor = tenant?.theme?.accent || 'var(--clinical-blue)';
+  const primaryColor = tenant?.theme?.primary || 'var(--medical-primary)';
+  const accentColor = tenant?.theme?.accent || 'var(--medical-secondary)';
 
   return (
     <div id="app" style={{ '--tenant-primary': primaryColor, '--tenant-accent': accentColor }}>
@@ -58,9 +58,9 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
         <div className="brand-block">
           <div className="tenant-logo-wrapper">
             <div className="tenant-logo-icon">
-              <img 
-                src="/Medflow-logo.jpg" 
-                alt="MedFlow EMR" 
+              <img
+                src="/Medflow-logo.jpg"
+                alt="MedFlow EMR"
                 className="tenant-logo-img"
                 onError={(e) => {
                   // Fallback to SVG if image fails to load
@@ -68,8 +68,8 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
                   e.target.nextSibling.style.display = 'block';
                 }}
               />
-              <svg className="tenant-logo-fallback" style={{display: 'none'}} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/>
+              <svg className="tenant-logo-fallback" style={{ display: 'none' }} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" />
                 <polyline points="9 22 9 12"></polyline>
               </svg>
             </div>

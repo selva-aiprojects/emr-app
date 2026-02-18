@@ -20,7 +20,11 @@ import Chatbot from './components/Chatbot.jsx';
 
 export default function App() {
   const [tenants, setTenants] = useState([]);
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState(() => {
+    const s = api.getStoredSession();
+    const u = api.getStoredUser();
+    return (s && u) ? { ...s, user: u } : null;
+  });
   const [view, setView] = useState('dashboard');
   const [permissions, setPermissions] = useState(fallbackPermissions);
   const [users, setUsers] = useState([]);
@@ -109,19 +113,42 @@ export default function App() {
     setUsers(allUsers || []);
   }
 
+  // Restore data on mount/reload
+  useEffect(() => {
+    if (session?.tenantId && session?.user?.id) {
+      // Allow UI to render first, then fetch data
+      const fetchData = async () => {
+        try {
+          if (session.user.role === 'Superadmin') {
+            await refreshSuperadmin();
+          } else {
+            await refreshTenantData(session.tenantId, session.user.id);
+          }
+        } catch (e) {
+          console.error('Failed to restore session data', e);
+        }
+      };
+      fetchData();
+    }
+  }, [session?.tenantId, session?.user?.id]);
+
   async function handleLogin(loginData) {
     setError('');
     try {
       setLoading(true);
       setSession(loginData);
+
       if (loginData.role === 'Superadmin') {
         setView('superadmin');
         await refreshSuperadmin();
       } else {
         setView('dashboard');
+        // CRITICAL FIX: Fetch tenant data after login
+        await refreshTenantData(loginData.tenantId, loginData.user.id);
       }
     } catch (err) {
-      setError('Login failed');
+      setError('Login failed: ' + (err.message || 'Unknown error'));
+      await api.logout(); // Clear potentially bad state
     } finally {
       setLoading(false);
     }
