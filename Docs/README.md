@@ -1,108 +1,142 @@
-# EMR Multi-Tenant Application
+# 📚 **EMR Application Documentation Structure**
 
-A comprehensive Electronic Medical Records system built with **React** (frontend) and **PostgreSQL** (Neon) with an Express.js API, deployed on **Netlify**.
+## 🗂️ **Organized Documentation**
 
-🔗 **Live**: [https://emr-sys.netlify.app/](https://emr-sys.netlify.app/)
+### **📁 01-Project-Setup**
+- `README.md` - Project overview and getting started
+- `project-tasks.md` - Development tasks and milestones
+- `implementation-plan.md` - Step-by-step implementation guide
+- `project-walkthrough.md` - Complete project walkthrough
+
+### **📁 02-Requirements**
+- `REQUIREMENTS_SPECIFICATION.md` - Detailed system requirements
+- `SCOPE_AND_REQUIREMENTS.md` - Project scope definition
+- `SCOPE_DOCUMENT.md` - High-level scope overview
+
+### **📁 03-Technical-Design**
+- `TECHNICAL_DESIGN.md` - System architecture design
+- `TECHNICAL_DESIGN_ARCHITECTURE.md` - Detailed architecture
+- `TECHNICAL_HANDBOOK.md` - Developer handbook
+- `ui-design-system.md` - UI/UX design system
+- `DATA_FLOW_DIAGRAMS.md` - System data flow documentation
+
+### **📁 04-Features**
+- `FEATURE_FLAG_SYSTEM.md` - Feature flag implementation
+- `PATIENT_SEARCH_FEATURE.md` - Patient search functionality
+- `DOCTOR_PAYOUTS_FEATURE.md` - Doctor payout system
+- `HR_ACCOUNTS_BILLING_UPDATE.md` - HR and billing features
+- `chatbot.md` - AI chatbot integration
+
+### **📁 05-User-Guides**
+- `USER_MANUAL.md` - End-user manual
+- `USER_MANUAL_TESTING_GUIDE.md` - User testing guide
+- `user-manual-kidz-clinic.md` - Specialized clinic manual
+
+### **📁 06-Testing**
+- `TESTING_GUIDE.md` - Comprehensive testing guide
+
+### **📁 07-Deployment**
+- `deployment.md` - Deployment instructions
+- `deploy-render.md` - Render platform deployment
+
+### **📁 08-Archived**
+- `seed-data.md` - Database seed data
+- `EMR - Technical design & DB.docx` - Legacy documentation
+- `Project Scope Document.docx` - Legacy scope document
 
 ---
 
-## Architecture
+## 🎯 **Quick Access References**
 
-| Layer | Technology | Hosting |
-|-------|-----------|---------|
-| Frontend | React + Vite | Netlify CDN |
-| Backend | Express.js | Netlify Functions (serverless) |
-| Database | PostgreSQL | Neon (cloud) |
-| Auth | JWT + bcrypt | — |
+### **🔑 Demo Credentials**
+- **Primary**: `DEMO_LOGINS.md` (root directory)
+- **Corrected**: `CORRECTED_CREDENTIALS.md` (root directory)
+- **Enterprise**: `ENTERPRISE_TENANT_GUIDE.md` (root directory)
 
-## Multi-Tenant Design
+### **🧪 Testing Resources**
+- **Integration**: `INTEGRATION_TESTING.md` (root directory)
+- **Scripts**: `integration-test.js` (root directory)
 
-Each tenant (hospital/clinic) has isolated data. The system supports:
-- **4 tenants**: Selva Care Hospital (SCH), Nila Health Center (NHC), Riverway Community Clinic (RCC), Omega Hospitals (OH)
-- **Role-based access**: Superadmin, Admin, Doctor, Nurse, Front Office, Billing, Patient
-- **Per-tenant features**: Inventory toggle, telehealth toggle
-- **Tenant theming**: Custom primary/accent colors
+### **🏥 Healthcare Design**
+- **Standards**: `HEALTHCARE_DESIGN_STANDARDS.md` (root directory)
 
-## Modules
+---
 
-| Module | Features |
-|--------|----------|
-| **Dashboard** | Metric cards (patients, appointments, walk-ins, employees, revenue), welcome banner |
-| **Patients** | Registration, medical history, clinical records, MRN generation |
-| **Appointments** | Scheduling, walk-in management, status tracking, rescheduling |
-| **EMR** | Encounter creation (OPD/IPD/emergency), diagnosis, notes |
-| **Billing** | Invoice generation, tax calculation, payment tracking |
-| **Inventory** | Stock management, reorder alerts, item categories |
-| **Employees** | HR records, leave management, shift tracking |
-| **Reports** | Revenue, patient, and appointment summaries |
-| **Admin** | Tenant settings, user management, feature toggles |
-| **Superadmin** | Platform-wide control, tenant creation, system overview |
-| **Chatbot** | Tenant-scoped AI assistant (patient lookup, stats, navigation) |
+## 📋 **Documentation Priority**
 
-## Quick Start (Local)
+### **🚀 For Development**
+1. `README.md` - Project setup
+2. `TECHNICAL_DESIGN.md` - Architecture understanding
+3. `FEATURE_FLAG_SYSTEM.md` - Feature implementation
+4. `TESTING_GUIDE.md` - Testing procedures
 
-```bash
-# Install dependencies
-npm install
+### **👥 For Users**
+1. `USER_MANUAL.md` - General usage
+2. `DEMO_LOGINS.md` - Login credentials
+3. `USER_MANUAL_TESTING_GUIDE.md` - User testing
 
-# Set environment variables
-cp .env.example .env
-# Edit .env with your DATABASE_URL, JWT_SECRET
+### **🔧 For Maintenance**
+1. `TECHNICAL_HANDBOOK.md` - Developer reference
+2. `deployment.md` - Deployment procedures
+3. `HEALTHCARE_DESIGN_STANDARDS.md` - Design guidelines
 
-# Run locally
-npm start
-# Frontend: http://localhost:5173
-# Backend:  http://localhost:4000
+---
+
+## 🎨 **Design System Integration**
+
+### **🏥 Healthcare Professional Theme**
+- **Colors**: Medical Navy, Clinical Blue, Health Green
+- **Typography**: Clean, medical-grade fonts
+- **Components**: Professional healthcare UI elements
+- **Accessibility**: WCAG 2.1 AA compliant
+
+### **📱 Responsive Design**
+- **Mobile**: Optimized for tablets and phones
+- **Desktop**: Professional medical workstation layout
+- **Cross-browser**: Compatible with modern browsers
+
+---
+
+## 🔍 **Navigation Tips**
+
+### **📂 Find Documentation Fast**
+```
+Docs/
+├── 01-Project-Setup/     # Getting started
+├── 02-Requirements/      # What to build
+├── 03-Technical-Design/   # How it works
+├── 04-Features/          # Feature details
+├── 05-User-Guides/       # How to use
+├── 06-Testing/           # Quality assurance
+├── 07-Deployment/        # Go live
+└── 08-Archived/          # Legacy files
 ```
 
-## Test Credentials
+### **🎯 Quick Search**
+- **Login Issues**: Check `DEMO_LOGINS.md`
+- **Feature Questions**: Look in `04-Features/`
+- **Technical Problems**: Check `03-Technical-Design/`
+- **User Help**: See `05-User-Guides/`
 
-| Role | Tenant | Email | Password |
-|------|--------|-------|----------|
-| Superadmin | — | superadmin@emr.local | Admin@123 |
-| Admin | SCH | anita@sch.local | Anita@123 |
-| Doctor | SCH | rajesh@sch.local | Rajesh@123 |
-| Patient | SCH | meena@sch.local | Meena@123 |
-| Admin | NHC | admin@nhc.local | Admin@123 |
-| Admin | RCC | admin@rcc.local | Admin@123 |
-| Admin | OH | admin@omega.local | Admin@123 |
+---
 
-## Project Structure
+## 📞 **Support & Contact**
 
-```
-EMR-Application/
-├── client/                   # React frontend
-│   ├── src/
-│   │   ├── components/       # AppLayout, MetricCard, Chatbot
-│   │   ├── pages/            # LoginPage, DashboardPage, PatientsPage, etc.
-│   │   ├── config/           # modules.js (page metadata & permissions)
-│   │   ├── utils/            # chatEngine.js, format.js
-│   │   ├── api.js            # API client with JWT auth
-│   │   ├── App.jsx           # Main app (routing, state, auth)
-│   │   └── index.css         # Design system (Inter font, healthcare palette)
-│   ├── public/
-│   │   └── _redirects        # Netlify SPA fallback
-│   └── .env                  # VITE_API_URL for local dev
-├── server/                   # Express.js backend
-│   ├── db/
-│   │   ├── connection.js     # PostgreSQL connection pool
-│   │   └── repository.js     # All CRUD operations
-│   ├── middleware/            # JWT auth middleware
-│   └── index.js              # Express app (exports for serverless)
-├── database/                 # SQL scripts
-│   ├── schema_enhanced.sql   # Full schema with constraints
-│   ├── init_db.sql           # Initial seed (tenants, users, 1 patient each)
-│   └── seed_patient_journeys.sql  # 10 patients/tenant with full journeys
-├── netlify/
-│   └── functions/api.js      # Serverless wrapper (serverless-http)
-├── netlify.toml              # Build & redirect config
-└── docs/                     # Documentation
-```
+### **🐛 Bug Reports**
+1. Check `TESTING_GUIDE.md` for known issues
+2. Review `INTEGRATION_TESTING.md` for test cases
+3. Document in appropriate feature folder
 
-## Deployment (Netlify)
+### **💡 Feature Requests**
+1. Review `FEATURE_FLAG_SYSTEM.md`
+2. Check `04-Features/` for existing implementations
+3. Document in `02-Requirements/`
 
-See [deployment.md](deployment.md) for full details.
+### **🔒 Security**
+1. Review `HEALTHCARE_DESIGN_STANDARDS.md`
+2. Check compliance in `USER_MANUAL.md`
+3. Follow medical data protection guidelines
 
-## Seed Data
+---
 
-See [seed-data.md](seed-data.md) for details on the 40+ patient journeys seeded across all tenants.
+**This organized structure makes finding documentation fast and efficient!** 📚✨

@@ -7,6 +7,79 @@
 import { query } from './connection.js';
 
 // =====================================================
+// FEATURE FLAG FUNCTIONS
+// =====================================================
+
+/**
+ * Get tenant's subscription tier
+ */
+export async function getTenantTier(tenantId) {
+  const sql = 'SELECT subscription_tier FROM emr.tenants WHERE id = $1';
+  const result = await query(sql, [tenantId]);
+  return result.rows[0]?.subscription_tier || 'Basic';
+}
+
+/**
+ * Get custom feature flags for a tenant
+ */
+export async function getTenantCustomFeatures(tenantId) {
+  const sql = 'SELECT feature_flag FROM emr.tenant_features WHERE tenant_id = $1 AND enabled = true';
+  const result = await query(sql, [tenantId]);
+  return result.rows.map(row => row.feature_flag);
+}
+
+/**
+ * Get global kill switches
+ */
+export async function getGlobalKillSwitches() {
+  const sql = 'SELECT feature_flag, enabled FROM emr.global_kill_switches WHERE enabled = true';
+  const result = await query(sql);
+  const killSwitches = {};
+  result.rows.forEach(row => {
+    killSwitches[row.feature_flag] = row.enabled;
+  });
+  return killSwitches;
+}
+
+/**
+ * Set global kill switch
+ */
+export async function setGlobalKillSwitch(featureFlag, enabled, userId, reason) {
+  const sql = `
+    INSERT INTO emr.global_kill_switches (feature_flag, enabled, created_by, reason)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (feature_flag) 
+    DO UPDATE SET 
+      enabled = EXCLUDED.enabled,
+      reason = EXCLUDED.reason,
+      updated_at = NOW()
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [featureFlag, enabled, userId, reason]);
+  return result.rows[0];
+}
+
+/**
+ * Get effective feature flag status for a tenant
+ */
+export async function getTenantFeatureStatus(tenantId) {
+  const sql = 'SELECT * FROM emr.tenant_feature_status WHERE tenant_id = $1';
+  const result = await query(sql, [tenantId]);
+  
+  const flags = {};
+  result.rows.forEach(row => {
+    flags[row.feature_flag] = {
+      enabled: row.effective_enabled,
+      killSwitchActive: row.kill_switch_active,
+      customEnabled: row.custom_enabled
+    };
+  });
+  
+  return flags;
+}
+
+// =====================================================
 // UTILITY FUNCTIONS
 // =====================================================
 
@@ -36,8 +109,50 @@ export async function createAuditLog({ tenantId, userId, userName, action, entit
 }
 
 /**
- * Generate unique MRN for patient
+ * Update tenant settings including subscription tier
  */
+export async function updateTenantSettings({ tenantId, displayName, theme, features, subscriptionTier }) {
+  const updates = [];
+  const values = [];
+  let paramIndex = 1;
+
+  if (displayName !== undefined) {
+    updates.push(`display_name = $${paramIndex++}`);
+    values.push(displayName);
+  }
+
+  if (theme !== undefined) {
+    updates.push(`theme = $${paramIndex++}`);
+    values.push(JSON.stringify(theme));
+  }
+
+  if (features !== undefined) {
+    updates.push(`features = $${paramIndex++}`);
+    values.push(JSON.stringify(features));
+  }
+
+  if (subscriptionTier !== undefined) {
+    updates.push(`subscription_tier = $${paramIndex++}`);
+    values.push(subscriptionTier);
+  }
+
+  if (updates.length === 0) {
+    throw new Error('No updates provided');
+  }
+
+  updates.push(`updated_at = NOW()`);
+  values.push(tenantId);
+
+  const sql = `
+    UPDATE emr.tenants 
+    SET ${updates.join(', ')}
+    WHERE id = $${paramIndex}
+    RETURNING *
+  `;
+
+  const result = await query(sql, values);
+  return result.rows[0];
+}
 export async function generateMRN(tenantId) {
   const tenantResult = await query('SELECT code FROM emr.tenants WHERE id = $1', [tenantId]);
   const tenantCode = tenantResult.rows[0]?.code || 'UNK';
@@ -94,27 +209,6 @@ export async function createTenant({ name, code, subdomain, theme, features }) {
     subdomain,
     JSON.stringify(theme || { primary: '#0f5a6e', accent: '#f57f17' }),
     JSON.stringify(features || { inventory: true, telehealth: false }),
-  ]);
-
-  return result.rows[0];
-}
-
-export async function updateTenantSettings({ tenantId, displayName, theme, features }) {
-  const sql = `
-    UPDATE emr.tenants
-    SET name = COALESCE($2, name),
-        theme = COALESCE($3, theme),
-        features = COALESCE($4, features),
-        updated_at = NOW()
-    WHERE id = $1
-    RETURNING *
-  `;
-
-  const result = await query(sql, [
-    tenantId,
-    displayName,
-    theme ? JSON.stringify(theme) : null,
-    features ? JSON.stringify(features) : null,
   ]);
 
   return result.rows[0];

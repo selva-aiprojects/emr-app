@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { testConnection } from './db/connection.js';
 import { hashPassword, comparePassword, generateToken } from './services/auth.service.js';
 import { authenticate, requireRole, requireTenant, requirePermission, restrictPatientAccess } from './middleware/auth.middleware.js';
+import { evaluateAllFeatures, featureGate, moduleGate } from './middleware/featureFlag.middleware.js';
 import * as repo from './db/repository.js';
 import { createAuditLog } from './db/repository.js';
 
@@ -171,6 +172,9 @@ app.get('/api/tenants', async (_req, res) => {
 // Apply authentication to all /api routes below this point
 app.use('/api', authenticate);
 
+// Apply feature flag evaluation to all authenticated routes
+app.use('/api', evaluateAllFeatures);
+
 app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
   try {
     const { name, code, subdomain, primaryColor, accentColor } = req.body;
@@ -208,7 +212,7 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
 app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
   try {
     const { id } = req.params;
-    const { displayName, primaryColor, accentColor, featureInventory, featureTelehealth } = req.body;
+    const { displayName, primaryColor, accentColor, featureInventory, featureTelehealth, subscriptionTier } = req.body;
 
     const theme = (primaryColor || accentColor) ? {
       primary: primaryColor,
@@ -225,6 +229,7 @@ app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
       displayName,
       theme,
       features,
+      subscriptionTier
     });
 
     if (!tenant) {
@@ -301,6 +306,199 @@ app.post('/api/users', async (req, res) => {
       return res.status(409).json({ error: 'Email already exists for this tenant' });
     }
     res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// =====================================================
+// FEATURE FLAGS
+// =====================================================
+
+app.get('/api/tenants/:id/features', requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { getFeatureFlagStatus } = await import('./services/featureFlag.service.js');
+    const flags = await getFeatureFlagStatus(id);
+    res.json(flags);
+  } catch (error) {
+    console.error('Error fetching feature flags:', error);
+    res.status(500).json({ error: 'Failed to fetch feature flags' });
+  }
+});
+
+// Admin endpoints for managing kill switches (Superadmin only)
+app.get('/api/admin/kill-switches', requireRole('Superadmin'), async (req, res) => {
+  try {
+    const { getGlobalKillSwitches } = await import('./services/featureFlag.service.js');
+    const killSwitches = await getGlobalKillSwitches();
+    res.json(killSwitches);
+  } catch (error) {
+    console.error('Error fetching kill switches:', error);
+    res.status(500).json({ error: 'Failed to fetch kill switches' });
+  }
+});
+
+app.post('/api/admin/kill-switches', requireRole('Superadmin'), async (req, res) => {
+  try {
+    const { featureFlag, enabled, reason } = req.body;
+    
+    if (!featureFlag || typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: 'featureFlag and enabled are required' });
+    }
+
+    const { setGlobalKillSwitch } = await import('./services/featureFlag.service.js');
+    const success = await setGlobalKillSwitch(featureFlag, enabled, req.user.id, reason);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to update kill switch' });
+    }
+
+    await createAuditLog({
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'kill_switch.update',
+      entityName: 'feature_flag',
+      entityId: featureFlag,
+      details: { enabled, reason }
+    });
+
+    res.json({ message: 'Kill switch updated successfully', featureFlag, enabled });
+  } catch (error) {
+    console.error('Error updating kill switch:', error);
+    res.status(500).json({ error: 'Failed to update kill switch' });
+  }
+});
+
+// Subscription Catalog Management
+app.get('/api/admin/subscription-catalog', requireRole('Superadmin'), async (req, res) => {
+  try {
+    const catalog = [
+      {
+        id: 'basic',
+        name: 'Basic',
+        displayName: 'Basic Plan',
+        description: 'Essential EMR functionality for small practices',
+        price: '$99/month',
+        features: ['permission-core_engine-access'],
+        color: '#6b7280',
+        icon: '🩺',
+        popular: false,
+        tier: 'Basic'
+      },
+      {
+        id: 'professional',
+        name: 'Professional',
+        displayName: 'Professional Plan',
+        description: 'Enhanced EMR with customer support features',
+        price: '$299/month',
+        features: ['permission-core_engine-access', 'permission-customer_support-access'],
+        color: '#3b82f6',
+        icon: '⭐',
+        popular: true,
+        tier: 'Professional'
+      },
+      {
+        id: 'enterprise',
+        name: 'Enterprise',
+        displayName: 'Enterprise Plan',
+        description: 'Complete EMR solution with all advanced features',
+        price: '$599/month',
+        features: ['permission-core_engine-access', 'permission-customer_support-access', 'permission-hr_payroll-access', 'permission-accounts-access'],
+        color: '#10b981',
+        icon: '🏢',
+        popular: false,
+        tier: 'Enterprise'
+      }
+    ];
+
+    res.json(catalog);
+  } catch (error) {
+    console.error('Error fetching subscription catalog:', error);
+    res.status(500).json({ error: 'Failed to fetch subscription catalog' });
+  }
+});
+
+app.post('/api/admin/subscription-catalog', requireRole('Superadmin'), async (req, res) => {
+  try {
+    const { subscription } = req.body;
+    
+    if (!subscription || !subscription.id) {
+      return res.status(400).json({ error: 'Subscription data is required' });
+    }
+
+    // In a real implementation, this would save to database
+    console.log('Saving subscription:', subscription);
+    
+    // Simulate saving
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    res.json({ 
+      message: 'Subscription saved successfully', 
+      subscription 
+    });
+  } catch (error) {
+    console.error('Error saving subscription:', error);
+    res.status(500).json({ error: 'Failed to save subscription' });
+  }
+});
+
+app.post('/api/admin/apply-subscription-bundle', requireRole('Superadmin'), async (req, res) => {
+  try {
+    const { subscriptionId, features } = req.body;
+    
+    if (!subscriptionId || !features) {
+      return res.status(400).json({ error: 'subscriptionId and features are required' });
+    }
+
+    // Get all tenants
+    const tenants = await repo.getTenants();
+    
+    let updatedCount = 0;
+    
+    for (const tenant of tenants) {
+      // Update tenant subscription tier based on the bundle
+      await repo.updateTenantSettings({
+        tenantId: tenant.id,
+        subscriptionTier: subscriptionId
+      });
+      
+      // Clear existing custom features and add the bundle features
+      await query(`
+        DELETE FROM emr.tenant_features 
+        WHERE tenant_id = $1
+      `, [tenant.id]);
+      
+      // Insert new features from the bundle
+      for (const feature of features) {
+        await query(`
+          INSERT INTO emr.tenant_features (tenant_id, feature_flag, enabled, created_at, updated_at)
+          VALUES ($1, $2, true, NOW(), NOW())
+        `, [tenant.id, feature]);
+      }
+      
+      updatedCount++;
+    }
+
+    await createAuditLog({
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'subscription_bundle.apply',
+      entityName: 'subscription',
+      entityId: subscriptionId,
+      details: { 
+        features, 
+        tenantsUpdated: updatedCount,
+        tenantIds: tenants.map(t => t.id)
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      message: `Subscription bundle applied to ${updatedCount} tenants`,
+      tenantsUpdated: updatedCount
+    });
+  } catch (error) {
+    console.error('Error applying subscription bundle:', error);
+    res.status(500).json({ error: 'Failed to apply subscription bundle' });
   }
 });
 
@@ -714,7 +912,7 @@ app.post('/api/encounters/:id/discharge', requireTenant, requirePermission('emr'
 // INVOICES
 // =====================================================
 
-app.post('/api/invoices', requireTenant, requirePermission('billing'), async (req, res) => {
+app.post('/api/invoices', requireTenant, requirePermission('billing'), moduleGate('billing'), async (req, res) => {
   try {
     const { patientId, description, amount, taxPercent, paymentMethod } = req.body;
 
@@ -739,7 +937,7 @@ app.post('/api/invoices', requireTenant, requirePermission('billing'), async (re
   }
 });
 
-app.patch('/api/invoices/:id/pay', requireTenant, requirePermission('billing'), async (req, res) => {
+app.patch('/api/invoices/:id/pay', requireTenant, requirePermission('billing'), moduleGate('billing'), async (req, res) => {
   try {
     const { id } = req.params;
     const { paymentMethod } = req.body;
@@ -945,7 +1143,7 @@ app.patch('/api/inventory-items/:id/stock', requireTenant, requirePermission('in
 // EMPLOYEES
 // =====================================================
 
-app.post('/api/employees', requireTenant, requirePermission('employees'), async (req, res) => {
+app.post('/api/employees', requireTenant, requirePermission('employees'), moduleGate('employees'), async (req, res) => {
   try {
     const { name, code, department, designation, joinDate, shift, salary } = req.body;
 
@@ -984,7 +1182,7 @@ app.post('/api/employees', requireTenant, requirePermission('employees'), async 
   }
 });
 
-app.post('/api/employees/:id/leaves', requireTenant, requirePermission('employees'), async (req, res) => {
+app.post('/api/employees/:id/leaves', requireTenant, requirePermission('employees'), moduleGate('employees'), async (req, res) => {
   try {
     const { id } = req.params;
     const { from, to, type } = req.body;

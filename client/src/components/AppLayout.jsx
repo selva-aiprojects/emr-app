@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { moduleMeta } from '../config/modules.js';
 import { helpContent } from '../config/helpContent.js';
+import { ModuleGate, useFeatureAccess } from './FeatureGate.jsx';
 
 const navIcons = {
   superadmin: <svg className="nav-icon color-indigo" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg>,
@@ -21,10 +22,14 @@ const navIcons = {
 export default function AppLayout({ tenant, activeUser, allowedViews, view, setView, onLogout, children, error }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const { getAccessibleModules } = useFeatureAccess(tenant?.id);
+
+  // Filter allowed views based on feature flags
+  const accessibleModules = getAccessibleModules(allowedViews);
 
   // Dynamic colors from tenant settings
-  const primaryColor = tenant?.theme?.primary || '#10b981';
-  const accentColor = tenant?.theme?.accent || '#3b82f6';
+  const primaryColor = tenant?.theme?.primary || 'var(--medical-navy)';
+  const accentColor = tenant?.theme?.accent || 'var(--clinical-blue)';
 
   return (
     <div id="app" style={{ '--tenant-primary': primaryColor, '--tenant-accent': accentColor }}>
@@ -52,34 +57,52 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
       <aside className={`sidebar premium-sidebar ${isMobileMenuOpen ? 'mobile-active' : ''}`}>
         <div className="brand-block">
           <div className="tenant-logo-wrapper">
-            <img
-              src={tenant?.name === 'Kidz Clinic' ? '/kidz_logo.svg' : '/logo.svg'}
-              alt="Logo"
-              className="tenant-logo-img"
-            />
+            <div className="tenant-logo-icon">
+              <img 
+                src="/Medflow-logo.jpg" 
+                alt="MedFlow EMR" 
+                className="tenant-logo-img"
+                onError={(e) => {
+                  // Fallback to SVG if image fails to load
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'block';
+                }}
+              />
+              <svg className="tenant-logo-fallback" style={{display: 'none'}} width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z"/>
+                <polyline points="9 22 9 12"></polyline>
+              </svg>
+            </div>
+            <div className="tenant-logo-text">
+              <h1>{tenant?.name || 'MedFlow'}</h1>
+              <p className="tenant-subtitle">Enterprise EMR</p>
+            </div>
           </div>
-          <div className="brand-text">
-            <h1>{tenant?.name || 'EMR Platform'}</h1>
+          <div className="brand-info">
             <p className="role-tag">{activeUser.role}</p>
+            {tenant?.subscription_tier && (
+              <p className="tier-indicator">{tenant.subscription_tier} Tier</p>
+            )}
           </div>
         </div>
 
         <nav className="module-nav">
-          {allowedViews.map((item) => {
+          {accessibleModules.map((item) => {
             if (!moduleMeta[item]) return null;
             return (
-              <button
-                key={item}
-                className={view === item ? 'active' : ''}
-                onClick={() => {
-                  setView(item);
-                  setIsMobileMenuOpen(false);
-                }}
-              >
-                <div className="icon-box">{navIcons[item]}</div>
-                <span>{moduleMeta[item].title}</span>
-                {view === item && <div className="active-indicator"></div>}
-              </button>
+              <ModuleGate key={item} module={item} tenantId={tenant?.id}>
+                <button
+                  className={view === item ? 'active' : ''}
+                  onClick={() => {
+                    setView(item);
+                    setIsMobileMenuOpen(false);
+                  }}
+                >
+                  <div className="icon-box">{navIcons[item]}</div>
+                  <span>{moduleMeta[item].title}</span>
+                  {view === item && <div className="active-indicator"></div>}
+                </button>
+              </ModuleGate>
             );
           })}
         </nav>
@@ -87,7 +110,9 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
         <div className="sidebar-footer">
           <button className="logout-btn premium-logout" onClick={onLogout}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
             </svg>
             <span>Exit Workspace</span>
           </button>
@@ -99,7 +124,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
           <div className="header-context">
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <button className="menu-toggle" onClick={() => setIsMobileMenuOpen(true)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
               </button>
               <div className="title-group">
                 <h2 className="header-title">{moduleMeta[view]?.title}</h2>
@@ -107,6 +132,11 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
                   <span className="pulse"></span>
                   LIVE SYSTEM
                 </div>
+                {tenant?.subscription_tier && (
+                  <div className="subscription-badge" style={{ backgroundColor: getTierBadgeColor(tenant.subscription_tier) }}>
+                    {tenant.subscription_tier} TIER
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -155,10 +185,27 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
         }
 
         .brand-block { padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.08); margin-bottom: 0.25rem; flex-shrink: 0; }
-        .tenant-logo-wrapper { background: rgba(255,255,255,0.05); padding: 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); width: fit-content; margin-bottom: 0.5rem; }
-        .tenant-logo-img { width: 28px; height: 28px; object-fit: contain; }
-        .brand-text h1 { color: white; font-size: 0.95rem; font-weight: 800; letter-spacing: -0.02em; margin: 0; line-height: 1.2; }
-        .role-tag { color: var(--tenant-primary); font-size: 0.55rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; display: inline-block; padding: 1px 6px; background: rgba(16, 185, 129, 0.1); border-radius: 4px; }
+        .tenant-logo-wrapper { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); width: fit-content; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 12px; }
+        .tenant-logo-icon { 
+          width: 40px; height: 40px; background: var(--tenant-primary, #10b981); 
+          border-radius: 10px; display: grid; place-items: center; 
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+        .tenant-logo-icon svg { 
+          color: white; stroke-width: 1.5; 
+        }
+        .tenant-logo-text { text-align: center; }
+        .tenant-logo-text h1 { color: white; font-size: 1.1rem; font-weight: 800; margin: 0; line-height: 1.2; }
+        .tenant-logo-text p { color: rgba(255,255,255,0.8); font-size: 0.65rem; font-weight: 600; margin: 0; margin-top: 2px; }
+        .brand-text { display: none; }
+        .tenant-logo-img { display: none; }
+        .brand-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .role-tag { color: var(--tenant-primary, #10b981); font-size: 0.55rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; margin: 0; padding: 2px 6px; background: rgba(16, 185, 129, 0.1); border-radius: 4px; }
+        .tier-indicator { 
+          color: white; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; 
+          padding: 2px 6px; border-radius: 4px; background: var(--tenant-accent, #3b82f6);
+          box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
 
         .module-nav { 
           padding: 0.5rem 0.75rem; 
@@ -210,6 +257,11 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
           display: flex; align-items: center; gap: 8px; background: #f0fdf4; 
           color: #15803d; padding: 4px 12px; border-radius: 2rem; font-size: 0.6rem; 
           font-weight: 900; border: 1.5px solid #dcfce7; white-space: nowrap;
+        }
+        .subscription-badge { 
+          color: white; padding: 4px 10px; border-radius: 12px; font-size: 0.6rem; 
+          font-weight: 700; text-transform: uppercase; margin-left: 8px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         
         .header-right-actions { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
@@ -267,6 +319,34 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
         .help-content { padding: 1.75rem; color: #334155; line-height: 1.6; font-size: 0.95rem; }
         .help-content ul { padding-left: 1.25rem; margin-top: 1rem; display: flex; flex-direction: column; gap: 8px; }
         .help-content li { font-weight: 500; }
+        
+        /* Logo Styling for Consistent Theming */
+        .tenant-logo-img {
+          width: 32px;
+          height: 32px;
+          object-fit: contain;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          transition: transform 0.3s ease;
+        }
+
+        .tenant-logo-img:hover {
+          transform: scale(1.05);
+        }
+
+        .tenant-logo-fallback {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          background: var(--tenant-primary);
+          color: white;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+          transition: transform 0.3s ease;
+        }
+
+        .tenant-logo-fallback:hover {
+          transform: scale(1.05);
+        }
         .help-content li strong { color: var(--tenant-primary); font-weight: 700; }
 
         @keyframes pulse-glow { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }

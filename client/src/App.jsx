@@ -109,23 +109,19 @@ export default function App() {
     setUsers(allUsers || []);
   }
 
-  async function handleLogin(e) {
-    e.preventDefault();
+  async function handleLogin(loginData) {
     setError('');
     try {
       setLoading(true);
-      const fd = new FormData(e.target);
-      const login = await api.login(fd.get('tenantId'), fd.get('email'), fd.get('password'));
-      setSession(login);
-      if (login.role === 'Superadmin') {
+      setSession(loginData);
+      if (loginData.role === 'Superadmin') {
         setView('superadmin');
         await refreshSuperadmin();
       } else {
         setView('dashboard');
-        await refreshTenantData(login.tenantId, login.user.id);
       }
     } catch (err) {
-      setError(err.message);
+      setError('Login failed');
     } finally {
       setLoading(false);
     }
