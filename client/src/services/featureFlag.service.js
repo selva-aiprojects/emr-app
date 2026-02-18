@@ -4,7 +4,7 @@ import { api } from '../api.js';
 // Feature flag definitions matching backend
 export const FEATURE_FLAGS = {
   CORE_ENGINE_ACCESS: 'permission-core_engine-access',
-  HR_PAYROLL_ACCESS: 'permission-hr_payroll-access', 
+  HR_PAYROLL_ACCESS: 'permission-hr_payroll-access',
   ACCOUNTS_ACCESS: 'permission-accounts-access',
   CUSTOMER_SUPPORT_ACCESS: 'permission-customer_support-access'
 };
@@ -40,7 +40,7 @@ class FeatureFlagService {
   async getFeatureFlags(tenantId) {
     const cacheKey = `features_${tenantId}`;
     const cached = this.cache.get(cacheKey);
-    
+
     if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
       return cached.data;
     }
@@ -48,13 +48,13 @@ class FeatureFlagService {
     try {
       const response = await api.get(`/tenants/${tenantId}/features`);
       const flags = response.data || {};
-      
+
       // Cache the result
       this.cache.set(cacheKey, {
         data: flags,
         timestamp: Date.now()
       });
-      
+
       return flags;
     } catch (error) {
       console.error('Error fetching feature flags:', error);
@@ -78,7 +78,7 @@ class FeatureFlagService {
     if (!flag) {
       return true; // Allow access if no flag defined
     }
-    
+
     return await this.isFeatureEnabled(tenantId, flag);
   }
 
@@ -101,10 +101,13 @@ export function useFeatureFlags(tenantId) {
   const [error, setError] = React.useState(null);
 
   React.useEffect(() => {
-    if (!tenantId) return;
+    if (!tenantId) {
+      setLoading(false);
+      return;
+    }
 
     let mounted = true;
-    
+
     const loadFlags = async () => {
       try {
         setLoading(true);

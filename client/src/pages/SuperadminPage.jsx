@@ -3,7 +3,8 @@ import { currency } from '../utils/format.js';
 import { useState, useEffect } from 'react';
 import { api } from '../api.js';
 
-export default function SuperadminPage({ superOverview = {}, tenants = [], onCreateTenant, onCreateUser }) {
+export default function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTenant, onCreateUser }) {
+  const superOverview = propOverview || {};
   const [killSwitches, setKillSwitches] = useState({});
   const [featureFlags, setFeatureFlags] = useState({});
   const [selectedTenant, setSelectedTenant] = useState(null);

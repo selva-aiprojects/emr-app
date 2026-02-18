@@ -25,7 +25,11 @@ export default function App() {
     const u = api.getStoredUser();
     return (s && u) ? { ...s, user: u } : null;
   });
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState(() => {
+    const s = api.getStoredSession();
+    if (s?.role === 'Superadmin') return 'superadmin';
+    return (s && s.tenantId) ? 'dashboard' : 'login'; // Placeholder for safety
+  });
   const [permissions, setPermissions] = useState(fallbackPermissions);
   const [users, setUsers] = useState([]);
   const [patients, setPatients] = useState([]);
@@ -115,20 +119,22 @@ export default function App() {
 
   // Restore data on mount/reload
   useEffect(() => {
-    if (session?.tenantId && session?.user?.id) {
-      // Allow UI to render first, then fetch data
-      const fetchData = async () => {
-        try {
-          if (session.user.role === 'Superadmin') {
-            await refreshSuperadmin();
-          } else {
-            await refreshTenantData(session.tenantId, session.user.id);
+    if (session?.user?.id) {
+      // Superadmin may not have a tenantId
+      if (session.user.role === 'Superadmin' || session.tenantId) {
+        const fetchData = async () => {
+          try {
+            if (session.user.role === 'Superadmin') {
+              await refreshSuperadmin();
+            } else {
+              await refreshTenantData(session.tenantId, session.user.id);
+            }
+          } catch (e) {
+            console.error('Failed to restore session data', e);
           }
-        } catch (e) {
-          console.error('Failed to restore session data', e);
-        }
-      };
-      fetchData();
+        };
+        fetchData();
+      }
     }
   }, [session?.tenantId, session?.user?.id]);
 
