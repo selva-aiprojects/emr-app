@@ -162,21 +162,23 @@ export function requireTenant(req, res, next) {
  */
 const PERMISSIONS = {
   Superadmin: ['superadmin', 'tenants', 'users', 'inventory', 'billing', 'reports'], // REMOVED: 'dashboard', 'patients', 'appointments', 'emr'
-  Admin: ['dashboard', 'patients', 'appointments', 'emr', 'billing', 'inventory', 'employees', 'reports', 'admin', 'users'],
+  Admin: ['dashboard', 'patients', 'appointments', 'emr', 'billing', 'accounts', 'insurance', 'inventory', 'employees', 'reports', 'admin', 'users'],
   Doctor: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy', 'reports'],
   Nurse: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy'],
   Lab: ['dashboard', 'patients', 'reports'],
   Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports'], // Can see patients but only for prescriptions
   'Support Staff': ['dashboard', 'patients', 'appointments'],
   'Front Office': ['dashboard', 'patients', 'appointments'],
-  Billing: ['dashboard', 'billing', 'reports'],
+  Billing: ['dashboard', 'billing', 'accounts', 'insurance', 'reports'],
+  Accounts: ['dashboard', 'billing', 'accounts', 'insurance', 'reports'],
   Inventory: ['dashboard', 'inventory', 'reports'],
   Patient: ['dashboard', 'appointments', 'patients'],
   // New Roles
-  Insurance: ['dashboard', 'billing', 'reports'],
-  Management: ['dashboard', 'reports', 'users', 'billing', 'inventory'],
+  Insurance: ['dashboard', 'insurance', 'reports'],
+  Management: ['dashboard', 'reports', 'users', 'billing', 'accounts', 'insurance', 'inventory'],
   HR: ['dashboard', 'employees', 'reports', 'users'],
   Operations: ['dashboard', 'reports', 'inventory', 'users', 'billing'],
+  Auditor: ['dashboard', 'reports'],
 };
 
 /**

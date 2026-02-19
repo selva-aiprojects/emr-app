@@ -22,10 +22,12 @@ const ROLE_CATALOG = [
   { key: 'support', role: 'Support Staff', name: 'Support Staff' },
   { key: 'frontoffice', role: 'Front Office', name: 'Front Office Executive' },
   { key: 'billing', role: 'Billing', name: 'Billing Executive' },
+  { key: 'accounts', role: 'Accounts', name: 'Accounts Team' },
   { key: 'hr', role: 'HR', name: 'HR Manager' },
   { key: 'operations', role: 'Operations', name: 'Operations Manager' },
   { key: 'insurance', role: 'Insurance', name: 'Insurance Desk' },
   { key: 'management', role: 'Management', name: 'Management User' },
+  { key: 'auditor', role: 'Auditor', name: 'Internal Auditor' },
   { key: 'inventory', role: 'Inventory', name: 'Inventory Controller' },
 ];
 

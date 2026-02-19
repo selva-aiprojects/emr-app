@@ -26,11 +26,12 @@ export const fallbackPermissions = {
   Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports'],
   'Support Staff': ['dashboard', 'inventory', 'support'],
   'Front Office': ['dashboard', 'appointments', 'patients', 'billing'],
-  Billing: ['dashboard', 'billing', 'insurance', 'reports'],
+  Billing: ['dashboard', 'billing', 'accounts', 'insurance', 'reports'],
   Insurance: ['dashboard', 'insurance', 'reports'],
   HR: ['dashboard', 'employees', 'reports'],
-  Accounts: ['dashboard', 'accounts', 'reports'],
-  Management: ['dashboard', 'reports', 'employees', 'accounts', 'insurance'],
+  Accounts: ['dashboard', 'billing', 'accounts', 'insurance', 'reports'],
+  Management: ['dashboard', 'reports', 'employees', 'billing', 'accounts', 'insurance'],
   Inventory: ['dashboard', 'inventory', 'pharmacy', 'reports'],
+  Auditor: ['dashboard', 'reports'],
   Patient: ['dashboard', 'appointments', 'patients']
 };

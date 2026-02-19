@@ -1404,7 +1404,7 @@ app.get('/api/reports/financials', requireTenant, requirePermission('reports'), 
 // INSURANCE
 // =====================================================
 
-app.get('/api/insurance/providers', requireTenant, requirePermission('billing'), async (req, res) => {
+app.get('/api/insurance/providers', requireTenant, requirePermission('insurance'), async (req, res) => {
   try {
     const providers = await repo.getInsuranceProviders(req.tenantId);
     res.json(providers);
@@ -1414,7 +1414,7 @@ app.get('/api/insurance/providers', requireTenant, requirePermission('billing'),
   }
 });
 
-app.post('/api/insurance/providers', requireTenant, requirePermission('billing'), async (req, res) => {
+app.post('/api/insurance/providers', requireTenant, requirePermission('insurance'), async (req, res) => {
   try {
     const provider = await repo.createInsuranceProvider({ ...req.body, tenantId: req.tenantId });
     res.status(201).json(provider);
@@ -1424,7 +1424,7 @@ app.post('/api/insurance/providers', requireTenant, requirePermission('billing')
   }
 });
 
-app.get('/api/insurance/claims', requireTenant, requirePermission('billing'), async (req, res) => {
+app.get('/api/insurance/claims', requireTenant, requirePermission('insurance'), async (req, res) => {
   try {
     const { status } = req.query;
     const claims = await repo.getClaims(req.tenantId, { status });
@@ -1435,7 +1435,7 @@ app.get('/api/insurance/claims', requireTenant, requirePermission('billing'), as
   }
 });
 
-app.post('/api/insurance/claims', requireTenant, requirePermission('billing'), async (req, res) => {
+app.post('/api/insurance/claims', requireTenant, requirePermission('insurance'), async (req, res) => {
   try {
     const claim = await repo.createClaim({ ...req.body, tenantId: req.tenantId });
     res.status(201).json(claim);
@@ -1521,6 +1521,5 @@ app.use((err, _req, res, _next) => {
 // Export the app for serverless use (Netlify Functions)
 export { app };
 export default app;
-
 
 

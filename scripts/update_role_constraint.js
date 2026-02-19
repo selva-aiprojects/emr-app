@@ -12,8 +12,8 @@ async function updateConstraint() {
       ALTER TABLE emr.users ADD CONSTRAINT users_role_check 
       CHECK (role IN (
         'Superadmin', 'Admin', 'Doctor', 'Nurse', 'Lab', 'Pharmacy', 
-        'Support Staff', 'Front Office', 'Billing', 'Inventory', 'Patient',
-        'HR', 'Operations', 'Insurance', 'Management'
+        'Support Staff', 'Front Office', 'Billing', 'Accounts', 'Inventory', 'Patient',
+        'HR', 'Operations', 'Insurance', 'Management', 'Auditor'
       ))
     `);
 
