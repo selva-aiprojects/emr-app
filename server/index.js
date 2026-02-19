@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { testConnection } from './db/connection.js';
 import { hashPassword, comparePassword, generateToken } from './services/auth.service.js';
@@ -1478,19 +1479,24 @@ if (isDirectRun) {
     res.status(404).json({ error: 'API route not found' });
   });
 
+  const clientDistPath = path.join(__dirname, '../client/dist');
+  const rootDistPath = path.join(__dirname, '../dist');
+  const frontendDistPath = fs.existsSync(clientDistPath) ? clientDistPath : rootDistPath;
+
   // Serve static files from the React app
-  app.use(express.static(path.join(__dirname, '../client/dist')));
+  app.use(express.static(frontendDistPath));
 
   // The "catchall" handler: for any request that doesn't
   // match one above, send back React's index.html file.
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
 
   // Start server
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
+    console.log(`Frontend bundle path: ${frontendDistPath}`);
   });
 }
 
@@ -1521,5 +1527,4 @@ app.use((err, _req, res, _next) => {
 // Export the app for serverless use (Netlify Functions)
 export { app };
 export default app;
-
 
