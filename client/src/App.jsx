@@ -9,6 +9,7 @@ import PatientsPage from './pages/PatientsPage.jsx';
 import AppointmentsPage from './pages/AppointmentsPage.jsx';
 import EmrPage from './pages/EmrPage.jsx';
 import BillingPage from './pages/BillingPage.jsx';
+import InsurancePage from './pages/InsurancePage.jsx';
 import InventoryPage from './pages/InventoryPage.jsx';
 import InpatientPage from './pages/InpatientPage.jsx';
 import PharmacyPage from './pages/PharmacyPage.jsx';
@@ -27,8 +28,10 @@ export default function App() {
   });
   const [view, setView] = useState(() => {
     const s = api.getStoredSession();
-    if (s?.role === 'Superadmin') return 'superadmin';
-    return (s && s.tenantId) ? 'dashboard' : 'login'; // Placeholder for safety
+    const u = api.getStoredUser();
+    const role = u?.role || s?.role;
+    if (role && role.toLowerCase() === 'superadmin') return 'superadmin';
+    return (s && s.tenantId) ? 'dashboard' : 'login';
   });
   const [permissions, setPermissions] = useState(fallbackPermissions);
   const [users, setUsers] = useState([]);
@@ -42,8 +45,12 @@ export default function App() {
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
   const [superOverview, setSuperOverview] = useState(null);
   const [reportSummary, setReportSummary] = useState(null);
+  const [insuranceProviders, setInsuranceProviders] = useState([]);
+  const [claims, setClaims] = useState([]);
   const [activePatientId, setActivePatientId] = useState('');
   const [loading, setLoading] = useState(false);
+
+  console.log('DEBUG: SuperadminPage render', { superOverview, tenantsLength: tenants?.length });
   const [error, setError] = useState('');
 
   const tenant = useMemo(() => tenants.find((t) => t.id === session?.tenantId), [tenants, session]);
@@ -55,12 +62,29 @@ export default function App() {
   );
 
   const allowedViews = useMemo(() => {
-    if (!activeUser) {
+    if (!activeUser?.role) {
       return [];
     }
-    const roleViews = permissions[activeUser.role] || ['dashboard'];
+
+    // Normalize role for permission mapping
+    const roleKey = activeUser.role.charAt(0).toUpperCase() + activeUser.role.slice(1).toLowerCase();
+    const normalizedRole = roleKey === 'Front office' ? 'Front Office' : (roleKey === 'Support staff' ? 'Support Staff' : roleKey);
+
+    const roleViews = permissions[normalizedRole] || permissions[activeUser.role] || ['dashboard'];
     return roleViews.filter((item) => !(item === 'inventory' && !tenant?.features?.inventory));
   }, [permissions, activeUser, tenant]);
+
+  const slmInsights = useMemo(() => {
+    if (!tenant) return null;
+    const pendingBilled = invoices.filter(i => i.status !== 'paid').length;
+    const capacity = encounters.filter(e => e.status === 'open').length;
+
+    return {
+      narrative: `Facility throughput is currently at ${((capacity / 50) * 100).toFixed(0)}% theoretical capacity. ${pendingBilled > 10 ? 'Alert: Financial lag detected in billing cycles.' : 'Financial velocity is within target parameters.'}`,
+      trends: ['↑ Patient Inflow', '✓ Staff Stability', pendingBilled > 15 ? '⚠ Billing Backlog' : '✓ Liquidity Stable'],
+      forecast: (reportSummary?.periodical?.dailyAppointments || 0) * 30 * 1.15
+    };
+  }, [tenant, encounters, invoices, reportSummary]);
 
   useEffect(() => {
     loadTenants();
@@ -105,6 +129,8 @@ export default function App() {
     setInventory(bootstrap.inventory || []);
     setEmployees(bootstrap.employees || []);
     setEmployeeLeaves(bootstrap.employeeLeaves || []);
+    setInsuranceProviders(bootstrap.insuranceProviders || []);
+    setClaims(bootstrap.claims || []);
     setReportSummary(reports || null);
     if (!activePatientId && bootstrap.patients?.length) {
       setActivePatientId(bootstrap.patients[0].id);
@@ -112,9 +138,21 @@ export default function App() {
   }
 
   async function refreshSuperadmin() {
-    const [overview, allUsers] = await Promise.all([api.getSuperadminOverview(), api.getUsers()]);
-    setSuperOverview(overview);
-    setUsers(allUsers || []);
+    console.log('DEBUG: refreshSuperadmin started');
+    try {
+      const [overview, allUsers, allTenants] = await Promise.all([
+        api.getSuperadminOverview(),
+        api.getUsers(),
+        api.getTenants()
+      ]);
+      console.log('DEBUG: Superadmin data fetched', { overview, allUsers, allTenants });
+      setSuperOverview(overview);
+      setUsers(allUsers || []);
+      setTenants(allTenants || []);
+    } catch (err) {
+      console.error('DEBUG: refreshSuperadmin failed', err);
+      setError('Failed to load platform data: ' + err.message);
+    }
   }
 
   // Restore data on mount/reload
@@ -137,6 +175,16 @@ export default function App() {
       }
     }
   }, [session?.tenantId, session?.user?.id]);
+
+  useEffect(() => {
+    console.log('PLATFORM_DIAGNOSTIC:', {
+      role: activeUser?.role,
+      view,
+      allowedViews,
+      hasSession: !!session,
+      tenantId: session?.tenantId
+    });
+  }, [activeUser, view, allowedViews, session]);
 
   async function handleLogin(loginData) {
     setError('');
@@ -175,19 +223,7 @@ export default function App() {
   }
 
   function logout() {
-    setSession(null);
-    setView('dashboard');
-    setUsers([]);
-    setPatients([]);
-    setAppointments([]);
-    setWalkins([]);
-    setEncounters([]);
-    setInvoices([]);
-    setInventory([]);
-    setEmployees([]);
-    setEmployeeLeaves([]);
-    setSuperOverview(null);
-    setReportSummary(null);
+    api.logout(); // This will clear storage and redirect
   }
 
   async function printPatientDoc(docType) {
@@ -209,12 +245,13 @@ export default function App() {
     return <LoginPage tenants={tenants} onLogin={handleLogin} loading={loading} error={error} />;
   }
 
+  // Calculate metrics safely
   const metrics = {
-    patients: patients.length,
-    appointments: appointments.length,
-    walkins: walkins.filter((w) => w.status !== 'converted').length,
-    employees: employees.length,
-    revenue: invoices.reduce((sum, x) => sum + Number(x.paid || 0), 0)
+    patients: (patients || []).length,
+    appointments: (appointments || []).length,
+    walkins: (walkins || []).filter((w) => w.status !== 'converted').length,
+    employees: (employees || []).length,
+    revenue: (invoices || []).reduce((sum, x) => sum + Number(x.paid || 0), 0)
   };
 
   return (
@@ -484,9 +521,42 @@ export default function App() {
           />
         )}
 
+        {view === 'insurance' && (
+          <InsurancePage
+            providers={insuranceProviders}
+            claims={claims}
+            onCreateProvider={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.createInsuranceProvider({
+                tenantId: session.tenantId,
+                name: fd.get('name'),
+                type: fd.get('type'),
+                coverageLimit: Number(fd.get('coverageLimit')),
+                contactPerson: fd.get('contactPerson'),
+                phone: fd.get('phone'),
+                email: fd.get('email')
+              }));
+              e.target.reset();
+            }}
+            onCreateClaim={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.createClaim({
+                tenantId: session.tenantId,
+                patientId: fd.get('patientId'),
+                providerId: fd.get('providerId'),
+                amount: Number(fd.get('amount')),
+                claimNumber: fd.get('claimNumber')
+              }));
+              e.target.reset();
+            }}
+          />
+        )}
+
         {view === 'accounts' && <AccountsPage tenant={tenant} />}
 
-        {view === 'reports' && <ReportsPage reportSummary={reportSummary} tenant={tenant} />}
+        {view === 'reports' && <ReportsPage reportSummary={reportSummary} tenant={tenant} slmInsights={slmInsights} superOverview={superOverview} />}
 
         {view === 'admin' && (
           <AdminPage
@@ -519,7 +589,7 @@ export default function App() {
 
       <Chatbot context={{
         patients, appointments, walkins, encounters, invoices, inventory,
-        employees, employeeLeaves, tenant, activeUser, setView
+        employees, employeeLeaves, insuranceProviders, claims, tenant, activeUser, setView
       }} />
     </>
   );

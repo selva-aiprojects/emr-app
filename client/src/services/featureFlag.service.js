@@ -47,7 +47,7 @@ class FeatureFlagService {
 
     try {
       const response = await api.get(`/tenants/${tenantId}/features`);
-      const flags = response.data || {};
+      const flags = response.data || response; // api.get might return data directly or wrapped
 
       // Cache the result
       this.cache.set(cacheKey, {
@@ -135,14 +135,19 @@ export function useFeatureFlags(tenantId) {
   }, [tenantId]);
 
   const isFeatureEnabled = React.useCallback((flag) => {
+    // Superadmin/Platform bypass: If no tenantId, allow all features
+    if (!tenantId) return true;
     return flags[flag]?.enabled || false;
-  }, [flags]);
+  }, [flags, tenantId]);
 
   const isModuleAccessible = React.useCallback((module) => {
+    // Superadmin/Platform bypass: If no tenantId, allow all modules
+    if (!tenantId) return true;
+
     const flag = MODULE_FLAG_MAPPING[module];
     if (!flag) return true;
     return isFeatureEnabled(flag);
-  }, [flags, isFeatureEnabled]);
+  }, [tenantId, isFeatureEnabled]);
 
   return {
     flags,

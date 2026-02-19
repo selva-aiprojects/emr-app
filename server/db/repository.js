@@ -196,6 +196,11 @@ export async function getTenantById(id) {
   return result.rows[0];
 }
 
+export async function getTenantByCode(code) {
+  const result = await query('SELECT * FROM emr.tenants WHERE code = $1', [code]);
+  return result.rows[0];
+}
+
 export async function createTenant({ name, code, subdomain, theme, features }) {
   const sql = `
     INSERT INTO emr.tenants (name, code, subdomain, theme, features, status)
@@ -1318,6 +1323,17 @@ export async function getSuperadminOverview() {
     `
   );
 
+  /* Aggregate Monthly Revenue for Platform */
+  const monthlyRevenue = await query(`
+    SELECT
+      to_char(created_at, 'Mon') as month,
+      SUM(paid) as amount
+    FROM emr.invoices
+    WHERE status = 'paid' AND created_at > current_date - interval '6 months'
+    GROUP BY to_char(created_at, 'Mon'), date_trunc('month', created_at)
+    ORDER BY date_trunc('month', created_at)
+  `);
+
   return {
     tenants: tenantStats,
     totals: {
@@ -1326,6 +1342,12 @@ export async function getSuperadminOverview() {
       patients: parseInt(totals.rows[0].patients),
       appointments: parseInt(totals.rows[0].appointments),
     },
+    monthlyComparison: {
+      revenue: monthlyRevenue.rows.map(r => ({
+        month: r.month,
+        amount: parseFloat(r.amount)
+      }))
+    }
   };
 }
 
@@ -1487,7 +1509,9 @@ export async function getBootstrapData(tenantId, userId) {
     invoices,
     inventory,
     employees,
-    employeesLeaves
+    employeesLeaves,
+    insuranceProviders,
+    claims
   ] = await Promise.all([
     getUserById(userId),
     // Placeholder for other data to be fetched below
@@ -1498,11 +1522,23 @@ export async function getBootstrapData(tenantId, userId) {
     getInvoices(tenantId),
     getInventoryItems(tenantId),
     getEmployees(tenantId),
-    getEmployeeLeaves(tenantId)
+    getEmployeeLeaves(tenantId),
+    getInsuranceProviders(tenantId),
+    getClaims(tenantId)
   ]);
 
   if (!user) throw new Error('User not found');
-  const userRole = user.role;
+
+  // Normalize user role casing for permission matching (e.g., "doctor" -> "Doctor")
+  let userRole = user.role;
+  if (userRole) {
+    userRole = userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase();
+    if (userRole === 'Front office') userRole = 'Front Office';
+    if (userRole === 'Support staff') userRole = 'Support Staff';
+  }
+
+  // Also update the role on the user object itself for the frontend
+  user.role = userRole;
 
   // Securely fetch patients with masking
   // Only some roles should see patients list at all? 
@@ -1524,7 +1560,9 @@ export async function getBootstrapData(tenantId, userId) {
     invoices,
     inventory,
     employees,
-    employeeLeaves: employeesLeaves
+    employeeLeaves: employeesLeaves,
+    insuranceProviders,
+    claims
   };
 }
 
@@ -1536,39 +1574,143 @@ export async function getBootstrapData(tenantId, userId) {
 
 
 
-export async function getTenantByCode(code) {
-  const sql = 'SELECT * FROM emr.tenants WHERE code = $1';
-  const result = await query(sql, [code]);
+// =====================================================
+// INSURANCE
+// =====================================================
+
+export async function getInsuranceProviders(tenantId) {
+  const result = await query(
+    'SELECT * FROM emr.insurance_providers WHERE tenant_id = $1 ORDER BY name',
+    [tenantId]
+  );
+  return result.rows;
+}
+
+export async function createInsuranceProvider({ tenantId, name, type, coverageLimit, contactPerson, phone, email }) {
+  const sql = `
+    INSERT INTO emr.insurance_providers (tenant_id, name, type, coverage_limit, contact_person, phone, email, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active')
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, name, type, coverageLimit, contactPerson, phone, email]);
   return result.rows[0];
+}
+
+export async function getClaims(tenantId, filters = {}) {
+  let sql = `
+    SELECT c.*, p.first_name || ' ' || p.last_name as patient_name, ip.name as provider_name
+    FROM emr.claims c
+    JOIN emr.patients p ON c.patient_id = p.id
+    JOIN emr.insurance_providers ip ON c.provider_id = ip.id
+    WHERE c.tenant_id = $1
+  `;
+  const params = [tenantId];
+  if (filters.status) {
+    sql += ` AND c.status = $2`;
+    params.push(filters.status);
+  }
+  sql += ' ORDER BY c.created_at DESC';
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function createClaim({ tenantId, patientId, providerId, amount, claimNumber, encounterId = null, invoiceId = null }) {
+  const sql = `
+    INSERT INTO emr.claims (tenant_id, patient_id, provider_id, amount, claim_number, encounter_id, invoice_id, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending')
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, patientId, providerId, amount, claimNumber, encounterId, invoiceId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// ACCOUNTS (Financial Summary)
+// =====================================================
+
+export async function getFinancialSummary(tenantId, month) {
+  // Total Income (Paid Invoices)
+  const incomeResult = await query(
+    `SELECT SUM(paid) as income FROM emr.invoices WHERE tenant_id = $1 AND TO_CHAR(created_at, 'YYYY-MM') = $2`,
+    [tenantId, month.slice(0, 7)]
+  );
+
+  // Total Expenses
+  const expenseResult = await query(
+    `SELECT category, SUM(amount) as amount FROM emr.expenses 
+     WHERE tenant_id = $1 AND TO_CHAR(date, 'YYYY-MM') = $2
+     GROUP BY category`,
+    [tenantId, month.slice(0, 7)]
+  );
+
+  const expenses = {};
+  expenseResult.rows.forEach(r => {
+    expenses[r.category] = parseFloat(r.amount);
+  });
+
+  return {
+    income: parseFloat(incomeResult.rows[0]?.income || 0),
+    expenses,
+    month
+  };
+}
+
+export async function getExpenses(tenantId, { month } = {}) {
+  let sql = 'SELECT * FROM emr.expenses WHERE tenant_id = $1';
+  const params = [tenantId];
+  if (month) {
+    sql += ` AND TO_CHAR(date, 'YYYY-MM') = $2`;
+    params.push(month.slice(0, 7));
+  }
+  sql += ' ORDER BY date DESC';
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function addExpense({ tenantId, category, description, amount, date, paymentMethod, reference, recordedBy }) {
+  const sql = `
+    INSERT INTO emr.expenses (tenant_id, category, description, amount, date, payment_method, reference, recorded_by)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, category, description, amount, date, paymentMethod, reference, recordedBy]);
+  return result.rows[0];
+}
+
+export async function getAttendance(tenantId, date) {
+  const sql = `
+    SELECT a.*, e.name, e.code, e.shift
+    FROM emr.attendance a
+    JOIN emr.employees e ON a.employee_id = e.id
+    WHERE a.tenant_id = $1 AND a.date = $2
+  `;
+  const result = await query(sql, [tenantId, date]);
+  return result.rows;
 }
 
 export async function recordAttendance({ tenantId, employeeId, date, status, checkIn, checkOut }) {
   const sql = `
-    INSERT INTO emr.employee_attendance(tenant_id, employee_id, date, status, check_in, check_out)
-    VALUES($1, $2, $3, $4, $5, $6)
+    INSERT INTO emr.attendance (tenant_id, employee_id, date, status, check_in, check_out)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    ON CONFLICT (tenant_id, employee_id, date) 
+    DO UPDATE SET 
+      status = EXCLUDED.status, 
+      check_in = EXCLUDED.check_in, 
+      check_out = EXCLUDED.check_out,
+    updated_at = NOW()
     RETURNING *
   `;
-  const result = await query(sql, [tenantId, employeeId, date, status, checkIn, checkOut]);
+  const result = await query(sql, [tenantId, employeeId, date, status, checkIn || null, checkOut || null]);
   return result.rows[0];
 }
 
-export async function addEmployeeLeave({ tenantId, employeeId, type, startDate, endDate, reason, status }) {
-  const sql = `
-    INSERT INTO emr.employee_leaves(tenant_id, employee_id, leave_type, start_date, end_date, reason, status)
-    VALUES($1, $2, $3, $4, $5, $6, $7)
-    RETURNING *
-  `;
-  const result = await query(sql, [tenantId, employeeId, type, startDate, endDate, reason, status || 'Pending']);
-  return result.rows[0];
-}
+
 
 export default {
   // Tenants
   getTenants,
-  getTenants,
   getTenantById,
   getTenantByCode,
-  createTenant,
   createTenant,
   updateTenantSettings,
 
@@ -1616,23 +1758,33 @@ export default {
   getEmployees,
   getEmployeeLeaves,
   createEmployee,
+  createEmployeeLeave,
   recordAttendance,
-  addEmployeeLeave,
+  getAttendance,
 
+  // Insurance
+  getInsuranceProviders,
+  createInsuranceProvider,
+  getClaims,
+  createClaim,
 
-  // Bootstrap
-  getBootstrapData,
+  // Reports & Accounts
+  getReportSummary,
+  getFinancialSummary,
+  getExpenses,
+  addExpense,
+  getDoctorPayouts,
 
-  // Superadmin
-  getSuperadminOverview,
-
-  // Prescriptions
+  // Pharmacy
   getPrescriptions,
   getPrescriptionById,
   createPrescription,
   updatePrescriptionStatus,
   dispensePrescription,
 
-  // Doctor Payouts
-  getDoctorPayouts
+  // Bootstrap
+  getBootstrapData,
+
+  // Superadmin
+  getSuperadminOverview,
 };

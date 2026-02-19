@@ -94,7 +94,7 @@ export default function BillingPage({ tenant, patients,
   setActivePatientId,
   onIssueInvoice,
   onMarkPaid }) {
-  const [activeView, setActiveView] = useState('list'); // 'list' | 'create'
+  const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'settlement'
 
   const sortedInvoices = [...invoices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -113,6 +113,12 @@ export default function BillingPage({ tenant, patients,
             onClick={() => setActiveView('create')}
           >
             <span className="icon">➕</span> New Statement
+          </button>
+          <button
+            className={`tab-link ${activeView === 'settlement' ? 'active' : ''}`}
+            onClick={() => setActiveView('settlement')}
+          >
+            <span className="icon">🏨</span> Bed Settlement
           </button>
         </div>
       </div>
@@ -171,6 +177,42 @@ export default function BillingPage({ tenant, patients,
                 <button type="button" className="cancel-btn-premium" onClick={() => setActiveView('list')}>Discard Statement</button>
               </div>
             </form>
+          </article>
+        )}
+
+        {activeView === 'settlement' && (
+          <article className="settlement-workspace panel premium-glass" style={{ padding: '2rem' }}>
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900 }}>IPD Discharge & Settlement</h3>
+              <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Finalize financial clearance for patients awaiting clinical discharge.</p>
+            </div>
+            <div className="settlement-controls" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+              {patients.slice(0, 3).map(p => (
+                <div key={p.id} className="settlement-card premium-glass" style={{ padding: '1.5rem', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '14px' }}>{p.name}</div>
+                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>WARD-B • ROOM 10{Math.floor(Math.random() * 9)}</div>
+                    </div>
+                    <span style={{ fontSize: '10px', fontWeight: 900, color: '#f59e0b', background: '#fffbeb', padding: '2px 8px', borderRadius: '4px' }}>WAITING</span>
+                  </div>
+                  <div className="bill-summary" style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span>Bed Charges</span> <strong>{currency(12500)}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span>Medications</span> <strong>{currency(4200)}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 900, marginTop: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
+                      <span>Total Due</span> <strong>{currency(16700)}</strong>
+                    </div>
+                  </div>
+                  <button className="primary-submit-btn" style={{ background: '#10b981', color: 'white', border: 'none', padding: '10px', width: '100%', borderRadius: '8px', marginTop: '1rem', fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}>
+                    Initiate Final Exit
+                  </button>
+                </div>
+              ))}
+            </div>
           </article>
         )}
 

@@ -68,12 +68,13 @@ app.post('/api/login', async (req, res) => {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      await repo.updateUserLastLogin(user.id);
+      // Normalize role for consistency
+      const normalizedRole = user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase();
 
       const token = generateToken({
         userId: user.id,
         tenantId: null,
-        role: user.role,
+        role: normalizedRole,
         email: user.email,
       });
 
@@ -83,10 +84,10 @@ app.post('/api/login', async (req, res) => {
           id: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
+          role: normalizedRole,
         },
         tenantId: null,
-        role: user.role,
+        role: normalizedRole,
       });
     }
 
@@ -134,10 +135,15 @@ app.post('/api/login', async (req, res) => {
       action: 'auth.login',
     });
 
+    // Normalize role for consistency
+    const normalizedRole = user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase();
+    // Special handling for multi-word roles
+    const finalRole = normalizedRole === 'Front office' ? 'Front Office' : (normalizedRole === 'Support staff' ? 'Support Staff' : normalizedRole);
+
     const token = generateToken({
       userId: user.id,
       tenantId: user.tenant_id,
-      role: user.role,
+      role: finalRole,
       email: user.email,
       patientId: user.patient_id,
     });
@@ -148,11 +154,11 @@ app.post('/api/login', async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role,
+        role: finalRole,
         patientId: user.patient_id,
       },
       tenantId: user.tenant_id,
-      role: user.role,
+      role: finalRole,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -269,7 +275,7 @@ app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
 // USERS
 // =====================================================
 
-app.get('/api/users', async (req, res) => {
+app.get('/api/users', authenticate, async (req, res) => {
   try {
     const { tenantId } = req.query;
     console.log('DEBUG: tenantId from query:', tenantId, 'Type:', typeof tenantId);
@@ -339,7 +345,7 @@ app.get('/api/tenants/:id/features', requireTenant, async (req, res) => {
 });
 
 // Admin endpoints for managing kill switches (Superadmin only)
-app.get('/api/admin/kill-switches', requireRole('Superadmin'), async (req, res) => {
+app.get('/api/admin/kill-switches', authenticate, requireRole('Superadmin'), async (req, res) => {
   try {
     const { getGlobalKillSwitches } = await import('./services/featureFlag.service.js');
     const killSwitches = await getGlobalKillSwitches();
@@ -350,7 +356,7 @@ app.get('/api/admin/kill-switches', requireRole('Superadmin'), async (req, res) 
   }
 });
 
-app.post('/api/admin/kill-switches', requireRole('Superadmin'), async (req, res) => {
+app.post('/api/admin/kill-switches', authenticate, requireRole('Superadmin'), async (req, res) => {
   try {
     const { featureFlag, enabled, reason } = req.body;
 
@@ -531,10 +537,31 @@ app.get('/api/bootstrap', requireTenant, async (req, res) => {
 });
 
 // =====================================================
+// REPORTS
+// =====================================================
+
+app.get('/api/reports/summary/:id', authenticate, requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Ensure user has access to this tenant's reports
+    if (req.user.role !== 'Superadmin' && req.tenantId !== id) {
+      return res.status(403).json({ error: 'Access denied to this tenant' });
+    }
+
+    const summary = await repo.getReportSummary(id);
+    res.json(summary);
+  } catch (error) {
+    console.error('Error fetching report summary:', error);
+    res.status(500).json({ error: 'Failed to fetch report summary' });
+  }
+});
+
+// =====================================================
 // SUPERADMIN
 // =====================================================
 
-app.get('/api/superadmin/overview', requireRole('Superadmin'), async (_req, res) => {
+app.get('/api/superadmin/overview', authenticate, requireRole('Superadmin'), async (_req, res) => {
   try {
     const overview = await repo.getSuperadminOverview();
     res.json(overview);
@@ -1369,6 +1396,51 @@ app.get('/api/reports/financials', requireTenant, requirePermission('reports'), 
 });
 
 // =====================================================
+// INSURANCE
+// =====================================================
+
+app.get('/api/insurance/providers', requireTenant, requirePermission('billing'), async (req, res) => {
+  try {
+    const providers = await repo.getInsuranceProviders(req.tenantId);
+    res.json(providers);
+  } catch (error) {
+    console.error('Error fetching insurance providers:', error);
+    res.status(500).json({ error: 'Failed to fetch insurance providers' });
+  }
+});
+
+app.post('/api/insurance/providers', requireTenant, requirePermission('billing'), async (req, res) => {
+  try {
+    const provider = await repo.createInsuranceProvider({ ...req.body, tenantId: req.tenantId });
+    res.status(201).json(provider);
+  } catch (error) {
+    console.error('Error creating insurance provider:', error);
+    res.status(500).json({ error: 'Failed to create insurance provider' });
+  }
+});
+
+app.get('/api/insurance/claims', requireTenant, requirePermission('billing'), async (req, res) => {
+  try {
+    const { status } = req.query;
+    const claims = await repo.getClaims(req.tenantId, { status });
+    res.json(claims);
+  } catch (error) {
+    console.error('Error fetching claims:', error);
+    res.status(500).json({ error: 'Failed to fetch claims' });
+  }
+});
+
+app.post('/api/insurance/claims', requireTenant, requirePermission('billing'), async (req, res) => {
+  try {
+    const claim = await repo.createClaim({ ...req.body, tenantId: req.tenantId });
+    res.status(201).json(claim);
+  } catch (error) {
+    console.error('Error creating claim:', error);
+    res.status(500).json({ error: 'Failed to create claim' });
+  }
+});
+
+// =====================================================
 // REALTIME TICK (For demo/development)
 // =====================================================
 
@@ -1397,6 +1469,7 @@ if (isDirectRun) {
 
   // Handle 404 for API routes specifically
   app.all('/api/*', (req, res) => {
+    console.log(`[404] API Route not found: ${req.method} ${req.url}`);
     res.status(404).json({ error: 'API route not found' });
   });
 

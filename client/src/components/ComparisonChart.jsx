@@ -1,18 +1,15 @@
 export default function ComparisonChart({ title, data, dataKey, color, todayValue, formatValue = (v) => v }) {
     if (!data || data.length === 0) {
         return (
-            <div className="panel" style={{ padding: '1.5rem' }}>
-                <h4 style={{ marginBottom: '1rem', fontSize: '1rem', fontWeight: '600', color: '#475569' }}>{title}</h4>
-                <p style={{ color: '#94a3b8', textAlign: 'center', padding: '2rem' }}>No data available</p>
+            <div className="oversight-section" style={{ minHeight: '200px', display: 'grid', placeItems: 'center' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Insight generation in progress...</p>
             </div>
         );
     }
 
-    // Calculate statistics
     const values = data.map(d => d[dataKey]);
     const total = values.reduce((sum, val) => sum + val, 0);
-    const avg = total / values.length;
-    const max = Math.max(...values);
+    const max = Math.max(...values, 1);
     const currentMonth = data[data.length - 1];
     const previousMonth = data.length > 1 ? data[data.length - 2] : null;
 
@@ -20,116 +17,75 @@ export default function ComparisonChart({ title, data, dataKey, color, todayValu
         ? ((currentMonth[dataKey] - previousMonth[dataKey]) / previousMonth[dataKey] * 100).toFixed(1)
         : 0;
 
-    // Chart dimensions
-    const chartHeight = 200;
-    const chartWidth = 100; // percentage
-    const barWidth = 100 / data.length - 2; // percentage with gap
+    const chartHeight = 160;
+    const barWidth = (100 / data.length) - 4;
 
     return (
-        <div className="panel" style={{ padding: '1.5rem' }}>
-            {/* Header */}
-            <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ marginBottom: '0.5rem', fontSize: '1rem', fontWeight: '600', color: '#475569' }}>
-                    {title}
-                </h4>
-                <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                    <div>
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Today</span>
-                        <span style={{ fontSize: '1.25rem', fontWeight: '700', color: color }}>
-                            {formatValue(todayValue)}
-                        </span>
-                    </div>
-                    <div>
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>This Month</span>
-                        <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#1e293b' }}>
-                            {formatValue(currentMonth[dataKey])}
-                        </span>
-                        {monthChange !== 0 && (
-                            <span style={{
-                                fontSize: '0.75rem',
-                                color: monthChange > 0 ? '#16a34a' : '#dc2626',
-                                marginLeft: '0.5rem'
-                            }}>
-                                {monthChange > 0 ? '↑' : '↓'} {Math.abs(monthChange)}%
-                            </span>
-                        )}
-                    </div>
-                    <div>
-                        <span style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'block' }}>Total</span>
-                        <span style={{ fontSize: '1.25rem', fontWeight: '700', color: '#64748b' }}>
-                            {formatValue(total)}
-                        </span>
-                    </div>
+        <div className="oversight-section charting-widget">
+            <div className="section-head-premium">
+                <div className="head-text">
+                    <h3>{title}</h3>
+                    <p>Monthly performance delta: <span className={monthChange >= 0 ? 'text-success' : 'text-danger'}>
+                        {monthChange >= 0 ? '+' : ''}{monthChange}%
+                    </span></p>
                 </div>
             </div>
 
-            {/* Chart */}
-            <div style={{ position: 'relative', height: `${chartHeight}px`, marginBottom: '1rem' }}>
-                <svg width="100%" height={chartHeight} style={{ overflow: 'visible' }}>
-                    {/* Grid lines */}
-                    {[0, 25, 50, 75, 100].map((percent) => (
-                        <g key={percent}>
-                            <line
-                                x1="0"
-                                y1={chartHeight - (chartHeight * percent / 100)}
-                                x2="100%"
-                                y2={chartHeight - (chartHeight * percent / 100)}
-                                stroke="#e2e8f0"
-                                strokeWidth="1"
-                            />
-                            <text
-                                x="0"
-                                y={chartHeight - (chartHeight * percent / 100) - 5}
-                                fontSize="10"
-                                fill="#94a3b8"
-                            >
-                                {formatValue(max * percent / 100)}
-                            </text>
-                        </g>
-                    ))}
-
-                    {/* Bars */}
-                    {data.map((item, index) => {
-                        const barHeight = (item[dataKey] / max) * chartHeight;
-                        const x = (index * (100 / data.length)) + '%';
-                        const isCurrentMonth = index === data.length - 1;
-
-                        return (
-                            <g key={index}>
-                                <rect
-                                    x={x}
-                                    y={chartHeight - barHeight}
-                                    width={`${barWidth}%`}
-                                    height={barHeight}
-                                    fill={isCurrentMonth ? color : `${color}80`}
-                                    rx="4"
-                                />
-                                <text
-                                    x={`calc(${x} + ${barWidth / 2}%)`}
-                                    y={chartHeight + 15}
-                                    fontSize="10"
-                                    fill="#64748b"
-                                    textAnchor="middle"
-                                >
-                                    {item.month.split('-')[1]}
-                                </text>
-                            </g>
-                        );
-                    })}
-                </svg>
-            </div>
-
-            {/* Legend */}
-            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#64748b' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: color }}></div>
-                    <span>Current Month</span>
+            <div style={{ padding: '24px' }}>
+                <div className="chart-stats-row" style={{ display: 'flex', gap: '32px', marginBottom: '24px' }}>
+                    <div className="stat-pill">
+                        <span className="label">Terminal Period</span>
+                        <span className="value">{formatValue(currentMonth[dataKey])}</span>
+                    </div>
+                    <div className="stat-pill">
+                        <span className="label">Cumulative Velocity</span>
+                        <span className="value" style={{ color: 'var(--text-secondary)' }}>{formatValue(total)}</span>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: `${color}80` }}></div>
-                    <span>Previous Months</span>
+
+                <div className="chart-viewport" style={{ position: 'relative', height: `${chartHeight}px` }}>
+                    <svg width="100%" height="100%" style={{ overflow: 'visible' }}>
+                        {data.map((item, index) => {
+                            const h = (item[dataKey] / max) * chartHeight;
+                            const x = (index * (100 / data.length)) + '%';
+                            const isLast = index === data.length - 1;
+
+                            return (
+                                <g key={index}>
+                                    <rect
+                                        x={x}
+                                        y={chartHeight - h}
+                                        width={`${barWidth}%`}
+                                        height={h}
+                                        fill={isLast ? color : 'var(--border-light)'}
+                                        rx="6"
+                                        style={{ transition: 'all 0.4s ease' }}
+                                    />
+                                    <text
+                                        x={`calc(${x} + ${barWidth / 2}%)`}
+                                        y={chartHeight + 18}
+                                        fontSize="10"
+                                        fill="var(--text-muted)"
+                                        textAnchor="middle"
+                                        fontWeight="700"
+                                    >
+                                        {item.month?.split('-')[1]?.toUpperCase()}
+                                    </text>
+                                </g>
+                            );
+                        })}
+                    </svg>
                 </div>
             </div>
+
+            <style>{`
+        .charting-widget { border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+        .text-success { color: var(--medical-success); font-weight: 700; }
+        .text-danger { color: var(--medical-danger); font-weight: 700; }
+        .stat-pill { display: flex; flex-direction: column; }
+        .stat-pill .label { font-size: 0.7rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .stat-pill .value { font-size: 1.25rem; font-weight: 800; color: var(--text-primary); letter-spacing: -0.02em; }
+      `}</style>
         </div>
     );
 }

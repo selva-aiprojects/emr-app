@@ -3,7 +3,7 @@ import * as repo from '../db/repository.js';
 // Feature flag definitions with naming convention: permission-{module}-access
 export const FEATURE_FLAGS = {
   CORE_ENGINE_ACCESS: 'permission-core_engine-access',
-  HR_PAYROLL_ACCESS: 'permission-hr_payroll-access', 
+  HR_PAYROLL_ACCESS: 'permission-hr_payroll-access',
   ACCOUNTS_ACCESS: 'permission-accounts-access',
   CUSTOMER_SUPPORT_ACCESS: 'permission-customer_support-access'
 };
@@ -63,18 +63,18 @@ async function getTenantCustomFeatures(tenantId) {
 /**
  * Get global kill switches with caching
  */
-async function getGlobalKillSwitches() {
+export async function getGlobalKillSwitches() {
   const now = Date.now();
-  
+
   // Return cached value if still valid
   if (globalKillSwitchesCache && (now - killSwitchesCacheTime) < KILL_SWITCHES_CACHE_TTL) {
     return globalKillSwitchesCache;
   }
-  
+
   // Fetch from database
   globalKillSwitchesCache = await repo.getGlobalKillSwitches();
   killSwitchesCacheTime = now;
-  
+
   return globalKillSwitchesCache;
 }
 
@@ -92,16 +92,16 @@ export async function evaluateFeatureFlag(tenantId, flag) {
 
     // Get tenant tier
     const tier = await getTenantTier(tenantId);
-    
+
     // Get default features for tier
     const defaultFeatures = DEFAULT_FEATURES_BY_TIER[tier] || [];
-    
+
     // Get custom features for tenant
     const customFeatures = await getTenantCustomFeatures(tenantId);
-    
+
     // Combine features
     const enabledFeatures = [...defaultFeatures, ...customFeatures];
-    
+
     return enabledFeatures.includes(flag);
   } catch (error) {
     console.error(`Error evaluating feature flag ${flag}:`, error);
@@ -118,9 +118,9 @@ export async function getTenantFeatureFlags(tenantId) {
     const defaultFeatures = DEFAULT_FEATURES_BY_TIER[tier] || [];
     const customFeatures = await getTenantCustomFeatures(tenantId);
     const killSwitches = await getGlobalKillSwitches();
-    
+
     const allFeatures = [...defaultFeatures, ...customFeatures];
-    
+
     // Filter out killed features
     return allFeatures.filter(flag => !killSwitches[flag]);
   } catch (error) {
@@ -138,7 +138,7 @@ export async function isModuleAccessible(tenantId, module) {
     // If no flag defined for module, allow access (backward compatibility)
     return true;
   }
-  
+
   return await evaluateFeatureFlag(tenantId, flag);
 }
 
@@ -148,11 +148,11 @@ export async function isModuleAccessible(tenantId, module) {
 export async function setGlobalKillSwitch(flag, enabled, userId, reason) {
   try {
     await repo.setGlobalKillSwitch(flag, enabled, userId, reason);
-    
+
     // Clear cache to force refresh
     globalKillSwitchesCache = null;
     killSwitchesCacheTime = 0;
-    
+
     console.log(`Global kill switch for ${flag} ${enabled ? 'ENABLED' : 'DISABLED'}`);
     return true;
   } catch (error) {

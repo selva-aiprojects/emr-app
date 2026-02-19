@@ -1,0 +1,256 @@
+[
+  {
+    "tenant": {
+      "name": "Basic Health Clinic",
+      "code": "BHC",
+      "id": "7bb311e7-672e-49c9-8be0-cca06037faec"
+    },
+    "users": []
+  },
+  {
+    "tenant": {
+      "name": "City General Hospital",
+      "code": "city_general",
+      "id": "d2b95ce3-5325-4bc9-b507-f95bf9c566f8"
+    },
+    "users": [
+      {
+        "name": "Admin Lisa White",
+        "email": "lisa.white@citygen.local",
+        "role": "Admin"
+      },
+      {
+        "name": "Billing Officer Robert",
+        "email": "robert.billing@citygen.local",
+        "role": "Billing"
+      },
+      {
+        "name": "Dr. Emily Chen",
+        "email": "emily.chen@citygen.local",
+        "role": "Doctor"
+      },
+      {
+        "name": "Lab Tech Michael Brown",
+        "email": "michael.brown@citygen.local",
+        "role": "Lab"
+      },
+      {
+        "name": "Nurse Sarah Jones",
+        "email": "sarah.jones@citygen.local",
+        "role": "Nurse"
+      },
+      {
+        "name": "Staff Jessica Taylor",
+        "email": "jessica.taylor@citygen.local",
+        "role": "Front Office"
+      }
+    ]
+  },
+  {
+    "tenant": {
+      "name": "Enterprise Hospital Systems",
+      "code": "EHS",
+      "id": "90a13c9a-4744-4db9-8105-1537d8e3fe50"
+    },
+    "users": [
+      {
+        "name": "Accounts Manager",
+        "email": "accounts@ehs.local",
+        "role": "Billing"
+      },
+      {
+        "name": "Dr. Sarah Smith",
+        "email": "doctor@ehs.local",
+        "role": "Doctor"
+      },
+      {
+        "name": "EHS Administrator",
+        "email": "admin@ehs.local",
+        "role": "Admin"
+      },
+      {
+        "name": "HR Manager",
+        "email": "hr@ehs.local",
+        "role": "HR"
+      },
+      {
+        "name": "Hospital Manager",
+        "email": "management@ehs.local",
+        "role": "Management"
+      },
+      {
+        "name": "Insurance Coordinator",
+        "email": "insurance@ehs.local",
+        "role": "Insurance"
+      },
+      {
+        "name": "Lab Technician",
+        "email": "lab@ehs.local",
+        "role": "Lab"
+      },
+      {
+        "name": "Nurse Jackie",
+        "email": "nurse@ehs.local",
+        "role": "Nurse"
+      },
+      {
+        "name": "Ops Manager",
+        "email": "ops@ehs.local",
+        "role": "Operations"
+      },
+      {
+        "name": "Pharmacist John",
+        "email": "pharmacy@ehs.local",
+        "role": "Pharmacy"
+      },
+      {
+        "name": "Receptionist",
+        "email": "front_office@ehs.local",
+        "role": "Front Office"
+      },
+      {
+        "name": "Support Staff",
+        "email": "support@ehs.local",
+        "role": "Support Staff"
+      }
+    ]
+  },
+  {
+    "tenant": {
+      "name": "Kidz Clinic",
+      "code": "SCH",
+      "id": "10000000-0000-0000-0000-000000000001"
+    },
+    "users": [
+      {
+        "name": "Arun Lab Tech",
+        "email": "arun@sch.local",
+        "role": "Lab"
+      },
+      {
+        "name": "Dr Pushpa",
+        "email": "pushpa@kidz-clinic.com",
+        "role": "Doctor"
+      },
+      {
+        "name": "Dr. Anita Sharma",
+        "email": "anita@sch.local",
+        "role": "Admin"
+      },
+      {
+        "name": "Dr. Rajesh Kumar",
+        "email": "rajesh@sch.local",
+        "role": "Doctor"
+      },
+      {
+        "name": "Lakshmi Support",
+        "email": "lakshmi@sch.local",
+        "role": "Support Staff"
+      },
+      {
+        "name": "Meena Krishnan",
+        "email": "meena@sch.local",
+        "role": "Patient"
+      },
+      {
+        "name": "Meera Pharmacist",
+        "email": "meera@sch.local",
+        "role": "Pharmacy"
+      },
+      {
+        "name": "Nurse Priya Patel",
+        "email": "priya@sch.local",
+        "role": "Nurse"
+      },
+      {
+        "name": "Suresh Menon",
+        "email": "suresh@sch.local",
+        "role": "Front Office"
+      }
+    ]
+  },
+  {
+    "tenant": {
+      "name": "Nila Health Center",
+      "code": "NHC",
+      "id": "10000000-0000-0000-0000-000000000002"
+    },
+    "users": [
+      {
+        "name": "Dr. Balan",
+        "email": "doctor@nhc.local",
+        "role": "Doctor"
+      },
+      {
+        "name": "Nila Admin",
+        "email": "admin@nhc.local",
+        "role": "Admin"
+      }
+    ]
+  },
+  {
+    "tenant": {
+      "name": "Omega Hospitals",
+      "code": "OH",
+      "id": "10000000-0000-0000-0000-000000000004"
+    },
+    "users": [
+      {
+        "name": "Dr. Vikram",
+        "email": "doctor@omega.local",
+        "role": "Doctor"
+      },
+      {
+        "name": "Omega Admin",
+        "email": "admin@omega.local",
+        "role": "Admin"
+      }
+    ]
+  },
+  {
+    "tenant": {
+      "name": "Professional Medical Center",
+      "code": "PMC",
+      "id": "a35c2c8e-12ad-43a4-baeb-ec9026ecd84a"
+    },
+    "users": []
+  },
+  {
+    "tenant": {
+      "name": "Riverway Community Clinic",
+      "code": "RCC",
+      "id": "10000000-0000-0000-0000-000000000003"
+    },
+    "users": [
+      {
+        "name": "Nurse Sarah",
+        "email": "nurse@rcc.local",
+        "role": "Nurse"
+      },
+      {
+        "name": "Riverway Admin",
+        "email": "admin@rcc.local",
+        "role": "Admin"
+      }
+    ]
+  },
+  {
+    "tenant": {
+      "name": "Valley Health Clinic",
+      "code": "valley_health",
+      "id": "7148689f-91d0-41fb-8fbf-f4320acff38d"
+    },
+    "users": [
+      {
+        "name": "Dr. Mark Davis",
+        "email": "mark.davis@valley.local",
+        "role": "Doctor"
+      },
+      {
+        "name": "Nurse David Wilson",
+        "email": "david.wilson@valley.local",
+        "role": "Nurse"
+      }
+    ]
+  }
+]

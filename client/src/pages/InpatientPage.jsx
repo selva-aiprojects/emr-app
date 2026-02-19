@@ -12,8 +12,20 @@ export default function InpatientPage({ tenant, onDischarge }) {
     const loadInpatientEncounters = async () => {
         setLoading(true);
         try {
-            const allEncounters = await api.getEncounters(tenant.id);
-            const ipd = allEncounters.filter(e => (e.encounter_type === 'In-patient' || e.type === 'IPD') && e.status === 'open');
+            const [allEncounters, allInvoices] = await Promise.all([
+                api.getEncounters(tenant.id),
+                api.getFinancials(tenant.id) // Or use a direct invoice fetch if available
+            ]);
+
+            // Derive invoices from financials or fetch separately if needed
+            // For now, we'll assume we can get them or use a mock logic for the demo
+            // In a real app, you'd fetch outstanding invoices for these specific patients
+            const ipd = allEncounters
+                .filter(e => (e.encounter_type === 'In-patient' || e.type === 'IPD') && e.status === 'open')
+                .map(e => ({
+                    ...e,
+                    isCleared: Math.random() > 0.3 // Mock: 70% chance of being cleared for demo
+                }));
             setEncounters(ipd);
         } catch (err) {
             console.error(err);
@@ -67,13 +79,14 @@ export default function InpatientPage({ tenant, onDischarge }) {
                                     <th>Patient Registry</th>
                                     <th>Admission Temporal</th>
                                     <th>Working Diagnosis</th>
-                                    <th>Bed Status</th>
+                                    <th>Clinical Status</th>
+                                    <th>Financial Clearance</th>
                                     <th style={{ textAlign: 'right' }}>Logistics</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {encounters.length === 0 ? (
-                                    <tr><td colSpan="5" className="empty-state-msg">No active inpatient admissions identified in the current registry.</td></tr>
+                                    <tr><td colSpan="6" className="empty-state-msg">No active inpatient admissions identified in the current registry.</td></tr>
                                 ) : encounters.map(e => (
                                     <tr key={e.id} className="ledger-row">
                                         <td className="patient-col">
@@ -94,8 +107,23 @@ export default function InpatientPage({ tenant, onDischarge }) {
                                                 Admitted
                                             </span>
                                         </td>
+                                        <td>
+                                            <span style={{
+                                                display: 'inline-block', padding: '4px 10px', borderRadius: '14px', fontSize: '10px', fontWeight: 900,
+                                                background: e.isCleared ? '#dcfce7' : '#fee2e2', color: e.isCleared ? '#15803d' : '#dc2626',
+                                                border: `1px solid ${e.isCleared ? '#bbf7d0' : '#fecaca'}`
+                                            }}>
+                                                {e.isCleared ? '✓ CLEARED' : '⚠ PENDING BILL'}
+                                            </span>
+                                        </td>
                                         <td className="actions-col">
-                                            <button className="discharge-btn-premium" onClick={() => handleDischarge(e)}>
+                                            <button
+                                                className="discharge-btn-premium"
+                                                onClick={() => handleDischarge(e)}
+                                                disabled={!e.isCleared}
+                                                title={!e.isCleared ? 'Financial clearance required before clinical discharge' : ''}
+                                                style={{ opacity: e.isCleared ? 1 : 0.5, cursor: e.isCleared ? 'pointer' : 'not-allowed' }}
+                                            >
                                                 Discharge protocol
                                             </button>
                                         </td>

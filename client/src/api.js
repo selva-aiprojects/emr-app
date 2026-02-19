@@ -438,8 +438,31 @@ export async function dispensePrescription(id, data) {
 }
 
 // =====================================================
-// EXPORTS & COMPATIBILITY
+// INSURANCE
 // =====================================================
+
+export async function getInsuranceProviders(tenantId) {
+  return await apiRequest(`/insurance/providers?tenantId=${tenantId}`);
+}
+
+export async function createInsuranceProvider(data) {
+  return await apiRequest('/insurance/providers', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getClaims(tenantId, filters = {}) {
+  const params = new URLSearchParams({ tenantId, ...filters });
+  return await apiRequest(`/insurance/claims?${params.toString()}`);
+}
+
+export async function createClaim(data) {
+  return await apiRequest('/insurance/claims', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
 
 const apiClient = {
   // Auth
@@ -510,6 +533,12 @@ const apiClient = {
   getAttendance,
   getExpenses,
   getFinancials,
+
+  // Insurance
+  getInsuranceProviders,
+  createInsuranceProvider,
+  getClaims,
+  createClaim,
 
   // Realtime
   getRealtimeTick,

@@ -3,14 +3,14 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 
 export default defineConfig({
-  root: path.resolve(process.cwd(), 'client'),
+  root: './',
   plugins: [react()],
   build: {
-    outDir: path.resolve(process.cwd(), 'client', 'dist'),
+    outDir: './dist',
     emptyOutDir: true,
   },
   server: {
-    port: 5173,
+    port: 5175,
     open: false,
     proxy: {
       '/api': {
@@ -21,6 +21,6 @@ export default defineConfig({
     }
   },
   preview: {
-    port: 5173
+    port: 5175
   }
 });

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "node --watch server/index.js",
-    "dev:client": "vite --config client/vite.config.js",
+    "dev:client": "vite client --port 5175",
     "build": "vite build --config client/vite.config.js",
     "preview": "vite preview --config client/vite.config.js",
     "start": "node server/index.js",

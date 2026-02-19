@@ -23,6 +23,15 @@ export async function authenticate(req, res, next) {
     let decoded;
     try {
       decoded = verifyToken(token);
+
+      // Normalize role to PascalCase (e.g., "doctor" -> "Doctor", "DOCTOR" -> "Doctor")
+      if (decoded.role) {
+        decoded.role = decoded.role.charAt(0).toUpperCase() + decoded.role.slice(1).toLowerCase();
+        // Special handling for multi-word roles if needed, though most here are single word or handled
+        if (decoded.role === 'Front office') decoded.role = 'Front Office';
+        if (decoded.role === 'Support staff') decoded.role = 'Support Staff';
+      }
+
     } catch (error) {
       return res.status(401).json({
         error: 'Invalid token',
@@ -52,13 +61,17 @@ export async function authenticate(req, res, next) {
       });
     }
 
+    // Normalize role for consistency
+    const userRole = user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase();
+    const finalRole = userRole === 'Front office' ? 'Front Office' : (userRole === 'Support staff' ? 'Support Staff' : userRole);
+
     // Attach user info to request object
     req.user = {
       id: user.id,
       tenantId: user.tenant_id,
       email: user.email,
       name: user.name,
-      role: user.role,
+      role: finalRole,
       patientId: user.patient_id,
     };
 
@@ -102,7 +115,7 @@ export function requireRole(...roles) {
  * Extracts tenantId from query params or body
  */
 export function requireTenant(req, res, next) {
-  const tenantId = req.header('x-tenant-id') || req.query.tenantId || req.body.tenantId;
+  const tenantId = req.header('x-tenant-id') || req.query.tenantId || req.body.tenantId || req.params.id || req.params.tenantId;
 
   if (!tenantId) {
     return res.status(400).json({
@@ -240,12 +253,15 @@ export async function optionalAuth(req, res, next) {
 
     if (userResult.rows.length > 0) {
       const user = userResult.rows[0];
+      const userRole = user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase();
+      const finalRole = userRole === 'Front office' ? 'Front Office' : (userRole === 'Support staff' ? 'Support Staff' : userRole);
+
       req.user = {
         id: user.id,
         tenantId: user.tenant_id,
         email: user.email,
         name: user.name,
-        role: user.role,
+        role: finalRole,
         patientId: user.patient_id,
       };
     } else {

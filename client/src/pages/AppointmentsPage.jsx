@@ -24,80 +24,83 @@ export default function AppointmentsPage({
   const isPatient = activeUser.role === 'Patient';
 
   return (
-    <section className="view appointments-workspace">
-      <div className="workspace-header">
-        <div className="tab-group premium-glass">
-          <button
-            className={`tab-link ${activeTab === 'appointments' ? 'active' : ''}`}
-            onClick={() => setActiveTab('appointments')}
-          >
-            <span className="icon">📅</span> Calendar Schedule
-          </button>
-          {!isPatient && (
+    <div className="appointments-intelligence-workspace">
+      <div className="view-header-premium">
+        <div className="header-labels">
+          <div className="tab-switcher-premium">
             <button
-              className={`tab-link ${activeTab === 'walkins' ? 'active' : ''}`}
-              onClick={() => setActiveTab('walkins')}
+              className={`tab-item-premium ${activeTab === 'appointments' ? 'active' : ''}`}
+              onClick={() => setActiveTab('appointments')}
             >
-              <span className="icon">🚶</span> Reception Queue
+              Clinical Schedule
             </button>
-          )}
+            {!isPatient && (
+              <button
+                className={`tab-item-premium ${activeTab === 'walkins' ? 'active' : ''}`}
+                onClick={() => setActiveTab('walkins')}
+              >
+                Reception Queue
+              </button>
+            )}
+          </div>
+          <h1>Scheduling <span>Intelligence</span> Hub</h1>
+          <p>Coordinated resource planning and patient flow management</p>
         </div>
       </div>
 
-      <div className="appointment-main-grid">
-        <div className="booking-column">
+      <div className="appointment-lattice-layout">
+        <main className="booking-instrument-panel">
           {activeTab === 'appointments' && (
-            <article className="panel booking-premium premium-glass">
-              <div className="panel-header-rich">
-                <div className="header-icon-box">🗓️</div>
-                <div className="header-text">
-                  <h3>{isPatient ? 'Request Clinical Slot' : 'Advance Booking'}</h3>
-                  <p>{isPatient ? 'Choose your preferred physician and time' : 'Register a scheduled patient arrival'}</p>
+            <article className="oversight-section booking-card-premium">
+              <div className="section-head-premium large">
+                <div className="head-text">
+                  <h3>{isPatient ? 'Secure Slot Reservation' : 'Coordinated Clinical Booking'}</h3>
+                  <p>{isPatient ? 'Request a preferred encounter time with your physician' : 'Log a scheduled medical interaction in the central registry'}</p>
                 </div>
               </div>
 
-              <form className="medical-form" onSubmit={isPatient ? onSelfAppointment : onCreateAppointment}>
-                <div className="form-grid-premium">
+              <form className="medical-intake-form" onSubmit={isPatient ? onSelfAppointment : onCreateAppointment}>
+                <div className="intake-grid">
                   {!isPatient && (
-                    <div className="form-section">
-                      <h4 className="form-section-title">Patient Selection</h4>
+                    <div className="intake-section">
+                      <h4>Patient Registry Context</h4>
                       <PatientSearch tenantId={session?.tenantId} />
                     </div>
                   )}
 
-                  <div className="form-section">
-                    <h4 className="form-section-title">Schedule Information</h4>
-                    <div className="form-group">
-                      <label>Clinical Provider</label>
+                  <div className="intake-section">
+                    <h4>Logistics & Resource Allocation</h4>
+                    <div className="input-field-premium">
+                      <label>Assigned Clinical Provider</label>
                       <select name="providerId" required>
-                        <option value="">Select Practitioner</option>
+                        <option value="">Select Lead Physician</option>
                         {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     </div>
-                    <div className="form-row">
-                      <div className="form-group">
-                        <label>Reserved From</label>
+                    <div className="form-row-grid">
+                      <div className="input-field-premium">
+                        <label>Reserved Start Time</label>
                         <input name="start" type="datetime-local" required />
                       </div>
-                      <div className="form-group">
-                        <label>Reserved To</label>
+                      <div className="input-field-premium">
+                        <label>Estimated Conclusion</label>
                         <input name="end" type="datetime-local" required />
                       </div>
                     </div>
                   </div>
 
-                  <div className="form-section">
-                    <h4 className="form-section-title">Interaction Context</h4>
-                    <div className="form-group">
-                      <label>Purpose of Visit</label>
-                      <input name="reason" placeholder="Brief visit summary..." required />
+                  <div className="intake-section">
+                    <h4>Clinical Rationale</h4>
+                    <div className="input-field-premium full">
+                      <label>Encounter Objective</label>
+                      <input name="reason" placeholder="Primary complaint or review objective..." required />
                     </div>
                   </div>
                 </div>
 
                 <div className="form-actions-premium">
-                  <button type="submit" className="save-btn-premium">
-                    {isPatient ? 'Submit Case Request' : 'Confirm & Log Booking'}
+                  <button type="submit" className="btn-primary-premium">
+                    {isPatient ? 'Commit Reservation Request' : 'Authorize Schedule Entry'}
                   </button>
                 </div>
               </form>
@@ -105,73 +108,72 @@ export default function AppointmentsPage({
           )}
 
           {activeTab === 'walkins' && !isPatient && (
-            <article className="panel booking-premium premium-glass">
-              <div className="panel-header-rich">
-                <div className="header-icon-box">⚡</div>
-                <div className="header-text">
-                  <h3>Direct Queue Entry</h3>
-                  <p>Fast-track registration for non-appointment arrivals</p>
+            <article className="oversight-section admission-form-container">
+              <div className="section-head-premium large">
+                <div className="head-text">
+                  <h3>Direct Reception Entry</h3>
+                  <p>Immediate queue placement for unscheduled patient arrivals</p>
                 </div>
               </div>
 
-              <form className="medical-form" onSubmit={onCreateWalkin}>
-                <div className="form-grid-premium">
-                  <div className="form-section">
-                    <h4 className="form-section-title">Demographics</h4>
-                    <div className="form-row">
-                      <div className="form-group">
+              <form className="medical-intake-form" onSubmit={onCreateWalkin}>
+                <div className="intake-grid">
+                  <div className="intake-section">
+                    <h4>Temporary Identity</h4>
+                    <div className="form-row-grid">
+                      <div className="input-field-premium">
                         <label>Full Patient Name</label>
-                        <input name="name" placeholder="Legal Name" required />
+                        <input name="name" placeholder="Legal Identity" required />
                       </div>
-                      <div className="form-group">
-                        <label>Contact Contact</label>
-                        <input name="phone" placeholder="+91 00000 00000" required />
+                      <div className="input-field-premium">
+                        <label>Verification Contact</label>
+                        <input name="phone" placeholder="Emergency mobile" required />
                       </div>
                     </div>
                   </div>
-                  <div className="form-section">
-                    <h4 className="form-section-title">Reason</h4>
-                    <div className="form-group">
-                      <label>Primary Symptom / Activity</label>
-                      <input name="reason" placeholder="e.g. Injury, Pharmacy Query..." required />
+                  <div className="intake-section">
+                    <h4>Arrival Context</h4>
+                    <div className="input-field-premium full">
+                      <label>Immediate Clinical Objective</label>
+                      <input name="reason" placeholder="Symptoms or service requested..." required />
                     </div>
                   </div>
                 </div>
                 <div className="form-actions-premium">
-                  <button type="submit" className="save-btn-premium walkin-purple">Add to Active Queue</button>
+                  <button type="submit" className="btn-secondary-premium">Initialize Queue Status</button>
                 </div>
               </form>
             </article>
           )}
-        </div>
+        </main>
 
-        <div className="visual-column">
-          <article className="panel schedule-ledger premium-glass">
-            <div className="ledger-header-rich">
-              <div className="title-stack">
-                <h4>Clinical Schedule</h4>
-                <p>{appointments.length} Active Records</p>
+        <aside className="schedule-ledger-stack">
+          <section className="oversight-section">
+            <div className="section-head-premium">
+              <div className="head-text">
+                <h3>Daily Roster</h3>
+                <p>{appointments.length} Confirmed Slots</p>
               </div>
-              <div className="pulse-indicator">LIVE</div>
+              <div className="live-tag">REALTIME</div>
             </div>
 
-            <div className="premium-scroll-box">
+            <div className="ledger-scroll-zone">
               {appointments.length === 0 ? (
-                <div className="empty-ledger">No clinical events booked for today.</div>
+                <div className="empty-observation">No clinical slots active for the current period.</div>
               ) : (
                 appointments.sort((a, b) => new Date(a.start) - new Date(b.start)).map(a => (
-                  <div key={a.id} className={`appointment-strip ${a.status}`}>
-                    <div className="strip-time">
+                  <div key={a.id} className={`clinical-strip-card ${a.status}`}>
+                    <div className="strip-time-block">
                       <strong>{new Date(a.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
                       <span>{new Date(a.start).toLocaleDateString([], { month: 'short', day: 'numeric' })}</span>
                     </div>
-                    <div className="strip-main">
-                      <div className="strip-patient" onClick={() => { setActivePatientId(a.patientId); setView('patients'); }}>
+                    <div className="strip-body">
+                      <div className="patient-link" onClick={() => { setActivePatientId(a.patientId); setView('patients'); }}>
                         {patientName(a.patientId, patients)}
                       </div>
-                      <div className="strip-provider">with {userName(a.providerId, users)}</div>
+                      <div className="provider-meta">with {userName(a.providerId, users)}</div>
                     </div>
-                    <div className="strip-actions">
+                    <div className="strip-controls">
                       <AppointmentActions
                         appointment={a}
                         user={activeUser}
@@ -183,108 +185,81 @@ export default function AppointmentsPage({
                 ))
               )}
             </div>
-          </article>
+          </section>
 
           {!isPatient && (
-            <article className="panel walkin-ledger premium-glass" style={{ marginTop: '1.5rem' }}>
-              <div className="ledger-header-rich">
-                <div className="title-stack">
-                  <h4>Walk-in Queue</h4>
-                  <p>{walkins.length} Awaiting Care</p>
+            <section className="oversight-section queue-stack">
+              <div className="section-head-premium">
+                <div className="head-text">
+                  <h3>Reception Queue</h3>
+                  <p>{walkins.length} Unscheduled Arrivals</p>
                 </div>
               </div>
-              <div className="premium-scroll-box mini">
+              <div className="ledger-scroll-zone mini">
                 {walkins.length === 0 ? (
-                  <div className="empty-ledger">Reception area is currently empty.</div>
+                  <div className="empty-observation">Reception area cleared.</div>
                 ) : (
                   walkins.map(w => (
-                    <div key={w.id} className={`walkin-strip ${w.status}`}>
-                      <div className="w-avatar">{(w.name || 'P')[0]}</div>
-                      <div className="w-info">
+                    <div key={w.id} className={`walkin-entry-card ${w.status}`}>
+                      <div className="entry-glyph">{(w.name || 'P')[0]}</div>
+                      <div className="entry-intel">
                         <strong>{w.name}</strong>
                         <span>{w.reason}</span>
                       </div>
-                      <div className="w-meta">
+                      <div className="entry-action">
                         {w.status !== 'converted' ? (
-                          <button onClick={() => onConvertWalkin(w.id)} className="convert-btn-micro">Admit</button>
+                          <button onClick={() => onConvertWalkin(w.id)} className="btn-mini-action">ADMIT</button>
                         ) : (
-                          <span className="converted-tag">Admitted</span>
+                          <span className="status-badge-mini">LOGGED</span>
                         )}
                       </div>
                     </div>
                   ))
                 )}
               </div>
-            </article>
+            </section>
           )}
-        </div>
+        </aside>
       </div>
 
       <style>{`
-        .appointments-workspace { animation: fade-in 0.5s ease-out; }
-        .workspace-header { margin-bottom: 2rem; }
-        .tab-group { display: flex; padding: 4px; border-radius: 12px; background: rgba(255,255,255,0.5); }
-        .tab-link { 
-          padding: 10px 18px; border: none; background: transparent; color: #64748b; 
-          font-size: 0.85rem; font-weight: 700; cursor: pointer; border-radius: 9px; 
-          transition: all 0.2s; display: flex; align-items: center; gap: 8px;
-        }
-        .tab-link.active { background: white; color: var(--tenant-primary); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-
-        .appointment-main-grid { display: grid; grid-template-columns: 1fr 400px; gap: 1.5rem; align-items: start; }
-        .premium-glass { background: white; border-radius: 1.5rem; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+        .appointments-intelligence-workspace { animation: fadeIn 0.8s ease-out; }
         
-        .panel-header-rich { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
-        .header-icon-box { font-size: 1.75rem; background: #f0fdf4; width: 54px; height: 54px; display: grid; place-items: center; border-radius: 14px; border: 1px solid #dcfce7; }
-        .header-text h3 { margin: 0; font-size: 1.35rem; font-weight: 900; color: #0f172a; }
-        .header-text p { margin: 4px 0 0; color: #64748b; font-size: 0.85rem; }
-
-        .booking-premium { padding: 2rem; }
-        .medical-form { display: flex; flex-direction: column; gap: 1.5rem; }
-        .form-section-title { font-size: 11px; text-transform: uppercase; color: var(--tenant-primary); font-weight: 800; letter-spacing: 0.1em; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 10px; }
-        .form-section-title::after { content: ''; flex: 1; height: 1px; background: #f1f5f9; }
-        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; }
-        .form-group label { display: block; font-size: 10px; font-weight: 800; color: #64748b; margin-bottom: 6px; text-transform: uppercase; }
-        .form-group input, .form-group select { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; width: 100%; border: 1px solid #e2e8f0; }
-
-        .save-btn-premium { background: var(--tenant-primary); color: white; padding: 12px 30px; border-radius: 12px; font-weight: 800; font-size: 0.95rem; width: 100%; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2); transition: 0.2s; }
-        .save-btn-premium:hover { transform: translateY(-2px); box-shadow: 0 12px 24px rgba(16, 185, 129, 0.3); }
-        .walkin-purple { background: #7c3aed; box-shadow: 0 10px 20px rgba(124, 58, 237, 0.2); }
-
-        .ledger-header-rich { padding: 1.5rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
-        .ledger-header-rich h4 { margin: 0; font-size: 1rem; font-weight: 900; }
-        .ledger-header-rich p { margin: 2px 0 0; font-size: 0.75rem; color: #94a3b8; font-weight: 700; }
-        .pulse-indicator { font-size: 9px; font-weight: 900; color: #ef4444; background: #fee2e2; padding: 2px 8px; border-radius: 20px; display: flex; align-items: center; gap: 4px; }
-        .pulse-indicator::before { content: ''; width: 6px; height: 6px; background: #ef4444; border-radius: 50%; animation: pulse 1s infinite; }
-
-        .premium-scroll-box { padding: 1rem; display: flex; flex-direction: column; gap: 0.75rem; max-height: 600px; overflow-y: auto; }
-        .premium-scroll-box.mini { max-height: 300px; }
-        .empty-ledger { text-align: center; padding: 3rem; color: #cbd5e1; font-size: 0.85rem; font-weight: 600; font-style: italic; }
-
-        .appointment-strip { 
-          display: flex; align-items: center; padding: 12px; border-radius: 14px; 
-          background: #f9fafb; border: 1px solid #f1f5f9; transition: 0.2s;
+        .tab-switcher-premium { display: flex; gap: 8px; margin-bottom: 24px; padding: 4px; background: var(--bg-app); border-radius: 12px; width: fit-content; border: 1px solid var(--border-light); }
+        .tab-item-premium { 
+          padding: 8px 20px; border: none; background: transparent; color: var(--text-muted); 
+          font-size: 0.8rem; font-weight: 800; cursor: pointer; border-radius: 9px; transition: var(--transition);
         }
-        .appointment-strip:hover { background: white; border-color: var(--tenant-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.02); }
-        .strip-time { display: flex; flex-direction: column; width: 70px; flex-shrink: 0; line-height: 1.2; border-right: 1px solid #e2e8f0; margin-right: 12px; }
-        .strip-time strong { font-size: 13px; color: #0f172a; }
-        .strip-time span { font-size: 10px; color: #94a3b8; font-weight: 700; }
-        .strip-main { flex: 1; }
-        .strip-patient { font-weight: 800; font-size: 14px; color: var(--tenant-primary); cursor: pointer; }
-        .strip-provider { font-size: 11px; color: #64748b; font-weight: 600; }
+        .tab-item-premium.active { background: white; color: var(--medical-primary); box-shadow: var(--shadow-sm); }
 
-        .walkin-strip { display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid #f8fafc; }
-        .w-avatar { width: 32px; height: 32px; border-radius: 8px; background: #f1f5f9; display: grid; place-items: center; font-weight: 800; color: #64748b; font-size: 12px; flex-shrink: 0; }
-        .active .w-avatar { background: #7c3aed; color: white; }
-        .w-info { flex: 1; display: flex; flex-direction: column; }
-        .w-info strong { font-size: 13px; color: #1e293b; }
-        .w-info span { font-size: 11px; color: #94a3b8; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; max-width: 180px; }
-        .convert-btn-micro { padding: 4px 10px; border-radius: 6px; background: white; border: 1px solid #e2e8f0; color: #3b82f6; font-size: 10px; font-weight: 800; cursor: pointer; transition: 0.2s; }
-        .convert-btn-micro:hover { background: #3b82f6; color: white; border-color: #3b82f6; }
-        .converted-tag { font-size: 10px; font-weight: 800; color: #10b981; text-transform: uppercase; }
+        .appointment-lattice-layout { display: grid; grid-template-columns: 1fr 420px; gap: 24px; align-items: start; }
+        
+        .btn-mini-action { background: white; border: 1px solid var(--border-light); color: var(--medical-secondary); font-size: 0.65rem; font-weight: 900; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: var(--transition); }
+        .btn-mini-action:hover { background: var(--medical-secondary); color: white; border-color: var(--medical-secondary); }
+        .status-badge-mini { font-size: 0.6rem; font-weight: 900; color: var(--medical-success); background: rgba(76, 175, 80, 0.1); padding: 2px 8px; border-radius: 4px; }
 
-        @keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
+        .ledger-scroll-zone { padding: 20px; display: flex; flex-direction: column; gap: 12px; max-height: 500px; overflow-y: auto; }
+        .ledger-scroll-zone.mini { max-height: 250px; }
+        
+        .clinical-strip-card { display: flex; align-items: center; padding: 14px; border-radius: 16px; background: var(--bg-app); border: 1px solid transparent; transition: var(--transition); }
+        .clinical-strip-card:hover { background: white; border-color: var(--border-light); box-shadow: var(--shadow-sm); }
+        .strip-time-block { width: 70px; border-right: 1px solid var(--border-light); margin-right: 16px; display: flex; flex-direction: column; }
+        .strip-time-block strong { font-size: 0.85rem; color: var(--text-primary); }
+        .strip-time-block span { font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; }
+        .strip-body { flex: 1; }
+        .patient-link { font-weight: 800; font-size: 0.9rem; color: var(--medical-primary); cursor: pointer; }
+        .provider-meta { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; margin-top: 2px; }
+
+        .walkin-entry-card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; border: 1px solid var(--bg-app); }
+        .entry-glyph { width: 32px; height: 32px; border-radius: 8px; background: var(--bg-app); display: grid; place-items: center; font-weight: 900; color: var(--text-muted); font-size: 0.75rem; }
+        .entry-intel { flex: 1; }
+        .entry-intel strong { display: block; font-size: 0.8rem; color: var(--text-primary); }
+        .entry-intel span { font-size: 0.7rem; color: var(--text-muted); font-weight: 600; }
+
+        .live-tag { font-size: 0.6rem; font-weight: 900; color: var(--medical-danger); background: rgba(244, 67, 54, 0.1); padding: 2px 8px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+        .live-tag::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--medical-danger); animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 0.2; } 50% { opacity: 1; } 100% { opacity: 0.2; } }
       `}</style>
-    </section>
+    </div>
   );
 }

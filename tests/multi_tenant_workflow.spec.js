@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 const CLIENT_URL = 'http://127.0.0.1:5175';
 
 const users = [
-    // City General Hospital (city_general)
+    // --- Existing Checks ---
     {
         name: 'Admin Lisa White',
         email: 'lisa.white@citygen.local',
@@ -18,37 +18,42 @@ const users = [
         role: 'Doctor',
         expectedText: 'Appointments'
     },
-    {
-        name: 'Nurse Sarah Jones',
-        email: 'sarah.jones@citygen.local',
-        tenant: 'City General Hospital',
-        role: 'Nurse',
-        expectedText: 'Patients'
-    },
 
-    // Valley Health Clinic (valley_health)
+    // --- Enterprise Hospital Systems (EHS) - New Module Checks ---
     {
-        name: 'Dr. Mark Davis',
-        email: 'mark.davis@valley.local',
-        tenant: 'Valley Health Clinic',
-        role: 'Doctor',
-        expectedText: 'Appointments'
-    },
-
-    // Kidz Clinic (SCH)
-    {
-        name: 'Dr. Anita Sharma',
-        email: 'anita@sch.local',
-        tenant: 'Kidz Clinic',
-        role: 'Admin',
-        expectedText: 'Manage Access'
+        name: 'HR Manager',
+        email: 'hr@ehs.local',
+        tenant: 'Enterprise Hospital Systems',
+        role: 'HR',
+        expectedText: 'Employee Roster' // From EmployeesPage.jsx
     },
     {
-        name: 'Meera Pharmacist',
-        email: 'meera@sch.local',
-        tenant: 'Kidz Clinic',
+        name: 'Accounts Manager',
+        email: 'accounts@ehs.local',
+        tenant: 'Enterprise Hospital Systems',
+        role: 'Billing',
+        expectedText: 'Financial Snapshot' // From AccountsPage.jsx
+    },
+    {
+        name: 'Insurance Coordinator',
+        email: 'insurance@ehs.local',
+        tenant: 'Enterprise Hospital Systems',
+        role: 'Insurance',
+        expectedText: 'Insurance & Claims Registry' // From InsurancePage.jsx
+    },
+    {
+        name: 'Pharmacist John',
+        email: 'pharmacy@ehs.local',
+        tenant: 'Enterprise Hospital Systems',
         role: 'Pharmacy',
-        expectedText: 'Dispense'
+        expectedText: 'Pharmaceutical Oversight' // From PharmacyPage.jsx
+    },
+    {
+        name: 'Ops Manager',
+        email: 'ops@ehs.local',
+        tenant: 'Enterprise Hospital Systems',
+        role: 'Operations',
+        expectedText: 'Asset Logistics' // From InventoryPage.jsx
     }
 ];
 
@@ -65,32 +70,26 @@ test.describe('Multi-Tenant User Workflows', () => {
 
             // Fill Credentials
             await page.fill('input[type="email"]', user.email);
-            await page.fill('input[type="password"]', 'Test@123'); // Assuming default password
+            // Assuming default password for all test users
+            await page.fill('input[type="password"]', 'Test@123');
 
             // Login
             await page.click('button[type="submit"]');
 
             // Verify Dashboard access
-            // We expect some role-specific content or just the main dashboard
-            // Adjust timeout for potential cold starts
-            await expect(page.locator('#root')).toBeVisible();
+            await expect(page.locator('.app-root')).toBeVisible({ timeout: 15000 });
+            await expect(page.locator('text=Sign In')).not.toBeVisible();
 
-            // Check for specific element based on role logic if possible, 
-            // or at least that we are NOT on the login page anymore
-            await expect(page.locator('text=Sign In')).not.toBeVisible({ timeout: 10000 });
-
-            // Check for role-specific expected text
+            // Check for role-specific expected text to verify module access
             if (user.expectedText) {
-                await expect(page.getByText(user.expectedText).first()).toBeVisible();
+                await expect(page.getByText(user.expectedText).first()).toBeVisible({ timeout: 10000 });
             }
 
             console.log(`Successfully verified ${user.name}`);
 
-            // Cleanup / Logout
-            // Locate logout button - usually in sidebar or header
-            // If logout is not easily clickable, we can just clear cookies or rely on independent browser contexts (default in Playwright per test)
-            // But let's try to logout cleanly if possible to test that flow too
-            const logoutBtn = page.getByText('Logout');
+            // Logout
+            // In new layout, logout is in sidebar footer
+            const logoutBtn = page.getByText('Sign Out');
             if (await logoutBtn.isVisible()) {
                 await logoutBtn.click();
                 await expect(page.locator('text=Sign In')).toBeVisible();
