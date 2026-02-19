@@ -117,7 +117,8 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
   let paramIndex = 1;
 
   if (displayName !== undefined) {
-    updates.push(`display_name = $${paramIndex++}`);
+    // Tenants table uses `name` as the display label column.
+    updates.push(`name = $${paramIndex++}`);
     values.push(displayName);
   }
 
