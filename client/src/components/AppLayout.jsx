@@ -41,7 +41,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
         <div className="sidebar-header">
           <div className="brand-logo">
             <div className="brand-icon">
-              {tenant?.name?.[0] || "M"}
+              <img src="/medflow-icon.svg" alt="MedFlow" width="24" height="24" />
             </div>
             <span>{tenant?.name || "MedFlow"}</span>
           </div>
