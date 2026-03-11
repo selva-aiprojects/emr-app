@@ -18,12 +18,16 @@ ADD COLUMN IF NOT EXISTS birth_place text;
 
 ALTER TABLE emr.encounters
 ADD COLUMN IF NOT EXISTS fhir_encounter_ref uuid;
-
+ALTER TABLE emr.prescriptions DROP CONSTRAINT IF EXISTS prescriptions_status_check;
+UPDATE emr.prescriptions SET status = LOWER(status) WHERE status IN ('Pending', 'Dispensed', 'Cancelled');
 ALTER TABLE emr.prescriptions
+ADD COLUMN IF NOT EXISTS patient_id uuid REFERENCES emr.patients(id),
+ADD COLUMN IF NOT EXISTS provider_id uuid REFERENCES emr.users(id),
+ADD COLUMN IF NOT EXISTS prescription_number varchar(64),
+ADD COLUMN IF NOT EXISTS priority varchar(16) DEFAULT 'routine' CHECK (priority IN ('routine', 'urgent', 'stat', 'asap')),
 ADD COLUMN IF NOT EXISTS fhir_medication_request_ref uuid;
 
-ALTER TABLE emr.observations
-ADD COLUMN IF NOT EXISTS fhir_observation_ref uuid;
+
 
 -- Conditions table (FHIR Condition Resource)
 CREATE TABLE IF NOT EXISTS emr.conditions(
@@ -150,12 +154,27 @@ CREATE INDEX IF NOT EXISTS idx_service_requests_patient ON emr.service_requests(
 -- PART 2: PHARMACY MODULE TABLES
 -- ============================================================
 
+DROP TABLE IF EXISTS emr.pharmacy_alerts CASCADE;
+DROP TABLE IF EXISTS emr.patient_medication_allocations CASCADE;
+DROP TABLE IF EXISTS emr.ward_stock CASCADE;
+DROP TABLE IF EXISTS emr.purchase_order_items CASCADE;
+DROP TABLE IF EXISTS emr.purchase_orders CASCADE;
+DROP TABLE IF EXISTS emr.vendors CASCADE;
+DROP TABLE IF EXISTS emr.pharmacy_inventory CASCADE;
+DROP TABLE IF EXISTS emr.drug_batches CASCADE;
+DROP TABLE IF EXISTS emr.medication_schedules CASCADE;
+DROP TABLE IF EXISTS emr.medication_administrations CASCADE;
+DROP TABLE IF EXISTS emr.prescription_items CASCADE;
+DROP TABLE IF EXISTS emr.drug_allergies CASCADE;
+DROP TABLE IF EXISTS emr.drug_interactions CASCADE;
+DROP TABLE IF EXISTS emr.drug_master CASCADE;
+
 -- Drug Master with comprehensive medication metadata
 CREATE TABLE IF NOT EXISTS emr.drug_master(
   drug_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid REFERENCES emr.tenants(id),
   generic_name text NOT NULL,
-  brand_names jsonb[] DEFAULT '{}',
+  brand_names text[] DEFAULT '{}',
   strength text,
   dosage_form varchar(64),
   route varchar(64),

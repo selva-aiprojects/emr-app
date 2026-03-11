@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import PatientSearch from '../components/PatientSearch.jsx';
 import { patientName } from '../utils/format.js';
 import { api } from '../api.js';
+import Prescriber from '../components/pharmacy/Prescriber.jsx';
 
 function printPrescription(enc, patient, medications, provider, tenant) {
   const w = window.open('', '_blank', 'width=800,height=900');
@@ -96,7 +97,9 @@ function printPrescription(enc, patient, medications, provider, tenant) {
 export default function EmrPage({ tenant, patients, providers, encounters, onCreateEncounter, onDischarge }) {
   const [activeTab, setActiveTab] = useState('active');
   const [selectedPatientId, setSelectedPatientId] = useState('');
-  const [meds, setMeds] = useState([{ name: '', dosage: '', duration: '', instructions: '' }]);
+
+  const [prescriptionItems, setPrescriptionItems] = useState([]);
+  const [safetyData, setSafetyData] = useState({ safetyCheck: null, overrideSafety: false });
 
   const activeEncounters = useMemo(() => encounters.filter(e => e.status === 'open'), [encounters]);
   const pastEncounters = useMemo(() => encounters.filter(e => e.status === 'closed'), [encounters]);
@@ -107,20 +110,28 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
     return encounters.filter(e => e.patientId === selectedPatientId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [encounters, selectedPatientId]);
 
-  const handleAddMed = () => setMeds([...meds, { name: '', dosage: '', duration: '', instructions: '' }]);
-  const handleMedChange = (i, f, v) => {
-    const next = [...meds];
-    next[i][f] = v;
-    setMeds(next);
+  const handleDrugsChange = (items, checkData) => {
+    setPrescriptionItems(items);
+    setSafetyData(checkData);
   };
-  const handleRemoveMed = (i) => setMeds(meds.filter((_, idx) => idx !== i));
 
   const [lastSaved, setLastSaved] = useState(null);
 
   const handleEncounterSubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
-    const validMeds = meds.filter(m => m.name);
+
+    if (safetyData.safetyCheck && !safetyData.safetyCheck.isSafe && !safetyData.overrideSafety) {
+      alert('You must override safety warnings before finalizing.');
+      return;
+    }
+
+    const legacyMeds = prescriptionItems.map(m => ({
+      name: m.drugName,
+      dosage: `${m.dose} ${m.doseUnit} ${m.frequency}`,
+      duration: `${m.durationDays} days`,
+      instructions: m.instructions
+    }));
 
     const data = {
       patientId: selectedPatientId,
@@ -131,13 +142,15 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
       notes: fd.get('notes'),
       bp: fd.get('bp'),
       hr: fd.get('hr'),
-      medications: validMeds
+      medications: legacyMeds,
+      pharmacyItems: prescriptionItems
     };
 
     try {
       await onCreateEncounter(data);
       setLastSaved({ ...data, createdAt: new Date().toISOString() });
-      setMeds([{ name: '', dosage: '', duration: '', instructions: '' }]);
+      setPrescriptionItems([]);
+      setSafetyData({ safetyCheck: null, overrideSafety: false });
     } catch (err) {
       alert('Clinical Save Error: ' + err.message);
     }
@@ -273,23 +286,12 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
                   </div>
                 </div>
 
-                <div className="rx-module-premium">
-                  <div className="rx-header">
-                    <h4>℞ Medications</h4>
-                    <button type="button" className="add-med-trigger" onClick={handleAddMed}>+ Add Prescription Line</button>
-                  </div>
-                  <div className="rx-lines">
-                    {meds.map((m, i) => (
-                      <div key={i} className="rx-entry-row">
-                        <input className="med-name-in" placeholder="Drug" value={m.name} onChange={e => handleMedChange(i, 'name', e.target.value)} />
-                        <input className="med-dose-in" placeholder="Dose (1-0-1)" value={m.dosage} onChange={e => handleMedChange(i, 'dosage', e.target.value)} />
-                        <input className="med-dur-in" placeholder="Days" value={m.duration} onChange={e => handleMedChange(i, 'duration', e.target.value)} />
-                        <input className="med-note-in" placeholder="Special Route/Note" value={m.instructions} onChange={e => handleMedChange(i, 'instructions', e.target.value)} />
-                        <button type="button" className="remove-med-btn" onClick={() => handleRemoveMed(i)}>✕</button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <Prescriber
+                  tenantId={tenant?.id}
+                  patientId={selectedPatientId}
+                  initialMeds={prescriptionItems}
+                  onDrugsChange={handleDrugsChange}
+                />
 
                 <div className="form-group-rich">
                   <label>Physician Advice & Narrative</label>
@@ -364,7 +366,7 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
           </div>
         </article>
       )}
-</section>
+    </section>
   );
 }
 

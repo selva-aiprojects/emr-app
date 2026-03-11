@@ -10,6 +10,7 @@ import { authenticate, requireRole, requireTenant, requirePermission, restrictPa
 import { evaluateAllFeatures, featureGate, moduleGate } from './middleware/featureFlag.middleware.js';
 import * as repo from './db/repository.js';
 import { createAuditLog } from './db/repository.js';
+import pharmacyRoutes from '../pharmacy-service/src/routes/pharmacy.routes.js';
 
 dotenv.config();
 
@@ -199,6 +200,9 @@ app.use('/api', authenticate);
 
 // Apply feature flag evaluation to all authenticated routes
 app.use('/api', evaluateAllFeatures);
+
+// Pharmacy microservice routes
+app.use('/api/pharmacy/v1', requireTenant, pharmacyRoutes);
 
 app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
   try {

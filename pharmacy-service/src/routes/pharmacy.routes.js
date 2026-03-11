@@ -12,7 +12,10 @@ import {
   searchDrugs,
   getDrugDetails,
   getLowStockAlerts,
-  getExpiringStockAlerts
+  getExpiringStockAlerts,
+  addVendor,
+  createPurchaseOrder,
+  importStock
 } from '../controllers/pharmacy.controller.js';
 
 const router = express.Router();
@@ -52,5 +55,18 @@ router.get('/alerts/low-stock', getLowStockAlerts);
 
 // GET /api/pharmacy/v1/alerts/expiring?days=90- Expiring stock alerts
 router.get('/alerts/expiring', getExpiringStockAlerts);
+
+// =====================================================
+// PROCUREMENT & VENDORS
+// =====================================================
+
+// POST /api/pharmacy/v1/vendors- Add new vendor
+router.post('/vendors', addVendor);
+
+// POST /api/pharmacy/v1/purchase-orders- Create PO
+router.post('/purchase-orders', createPurchaseOrder);
+
+// POST /api/pharmacy/v1/stock/import- Import from CSV (JSON)
+router.post('/stock/import', importStock);
 
 export default router;

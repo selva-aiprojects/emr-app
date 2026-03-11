@@ -17,6 +17,7 @@ import EmployeesPage from './pages/EmployeesPage.jsx';
 import AccountsPage from './pages/AccountsPage.jsx';
 import ReportsPage from './pages/ReportsPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
+import LabPage from './pages/LabPage.jsx';
 import Chatbot from './components/Chatbot.jsx';
 
 export default function App() {
@@ -418,7 +419,7 @@ export default function App() {
             onCreateEncounter={async (data) => {
               try {
                 // 1. Create the main encounter record
-                await api.addEncounter({
+                const encounterRes = await api.addEncounter({
                   tenantId: session.tenantId,
                   userId: activeUser.id,
                   patientId: data.patientId,
@@ -433,6 +434,7 @@ export default function App() {
 
                 // 2. If there are medications, save them to clinical records as a prescription
                 if (data.medications && data.medications.length > 0) {
+                  // A. Legacy clinical record logic
                   await api.addPatientClinical(data.patientId, {
                     tenantId: session.tenantId,
                     userId: activeUser.id,
@@ -445,6 +447,19 @@ export default function App() {
                       providerId: data.providerId
                     }
                   });
+
+                  // B. New Pharmacy Microservice logic
+                  try {
+                    await api.createPrescription(session.tenantId, {
+                      patientId: data.patientId,
+                      encounterId: encounterRes?.id || `enc-${Date.now()}`,
+                      priority: 'routine',
+                      category: data.type === 'Emergency' ? 'stat' : 'outpatient',
+                      items: data.pharmacyItems || []
+                    });
+                  } catch (rxErr) {
+                    console.error('Failed to create pharmacy prescription:', rxErr);
+                  }
                 }
 
                 refreshTenantData();
@@ -577,6 +592,8 @@ export default function App() {
             }}
           />
         )}
+
+        {view === 'lab' && <LabPage tenant={tenant} />}
 
         {view === 'accounts' && <AccountsPage tenant={tenant} />}
 

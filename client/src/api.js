@@ -430,10 +430,90 @@ export async function getPrescriptions(tenantId, filters = {}) {
   return await apiRequest(`/prescriptions?${params.toString()}`);
 }
 
-export async function dispensePrescription(id, data) {
+export async function createPrescription(tenantId, data) {
+  return await apiRequest('/pharmacy/v1/prescriptions', {
+    method: 'POST',
+    headers: { 'x-tenant-id': tenantId },
+    body: JSON.stringify(data)
+  });
+}
+
+export async function validatePrescription(tenantId, data) {
+  return await apiRequest('/pharmacy/v1/prescriptions/validate', {
+    method: 'POST',
+    headers: { 'x-tenant-id': tenantId },
+    body: JSON.stringify(data)
+  });
+}
+
+// Dispensing Queue
+export async function getPharmacyQueue(tenantId) {
+  return await apiRequest('/pharmacy/v1/pharmacy/queue', {
+    headers: { 'x-tenant-id': tenantId }
+  });
+}
+
+export async function dispenseMedication(tenantId, data) {
+  return await apiRequest('/pharmacy/v1/pharmacy/dispense', {
+    method: 'POST',
+    headers: { 'x-tenant-id': tenantId },
+    body: JSON.stringify(data)
+  });
+}
+
+// Old Dispense (for backward compatibility if needed, though we should migrate)
+export async function dispensePrescriptionOld(id, data) {
   return await apiRequest(`/prescriptions/${id}/dispense`, {
     method: 'POST',
     body: JSON.stringify(data)
+  });
+}
+
+// Drug Catalog
+export async function searchDrugs(query, filters = {}) {
+  const params = new URLSearchParams({ q: query, ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v != null)) });
+  return await apiRequest(`/pharmacy/v1/drugs/search?${params.toString()}`);
+}
+
+export async function getDrugDetails(id) {
+  return await apiRequest(`/pharmacy/v1/drugs/${id}`);
+}
+
+// Alerts
+export async function getLowStockAlerts(tenantId) {
+  return await apiRequest('/pharmacy/v1/alerts/low-stock', {
+    headers: { 'x-tenant-id': tenantId }
+  });
+}
+
+export async function getExpiringStockAlerts(tenantId, days = 90) {
+  return await apiRequest(`/pharmacy/v1/alerts/expiring?days=${days}`, {
+    headers: { 'x-tenant-id': tenantId }
+  });
+}
+
+// Procurement & Vendors
+export async function addPharmacyVendor(tenantId, data) {
+  return await apiRequest('/pharmacy/v1/vendors', {
+    method: 'POST',
+    headers: { 'x-tenant-id': tenantId },
+    body: JSON.stringify(data)
+  });
+}
+
+export async function createPharmacyPO(tenantId, data) {
+  return await apiRequest('/pharmacy/v1/purchase-orders', {
+    method: 'POST',
+    headers: { 'x-tenant-id': tenantId },
+    body: JSON.stringify(data)
+  });
+}
+
+export async function importPharmacyStock(tenantId, items) {
+  return await apiRequest('/pharmacy/v1/stock/import', {
+    method: 'POST',
+    headers: { 'x-tenant-id': tenantId },
+    body: JSON.stringify({ items })
   });
 }
 
@@ -558,7 +638,18 @@ apiClient.addEncounter = createEncounter;
 apiClient.dischargePatient = dischargePatient;
 apiClient.searchPatients = searchPatients;
 apiClient.getPrescriptions = getPrescriptions;
-apiClient.dispensePrescription = dispensePrescription;
+apiClient.dispensePrescription = dispensePrescriptionOld; // keeping old alias just in case
+apiClient.createPrescription = createPrescription;
+apiClient.validatePrescription = validatePrescription;
+apiClient.getPharmacyQueue = getPharmacyQueue;
+apiClient.dispenseMedication = dispenseMedication;
+apiClient.searchDrugs = searchDrugs;
+apiClient.getDrugDetails = getDrugDetails;
+apiClient.getLowStockAlerts = getLowStockAlerts;
+apiClient.getExpiringStockAlerts = getExpiringStockAlerts;
+apiClient.addPharmacyVendor = addPharmacyVendor;
+apiClient.createPharmacyPO = createPharmacyPO;
+apiClient.importPharmacyStock = importPharmacyStock;
 apiClient.addInvoice = createInvoice;
 apiClient.markInvoicePaid = payInvoice;
 apiClient.addInventory = createInventoryItem;

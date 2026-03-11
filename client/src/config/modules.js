@@ -5,7 +5,7 @@ export const moduleMeta = {
   appointments: { title: 'Appointments', subtitle: 'Scheduling, self-booking and walk-ins' },
   emr: { title: 'EMR', subtitle: 'Encounter and charting' },
   inpatient: { title: 'Inpatient', subtitle: 'Admissions and bed management' },
-  pharmacy: { title: 'Prescriptions', subtitle: 'Medication dispensing' },
+  pharmacy: { title: 'Pharmacy', subtitle: 'Medication dispensing' },
   billing: { title: 'Financial Logistics', subtitle: 'Revenue & Accounts' },
   insurance: { title: 'Insurance Registry', subtitle: 'Claims & Providers' },
   inventory: { title: 'Asset Logistics', subtitle: 'Pharmacy & Supply Chain' },
@@ -19,7 +19,7 @@ export const moduleMeta = {
 
 export const fallbackPermissions = {
   Superadmin: ['superadmin', 'dashboard', 'reports'],
-  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'billing', 'insurance', 'inventory', 'employees', 'accounts', 'reports', 'admin'],
+  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin'],
   Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'reports'],
   Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inventory'],
   Lab: ['dashboard', 'patients', 'lab', 'reports'],

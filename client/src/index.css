@@ -92,7 +92,8 @@ body {
   background-color: var(--bg-app);
   color: var(--text-main);
   -webkit-font-smoothing: antialiased;
-  font-size: 14px;
+  font-size: 11.5px;
+  /* Scaled down further to prevent overflow in data-dense boxes */
   line-height: 1.5;
 }
 
@@ -526,7 +527,8 @@ button {
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: var(--shadow-sm);
-  padding: 0.75rem 0.85rem;
+  padding: 0.65rem 0.75rem;
+  /* Tightened padding */
   display: flex;
   align-items: flex-start;
   gap: 0.65rem;
@@ -590,7 +592,8 @@ button {
 }
 
 .card-value {
-  font-size: 1.25rem;
+  font-size: 1rem;
+  /* Reduced to gracefully fit huge currency numbers */
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--text-main);
@@ -695,11 +698,14 @@ button {
   padding: 0.75rem 1.5rem;
   border-radius: var(--radius-md);
   font-weight: 600;
-  font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
   border: none;
   gap: 0.5rem;
+  flex-shrink: 0;
+  /* Prevent text crushing in flex layouts */
+  white-space: nowrap;
+  /* Keep button text on one line */
 }
 
 .btn-primary {
@@ -1140,10 +1146,10 @@ button {
   font-size: 0.72rem;
   font-weight: 700;
   line-height: 1;
-  cursor: pointer;
-  transition: all 0.15s ease;
   background: #eef2ff;
   color: #334155;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .action-btn:hover {
