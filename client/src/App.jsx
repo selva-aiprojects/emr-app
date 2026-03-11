@@ -18,6 +18,7 @@ import AccountsPage from './pages/AccountsPage.jsx';
 import ReportsPage from './pages/ReportsPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import LabPage from './pages/LabPage.jsx';
+import SupportPage from './pages/SupportPage.jsx';
 import Chatbot from './components/Chatbot.jsx';
 
 export default function App() {
@@ -594,6 +595,8 @@ export default function App() {
         )}
 
         {view === 'lab' && <LabPage tenant={tenant} />}
+
+        {view === 'support' && <SupportPage tenant={tenant} activeUser={activeUser} />}
 
         {view === 'accounts' && <AccountsPage tenant={tenant} />}
 

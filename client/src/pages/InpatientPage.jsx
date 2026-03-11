@@ -44,8 +44,26 @@ export default function InpatientPage({ tenant, onDischarge }) {
         const notes = prompt('Clinical Discharge Summary:', 'Patient stable, follow-up recommended.');
         if (notes === null) return;
 
+        const amountStr = prompt('Estimated inpatient bill amount (leave 0 for draft):', '0');
+        const amount = parseFloat(amountStr) || 0;
+
         try {
+            // 1. Close the clinical encounter
             await api.dischargePatient(encounter.id, { diagnosis, notes });
+
+            // 2. Auto-create a draft billing invoice
+            try {
+                await api.createDischargeInvoice(encounter.id, {
+                    patientId: encounter.patient_id || encounter.patientId,
+                    amount,
+                    description: `Inpatient Admission — ${diagnosis}`
+                });
+                alert(`✅ Patient discharged and a draft invoice of ₹${amount.toLocaleString()} has been created in Billing.`);
+            } catch (billingErr) {
+                console.warn('Billing bridge failed (non-critical):', billingErr.message);
+                alert('✅ Patient discharged. Note: Draft invoice creation failed — please raise invoice manually in Billing.');
+            }
+
             loadInpatientEncounters();
             if (onDischarge) onDischarge();
         } catch (err) {
@@ -133,8 +151,9 @@ export default function InpatientPage({ tenant, onDischarge }) {
                         </table>
                     </div>
                 )}
-            </article>
-</section>
+            </article>
+
+        </section>
     );
 }
 

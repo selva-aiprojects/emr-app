@@ -449,6 +449,32 @@ export const addVendor = async (req, res) => {
 };
 
 /**
+ * Get all vendors
+ */
+export const getVendors = async (req, res) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'];
+    const vendors = await inventoryService.getVendors(tenantId);
+    res.json({ success: true, data: vendors });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
+ * Get all purchase orders
+ */
+export const getPurchaseOrders = async (req, res) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'];
+    const pos = await inventoryService.getPurchaseOrders(tenantId);
+    res.json({ success: true, data: pos });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+/**
  * Create a purchase order
  */
 export const createPurchaseOrder = async (req, res) => {

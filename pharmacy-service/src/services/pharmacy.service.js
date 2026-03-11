@@ -457,13 +457,18 @@ export class PharmacyInventoryService {
     try {
       const sql = `
         INSERT INTO emr.vendors (
-          tenant_id, name, contact_person, email, phone, address, status
+          tenant_id, vendor_name, contact_person, email, phone, address, status
         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
       `;
       const result = await client.query(sql, [
-        data.tenantId, data.name, data.contactPerson, data.email,
-        data.phone, data.address, data.status || 'active'
+        data.tenantId,
+        data.vendor_name || data.name,       // support both field names
+        data.contact_person || data.contactPerson,
+        data.email,
+        data.phone,
+        data.address,
+        data.status || 'active'
       ]);
       return result.rows[0];
     } finally {
@@ -480,24 +485,29 @@ export class PharmacyInventoryService {
       await client.query('BEGIN');
       const poSql = `
         INSERT INTO emr.purchase_orders (
-          tenant_id, vendor_id, po_number, status, total_amount, created_by
+          tenant_id, vendor_id, order_number, status, total_amount, ordered_by
         ) VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *
       `;
       const po = await client.query(poSql, [
-        data.tenantId, data.vendorId, data.poNumber, 'draft', data.totalAmount, data.createdBy
+        data.tenantId,
+        data.vendorId,
+        data.poNumber || data.order_number || `PO-${Date.now()}`,
+        'pending',  // must be one of: pending, approved, shipped, received, cancelled, closed
+        data.totalAmount || 0,
+        data.createdBy || null
       ]);
 
-      const poId = po.rows[0].po_id;
+      const poId = po.rows[0].order_id;
 
-      for (const item of data.items) {
+      for (const item of (data.items || [])) {
         const itemSql = `
           INSERT INTO emr.purchase_order_items (
-            po_id, drug_id, quantity_ordered, unit_price, total_price
+            order_id, drug_id, quantity_ordered, unit_price, total_price
           ) VALUES ($1, $2, $3, $4, $5)
         `;
         await client.query(itemSql, [
-          poId, item.drugId, item.quantity, item.unitPrice, item.quantity * item.unitPrice
+          poId, item.drugId, item.quantity, item.unitPrice || 0, (item.quantity * (item.unitPrice || 0))
         ]);
       }
 
@@ -590,7 +600,7 @@ export class PharmacyInventoryService {
           END as alert_level
         FROM emr.drug_master dm
         JOIN emr.drug_batches db ON dm.drug_id = db.drug_id
-        WHERE dm.tenant_id = $1 OR dm.tenant_id IS NULL
+        WHERE (dm.tenant_id = $1 OR dm.tenant_id IS NULL)
           AND db.status = 'active'
           AND db.quantity_remaining <= dm.reorder_threshold
         ORDER BY 
@@ -662,6 +672,48 @@ export class PharmacyInventoryService {
         location: row.location,
         urgency: row.days_until_expiry <= 30 ? 'HIGH' : 'MEDIUM'
       }));
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Get all vendors for a tenant
+   */
+  async getVendors(tenantId) {
+    const client = await pool.connect();
+    try {
+      const sql = `
+        SELECT * FROM emr.vendors 
+        WHERE tenant_id = $1 OR tenant_id IS NULL
+        ORDER BY vendor_name ASC
+      `;
+      const result = await client.query(sql, [tenantId]);
+      return result.rows;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Get all purchase orders for a tenant
+   */
+  async getPurchaseOrders(tenantId) {
+    const client = await pool.connect();
+    try {
+      const sql = `
+        SELECT 
+          po.*,
+          v.vendor_name,
+          u.name as creator_name
+        FROM emr.purchase_orders po
+        JOIN emr.vendors v ON po.vendor_id = v.vendor_id
+        LEFT JOIN emr.users u ON po.created_by = u.id
+        WHERE po.tenant_id = $1
+        ORDER BY po.created_at DESC
+      `;
+      const result = await client.query(sql, [tenantId]);
+      return result.rows;
     } finally {
       client.release();
     }

@@ -7,6 +7,7 @@ import { api } from '../api.js';
 export default function DashboardPage({ metrics, activeUser, setView }) {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lowStockAlerts, setLowStockAlerts] = useState([]);
 
   const today = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
@@ -17,6 +18,7 @@ export default function DashboardPage({ metrics, activeUser, setView }) {
 
   useEffect(() => {
     loadReportData();
+    loadAlerts();
   }, []);
 
   async function loadReportData() {
@@ -33,6 +35,20 @@ export default function DashboardPage({ metrics, activeUser, setView }) {
       setLoading(false);
     }
   }
+
+  async function loadAlerts() {
+    try {
+      const session = api.getStoredSession() || {};
+      const tenantId = session.tenantId;
+      if (tenantId) {
+        const res = await api.getLowStockAlerts(tenantId);
+        setLowStockAlerts((res?.data || res || []).slice(0, 3));
+      }
+    } catch (err) {
+      console.warn('Low stock alerts unavailable:', err.message);
+    }
+  }
+
 
   const quickActions = [
     { label: 'Register Patient', icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>, view: 'patients', color: 'text-success' },
@@ -152,13 +168,33 @@ export default function DashboardPage({ metrics, activeUser, setView }) {
               <div className="panel-title">System Intelligence</div>
             </div>
             <div className="flex flex-col gap-3">
-              <div className="p-3 bg-amber-50 border border-amber-100 rounded-lg">
-                <div className="flex justify-between items-start mb-1">
-                  <span className="badge warning">Warning</span>
+              {lowStockAlerts.length > 0 ? lowStockAlerts.map((alert, i) => (
+                <div
+                  key={alert.drugId || i}
+                  className={`p-3 rounded-lg border ${alert.alertLevel === 'CRITICAL' ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'}`}
+                >
+                  <div className="flex justify-between items-start mb-1">
+                    <span className={`badge ${alert.alertLevel === 'CRITICAL' ? 'danger' : 'warning'}`}>
+                      {alert.alertLevel}
+                    </span>
+                    <span className="text-xs font-bold text-slate-400">QTY: {alert.quantityRemaining}</span>
+                  </div>
+                  <h5 className={`font-bold text-sm ${alert.alertLevel === 'CRITICAL' ? 'text-red-900' : 'text-amber-900'}`}>
+                    {alert.drugName}
+                  </h5>
+                  <p className={`text-xs ${alert.alertLevel === 'CRITICAL' ? 'text-red-700' : 'text-amber-800'}`}>
+                    Stock below reorder threshold ({alert.reorderThreshold}). Reorder required.
+                  </p>
                 </div>
-                <h5 className="font-bold text-sm text-amber-900">Low Inventory Alert</h5>
-                <p className="text-xs text-amber-800">Surgical supplies reaching critical levels.</p>
-              </div>
+              )) : (
+                <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+                  <div className="flex justify-between items-start mb-1">
+                    <span className="badge success">All Clear</span>
+                  </div>
+                  <h5 className="font-bold text-sm text-emerald-900">Inventory Stable</h5>
+                  <p className="text-xs text-emerald-800">All pharmacy stock levels within normal range.</p>
+                </div>
+              )}
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
                 <div className="flex justify-between items-start mb-1">
                   <span className="badge info">Status</span>
@@ -169,7 +205,6 @@ export default function DashboardPage({ metrics, activeUser, setView }) {
             </div>
           </section>
         </aside>
-
       </div>
     </div>
   );

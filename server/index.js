@@ -1451,8 +1451,166 @@ app.post('/api/insurance/claims', requireTenant, requirePermission('insurance'),
 });
 
 // =====================================================
-// REALTIME TICK (For demo/development)
+// LABORATORY MODULE
 // =====================================================
+
+// GET /api/lab/orders - List lab test orders for a tenant
+app.get('/api/lab/orders', requireTenant, async (req, res) => {
+  try {
+    const { status } = req.query;
+    let sql = `
+      SELECT 
+        sr.*,
+        p.first_name as patient_first_name,
+        p.last_name as patient_last_name,
+        u.name as ordered_by_name
+      FROM emr.service_requests sr
+      LEFT JOIN emr.patients p ON sr.patient_id = p.id
+      LEFT JOIN emr.users u ON sr.requester_id = u.id
+      WHERE sr.tenant_id = $1
+        AND sr.category = 'lab'
+    `;
+    const params = [req.tenantId];
+    if (status) { sql += ` AND sr.status = $2`; params.push(status); }
+    sql += ' ORDER BY sr.created_at DESC LIMIT 100';
+    const { Pool } = await import('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    const result = await pool.query(sql, params);
+    await pool.end();
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching lab orders:', error);
+    res.status(500).json({ error: 'Failed to fetch lab orders' });
+  }
+});
+
+// POST /api/lab/orders - Create a new lab test order
+app.post('/api/lab/orders', requireTenant, async (req, res) => {
+  try {
+    const { patientId, encounterId, tests, priority = 'routine', notes } = req.body;
+    if (!patientId || !tests || !tests.length) {
+      return res.status(400).json({ error: 'patientId and tests are required' });
+    }
+    const { Pool } = await import('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    const client = await pool.connect();
+    const orders = [];
+    try {
+      await client.query('BEGIN');
+      for (const test of tests) {
+        const sql = `
+          INSERT INTO emr.service_requests (
+            tenant_id, patient_id, encounter_id, requester_id, category,
+            code, display, status, priority, notes
+          ) VALUES ($1,$2,$3,$4,'lab',$5,$6,'pending',$7,$8)
+          RETURNING *
+        `;
+        const r = await client.query(sql, [
+          req.tenantId, patientId, encounterId || null, req.user.id,
+          test.code || 'LAB', test.name || test.display, priority, notes || null
+        ]);
+        orders.push(r.rows[0]);
+      }
+      await client.query('COMMIT');
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+      await pool.end();
+    }
+    res.status(201).json(orders);
+  } catch (error) {
+    console.error('Error creating lab order:', error);
+    res.status(500).json({ error: 'Failed to create lab order' });
+  }
+});
+
+// PATCH /api/lab/orders/:id/status - Update lab order status (pending → in-progress → completed)
+app.patch('/api/lab/orders/:id/status', requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const valid = ['pending', 'in-progress', 'completed', 'cancelled'];
+    if (!valid.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+    const { Pool } = await import('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    const r = await pool.query(
+      `UPDATE emr.service_requests SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 RETURNING *`,
+      [status, id, req.tenantId]
+    );
+    await pool.end();
+    if (!r.rows.length) return res.status(404).json({ error: 'Order not found' });
+    res.json(r.rows[0]);
+  } catch (error) {
+    console.error('Error updating lab order status:', error);
+    res.status(500).json({ error: 'Failed to update lab order status' });
+  }
+});
+
+// POST /api/lab/orders/:id/results - Record test results for a lab order
+app.post('/api/lab/orders/:id/results', requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { results, notes, criticalFlag = false } = req.body;
+    const { Pool } = await import('pg');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
+    // Store results as JSONB in notes / or in the diagnostic_reports table if available
+    const r = await pool.query(
+      `UPDATE emr.service_requests 
+       SET status = 'completed', notes = $1, updated_at = NOW()
+       WHERE id = $2 AND tenant_id = $3 RETURNING *`,
+      [JSON.stringify({ results, criticalFlag, enteredBy: req.user.id, enteredAt: new Date() }), id, req.tenantId]
+    );
+    await pool.end();
+    if (!r.rows.length) return res.status(404).json({ error: 'Order not found' });
+    res.json(r.rows[0]);
+  } catch (error) {
+    console.error('Error recording lab results:', error);
+    res.status(500).json({ error: 'Failed to record lab results' });
+  }
+});
+
+// =====================================================
+// INPATIENT → BILLING BRIDGE
+// =====================================================
+
+// POST /api/inpatient/:id/discharge-invoice - Auto-create a draft invoice on discharge
+app.post('/api/inpatient/:id/discharge-invoice', requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params; // encounter id
+    const { patientId, amount = 0, description } = req.body;
+
+    if (!patientId) return res.status(400).json({ error: 'patientId is required' });
+
+    const invoice = await repo.createInvoice({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      patientId,
+      description: description || 'Inpatient Admission & Healthcare Services',
+      amount: amount || 0,
+      taxPercent: 0,
+      paymentMethod: 'Insurance',
+      status: 'unpaid'
+    });
+
+    await repo.createAuditLog({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'inpatient.discharge.invoice_created',
+      entityName: 'invoice',
+      entityId: invoice.id,
+      details: { encounterId: id, patientId }
+    });
+
+    res.status(201).json(invoice);
+  } catch (error) {
+    console.error('Error creating discharge invoice:', error);
+    res.status(500).json({ error: 'Failed to create discharge invoice' });
+  }
+});
+
 
 app.get('/api/realtime-tick', requireTenant, async (req, res) => {
   try {

@@ -493,6 +493,18 @@ export async function getExpiringStockAlerts(tenantId, days = 90) {
 }
 
 // Procurement & Vendors
+export async function getPharmacyVendors(tenantId) {
+  return await apiRequest('/pharmacy/v1/vendors', {
+    headers: { 'x-tenant-id': tenantId }
+  });
+}
+
+export async function getPharmacyPOs(tenantId) {
+  return await apiRequest('/pharmacy/v1/purchase-orders', {
+    headers: { 'x-tenant-id': tenantId }
+  });
+}
+
 export async function addPharmacyVendor(tenantId, data) {
   return await apiRequest('/pharmacy/v1/vendors', {
     method: 'POST',
@@ -647,6 +659,8 @@ apiClient.searchDrugs = searchDrugs;
 apiClient.getDrugDetails = getDrugDetails;
 apiClient.getLowStockAlerts = getLowStockAlerts;
 apiClient.getExpiringStockAlerts = getExpiringStockAlerts;
+apiClient.getPharmacyVendors = getPharmacyVendors;
+apiClient.getPharmacyPOs = getPharmacyPOs;
 apiClient.addPharmacyVendor = addPharmacyVendor;
 apiClient.createPharmacyPO = createPharmacyPO;
 apiClient.importPharmacyStock = importPharmacyStock;
@@ -656,6 +670,15 @@ apiClient.addInventory = createInventoryItem;
 apiClient.addEmployee = createEmployee;
 apiClient.addEmployeeLeave = createEmployeeLeave;
 apiClient.getBootstrap = getBootstrapData;
+
+// Lab module
+apiClient.getLabOrders = (tenantId, status) => apiRequest(`/lab/orders${status ? `?status=${status}` : ''}`);
+apiClient.createLabOrder = (data) => apiRequest('/lab/orders', { method: 'POST', body: JSON.stringify(data) });
+apiClient.updateLabOrderStatus = (id, status) => apiRequest(`/lab/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+apiClient.recordLabResults = (id, data) => apiRequest(`/lab/orders/${id}/results`, { method: 'POST', body: JSON.stringify(data) });
+
+// Inpatient → Billing bridge
+apiClient.createDischargeInvoice = (encounterId, data) => apiRequest(`/inpatient/${encounterId}/discharge-invoice`, { method: 'POST', body: JSON.stringify(data) });
 
 // Generic HTTP methods (for direct usage)
 apiClient.get = (url) => apiRequest(url);

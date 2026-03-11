@@ -13,6 +13,8 @@ import {
   getDrugDetails,
   getLowStockAlerts,
   getExpiringStockAlerts,
+  getVendors,
+  getPurchaseOrders,
   addVendor,
   createPurchaseOrder,
   importStock
@@ -60,10 +62,16 @@ router.get('/alerts/expiring', getExpiringStockAlerts);
 // PROCUREMENT & VENDORS
 // =====================================================
 
-// POST /api/pharmacy/v1/vendors- Add new vendor
+// GET /api/pharmacy/v1/vendors - List all vendors
+router.get('/vendors', getVendors);
+
+// POST /api/pharmacy/v1/vendors - Add new vendor
 router.post('/vendors', addVendor);
 
-// POST /api/pharmacy/v1/purchase-orders- Create PO
+// GET /api/pharmacy/v1/purchase-orders - List all POs
+router.get('/purchase-orders', getPurchaseOrders);
+
+// POST /api/pharmacy/v1/purchase-orders - Create PO
 router.post('/purchase-orders', createPurchaseOrder);
 
 // POST /api/pharmacy/v1/stock/import- Import from CSV (JSON)

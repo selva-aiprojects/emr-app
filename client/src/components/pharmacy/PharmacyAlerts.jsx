@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../../api.js';
 
 export default function PharmacyAlerts({ tenant }) {
     const [lowStock, setLowStock] = useState([]);
     const [expiring, setExpiring] = useState([]);
+    const [vendors, setVendors] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [reordering, setReordering] = useState(null); // batchId being reordered
 
     useEffect(() => {
         loadAlerts();
@@ -13,16 +15,46 @@ export default function PharmacyAlerts({ tenant }) {
     const loadAlerts = async () => {
         setLoading(true);
         try {
-            const [stockRes, expiringRes] = await Promise.all([
+            const [stockRes, expiringRes, vendorRes] = await Promise.all([
                 api.getLowStockAlerts(tenant.id),
-                api.getExpiringStockAlerts(tenant.id, 90)
+                api.getExpiringStockAlerts(tenant.id, 90),
+                api.getPharmacyVendors(tenant.id)
             ]);
             setLowStock(stockRes.data || []);
             setExpiring(expiringRes.data || []);
+            setVendors(vendorRes.data || []);
         } catch (err) {
             console.error('Failed to load pharmacy alerts:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleReorder = async (item) => {
+        // Pick the first active vendor or prompt user if none exist
+        if (vendors.length === 0) {
+            alert('No vendors registered. Please add a vendor in the Vendors tab first.');
+            return;
+        }
+        const vendor = vendors[0]; // auto-select first vendor; could be a modal for multi-vendor
+        setReordering(item.batchId);
+        try {
+            const poNumber = `PO-${Date.now()}`;
+            await api.createPharmacyPO(tenant.id, {
+                vendorId: vendor.vendor_id,
+                poNumber,
+                items: [{
+                    drugId: item.drugId,
+                    quantity: item.suggestedOrderQuantity,
+                    unitPrice: 0
+                }],
+                totalAmount: 0
+            });
+            alert(`✅ Draft PO ${poNumber} created for ${item.drugName} (Qty: ${item.suggestedOrderQuantity}) via ${vendor.vendor_name}. Review it in the Procurement tab.`);
+        } catch (err) {
+            alert('Reorder Error: ' + err.message);
+        } finally {
+            setReordering(null);
         }
     };
 
@@ -36,7 +68,7 @@ export default function PharmacyAlerts({ tenant }) {
     }
 
     return (
-        <div className="grid grid-cols-2 gap-6 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
             {/* Low Stock Alerts */}
             <article className="premium-panel p-0 overflow-hidden">
                 <div className="p-4 border-b border-red-100 bg-red-50 flex justify-between items-center">
@@ -48,7 +80,7 @@ export default function PharmacyAlerts({ tenant }) {
                 </div>
                 <div className="p-2">
                     {lowStock.length === 0 ? (
-                        <div className="p-8 text-center text-slate-400 text-sm">Inventory levels optimal</div>
+                        <div className="p-8 text-center text-slate-400 text-sm">✅ Inventory levels optimal</div>
                     ) : (
                         <div className="space-y-2">
                             {lowStock.map(item => (
@@ -61,7 +93,13 @@ export default function PharmacyAlerts({ tenant }) {
                                         <div className={`font-bold text-lg ${item.alertLevel === 'CRITICAL' ? 'text-red-600' : 'text-amber-500'}`}>
                                             {item.quantityRemaining} left
                                         </div>
-                                        <button className="text-[10px] text-blue-600 font-bold uppercase hover:underline">Reorder {item.suggestedOrderQuantity}</button>
+                                        <button
+                                            onClick={() => handleReorder(item)}
+                                            disabled={reordering === item.batchId}
+                                            className="text-[10px] text-blue-600 font-bold uppercase hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {reordering === item.batchId ? 'Creating PO...' : `Reorder ${item.suggestedOrderQuantity}`}
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -81,7 +119,7 @@ export default function PharmacyAlerts({ tenant }) {
                 </div>
                 <div className="p-2">
                     {expiring.length === 0 ? (
-                        <div className="p-8 text-center text-slate-400 text-sm">No items expiring soon</div>
+                        <div className="p-8 text-center text-slate-400 text-sm">✅ No items expiring soon</div>
                     ) : (
                         <div className="space-y-2">
                             {expiring.map(item => (
