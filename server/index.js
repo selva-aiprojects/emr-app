@@ -1006,6 +1006,16 @@ app.patch('/api/invoices/:id/pay', requireTenant, requirePermission('billing'), 
   }
 });
 
+app.get('/api/invoices', requireTenant, requirePermission('billing'), async (req, res) => {
+  try {
+    const invoices = await repo.getInvoices(req.tenantId);
+    res.json(invoices);
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    res.status(500).json({ error: 'Failed to fetch invoices' });
+  }
+});
+
 // =====================================================
 // PHARMACY & PRESCRIPTIONS
 // =====================================================
@@ -1562,12 +1572,75 @@ app.post('/api/lab/orders/:id/results', requireTenant, async (req, res) => {
        WHERE id = $2 AND tenant_id = $3 RETURNING *`,
       [JSON.stringify({ results, criticalFlag, enteredBy: req.user.id, enteredAt: new Date() }), id, req.tenantId]
     );
+
+    // Add Audit Log
+    await repo.createAuditLog({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: criticalFlag ? 'lab.result.record_critical' : 'lab.result.record',
+      entityName: 'service_request',
+      entityId: id,
+      details: { criticalFlag }
+    });
+
     await pool.end();
     if (!r.rows.length) return res.status(404).json({ error: 'Order not found' });
     res.json(r.rows[0]);
   } catch (error) {
     console.error('Error recording lab results:', error);
     res.status(500).json({ error: 'Failed to record lab results' });
+  }
+});
+
+// =====================================================
+// SUPPORT TICKETS (Operations)
+// =====================================================
+
+app.get('/api/support/tickets', requireTenant, async (req, res) => {
+  try {
+    const tickets = await repo.getSupportTickets(req.tenantId);
+    res.json(tickets);
+  } catch (error) {
+    console.error('Error fetching support tickets:', error);
+    res.status(500).json({ error: 'Failed to fetch support tickets' });
+  }
+});
+
+app.post('/api/support/tickets', requireTenant, async (req, res) => {
+  try {
+    const { type, location, description, priority } = req.body;
+    if (!type || !description) return res.status(400).json({ error: 'type and description are required' });
+    
+    const ticket = await repo.createSupportTicket({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      type,
+      location,
+      description,
+      priority
+    });
+    res.status(201).json(ticket);
+  } catch (error) {
+    console.error('Error creating support ticket:', error);
+    res.status(500).json({ error: 'Failed to create support ticket' });
+  }
+});
+
+app.patch('/api/support/tickets/:id/status', requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const ticket = await repo.updateSupportTicketStatus({
+      id,
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      status
+    });
+    res.json(ticket);
+  } catch (error) {
+    console.error('Error updating support ticket status:', error);
+    res.status(500).json({ error: 'Failed to update support ticket status' });
   }
 });
 

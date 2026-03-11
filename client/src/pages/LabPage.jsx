@@ -76,6 +76,60 @@ export default function LabPage({ tenant }) {
         }
     };
 
+    const handlePrint = (order) => {
+        const parsed = order.notes ? JSON.parse(order.notes) : {};
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+                <head>
+                    <title>Lab Report - ${order.patient_first_name} ${order.patient_last_name}</title>
+                    <style>
+                        body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #1e293b; }
+                        .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+                        .report-title { font-size: 24px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
+                        .meta { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+                        .meta-item { font-size: 14px; }
+                        .meta-label { font-weight: bold; color: #64748b; text-transform: uppercase; font-size: 11px; margin-bottom: 2px; }
+                        .results-area { background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; }
+                        .results-text { font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; margin-top: 15px; }
+                        .critical { color: #dc2626; border: 2px solid #fecaca; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; }
+                        .footer { margin-top: 50px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <div class="report-title">LABORATORY INVESTIGATION REPORT</div>
+                        <div>${tenant?.name || 'Healthcare Facility'}</div>
+                    </div>
+                    
+                    <div class="meta">
+                        <div>
+                            <div class="meta-item"><div class="meta-label">Patient</div>\${order.patient_first_name} \${order.patient_last_name}</div>
+                            <div class="meta-item"><div class="meta-label">ID / MRN</div>\${order.patient_id}</div>
+                        </div>
+                        <div>
+                            <div class="meta-item"><div class="meta-label">Report Date</div>\${new Date().toLocaleString()}</div>
+                            <div class="meta-item"><div class="meta-label">Invoiced ID</div>\${order.id}</div>
+                        </div>
+                    </div>
+
+                    <div class="results-area">
+                        <div class="meta-label">Investigation: \${order.display || order.code}</div>
+                        \${parsed.criticalFlag ? '<div class="critical">⚠️ CRITICAL RESULT - ATTENTION REQUIRED</div>' : ''}
+                        <div class="results-text">\${parsed.results || 'No results recorded.'}</div>
+                    </div>
+
+                    <div class="footer">
+                        Electronic record validated by \${parsed.enteredBy || 'Laboratory Dept.'} at \${new Date(parsed.enteredAt).toLocaleString()}
+                        <br/>MedFlow EMR Systems
+                    </div>
+                    <script>window.print();</script>
+                </body>
+            </html>
+        `);
+        printWindow.document.close();
+    };
+
     const pendingCount = orders.filter(o => o.status === 'pending').length;
     const inProgressCount = orders.filter(o => o.status === 'in-progress').length;
 
@@ -124,9 +178,9 @@ export default function LabPage({ tenant }) {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="content-grid">
                 {/* Orders Panel */}
-                <div className="lg:col-span-2">
+                <div className="span-8">
                     <article className="premium-panel p-0 overflow-hidden">
                         <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                             <div>
@@ -195,6 +249,14 @@ export default function LabPage({ tenant }) {
                                                             Enter Result
                                                         </button>
                                                     )}
+                                                    {order.status === 'completed' && (
+                                                        <button
+                                                            onClick={() => handlePrint(order)}
+                                                            className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition"
+                                                        >
+                                                            Print Report
+                                                        </button>
+                                                    )}
                                                     {order.status === 'pending' && (
                                                         <button
                                                             onClick={() => handleStatusUpdate(order.id, 'cancelled')}
@@ -214,7 +276,7 @@ export default function LabPage({ tenant }) {
                 </div>
 
                 {/* Sidebar */}
-                <aside className="space-y-6">
+                <aside className="span-4 space-y-6">
                     <article className="premium-panel">
                         <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                             <span className="w-2 h-2 bg-blue-500 rounded-full"></span>

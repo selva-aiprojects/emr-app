@@ -8,18 +8,63 @@ const iconMap = {
 };
 
 export default function MetricCard({ label, value, accent = 'blue', icon, trend }) {
+  // Define accent-specific styles
+  const accentStyles = {
+    blue: {
+      iconBg: 'bg-blue-500',
+      iconText: 'text-white',
+      trendBg: 'bg-blue-50 dark:bg-blue-900/20',
+      trendText: 'text-blue-600 dark:text-blue-400',
+      shadow: 'shadow-blue-500/20'
+    },
+    emerald: {
+      iconBg: 'bg-emerald-500',
+      iconText: 'text-white',
+      trendBg: 'bg-emerald-50 dark:bg-emerald-900/20',
+      trendText: 'text-emerald-600 dark:text-emerald-400',
+      shadow: 'shadow-emerald-500/20'
+    },
+    amber: {
+      iconBg: 'bg-amber-500',
+      iconText: 'text-white',
+      trendBg: 'bg-amber-50 dark:bg-amber-900/20',
+      trendText: 'text-amber-600 dark:text-amber-400',
+      shadow: 'shadow-amber-500/20'
+    },
+    rose: {
+      iconBg: 'bg-rose-500',
+      iconText: 'text-white',
+      trendBg: 'bg-rose-50 dark:bg-rose-900/20',
+      trendText: 'text-rose-600 dark:text-rose-400',
+      shadow: 'shadow-rose-500/20'
+    }
+  };
+
+  const style = accentStyles[accent] || accentStyles.blue;
+
   return (
-    <article className={`intelligence-card ${accent}`}>
-      <div className={`card-icon ${accent}`}>
-        {iconMap[icon] || iconMap['patients']}
+    <article className="glass-panel rounded-super p-6 transition-all duration-300 flex flex-col gap-5 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-10 transition-opacity">
+        <svg className="w-12 h-12 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><path d="M12 2v20m10-10H2" /></svg>
       </div>
-      <div className="card-data">
-        <span className="card-label">{label}</span>
-        <div className="card-value-box">
-          <span className="card-value">{value}</span>
-          {trend && <span className="trend positive">{trend}</span>}
+      <div className="flex items-start justify-between relative z-10">
+        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${style.trendBg} ${style.trendText}`}>
+          {iconMap[icon] || iconMap['patients']}
         </div>
-        <p className="card-subtext">Clinical Platform Intelligence</p>
+        {trend && (
+          <span className={`px-2.5 py-1 rounded-full text-xs font-bold leading-none flex items-center gap-1 ${style.trendBg} ${style.trendText}`}>
+            {trend.startsWith('+') && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>}
+            {trend.startsWith('-') && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>}
+            {trend}
+          </span>
+        )}
+      </div>
+      
+      <div className="relative z-10">
+        <span className="block text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-2">{label}</span>
+        <div className="text-[1.75rem] font-extrabold text-main tracking-tight leading-none">
+          {value}
+        </div>
       </div>
     </article>
   );

@@ -47,7 +47,9 @@ export default function ComparisonChart({ title, data, dataKey, color, todayValu
                     <svg width="100%" height="100%" className="chart-svg">
                         {data.map((item, index) => {
                             const h = (item[dataKey] / max) * chartHeight;
-                            const x = (index * (100 / data.length)) + '%';
+                            const basePos = (index * (100 / data.length));
+                            const x = basePos + '%';
+                            const textX = (basePos + barWidth / 2) + '%';
                             const isLast = index === data.length - 1;
 
                             return (
@@ -62,7 +64,7 @@ export default function ComparisonChart({ title, data, dataKey, color, todayValu
                                         style={{ transition: 'all 0.4s ease' }}
                                     />
                                     <text
-                                        x={`calc(${x} + ${barWidth / 2}%)`}
+                                        x={textX}
                                         y={chartHeight + 18}
                                         fontSize="10"
                                         fill="var(--text-muted)"
@@ -76,9 +78,7 @@ export default function ComparisonChart({ title, data, dataKey, color, todayValu
                         })}
                     </svg>
                 </div>
-            </div>
-</div>
+            </div>
+        </div>
     );
 }
-
-

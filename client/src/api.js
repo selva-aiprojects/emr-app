@@ -328,9 +328,11 @@ export async function rescheduleAppointment(appointmentId, data) {
 // =====================================================
 
 export async function getEncounters(tenantId) {
-  // We'll rely on server exposing this or use bootstrap data if not. 
-  // Let's assume we will add GET /api/encounters for InpatientPage.
   return await apiRequest(`/encounters?tenantId=${tenantId}`);
+}
+
+export async function getInvoices(tenantId) {
+  return await apiRequest(`/invoices?tenantId=${tenantId}`);
 }
 
 export async function createEncounter(data) {
@@ -530,6 +532,28 @@ export async function importPharmacyStock(tenantId, items) {
 }
 
 // =====================================================
+// SUPPORT MODULE
+// =====================================================
+
+export async function getSupportTickets(tenantId) {
+  return await apiRequest(`/support/tickets?tenantId=${tenantId}`);
+}
+
+export async function createSupportTicket(data) {
+  return await apiRequest('/support/tickets', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSupportTicketStatus(id, status) {
+  return await apiRequest(`/support/tickets/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+// =====================================================
 // INSURANCE
 // =====================================================
 
@@ -603,6 +627,7 @@ const apiClient = {
   createEncounter,
 
   // Invoices
+  getInvoices,
   createInvoice,
   payInvoice,
 
@@ -669,6 +694,10 @@ apiClient.markInvoicePaid = payInvoice;
 apiClient.addInventory = createInventoryItem;
 apiClient.addEmployee = createEmployee;
 apiClient.addEmployeeLeave = createEmployeeLeave;
+apiClient.getSupportTickets = getSupportTickets;
+apiClient.addSupportTicket = createSupportTicket;
+apiClient.updateSupportStatus = updateSupportTicketStatus;
+apiClient.getInvoices = getInvoices;
 apiClient.getBootstrap = getBootstrapData;
 
 // Lab module

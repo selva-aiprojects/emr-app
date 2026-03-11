@@ -1256,6 +1256,16 @@ export async function getReportSummary(tenantId) {
     [tenantId]
   );
 
+  // Critical lab results (latest 5)
+  const criticalLabResult = await query(
+    `SELECT sr.*, p.first_name || ' ' || p.last_name as patient_name
+     FROM emr.service_requests sr
+     JOIN emr.patients p ON sr.patient_id = p.id
+     WHERE sr.tenant_id = $1 AND sr.category = 'lab' AND sr.status = 'completed' AND sr.notes::jsonb->>'criticalFlag' = 'true'
+     ORDER BY sr.updated_at DESC LIMIT 5`,
+    [tenantId]
+  );
+
   return {
     periodical: {
       dailyAppointments: parseInt(periodicalResult.rows[0].daily_appointments),
@@ -1263,6 +1273,13 @@ export async function getReportSummary(tenantId) {
       activeLabTests: parseInt(periodicalResult.rows[0].active_lab_tests),
       pendingInvoices: parseInt(periodicalResult.rows[0].pending_invoices),
     },
+    criticalAlerts: criticalLabResult.rows.map(r => ({
+      id: r.id,
+      patientName: r.patient_name,
+      testName: r.display,
+      date: r.updated_at,
+      details: JSON.parse(r.notes || '{}')
+    })),
     monthlyComparison: {
       appointments: appointmentsResult.rows.map(r => ({
         month: r.month,
@@ -1789,4 +1806,66 @@ export default {
 
   // Superadmin
   getSuperadminOverview,
+
+  // Support Tickets
+  getSupportTickets,
+  createSupportTicket,
+  updateSupportTicketStatus,
 };
+
+/**
+ * Support Ticket Repository Functions
+ */
+export async function getSupportTickets(tenantId) {
+  const sql = `
+    SELECT t.*, u.name as creator_name
+    FROM emr.support_tickets t
+    LEFT JOIN emr.users u ON t.created_by = u.id
+    WHERE t.tenant_id = $1
+    ORDER BY t.created_at DESC
+  `;
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function createSupportTicket({ tenantId, userId, type, location, description, priority }) {
+  const sql = `
+    INSERT INTO emr.support_tickets (tenant_id, created_by, type, location, description, priority)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, userId, type, location, description, priority || 'medium']);
+  const ticket = result.rows[0];
+
+  await createAuditLog({
+    tenantId,
+    userId,
+    action: 'support.ticket.create',
+    entityName: 'support_ticket',
+    entityId: ticket.id,
+    details: { type, priority }
+  });
+
+  return ticket;
+}
+
+export async function updateSupportTicketStatus({ id, tenantId, userId, status }) {
+  const sql = `
+    UPDATE emr.support_tickets
+    SET status = $1, updated_at = NOW()
+    WHERE id = $2 AND tenant_id = $3
+    RETURNING *
+  `;
+  const result = await query(sql, [status, id, tenantId]);
+  if (result.rows.length === 0) throw new Error('Ticket not found');
+
+  await createAuditLog({
+    tenantId,
+    userId,
+    action: `support.ticket.status.${status}`,
+    entityName: 'support_ticket',
+    entityId: id,
+  });
+
+  return result.rows[0];
+}

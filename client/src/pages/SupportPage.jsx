@@ -23,47 +23,50 @@ export default function SupportPage({ tenant, activeUser }) {
         loadTickets();
     }, [filter, tenant]);
 
-    const loadTickets = () => {
+    const loadTickets = async () => {
         setLoading(true);
         try {
-            const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            const stored = await api.getSupportTickets(tenant.id);
             const filtered = filter === 'all' ? stored : stored.filter(t => t.status === filter);
-            setTickets(filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
-        } catch {
+            setTickets(filtered.sort((a, b) => new Date(b.created_at || b.createdAt) - new Date(a.created_at || a.createdAt)));
+        } catch (err) {
+            console.error('Failed to load tickets:', err);
             setTickets([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleCreate = (e) => {
+    const handleCreate = async (e) => {
         e.preventDefault();
         setSubmitting(true);
         const fd = new FormData(e.target);
-        const ticket = {
-            id: `TKT-${Date.now()}`,
-            type: fd.get('type'),
-            location: fd.get('location'),
-            description: fd.get('description'),
-            priority: fd.get('priority'),
-            status: 'open',
-            createdBy: activeUser?.name || 'Staff',
-            createdAt: new Date().toISOString(),
-        };
-        const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        stored.push(ticket);
-        localStorage.setItem(storageKey, JSON.stringify(stored));
-        setShowForm(false);
-        e.target.reset();
-        setSubmitting(false);
-        loadTickets();
+        
+        try {
+            await api.addSupportTicket({
+                tenantId: tenant.id,
+                type: fd.get('type'),
+                location: fd.get('location'),
+                description: fd.get('description'),
+                priority: fd.get('priority')
+            });
+            setShowForm(false);
+            e.target.reset();
+            loadTickets();
+        } catch (err) {
+            alert('Failed to create ticket: ' + err.message);
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    const updateStatus = (id, newStatus) => {
-        const stored = JSON.parse(localStorage.getItem(storageKey) || '[]');
-        const updated = stored.map(t => t.id === id ? { ...t, status: newStatus, updatedAt: new Date().toISOString() } : t);
-        localStorage.setItem(storageKey, JSON.stringify(updated));
-        loadTickets();
+    const updateStatus = async (id, newStatus) => {
+        try {
+            await api.updateSupportStatus(id, newStatus);
+            loadTickets();
+        } catch (err) {
+            alert('Failed to update status: ' + err.message);
+        }
     };
 
     const all = JSON.parse(localStorage.getItem(storageKey) || '[]');
@@ -86,9 +89,9 @@ export default function SupportPage({ tenant, activeUser }) {
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4 mb-6">
                 {[
-                    { label: 'Open', value: all.filter(t => t.status === 'open').length, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-                    { label: 'In Progress', value: all.filter(t => t.status === 'in-progress').length, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-                    { label: 'Resolved', value: all.filter(t => t.status === 'resolved').length, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+                    { label: 'Open', value: tickets.filter(t => t.status === 'open').length, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+                    { label: 'In Progress', value: tickets.filter(t => t.status === 'in-progress').length, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+                    { label: 'Resolved', value: tickets.filter(t => t.status === 'resolved').length, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
                 ].map(s => (
                     <article key={s.label} className={`premium-panel ${s.bg} border ${s.border}`}>
                         <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
@@ -174,7 +177,7 @@ export default function SupportPage({ tenant, activeUser }) {
                                     </div>
                                     <p className="text-sm text-slate-600 mb-1">{ticket.description}</p>
                                     <div className="text-xs text-slate-400">
-                                        📍 {ticket.location} • By {ticket.createdBy} • {new Date(ticket.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                        📍 {ticket.location} • By {ticket.creator_name || ticket.createdBy || 'Staff'} • {new Date(ticket.created_at || ticket.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                                     </div>
                                 </div>
                                 <div className="flex gap-2 ml-4 flex-shrink-0">
@@ -192,7 +195,7 @@ export default function SupportPage({ tenant, activeUser }) {
             </article>
 
             <p className="text-xs text-slate-400 text-center mt-4 font-medium">
-                💡 Support tickets are stored locally. A dedicated backend table (`emr.support_tickets`) can be added to persist across sessions.
+                💡 Support tickets are now persisted in the Enterprise Database.
             </p>
         </section>
     );

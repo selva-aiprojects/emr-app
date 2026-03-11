@@ -14,18 +14,20 @@ export default function InpatientPage({ tenant, onDischarge }) {
         try {
             const [allEncounters, allInvoices] = await Promise.all([
                 api.getEncounters(tenant.id),
-                api.getFinancials(tenant.id) // Or use a direct invoice fetch if available
+                api.getInvoices(tenant.id)
             ]);
 
-            // Derive invoices from financials or fetch separately if needed
-            // For now, we'll assume we can get them or use a mock logic for the demo
-            // In a real app, you'd fetch outstanding invoices for these specific patients
             const ipd = allEncounters
                 .filter(e => (e.encounter_type === 'In-patient' || e.type === 'IPD') && e.status === 'open')
-                .map(e => ({
-                    ...e,
-                    isCleared: Math.random() > 0.3 // Mock: 70% chance of being cleared for demo
-                }));
+                .map(e => {
+                    // Check if there are any unpaid invoices for this patient
+                    const patientInvoices = allInvoices.filter(inv => inv.patientId === (e.patient_id || e.patientId));
+                    const hasUnpaid = patientInvoices.some(inv => inv.status !== 'paid');
+                    return {
+                        ...e,
+                        isCleared: !hasUnpaid
+                    };
+                });
             setEncounters(ipd);
         } catch (err) {
             console.error(err);
