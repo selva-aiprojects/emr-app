@@ -25,7 +25,10 @@ const navIcons = {
 export default function AppLayout({ tenant, activeUser, allowedViews, view, setView, onLogout, children, error }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
-  const [theme, setTheme] = useState(() => localStorage.getItem('medflow-theme') || THEMES.LIGHT);
+  const [theme, setTheme] = useState(() => {
+    const stored = localStorage.getItem('medflow-theme');
+    return Object.values(THEMES).includes(stored) ? stored : THEMES.HEALING_TEAL;
+  });
 
   const { getAccessibleModules } = useFeatureAccess(tenant?.id);
   const accessibleModules = getAccessibleModules(allowedViews);
@@ -75,7 +78,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
       )}
 
       {/* DESKTOP SIDEBAR */}
-      <aside className={`premium-sidebar ${mobileOpen ? 'hidden' : 'hidden lg:flex'}`}>
+      <aside className="premium-sidebar">
         <div className="sidebar-header border-b border-white/5 bg-black/10">
           <div className="brand-logo flex items-center gap-3 text-white">
             <div className="brand-icon w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-700 shadow-lg shadow-teal-900/30 border border-white/20 flex items-center justify-center">
@@ -113,7 +116,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
               <div className="text-xs text-muted truncate">{activeUser?.role}</div>
             </div>
           </div>
-          <button onClick={onLogout} className="logout-btn">
+          <button onClick={onLogout} className="logout-btn sidebar-signout">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>
             Sign Out
           </button>
@@ -138,25 +141,25 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
               {/* THEME SWITCHER - Refined grouped buttons */}
               <div className="flex items-center bg-white/5 p-1 rounded-lg border border-white/10">
                 <button 
-                  onClick={() => setTheme(THEMES.LIGHT)} 
-                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${theme === THEMES.LIGHT ? 'bg-[#ffca28] text-white shadow-sm ring-2 ring-[#ffca28]/30' : 'text-white/60 hover:text-white/90'}`}
-                  title="Light Theme"
+                  onClick={() => setTheme(THEMES.HEALING_TEAL)} 
+                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${theme === THEMES.HEALING_TEAL ? 'theme-btn theme-teal' : 'text-white/60 hover:text-white/90'}`}
+                  title="Healing Teal"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707M16.95 16.95l.707.707M7.05 7.05l.707.707M12 8a4 4 0 100 8 4 4 0 000-8z" /></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 12h6l3-6 3 12 3-6h3" /></svg>
                 </button>
                 <button 
-                  onClick={() => setTheme(THEMES.DARK)} 
-                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${theme === THEMES.DARK ? 'bg-slate-700 text-blue-400 shadow-sm ring-2 ring-blue-400/30' : 'text-white/60 hover:text-white/90'}`}
-                  title="Dark Theme"
+                  onClick={() => setTheme(THEMES.TRUST_BLUE)} 
+                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${theme === THEMES.TRUST_BLUE ? 'theme-btn theme-blue' : 'text-white/60 hover:text-white/90'}`}
+                  title="Trust Blue"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 3l8 4v6c0 4.4-3.2 7.8-8 9-4.8-1.2-8-4.6-8-9V7l8-4z" /></svg>
                 </button>
                 <button 
-                  onClick={() => setTheme(THEMES.MIDNIGHT)} 
-                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${theme === THEMES.MIDNIGHT ? 'bg-sky-900 text-sky-400 shadow-sm ring-2 ring-sky-400/30' : 'text-white/60 hover:text-white/90'}`}
-                  title="Midnight Blue"
+                  onClick={() => setTheme(THEMES.MEDICAL_SLATE)} 
+                  className={`w-8 h-8 flex items-center justify-center rounded-md transition-all ${theme === THEMES.MEDICAL_SLATE ? 'theme-btn theme-slate' : 'text-white/60 hover:text-white/90'}`}
+                  title="Medical Slate"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 7h16M4 12h16M4 17h16" /></svg>
                 </button>
               </div>
 

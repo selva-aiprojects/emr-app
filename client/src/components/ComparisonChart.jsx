@@ -17,8 +17,16 @@ export default function ComparisonChart({ title, data, dataKey, color, todayValu
         ? ((currentMonth[dataKey] - previousMonth[dataKey]) / previousMonth[dataKey] * 100).toFixed(1)
         : 0;
 
-    const chartHeight = 160;
-    const barWidth = (100 / data.length) - 4;
+    const chartHeight = 80;
+    const chartWidth = 100;
+    const labelRow = 18;
+    const safeDenom = Math.max(data.length - 1, 1);
+
+    const points = data.map((item, index) => {
+        const x = (index / safeDenom) * chartWidth;
+        const y = chartHeight - (item[dataKey] / max) * chartHeight;
+        return `${x},${y}`;
+    }).join(' ');
 
     return (
         <div className="oversight-section charting-widget">
@@ -43,36 +51,52 @@ export default function ComparisonChart({ title, data, dataKey, color, todayValu
                     </div>
                 </div>
 
-                <div className="chart-viewport" style={{ height: `${chartHeight}px` }}>
-                    <svg width="100%" height="100%" className="chart-svg">
+                <div className="chart-viewport" style={{ height: `${chartHeight + labelRow}px` }}>
+                    <svg viewBox={`0 0 ${chartWidth} ${chartHeight + labelRow}`} className="chart-svg" preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="chartArea" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+                                <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+                            </linearGradient>
+                        </defs>
+                        <path
+                            d={`M0 ${chartHeight} L ${points.replace(/ /g, ' L ')} L ${chartWidth} ${chartHeight} Z`}
+                            fill="url(#chartArea)"
+                        />
+                        <polyline
+                            points={points}
+                            fill="none"
+                            stroke={color}
+                            strokeWidth="2"
+                            strokeLinejoin="round"
+                            strokeLinecap="round"
+                        />
                         {data.map((item, index) => {
-                            const h = (item[dataKey] / max) * chartHeight;
-                            const basePos = (index * (100 / data.length));
-                            const x = basePos + '%';
-                            const textX = (basePos + barWidth / 2) + '%';
+                            const x = (index / safeDenom) * chartWidth;
+                            const y = chartHeight - (item[dataKey] / max) * chartHeight;
                             const isLast = index === data.length - 1;
-
                             return (
                                 <g key={index}>
-                                    <rect
-                                        x={x}
-                                        y={chartHeight - h}
-                                        width={`${barWidth}%`}
-                                        height={h}
-                                        fill={isLast ? color : 'var(--border-light)'}
-                                        rx="6"
-                                        style={{ transition: 'all 0.4s ease' }}
+                                    <circle
+                                        cx={x}
+                                        cy={y}
+                                        r={isLast ? 2.8 : 2}
+                                        fill={isLast ? color : '#ffffff'}
+                                        stroke={color}
+                                        strokeWidth="1"
                                     />
-                                    <text
-                                        x={textX}
-                                        y={chartHeight + 18}
-                                        fontSize="10"
-                                        fill="var(--text-muted)"
-                                        textAnchor="middle"
-                                        fontWeight="700"
-                                    >
-                                        {item.month?.split('-')[1]?.toUpperCase()}
-                                    </text>
+                                    {index % 2 === 0 && (
+                                        <text
+                                            x={x}
+                                            y={chartHeight + 14}
+                                            fontSize="8"
+                                            fill="var(--text-muted)"
+                                            textAnchor="middle"
+                                            fontWeight="700"
+                                        >
+                                            {item.month?.split('-')[1]?.toUpperCase()}
+                                        </text>
+                                    )}
                                 </g>
                             );
                         })}
