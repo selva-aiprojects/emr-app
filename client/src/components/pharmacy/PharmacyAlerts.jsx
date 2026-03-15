@@ -7,6 +7,19 @@ export default function PharmacyAlerts({ tenant }) {
     const [vendors, setVendors] = useState([]);
     const [loading, setLoading] = useState(true);
     const [reordering, setReordering] = useState(null); // batchId being reordered
+    const [lowStockAlertType, setLowStockAlertType] = useState('normal');
+    const [lowStockAlertMsg, setLowStockAlertMsg] = useState('Inventory levels optimal');
+
+    useEffect(() => {
+        if (lowStock.length > 0) {
+            const hasCritical = lowStock.some(i => i.alertLevel === 'CRITICAL');
+            setLowStockAlertType(hasCritical ? 'critical' : 'warning');
+            setLowStockAlertMsg(hasCritical ? 'Critical Stock depletion detected' : 'Stock replenishment advised');
+        } else {
+            setLowStockAlertType('normal');
+            setLowStockAlertMsg('Inventory levels optimal');
+        }
+    }, [lowStock]);
 
     useEffect(() => {
         loadAlerts();
@@ -70,13 +83,28 @@ export default function PharmacyAlerts({ tenant }) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4">
             {/* Low Stock Alerts */}
-            <article className="premium-panel p-0 overflow-hidden">
-                <div className="p-4 border-b border-red-100 bg-red-50 flex justify-between items-center">
-                    <div>
-                        <div className="font-bold text-lg text-red-900">Critical Low Stock</div>
-                        <div className="text-xs text-red-700 font-bold mt-1">Items below reorder threshold</div>
+            <article className="clinical-card p-0 overflow-hidden shadow-xl">
+                <div className={`px-4 py-8 flex items-center justify-between transition-all border-b ${
+                    lowStockAlertType === 'critical' ? 'bg-red-50/50 border-red-100' : 
+                    lowStockAlertType === 'warning' ? 'bg-amber-50/50 border-amber-100' : 'bg-slate-50 border-slate-100'
+                }`}>
+                    <div className="flex items-center gap-4">
+                        <div className={`w-3 h-3 rounded-full animate-pulse shadow-lg ${
+                            lowStockAlertType === 'critical' ? 'bg-red-500 shadow-red-500/50' : 
+                            lowStockAlertType === 'warning' ? 'bg-amber-500 shadow-amber-500/50' : 'bg-blue-500'
+                        }`}></div>
+                        <div>
+                            <span className={`text-[10px] font-black uppercase tracking-[0.2em] block ${
+                                lowStockAlertType === 'critical' ? 'text-red-700' : 
+                                lowStockAlertType === 'warning' ? 'text-amber-700' : 'text-slate-500'
+                            }`}>{lowStockAlertMsg}</span>
+                            <h3 className="font-bold text-slate-900">Inventory Depletion</h3>
+                        </div>
                     </div>
-                    <div className="px-3 py-1 bg-red-600 text-white rounded-full text-xs font-bold">{lowStock.length} Alerts</div>
+                    <div className={`px-4 py-1.5 rounded-full text-xs font-bold border ${
+                        lowStockAlertType === 'critical' ? 'bg-red-600 text-white border-red-700 shadow-lg shadow-red-600/20' : 
+                        'bg-white text-slate-700 border-slate-200'
+                    }`}>{lowStock.length} Alerts</div>
                 </div>
                 <div className="p-2">
                     {lowStock.length === 0 ? (
@@ -90,7 +118,7 @@ export default function PharmacyAlerts({ tenant }) {
                                         <div className="text-xs text-slate-500">Loc: {item.location} • Threshold: {item.reorderThreshold}</div>
                                     </div>
                                     <div className="text-right">
-                                        <div className={`font-bold text-lg ${item.alertLevel === 'CRITICAL' ? 'text-red-600' : 'text-amber-500'}`}>
+                                        <div className={`font-bold text-lg ${item.alertLevel === 'CRITICAL' ? 'text-amber-700' : 'text-amber-500'}`}>
                                             {item.quantityRemaining} left
                                         </div>
                                         <button
@@ -109,13 +137,14 @@ export default function PharmacyAlerts({ tenant }) {
             </article>
 
             {/* Expiring Stock Alerts */}
-            <article className="premium-panel p-0 overflow-hidden">
-                <div className="p-4 border-b border-amber-100 bg-amber-50 flex justify-between items-center">
+            <article className="clinical-card p-0 overflow-hidden shadow-xl">
+                <div className="px-5 py-8 border-b border-amber-100 bg-amber-50/30 flex justify-between items-center">
                     <div>
-                        <div className="font-bold text-lg text-amber-900">Expiring Stock</div>
-                        <div className="text-xs text-amber-700 font-bold mt-1">Batches expiring within 90 days</div>
+                        <span className="text-[10px] text-amber-700 font-black uppercase tracking-[0.2em] block mb-1">Stock Volatility</span>
+                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">Expiring Batches</h3>
+                        <p className="text-[10px] text-amber-600 font-bold mt-1 uppercase">Threshold: 90 Days</p>
                     </div>
-                    <div className="px-3 py-1 bg-amber-500 text-white rounded-full text-xs font-bold">{expiring.length} Alerts</div>
+                    <div className="px-4 py-1.5 bg-amber-500 text-white rounded-full text-xs font-bold shadow-lg shadow-amber-500/20">{expiring.length} Alerts</div>
                 </div>
                 <div className="p-2">
                     {expiring.length === 0 ? (
@@ -129,7 +158,7 @@ export default function PharmacyAlerts({ tenant }) {
                                         <div className="text-xs text-slate-500">Qty: {item.quantityRemaining} • Loc: {item.location}</div>
                                     </div>
                                     <div className="text-right">
-                                        <div className={`font-bold ${item.daysUntilExpiry <= 30 ? 'text-red-600' : 'text-amber-600'}`}>
+                                        <div className={`font-bold ${item.daysUntilExpiry <= 30 ? 'text-amber-700' : 'text-amber-600'}`}>
                                             {item.daysUntilExpiry} Days
                                         </div>
                                         <div className="text-[10px] text-slate-400 font-bold uppercase">{new Date(item.expiryDate).toLocaleDateString()}</div>

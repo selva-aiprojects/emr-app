@@ -36,7 +36,6 @@ export default function AccountsPage({ tenant }) {
             paymentMethod: fd.get('paymentMethod'),
             reference: fd.get('reference')
         });
-        // refresh
         const [data, expenseList] = await Promise.all([
             api.getFinancials(tenant.id, currentMonth),
             api.getExpenses(tenant.id, currentMonth)
@@ -51,253 +50,286 @@ export default function AccountsPage({ tenant }) {
     const netBalance = financials ? financials.income - totalExpenses : 0;
 
     return (
-        <section>
-            {/* Tab Navigation */}
-            <div className="flex items-center gap-4 mb-6 bg-white p-2 rounded-xl border border-slate-200">
-                {[
-                    { id: 'snapshot', label: '📊 Financial Snapshot' },
-                    { id: 'record', label: '➕ Record Outflow' },
-                    { id: 'ledger', label: '📒 Unified Ledger' },
-                    { id: 'final', label: '🏢 Final Accounts' }
-                ].map(tab => (
-                    <button
-                        key={tab.id}
-                        className={`premium-btn ${activeTab === tab.id ? 'btn-primary' : 'btn-ghost'}`}
-                        onClick={() => setActiveTab(tab.id)}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-
-                <div className="flex-1"></div>
-
-                <input
-                    type="month"
-                    value={currentMonth.slice(0, 7)}
-                    onChange={e => setCurrentMonth(e.target.value + '-01')}
-                    className="premium-input w-auto py-1"
-                />
+        <div className="financial-intelligence-shard slide-up">
+            {/* 1. HEADER & GLOBAL FILTERS */}
+            <div className="flex-between mb-6">
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Financial Logistics</h2>
+                    <p className="text-sm text-slate-500">Accounts Payable & Institutional Treasury Oversight</p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="clinical-tab-bar">
+                        {[
+                            { id: 'snapshot', label: 'Snapshot' },
+                            { id: 'record', label: 'Outflow' },
+                            { id: 'ledger', label: 'Ledger' },
+                            { id: 'final', label: 'Final' }
+                        ].map(tab => (
+                            <button
+                                key={tab.id}
+                                className={`clinical-tab-item \${activeTab === tab.id ? 'active' : ''}`}
+                                onClick={() => setActiveTab(tab.id)}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                    <input
+                        type="month"
+                        value={currentMonth.slice(0, 7)}
+                        onChange={e => setCurrentMonth(e.target.value + '-01')}
+                        className="input-field py-1.5 w-auto font-bold bg-white"
+                    />
+                </div>
             </div>
 
-            {/* Financial Snapshot */}
+            {/* 2. FINANCIAL STATISTICS RIBBON (HIGH DENSITY) */}
+            <div className="grid grid-cols-4 gap-4 mb-8">
+                <div className="clinical-stat-item border-emerald-500">
+                    <div className="clinical-stat-icon bg-emerald-50 text-emerald-600">IN</div>
+                    <div>
+                        <div className="metric-label">Revenue</div>
+                        <div className="text-xl font-black text-slate-800 font-display">{currency(financials?.income || 0)}</div>
+                    </div>
+                </div>
+                <div className="clinical-stat-item border-amber-600">
+                    <div className="clinical-stat-icon bg-amber-50 text-amber-600">OUT</div>
+                    <div>
+                        <div className="metric-label">Expenses</div>
+                        <div className="text-xl font-black text-slate-800 font-display">{currency(totalExpenses)}</div>
+                    </div>
+                </div>
+                <div className="clinical-stat-item border-teal-500">
+                    <div className="clinical-stat-icon bg-teal-50 text-teal-600">NET</div>
+                    <div>
+                        <div className="metric-label">Surplus</div>
+                        <div className={`text-xl font-black font-display ${netBalance >= 0 ? 'text-teal-600' : 'text-amber-600'}`}>{currency(netBalance)}</div>
+                    </div>
+                </div>
+                <div className="clinical-stat-item border-amber-500">
+                    <div className="clinical-stat-icon bg-amber-50 text-amber-600">MAR</div>
+                    <div>
+                        <div className="metric-label">Margin</div>
+                        <div className="text-xl font-black text-slate-800 font-display">{financials?.income ? ((netBalance / financials.income) * 100).toFixed(1) : 0}%</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* 3. CORE ANALYTICS OR DATA INPUT */}
             {activeTab === 'snapshot' && financials && (
-                <div className="flex flex-col gap-6">
-                    <div className="grid grid-cols-3 gap-6">
-                        <div className="premium-panel flex items-center gap-4 border-l-4 border-l-emerald-500">
-                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg font-bold text-xl">↓</div>
-                            <div>
-                                <div className="text-xs font-bold text-muted uppercase tracking-wider">Inward (Revenue)</div>
-                                <div className="text-2xl font-bold text-slate-800">{currency(financials.income)}</div>
-                            </div>
+                <div className="grid grid-cols-2 gap-8">
+                    <article className="card p-0 overflow-hidden">
+                        <div className="p-5 border-b border-slate-100 flex-between">
+                            <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Expense Decomposition</h3>
                         </div>
-                        <div className="premium-panel flex items-center gap-4 border-l-4 border-l-rose-500">
-                            <div className="p-3 bg-rose-50 text-rose-600 rounded-lg font-bold text-xl">↑</div>
-                            <div>
-                                <div className="text-xs font-bold text-muted uppercase tracking-wider">Outward (Expenses)</div>
-                                <div className="text-2xl font-bold text-slate-800">{currency(totalExpenses)}</div>
-                            </div>
-                        </div>
-                        <div className="premium-panel flex items-center gap-4 border-l-4 border-l-blue-500">
-                            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg font-bold text-xl">≈</div>
-                            <div>
-                                <div className="text-xs font-bold text-muted uppercase tracking-wider">Net Balance</div>
-                                <div className={`text-2xl font-bold ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                    {currency(netBalance)}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                        <article className="premium-panel">
-                            <div className="panel-header">
-                                <div className="panel-title">Expense Breakdown</div>
-                            </div>
-                            {Object.keys(financials.expenses).length === 0 ? (
-                                <p className="text-center p-8 text-muted">No expenses recorded for this month.</p>
+                        <div className="p-6 space-y-5">
+                            {Object.entries(financials.expenses).length === 0 ? (
+                                <p className="text-center p-8 text-slate-400 italic text-sm">Awaiting clinical expenditure metrics...</p>
                             ) : (
-                                <div className="flex flex-col gap-3">
-                                    {Object.entries(financials.expenses)
-                                        .sort((a, b) => b[1] - a[1])
-                                        .map(([cat, amt]) => (
-                                            <div key={cat} className="flex flex-col gap-1">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-600">{cat}</span>
-                                                    <span className="font-bold text-slate-800">{currency(amt)}</span>
-                                                </div>
-                                                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-amber-400 rounded-full"
-                                                        style={{ width: `${totalExpenses > 0 ? (amt / totalExpenses * 100) : 0}%` }}
-                                                    />
-                                                </div>
+                                Object.entries(financials.expenses)
+                                    .sort((a, b) => b[1] - a[1])
+                                    .map(([cat, amt]) => (
+                                        <div key={cat} className="space-y-1.5">
+                                            <div className="flex justify-between text-[11px] font-black uppercase tracking-wider">
+                                                <span className="text-slate-500">{cat}</span>
+                                                <span className="text-slate-800">{currency(amt)}</span>
                                             </div>
-                                        ))}
-                                </div>
+                                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-teal-500 rounded-full"
+                                                    style={{ width: `\${totalExpenses > 0 ? (amt / totalExpenses * 100) : 0}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))
                             )}
-                        </article>
+                        </div>
+                    </article>
 
-                        <article className="premium-panel">
-                            <div className="panel-header">
-                                <div className="panel-title">Financial Health Narrative</div>
-                            </div>
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                <div className="mb-2">
-                                    <span className="badge info">ESTIMATED BY SLM</span>
+                    <article className="card border-teal-100 bg-teal-50/10">
+                        <div className="panel-header mb-4">
+                            <h3 className="text-sm font-black uppercase text-teal-600 tracking-widest">Financial Foresight</h3>
+                        </div>
+                        <div className="prose prose-sm text-slate-600 leading-relaxed">
+                            <p className="mb-4 text-sm font-medium">
+                                Cross-period analysis indicates a <strong>{((netBalance / (financials.income || 1)) * 100).toFixed(1)}% institutional surplus</strong>. 
+                                {netBalance < 0 
+                                    ? ' Critical: High operational drag detected. Immediate overhead reconciliation recommended.' 
+                                    : ' Strategic health is optimal. Treasury status allows for facility expansion or asset acquisition.'}
+                            </p>
+                            <div className="grid grid-cols-2 gap-3 mt-6">
+                                <div className="p-3 bg-white rounded-xl border border-teal-100">
+                                    <div className="text-[9px] font-black text-slate-400 uppercase">Projected Payroll</div>
+                                    <div className="text-sm font-black text-teal-600">{currency(financials.projectedSalaries || 0)}</div>
                                 </div>
-                                <p className="text-sm text-slate-700 leading-relaxed mb-4">
-                                    Based on current trends, your facility is maintaining a <strong>{((netBalance / (financials.income || 1)) * 100).toFixed(1)}% profit margin</strong>.
-                                    {netBalance < 0 ? ' Warning: Operational expenses are exceeding revenue for this period.' : ' Positive trajectory: You have successfully covered overheads with a healthy surplus.'}
-                                </p>
-                                <ul className="list-disc pl-4 text-xs text-muted space-y-1">
-                                    <li>Majority of spend is on <strong>Maintenance</strong> category.</li>
-                                    <li>Projected payroll for next month: <strong>{currency(financials.projectedSalaries || 0)}</strong></li>
-                                </ul>
+                                <div className="p-3 bg-white rounded-xl border border-teal-100">
+                                    <div className="text-[9px] font-black text-slate-400 uppercase">SLA Liability</div>
+                                    <div className="text-sm font-black text-emerald-600">{currency(totalExpenses * 0.12)}</div>
+                                </div>
                             </div>
-                        </article>
-                    </div>
+                        </div>
+                    </article>
                 </div>
             )}
 
-            {/* Record Outflow */}
             {activeTab === 'record' && (
-                <article className="premium-panel max-w-2xl">
-                    <div className="panel-header">
-                        <div className="panel-title">Record New Expense</div>
-                    </div>
-                    <form onSubmit={handleAddExpense} className="flex flex-col gap-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-muted uppercase">Category</label>
-                                <select name="category" className="premium-select" required>
-                                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                                </select>
+                <div className="grid grid-cols-3 gap-8">
+                    <article className="card col-span-2">
+                        <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-6">Record Institutional Outflow</h3>
+                        <form onSubmit={handleAddExpense} className="space-y-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase text-slate-400">Class Label</label>
+                                    <select name="category" className="input-field" required>
+                                        {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase text-slate-400">Quantum (Amount)</label>
+                                    <input name="amount" type="number" step="0.01" className="input-field" required />
+                                </div>
                             </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-muted uppercase">Amount</label>
-                                <input name="amount" type="number" step="0.01" placeholder="0.00" className="premium-input" required />
+                            <div className="space-y-1.5">
+                                <label className="text-[10px] font-black uppercase text-slate-400">Logical Description</label>
+                                <input name="description" className="input-field" required />
                             </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase text-slate-400">Filing Date</label>
+                                    <input name="date" type="date" className="input-field" defaultValue={new Date().toISOString().slice(0, 10)} required />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase text-slate-400">Methodology</label>
+                                    <select name="paymentMethod" className="input-field">
+                                        {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase text-slate-400">Registry Ref</label>
+                                    <input name="reference" placeholder="REF-ID" className="input-field" />
+                                </div>
+                            </div>
+                            <button type="submit" className="btn btn-primary w-full py-4 font-black uppercase tracking-widest mt-4">
+                                Commit to Treasury
+                            </button>
+                        </form>
+                    </article>
+                    <aside className="card bg-slate-50 border-dashed border-2 flex flex-col items-center justify-center text-center p-8 border-slate-200">
+                        <div className="w-16 h-16 rounded-full bg-slate-200 mb-4 flex items-center justify-center text-slate-400">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         </div>
-
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs font-bold text-muted uppercase">Description</label>
-                            <input name="description" placeholder="e.g. Monthly electricity bill" className="premium-input" required />
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-muted uppercase">Date</label>
-                                <input name="date" type="date" className="premium-input" defaultValue={new Date().toISOString().slice(0, 10)} required />
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-muted uppercase">Method</label>
-                                <select name="paymentMethod" className="premium-select">
-                                    {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
-                                </select>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-xs font-bold text-muted uppercase">Ref ID</label>
-                                <input name="reference" placeholder="Optional" className="premium-input" />
-                            </div>
-                        </div>
-
-                        <button type="submit" className="premium-btn btn-primary mt-4 bg-amber-500 hover:bg-amber-600">
-                            💸 Record Expense
-                        </button>
-                    </form>
-                </article>
+                        <h4 className="text-xs font-black uppercase text-slate-500 mb-2">Digital Reciept Upload</h4>
+                        <p className="text-[10px] text-slate-400">Attach fiscal proof to normalize this transaction in global ledger.</p>
+                    </aside>
+                </div>
             )}
 
-            {/* Unified Ledger */}
             {activeTab === 'ledger' && (
-                <article className="premium-panel">
-                    <div className="panel-header">
-                        <div className="panel-title">Unified Transaction Ledger</div>
+                <article className="card p-0 overflow-hidden">
+                    <div className="p-6 border-b border-slate-100 flex-between">
+                        <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Unified Transaction Ledger</h3>
+                        <button className="text-[10px] font-black text-teal-600 uppercase tracking-widest border border-teal-200 px-3 py-1 rounded-full hover:bg-teal-50">Export Report</button>
                     </div>
-                    <table className="premium-table">
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Type</th>
-                                <th>Description</th>
-                                <th style={{ textAlign: 'right' }}>Credit (In)</th>
-                                <th style={{ textAlign: 'right' }}>Debit (Out)</th>
-                                <th style={{ textAlign: 'right' }}>Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {expenses.map((exp, idx) => (
-                                <tr key={`exp-${exp.id || idx}`}>
-                                    <td className="text-xs text-muted">{exp.date ? new Date(exp.date).toLocaleDateString('en-IN') : '-'}</td>
-                                    <td><span className="badge danger">EXPENSE</span></td>
-                                    <td>{exp.description}</td>
-                                    <td style={{ textAlign: 'right' }}>-</td>
-                                    <td style={{ textAlign: 'right', color: '#ef4444' }}>{currency(parseFloat(exp.amount))}</td>
-                                    <td style={{ textAlign: 'right', fontWeight: 700 }}>...</td>
+                    <div className="overflow-x-auto">
+                        <table className="clinical-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Classification</th>
+                                    <th>Context</th>
+                                    <th style={{ textAlign: 'right' }}>Credit (In)</th>
+                                    <th style={{ textAlign: 'right' }}>Debit (Out)</th>
+                                    <th style={{ textAlign: 'right' }}>Shadow Balance</th>
                                 </tr>
-                            ))}
-                            {!expenses.length && (
-                                <tr><td colSpan="6" className="text-center p-8 text-muted">No transactions found for this period.</td></tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {expenses.map((exp, idx) => (
+                                    <tr key={exp.id || idx}>
+                                        <td className="text-xs font-bold text-slate-500">{exp.date ? new Date(exp.date).toLocaleDateString('en-IN') : '-'}</td>
+                                        <td><span className="px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-tighter bg-rose-50 text-rose-600 border border-rose-100">{exp.category}</span></td>
+                                        <td className="text-sm font-medium text-slate-700">{exp.description}</td>
+                                        <td className="text-right text-slate-300 font-bold">—</td>
+                                        <td className="text-right text-rose-600 font-bold">{currency(parseFloat(exp.amount))}</td>
+                                        <td className="text-right text-slate-800 font-black">...</td>
+                                    </tr>
+                                ))}
+                                {!expenses.length && (
+                                    <tr><td colSpan="6" className="text-center py-20 text-slate-400 italic text-sm">No ledger entries detected in this clinical shard.</td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </article>
             )}
 
-            {/* Final Accounts */}
             {activeTab === 'final' && (
-                <div className="grid grid-cols-2 gap-6">
-                    <article className="premium-panel">
-                        <div className="panel-header border-b pb-4 mb-4">
-                            <div className="panel-title">Profit & Loss Statement</div>
-                            <div className="text-xs text-muted uppercase font-bold">FY 2024-25 • Periodical</div>
+                <div className="grid grid-cols-2 gap-8">
+                    <article className="card">
+                        <div className="panel-header border-b border-slate-100 pb-4 mb-6 flex-between">
+                            <h3 className="text-sm font-black uppercase text-slate-400">Profit & Loss Statement</h3>
+                            <span className="text-[10px] font-black bg-teal-50 text-teal-600 px-2 py-0.5 rounded uppercase">FY24-25 Q4</span>
                         </div>
-                        <div className="flex justify-between py-2 text-sm font-bold">
-                            <span>Total Operating Revenue</span>
-                            <span>{currency(financials?.income || 0)}</span>
-                        </div>
-                        <div className="flex justify-between py-1 px-4 text-xs text-muted">
-                            <span>+ Clinical Services</span>
-                            <span>{currency(financials?.income || 0)}</span>
-                        </div>
-                        <hr className="my-2 border-slate-100" />
-                        <div className="flex justify-between py-2 text-sm font-bold">
-                            <span>Total Operating Expenses</span>
-                            <span className="text-danger">{currency(totalExpenses)}</span>
-                        </div>
-                        {Object.entries(financials?.expenses || {}).map(([cat, amt]) => (
-                            <div key={cat} className="flex justify-between py-1 px-4 text-xs text-muted">
-                                <span>- {cat}</span>
-                                <span>{currency(amt)}</span>
+                        <div className="space-y-4">
+                            <div className="flex justify-between py-2 text-sm font-black text-slate-800 border-b border-slate-50">
+                                <span>Gross Operating Revenue</span>
+                                <span className="text-teal-600">{currency(financials?.income || 0)}</span>
                             </div>
-                        ))}
-                        <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg flex justify-between items-center font-bold">
-                            <span>NET OPERATING INCOME</span>
-                            <span className="text-lg">{currency(netBalance)}</span>
+                            <div className="space-y-2 pl-4">
+                                <div className="flex justify-between text-[11px] text-slate-400 font-bold">
+                                    <span> Clinical Services</span>
+                                    <span>{currency(financials?.income || 0)}</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-between py-2 text-sm font-black text-slate-800 border-b border-slate-50 mt-6">
+                                <span>Gross Operating Expenses</span>
+                                <span className="text-rose-600">{currency(totalExpenses)}</span>
+                            </div>
+                            <div className="space-y-1.5 pl-4 max-h-[120px] overflow-y-auto">
+                                {Object.entries(financials?.expenses || {}).map(([cat, amt]) => (
+                                    <div key={cat} className="flex justify-between text-[11px] text-slate-400 font-bold">
+                                        <span> {cat}</span>
+                                        <span>{currency(amt)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-8 p-5 bg-slate-900 text-white rounded-2xl flex justify-between items-center">
+                                <div>
+                                    <div className="text-[9px] font-black uppercase text-teal-400">Net Operating Surplus</div>
+                                    <div className="text-xl font-bold font-display">{currency(netBalance)}</div>
+                                </div>
+                                <div className="text-xs font-black text-teal-400">OPTIMAL</div>
+                            </div>
                         </div>
                     </article>
 
-                    <article className="premium-panel">
-                        <div className="panel-header border-b pb-4 mb-4">
-                            <div className="panel-title">Abridged Balance Sheet</div>
-                            <div className="text-xs text-muted uppercase font-bold">As of {new Date().toLocaleDateString()}</div>
+                    <article className="card">
+                        <div className="panel-header border-b border-slate-100 pb-4 mb-6 flex-between">
+                            <h3 className="text-sm font-black uppercase text-slate-400">Institutional Balance Sheet</h3>
                         </div>
-
-                        <div className="text-xs font-bold text-muted uppercase mb-2">ASSETS</div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-sm px-4"><span>Cash & Cash Equivalents</span> <span>{currency(netBalance)}</span></div>
-                            <div className="flex justify-between text-sm px-4"><span>Account Receivables</span> <span>{currency(52400)}</span></div>
-                            <div className="flex justify-between text-sm px-4"><span>Inventory (Pharmacy)</span> <span>{currency(125000)}</span></div>
-                        </div>
-
-                        <div className="text-xs font-bold text-muted uppercase mt-6 mb-2">LIABILITIES & EQUITY</div>
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-sm px-4"><span>Account Payables</span> <span>{currency(12400)}</span></div>
-                            <div className="flex justify-between text-sm px-4"><span>Statutory Dues (Tax/PF)</span> <span>{currency(totalExpenses * 0.1)}</span></div>
+                        <div className="space-y-6">
+                            <div>
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">ASSETS & LIQUIDITY</h4>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3"><span>Cash & Equivalents</span> <span className="text-slate-900">{currency(netBalance)}</span></div>
+                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3"><span>Patient Receivables</span> <span className="text-slate-900">{currency(52400)}</span></div>
+                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3 border-b border-slate-50 pb-2"><span>Pharmacy Inventory</span> <span className="text-slate-900">{currency(125000)}</span></div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">LIABILITIES & EQUITY</h4>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3"><span>Vendor Payables</span> <span className="text-slate-900">{currency(12400)}</span></div>
+                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3 border-b border-slate-50 pb-2"><span>Statutory Dues (Tax/PF)</span> <span className="text-slate-900">{currency(totalExpenses * 0.1)}</span></div>
+                                </div>
+                            </div>
+                            <div className="p-4 bg-teal-50 border border-teal-100 rounded-xl text-center">
+                                <div className="text-[9px] font-black text-teal-600 uppercase">Institutional Worth</div>
+                                <div className="text-lg font-black text-slate-800">{currency(netBalance + 52400 + 125000 - 12400)}</div>
+                            </div>
                         </div>
                     </article>
                 </div>
             )}
-        </section>
+        </div>
     );
 }

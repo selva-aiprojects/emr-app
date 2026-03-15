@@ -46,154 +46,175 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
   const avgRev = totalMonthlyRev / (monthlyRevenue.length || 1);
 
   return (
-    <section className="view-content intelligence-center">
-      <header className="intel-header">
-        <div className="title-stack">
-          <h2>{isSuper ? 'Platform Intelligence Registry' : 'Executive Intelligence Center'}</h2>
-          <p>
-            {isSuper
-              ? 'Cross-facility operational trajectory and network health'
-              : 'Real-time clinical performance and financial trajectory analysis'}
-          </p>
-        </div>
-        <div className="intel-badge premium-glass">
-          <span className="pulse-dot"></span>
-          {isSuper ? 'NETWORK OVERVIEW' : 'SLM LIVE ANALYTICS'}
-        </div>
-      </header>
-
-      <div className="intel-grid-top">
-        <article className="panel slm-insight-board">
-          <div className="insight-head">
-            <span className="insight-icon" aria-hidden="true">
-              AI
+    <div className="reports-intelligence-shard slide-up">
+      <header className="mb-8">
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800 tracking-tight">
+              {isSuper ? 'Platform Intelligence Registry' : 'Executive Clinical Analytics'}
+            </h2>
+            <p className="text-sm text-slate-500">
+              {isSuper
+                ? 'Cross-facility operational trajectory and network node health'
+                : 'Real-time performance metrics and institutional financial trajectory'}
+            </p>
+          </div>
+          <div className="px-3 py-1 bg-teal-50 text-teal-600 rounded-full border border-teal-100 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-[10px] font-black uppercase tracking-widest">
+              {isSuper ? 'NETWORK OVERVIEW ACTIVE' : 'SLM ANALYTICS ENGINE'}
             </span>
-            <h3>Strategic Narrative</h3>
           </div>
-          <p className="insight-copy">
-            {isSuper
-              ? `Platform health is optimal. Aggregate patient engagement across ${superOverview?.activeTenants || 0} facilities shows a ${superOverview?.growth || '+12%'} upward trend.`
-              : slmInsights?.narrative || 'Initializing operational narrative engine...'}
-          </p>
-          <div className="insight-tags">
-            {isSuper
-              ? ['Network Growth', 'Node Stability', 'Global Compliance'].map((t) => (
-                  <span key={t} className="i-tag">
-                    {t}
-                  </span>
-                ))
-              : slmInsights?.trends?.map((t) => (
-                  <span key={t} className="i-tag">
-                    {t}
-                  </span>
-                )) || <span className="i-tag">Normalizing...</span>}
-          </div>
-          <div className="predictive-footer">
-            <strong>{isSuper ? 'Platform Load Forecast:' : 'Next Month Forecast:'}</strong>
-            <span className="forecast-value">
-              + {isSuper ? '18.4%' : currency(slmInsights?.forecast || avgRev * 1.12)}
-            </span>
-            <span>{isSuper ? '(Estimated Expansion)' : '(Projected Growth)'}</span>
-          </div>
-        </article>
+        </div>
 
-        <div className="metrics-cluster">
+        <div className="grid grid-cols-4 gap-6">
           <MetricCard
             label={isSuper ? 'Entity Velocity' : 'Clinical Velocity'}
             value={metrics.velocity}
             icon="patients"
-            accent="blue"
+            accent="teal"
+            trend="+12.4% Trajectory"
           />
           <MetricCard
             label={isSuper ? 'System Liquidity' : 'Financial Liquidity'}
             value={metrics.liquidity}
             icon="revenue"
-            accent="rose"
+            accent="emerald"
+            trend="Settlement Stable"
           />
           <MetricCard
             label={isSuper ? 'User Engagement' : 'Resource Load'}
             value={metrics.load}
             icon="employees"
-            accent="emerald"
+            accent="teal"
+            trend="Nominal Capacity"
           />
           <MetricCard
             label={isSuper ? 'Node Count' : 'Aging Receivables'}
             value={metrics.receivables}
             icon="walkins"
             accent="amber"
+            trend="Audit Required"
           />
         </div>
+      </header>
+
+      <div className="grid grid-cols-12 gap-8 mb-8">
+        <article className="col-span-12 card border-l-4 border-teal-500 bg-slate-50/30">
+          <div className="flex items-start gap-6">
+            <div className="w-12 h-12 rounded-xl bg-teal-600 flex items-center justify-center text-white font-black shadow-lg shadow-teal-900/20">AI</div>
+            <div className="flex-1">
+              <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-2">Strategic Narrative Insights</h3>
+              <p className="text-slate-700 text-sm font-medium leading-relaxed max-w-4xl">
+                {isSuper
+                  ? `Platform health is optimal. Aggregate patient engagement across ${superOverview?.activeTenants || 0} facilities shows a strong upward trend. Node stability is maintaining 99.9% uptime with zero priority regressions.`
+                  : slmInsights?.narrative || 'Initializing operational narrative engine... Baseline metrics indicate high clinical retention and optimal resource allocation.'}
+              </p>
+              <div className="flex gap-2 mt-4">
+                {(isSuper ? ['Network Growth', 'Node Stability', 'Global Compliance'] : (slmInsights?.trends || ['Retention High', 'Flow Optimal'])).map((t) => (
+                  <span key={t} className="px-3 py-1 bg-white border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-tighter text-slate-500">
+                    {t}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isSuper ? 'Platform Forecast' : 'Growth Forecast'}</div>
+              <div className="text-2xl font-black text-emerald-600 tracking-tight">
+                + {isSuper ? '18.4%' : currency(slmInsights?.forecast || avgRev * 1.12)}
+              </div>
+              <div className="text-[9px] font-bold text-slate-400 uppercase">Projected expansion</div>
+            </div>
+          </div>
+        </article>
       </div>
 
-      <div className="grid-2-equal">
-        <article className="panel">
-          <div className="panel-header-flex">
-            <h3>Revenue Velocity</h3>
-            <span className="context-label">Last 6 Months</span>
+      <div className="grid grid-cols-2 gap-8">
+        <article className="card">
+          <div className="flex-between mb-8 border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-800 tracking-tight">Revenue Velocity</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Financial Performance Index • Last 6 Months</p>
+            </div>
           </div>
-          <div className="revenue-viz">
+          <div className="flex items-end justify-between h-48 gap-4 px-4">
             {monthlyRevenue.map((m) => {
               const maxVal = Math.max(...monthlyRevenue.map((r) => r.amount)) || 1;
               const height = (m.amount / maxVal) * 100;
               return (
-                <div key={m.month} className="rev-bar-group">
-                  <div className="rev-bar">
-                    <div className="rev-fill" style={{ height: `${height}%` }}>
-                      <span className="rev-val">{currency(m.amount).split('.')[0]}</span>
+                <div key={m.month} className="flex-1 flex flex-col items-center gap-3 group">
+                  <div className="w-full relative flex items-end justify-center h-full">
+                    <div className="w-full bg-slate-50 rounded-t-md group-hover:bg-teal-50 transition-colors" style={{ height: '100%' }}></div>
+                    <div 
+                      className="absolute bottom-0 w-full bg-teal-500/80 rounded-t-md group-hover:bg-teal-600 transition-all cursor-pointer" 
+                      style={{ height: `${height}%` }}
+                    >
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-xl">
+                        {currency(m.amount)}
+                      </div>
                     </div>
                   </div>
-                  <span className="rev-label">{m.month}</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{m.month}</span>
                 </div>
               );
             })}
           </div>
         </article>
 
-        <article className="panel">
-          <h3>Physician Performance Registry</h3>
-          {loading ? (
-            <p>Syncing performance metrics...</p>
-          ) : (
-            <table className="clinical-table">
-              <thead>
-                <tr>
-                  <th>Provider</th>
-                  <th>Clinical Load</th>
-                  <th style={{ textAlign: 'right' }}>Revenue Share</th>
-                </tr>
-              </thead>
-              <tbody>
-                {payouts.length > 0 ? (
-                  payouts.map((p) => (
-                    <tr key={p.doctor_id}>
-                      <td>
-                        <div className="provider-name">{p.doctor_name}</div>
-                        <div className="provider-role">{p.role}</div>
-                      </td>
-                      <td>
-                        <div className="provider-load">{p.patient_count} Encounters</div>
-                        <div className="mini-track">
-                          <div className="mini-fill" style={{ width: `${(p.patient_count / 20) * 100}%` }}></div>
-                        </div>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <div className="provider-revenue">{currency(p.total_revenue)}</div>
-                        <div className="provider-commission">+ {currency(p.estimated_commission)}</div>
+        <article className="card p-0 overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex-between bg-slate-50/20">
+            <div>
+              <h3 className="text-base font-bold text-slate-800 tracking-tight">Physician Performance Registry</h3>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clinical Load & Revenue Share Analysis</p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            {loading ? (
+              <div className="py-20 text-center text-slate-400 italic">Syncing performance metrics...</div>
+            ) : (
+              <table className="clinical-table">
+                <thead>
+                  <tr>
+                    <th>Clinical Staff</th>
+                    <th>Clinical Load</th>
+                    <th style={{ textAlign: 'right' }}>Revenue Share</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payouts.length > 0 ? (
+                    payouts.map((p) => (
+                      <tr key={p.doctor_id}>
+                        <td>
+                          <div className="font-bold text-slate-800 tracking-tight">{p.doctor_name}</div>
+                          <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{p.role}</div>
+                        </td>
+                        <td>
+                          <div className="flex items-center gap-4">
+                            <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-teal-500 rounded-full" style={{ width: `${Math.min(100, (p.patient_count / 20) * 100)}%` }}></div>
+                            </div>
+                            <span className="text-[11px] font-black text-slate-600 whitespace-nowrap">{p.patient_count} Encounters</span>
+                          </div>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <div className="font-black text-slate-800 tracking-tight">{currency(p.total_revenue)}</div>
+                          <div className="text-[9px] font-black text-emerald-600 uppercase">Share: {currency(p.estimated_commission)}</div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="3" className="text-center py-20 text-slate-400 italic text-sm">
+                        Awaiting sequential data normalization...
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="3" style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>
-                      Awaiting data normalization...
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          )}
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
         </article>
       </div>
-    </section>
+    </div>
   );
 }

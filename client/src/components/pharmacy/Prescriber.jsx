@@ -199,7 +199,7 @@ export default function Prescriber({ tenantId, patientId, onDrugsChange, initial
                             onClick={() => removeItem(i)}
                         >✕</button>
                         <div className="font-bold text-emerald-700 mb-2 pb-2 border-b border-slate-200">
-                            {m.drugName} <span className="text-xs font-normal text-slate-500 bg-emerald-50 px-1 rounded ml-1">ID: {m.drugId.slice(0, 8)}</span>
+                            {m.drugName} <div className="text-amber-600 font-bold uppercase text-[9px]">Critical</div> <span className="text-xs font-normal text-slate-500 bg-emerald-50 px-1 rounded ml-1">ID: {m.drugId.slice(0, 8)}</span>
                         </div>
 
                         <div className="grid grid-cols-4 gap-2 mb-2">

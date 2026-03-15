@@ -1,361 +1,417 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api.js';
+import MetricCard from '../components/MetricCard';
+import { 
+  StatusBadge, 
+  ActionCard, 
+  SectionHeader, 
+  SubSectionHeader, 
+  DataTable 
+} from '../components/ui';
+import { 
+  Plus, 
+  Search, 
+  Filter, 
+  Download, 
+  FileText, 
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Play,
+  Eye,
+  Edit,
+  Trash2,
+  FlaskConical,
+  Activity,
+  Users
+} from 'lucide-react';
 
 const COMMON_TESTS = [
-    { code: 'CBC', name: 'Complete Blood Count' },
-    { code: 'BMP', name: 'Basic Metabolic Panel' },
-    { code: 'LFT', name: 'Liver Function Test' },
-    { code: 'RFT', name: 'Renal Function Test' },
-    { code: 'GLUCOSE', name: 'Fasting Blood Glucose' },
-    { code: 'LIPID', name: 'Lipid Profile' },
-    { code: 'TSH', name: 'Thyroid Stimulating Hormone' },
-    { code: 'UA', name: 'Urinalysis' },
-    { code: 'XRAY', name: 'Chest X-Ray' },
-    { code: 'ECG', name: 'Electrocardiogram' },
+  { code: 'CBC', name: 'Complete Blood Count' },
+  { code: 'BMP', name: 'Basic Metabolic Panel' },
+  { code: 'LFT', name: 'Liver Function Test' },
+  { code: 'RFT', name: 'Renal Function Test' },
+  { code: 'GLUCOSE', name: 'Fasting Blood Glucose' },
+  { code: 'LIPID', name: 'Lipid Profile' },
+  { code: 'TSH', name: 'Thyroid Stimulating Hormone' },
+  { code: 'UA', name: 'Urinalysis' },
+  { code: 'XRAY', name: 'Chest X-Ray' },
+  { code: 'ECG', name: 'Electrocardiogram' },
 ];
 
-const STATUS_STYLES = {
-    pending: 'bg-amber-100 text-amber-700 border-amber-200',
-    'in-progress': 'bg-blue-100 text-blue-700 border-blue-200',
-    completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    cancelled: 'bg-red-100 text-red-700 border-red-200',
-};
-
 export default function LabPage({ tenant }) {
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('pending');
-    const [showResultModal, setShowResultModal] = useState(null); // order being resulted
-    const [resultText, setResultText] = useState('');
-    const [criticalFlag, setCriticalFlag] = useState(false);
-    const [submittingResult, setSubmittingResult] = useState(false);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('pending');
+  const [showResultModal, setShowResultModal] = useState(null);
+  const [resultText, setResultText] = useState('');
+  const [criticalFlag, setCriticalFlag] = useState(false);
+  const [submittingResult, setSubmittingResult] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
 
-    useEffect(() => {
-        loadOrders();
-    }, [activeTab, tenant]);
+  useEffect(() => {
+    loadOrders();
+  }, [activeTab, tenant]);
 
-    const loadOrders = async () => {
-        setLoading(true);
-        try {
-            const status = activeTab === 'all' ? null : activeTab;
-            const data = await api.getLabOrders(tenant?.id, status);
-            setOrders(Array.isArray(data) ? data : []);
-        } catch (err) {
-            console.error('Failed to load lab orders:', err);
-            setOrders([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const loadOrders = async () => {
+    setLoading(true);
+    try {
+      const status = activeTab === 'all' ? null : activeTab;
+      const data = await api.getLabOrders(tenant?.id, status);
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to load lab orders:', err);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleStatusUpdate = async (orderId, newStatus) => {
-        try {
-            await api.updateLabOrderStatus(orderId, newStatus);
-            loadOrders();
-        } catch (err) {
-            alert('Failed to update status: ' + err.message);
-        }
-    };
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      await api.updateLabOrderStatus(orderId, newStatus);
+      loadOrders();
+    } catch (err) {
+      alert('Failed to update status: ' + err.message);
+    }
+  };
 
-    const handleSubmitResult = async () => {
-        if (!resultText.trim()) return;
-        setSubmittingResult(true);
-        try {
-            await api.recordLabResults(showResultModal.id, {
-                results: resultText,
-                criticalFlag,
-            });
-            setShowResultModal(null);
-            setResultText('');
-            setCriticalFlag(false);
-            loadOrders();
-        } catch (err) {
-            alert('Failed to record result: ' + err.message);
-        } finally {
-            setSubmittingResult(false);
-        }
-    };
+  const handleSubmitResult = async () => {
+    if (!resultText.trim()) return;
+    setSubmittingResult(true);
+    try {
+      await api.recordLabResults(showResultModal.id, {
+        results: resultText,
+        criticalFlag,
+      });
+      setShowResultModal(null);
+      setResultText('');
+      setCriticalFlag(false);
+      loadOrders();
+    } catch (err) {
+      alert('Failed to record result: ' + err.message);
+    } finally {
+      setSubmittingResult(false);
+    }
+  };
 
-    const handlePrint = (order) => {
-        const parsed = order.notes ? JSON.parse(order.notes) : {};
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-                <head>
-                    <title>Lab Report - ${order.patient_first_name} ${order.patient_last_name}</title>
-                    <style>
-                        body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #1e293b; }
-                        .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
-                        .report-title { font-size: 24px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
-                        .meta { display: grid; grid-template-cols: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
-                        .meta-item { font-size: 14px; }
-                        .meta-label { font-weight: bold; color: #64748b; text-transform: uppercase; font-size: 11px; margin-bottom: 2px; }
-                        .results-area { background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; }
-                        .results-text { font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; margin-top: 15px; }
-                        .critical { color: #dc2626; border: 2px solid #fecaca; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; }
-                        .footer { margin-top: 50px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <div class="report-title">LABORATORY INVESTIGATION REPORT</div>
-                        <div>${tenant?.name || 'Healthcare Facility'}</div>
-                    </div>
-                    
-                    <div class="meta">
-                        <div>
-                            <div class="meta-item"><div class="meta-label">Patient</div>\${order.patient_first_name} \${order.patient_last_name}</div>
-                            <div class="meta-item"><div class="meta-label">ID / MRN</div>\${order.patient_id}</div>
-                        </div>
-                        <div>
-                            <div class="meta-item"><div class="meta-label">Report Date</div>\${new Date().toLocaleString()}</div>
-                            <div class="meta-item"><div class="meta-label">Invoiced ID</div>\${order.id}</div>
-                        </div>
-                    </div>
+  const handlePrint = (order) => {
+    const parsed = order.notes ? JSON.parse(order.notes) : {};
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Lab Report - ${order.patient_first_name} ${order.patient_last_name}</title>
+          <style>
+            body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #1e293b; line-height: 1.5; }
+            .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+            .report-title { font-size: 24px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
+            .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
+            .meta-item { font-size: 14px; }
+            .meta-label { font-weight: bold; color: #64748b; text-transform: uppercase; font-size: 11px; margin-bottom: 2px; }
+            .results-area { background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; }
+            .results-text { font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; margin-top: 15px; }
+            .critical { color: #dc2626; border: 2px solid #fecaca; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; }
+            .footer { margin-top: 50px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="report-title">LABORATORY INVESTIGATION REPORT</div>
+            <div>${tenant?.name || 'Healthcare Facility'}</div>
+          </div>
+          <div class="meta">
+            <div>
+              <div class="meta-item"><div class="meta-label">Patient</div>${order.patient_first_name} ${order.patient_last_name}</div>
+              <div class="meta-item"><div class="meta-label">Test</div>${order.display || order.code}</div>
+              <div class="meta-item"><div class="meta-label">Ordered By</div>${order.ordered_by_name || 'Staff'}</div>
+            </div>
+            <div>
+              <div class="meta-item"><div class="meta-label">Order Date</div>${new Date(order.created_at).toLocaleDateString()}</div>
+              <div class="meta-item"><div class="meta-label">Status</div>${order.status}</div>
+              <div class="meta-item"><div class="meta-label">Report ID</div>LAB-${order.id}</div>
+            </div>
+          </div>
+          ${parsed?.criticalFlag ? '<div class="critical">⚠️ CRITICAL RESULTS - URGENT ATTENTION REQUIRED</div>' : ''}
+          <div class="results-area">
+            <div class="meta-label">LABORATORY RESULTS</div>
+            <div class="results-text">${parsed?.results || 'Results pending...'}</div>
+          </div>
+          <div class="footer">
+            Generated on ${new Date().toLocaleString()} | Report ID: LAB-${order.id}
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  };
 
-                    <div class="results-area">
-                        <div class="meta-label">Investigation: \${order.display || order.code}</div>
-                        \${parsed.criticalFlag ? '<div class="critical">⚠️ CRITICAL RESULT - ATTENTION REQUIRED</div>' : ''}
-                        <div class="results-text">\${parsed.results || 'No results recorded.'}</div>
-                    </div>
+  const filteredOrders = orders.filter(order => 
+    order.patient_first_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
+    order.patient_last_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
+    order.display?.toLowerCase().includes(searchValue.toLowerCase()) ||
+    order.code?.toLowerCase().includes(searchValue.toLowerCase())
+  );
 
-                    <div class="footer">
-                        Electronic record validated by \${parsed.enteredBy || 'Laboratory Dept.'} at \${new Date(parsed.enteredAt).toLocaleString()}
-                        <br/>MedFlow EMR Systems
-                    </div>
-                    <script>window.print();</script>
-                </body>
-            </html>
-        `);
-        printWindow.document.close();
-    };
+  const tableColumns = [
+    { key: 'test', label: 'Test', render: (value, row) => (
+      <div>
+        <div className="font-medium text-clinical-text">{row.display || row.code}</div>
+        <div className="text-xs text-clinical-muted">{row.code}</div>
+      </div>
+    )},
+    { key: 'patient', label: 'Patient', render: (value, row) => (
+      <div>
+        <div className="font-medium text-clinical-text">
+          {row.patient_first_name} {row.patient_last_name}
+        </div>
+        <div className="text-xs text-clinical-muted">ID: {row.patient_id}</div>
+      </div>
+    )},
+    { key: 'ordered_by', label: 'Ordered By', render: (value, row) => (
+      <div className="text-sm">
+        {row.ordered_by_name || 'Staff'}
+      </div>
+    )},
+    { key: 'created_at', label: 'Date', render: (value, row) => (
+      <div className="text-sm">
+        {new Date(row.created_at).toLocaleDateString()}
+      </div>
+    )},
+    { key: 'status', label: 'Status', render: (value, row) => {
+      const parsed = row.notes ? JSON.parse(row.notes) : null;
+      return (
+        <div className="flex items-center gap-2">
+          <StatusBadge status={row.status} />
+          {parsed?.criticalFlag && (
+            <StatusBadge status="critical" size="sm" />
+          )}
+        </div>
+      );
+    }},
+  ];
 
-    const pendingCount = orders.filter(o => o.status === 'pending').length;
-    const inProgressCount = orders.filter(o => o.status === 'in-progress').length;
+  const tableActions = [
+    { icon: Eye, label: 'View Details', onClick: (row) => console.log('View', row) },
+    { icon: Edit, label: 'Edit', onClick: (row) => console.log('Edit', row) },
+    { icon: Download, label: 'Download', onClick: (row) => handlePrint(row) },
+  ];
 
-    return (
-        <section>
-            <div className="flex justify-between items-end mb-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Diagnostic Intelligence</h1>
-                    <p className="text-sm font-semibold text-slate-500 mt-1">Laboratory results and pathology reports</p>
+  const metrics = {
+    pending: orders.filter(o => o.status === 'pending').length,
+    inProgress: orders.filter(o => o.status === 'in-progress').length,
+    completed: orders.filter(o => o.status === 'completed').length,
+    critical: orders.filter(o => {
+      const parsed = o.notes ? JSON.parse(o.notes) : null;
+      return parsed?.criticalFlag;
+    }).length,
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <SectionHeader
+        title="Laboratory Services"
+        subtitle="Diagnostic testing and pathology management"
+        badge={`${orders.length} Tests`}
+        showSearch
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
+        actions={[
+          { label: 'New Order', icon: Plus, variant: 'primary', onClick: () => console.log('New order') },
+          { label: 'Export', icon: Download, variant: 'secondary', onClick: () => console.log('Export') },
+        ]}
+      />
+
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <MetricCard
+          label="Pending Analysis"
+          value={metrics.pending}
+          icon={Clock}
+          change="Awaiting processing"
+          trend="down"
+          accent="warning"
+        />
+        <MetricCard
+          label="In Progress"
+          value={metrics.inProgress}
+          icon={Play}
+          change="Active processing"
+          trend="up"
+          accent="info"
+        />
+        <MetricCard
+          label="Completed Today"
+          value={metrics.completed}
+          icon={CheckCircle}
+          change="Finished tests"
+          trend="up"
+          accent="success"
+        />
+        <MetricCard
+          label="Critical Results"
+          value={metrics.critical}
+          icon={AlertCircle}
+          change="Requires attention"
+          trend="down"
+          accent="error"
+        />
+      </div>
+
+      {/* Tabs */}
+      <div className="flex space-x-1 bg-clinical-bg rounded-lg p-1">
+        {['pending', 'in-progress', 'completed', 'all'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`
+              flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all
+              ${activeTab === tab
+                ? 'bg-white text-clinical-text shadow-sm'
+                : 'text-clinical-muted hover:text-clinical-text'
+              }
+            `}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Lab Orders Table */}
+        <div className="lg:col-span-2">
+          <SubSectionHeader
+            title="Lab Orders"
+            subtitle={`${filteredOrders.length} orders found`}
+            badge={activeTab}
+          />
+          
+          <DataTable
+            data={filteredOrders}
+            columns={tableColumns}
+            loading={loading}
+            emptyMessage="No lab orders found"
+            actions={tableActions}
+            onRowClick={(row) => setShowResultModal(row)}
+          />
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <ActionCard
+            title="Quick Actions"
+            description="Common laboratory tasks"
+            icon={FlaskConical}
+          >
+            <div className="space-y-3">
+              <button className="w-full btn-secondary text-left justify-start">
+                <Plus className="w-4 h-4" />
+                New Lab Order
+              </button>
+              <button className="w-full btn-secondary text-left justify-start">
+                <Users className="w-4 h-4" />
+                Patient Lookup
+              </button>
+              <button className="w-full btn-secondary text-left justify-start">
+                <Activity className="w-4 h-4" />
+                Test Queue
+              </button>
+            </div>
+          </ActionCard>
+
+          {/* Common Tests Reference */}
+          <div className="clinical-card p-6">
+            <SubSectionHeader
+              title="Common Tests"
+              subtitle="Quick reference"
+            />
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {COMMON_TESTS.map(test => (
+                <div key={test.code} className="flex justify-between items-center py-2 border-b border-clinical-border/50">
+                  <span className="font-mono text-sm font-medium text-medical-blue">{test.code}</span>
+                  <span className="text-xs text-clinical-muted text-right">{test.name}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                    {pendingCount > 0 && (
-                        <span className="px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-full text-xs font-bold animate-pulse">
-                            {pendingCount} Pending
-                        </span>
-                    )}
-                    <div className="badge success">CENTRAL LAB ONLINE</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Result Entry Modal */}
+      {showResultModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-pro overflow-hidden flex flex-col animate-slide-up">
+            <div className="p-6 border-b border-clinical-border flex justify-between items-center">
+              <h3 className="text-xl font-bold text-clinical-text">
+                Record Lab Results
+              </h3>
+              <button
+                onClick={() => setShowResultModal(null)}
+                className="w-10 h-10 rounded-full hover:bg-clinical-bg flex items-center justify-center transition-colors text-clinical-muted"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-clinical-bg p-4 rounded-lg">
+                <div className="text-sm text-clinical-muted">Patient</div>
+                <div className="font-medium text-clinical-text">
+                  {showResultModal.patient_first_name} {showResultModal.patient_last_name}
                 </div>
+                <div className="text-sm text-clinical-muted mt-1">
+                  Test: {showResultModal.display || showResultModal.code}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-clinical-text mb-2">
+                  Lab Results
+                </label>
+                <textarea
+                  value={resultText}
+                  onChange={(e) => setResultText(e.target.value)}
+                  className="w-full h-32 px-3 py-2 border border-clinical-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/20 focus:border-medical-blue"
+                  placeholder="Enter lab results..."
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="critical"
+                  checked={criticalFlag}
+                  onChange={(e) => setCriticalFlag(e.target.checked)}
+                  className="rounded border-clinical-border text-medical-blue focus:ring-medical-blue/20"
+                />
+                <label htmlFor="critical" className="text-sm font-medium text-clinical-text">
+                  Mark as critical results
+                </label>
+              </div>
             </div>
 
-            {/* Stats Row */}
-            <div className="grid grid-cols-4 gap-4 mb-6">
-                {[
-                    { label: 'Pending Tests', value: orders.filter(o => o.status === 'pending').length, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
-                    { label: 'In Progress', value: orders.filter(o => o.status === 'in-progress').length, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
-                    { label: 'Completed Today', value: orders.filter(o => o.status === 'completed').length, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
-                    { label: 'Turnaround (avg)', value: '1.2 hrs', color: 'text-slate-700', bg: 'bg-slate-50', border: 'border-slate-100' },
-                ].map(s => (
-                    <article key={s.label} className={`premium-panel ${s.bg} border ${s.border}`}>
-                        <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                        <div className="text-xs font-bold text-slate-500 uppercase mt-1">{s.label}</div>
-                    </article>
-                ))}
+            <div className="p-6 border-t border-clinical-border flex justify-end gap-3">
+              <button
+                onClick={() => setShowResultModal(null)}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitResult}
+                disabled={submittingResult || !resultText.trim()}
+                className="btn-primary"
+              >
+                {submittingResult ? 'Saving...' : 'Save Results'}
+              </button>
             </div>
-
-            {/* Tab Filter */}
-            <div className="flex gap-2 mb-4">
-                {['pending', 'in-progress', 'completed', 'all'].map(tab => (
-                    <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition ${activeTab === tab ? 'bg-indigo-600 text-white shadow' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}
-                    >
-                        {tab === 'all' ? 'All Orders' : tab.replace('-', ' ')}
-                    </button>
-                ))}
-            </div>
-
-            <div className="content-grid">
-                {/* Orders Panel */}
-                <div className="span-8">
-                    <article className="premium-panel p-0 overflow-hidden">
-                        <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                            <div>
-                                <div className="font-bold text-lg text-slate-700">Test Requests</div>
-                                <div className="text-xs text-muted uppercase font-bold mt-1">
-                                    {orders.length} order{orders.length !== 1 ? 's' : ''} in view
-                                </div>
-                            </div>
-                            <button onClick={loadOrders} className="text-xs font-bold text-indigo-600 hover:underline uppercase">Refresh</button>
-                        </div>
-
-                        {loading ? (
-                            <div className="p-12 text-center text-slate-400">
-                                <div className="animate-spin text-2xl mb-2">⏳</div>
-                                <p>Loading lab orders...</p>
-                            </div>
-                        ) : orders.length === 0 ? (
-                            <div className="p-12 text-center text-slate-400">
-                                <div className="text-4xl mb-4 opacity-20">🔬</div>
-                                <h3 className="font-bold text-slate-600">No {activeTab !== 'all' ? activeTab : ''} requests</h3>
-                                <p className="text-sm">All diagnostic directives have been processed.</p>
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-slate-100">
-                                {orders.map(order => {
-                                    let parsed = null;
-                                    try { parsed = order.notes ? JSON.parse(order.notes) : null; } catch { }
-                                    return (
-                                        <div key={order.id} className="p-4 hover:bg-slate-50 transition-colors">
-                                            <div className="flex justify-between items-start">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="font-bold text-slate-800">{order.display || order.code || 'Lab Test'}</span>
-                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border capitalize ${STATUS_STYLES[order.status] || 'bg-slate-100 text-slate-600'}`}>
-                                                            {order.status}
-                                                        </span>
-                                                        {parsed?.criticalFlag && (
-                                                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-600 text-white animate-pulse">CRITICAL</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="text-xs text-slate-500 font-medium">
-                                                        Patient: <span className="font-bold text-slate-700">{order.patient_first_name} {order.patient_last_name}</span>
-                                                        {' • '}Ordered by: {order.ordered_by_name || 'Staff'}
-                                                        {' • '}{new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                    {parsed?.results && (
-                                                        <div className="mt-2 p-2 bg-emerald-50 rounded text-xs font-mono text-emerald-800 border border-emerald-100">
-                                                            📋 {parsed.results}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex gap-2 ml-4 flex-shrink-0">
-                                                    {order.status === 'pending' && (
-                                                        <button
-                                                            onClick={() => handleStatusUpdate(order.id, 'in-progress')}
-                                                            className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition"
-                                                        >
-                                                            Start
-                                                        </button>
-                                                    )}
-                                                    {order.status === 'in-progress' && (
-                                                        <button
-                                                            onClick={() => setShowResultModal(order)}
-                                                            className="text-xs px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition"
-                                                        >
-                                                            Enter Result
-                                                        </button>
-                                                    )}
-                                                    {order.status === 'completed' && (
-                                                        <button
-                                                            onClick={() => handlePrint(order)}
-                                                            className="text-xs px-3 py-1.5 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition"
-                                                        >
-                                                            Print Report
-                                                        </button>
-                                                    )}
-                                                    {order.status === 'pending' && (
-                                                        <button
-                                                            onClick={() => handleStatusUpdate(order.id, 'cancelled')}
-                                                            className="text-xs px-3 py-1.5 text-red-600 border border-red-200 rounded-lg font-bold hover:bg-red-50 transition"
-                                                        >
-                                                            Cancel
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </article>
-                </div>
-
-                {/* Sidebar */}
-                <aside className="span-4 space-y-6">
-                    <article className="premium-panel">
-                        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
-                            Quick Reference
-                        </h3>
-                        <div className="space-y-2">
-                            {[
-                                { label: 'Turnaround Time', value: '1.2 hrs avg' },
-                                { label: 'Critical Values', value: orders.filter(o => { try { return JSON.parse(o.notes || '{}').criticalFlag; } catch { return false; } }).length, critical: true },
-                                { label: 'TAT SLA', value: '< 4 hours' },
-                            ].map(item => (
-                                <div key={item.label} className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                                    <span className="text-xs font-bold text-slate-500 uppercase">{item.label}</span>
-                                    <span className={`text-sm font-bold ${item.critical && item.value > 0 ? 'text-red-600' : 'text-slate-900'}`}>{item.value}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </article>
-
-                    <article className="premium-panel bg-indigo-600 text-white">
-                        <h3 className="font-bold mb-2">Common Test Codes</h3>
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto">
-                            {COMMON_TESTS.map(t => (
-                                <div key={t.code} className="flex justify-between text-xs">
-                                    <span className="font-mono font-bold text-indigo-200">{t.code}</span>
-                                    <span className="text-indigo-100">{t.name}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </article>
-                </aside>
-            </div>
-
-            {/* Result Entry Modal */}
-            {showResultModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 animate-in zoom-in-95">
-                        <div className="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 className="font-bold text-slate-800">Record Result</h3>
-                                <p className="text-xs text-slate-500">{showResultModal.display || showResultModal.code}</p>
-                            </div>
-                            <button onClick={() => setShowResultModal(null)} className="text-slate-400 hover:text-slate-700 text-xl font-bold">×</button>
-                        </div>
-
-                        <div className="mb-4">
-                            <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Result / Findings</label>
-                            <textarea
-                                value={resultText}
-                                onChange={e => setResultText(e.target.value)}
-                                className="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 font-mono"
-                                rows="4"
-                                placeholder="Enter test result here (e.g. Hb: 13.2 g/dL, WBC: 7,500/μL...)"
-                            />
-                        </div>
-
-                        <label className="flex items-center gap-2 cursor-pointer mb-5">
-                            <input
-                                type="checkbox"
-                                checked={criticalFlag}
-                                onChange={e => setCriticalFlag(e.target.checked)}
-                                className="w-4 h-4 rounded"
-                            />
-                            <span className="text-xs font-bold text-red-600 uppercase">Critical / Panic Value — Notify Clinician Immediately</span>
-                        </label>
-
-                        <div className="flex gap-3 justify-end">
-                            <button onClick={() => setShowResultModal(null)} className="px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-lg">Cancel</button>
-                            <button
-                                onClick={handleSubmitResult}
-                                disabled={submittingResult || !resultText.trim()}
-                                className="px-6 py-2 bg-emerald-600 text-white rounded-lg text-sm font-bold shadow hover:bg-emerald-700 transition disabled:opacity-50"
-                            >
-                                {submittingResult ? 'Saving...' : 'Submit Result'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </section>
-    );
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

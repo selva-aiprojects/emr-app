@@ -145,7 +145,8 @@ export default function PatientSearch({ tenantId, onSelect, initialPatientId }) 
                         </div>
                     ))}
                 </div>
-            )}
+            )}
+
 </div>
     );
 }

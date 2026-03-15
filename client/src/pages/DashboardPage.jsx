@@ -42,7 +42,7 @@ export default function DashboardPage({ metrics, activeUser, setView }) {
       const tenantId = session.tenantId;
       if (tenantId) {
         const res = await api.getLowStockAlerts(tenantId);
-        setLowStockAlerts((res?.data || res || []).slice(0, 3));
+        setLowStockAlerts((res?.data || res || []).slice(0, 5));
       }
     } catch (err) {
       console.warn('Low stock alerts unavailable:', err.message);
@@ -325,9 +325,13 @@ export default function DashboardPage({ metrics, activeUser, setView }) {
                   <span className={'alert-pill ' + (isCritical ? 'alert-pill--critical' : 'alert-pill--warning')}>
                     Stock Alert
                   </span>
-                  <span className="alert-title">{alert.drugName}</span>
-                  <span className="alert-meta">QTY: {alert.quantityRemaining}</span>
-                  <span className="alert-time">Below threshold</span>
+                  <div className="alert-content">
+                    <span className="alert-title">{alert.drugName}</span>
+                    <span className="alert-meta">
+                      Stock: <span className="font-bold">{alert.quantityRemaining}</span> units remaining
+                    </span>
+                  </div>
+                  <span className="alert-time">Action Required</span>
                 </div>
               );
             })}
