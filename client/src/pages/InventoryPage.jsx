@@ -5,18 +5,14 @@ export default function InventoryPage({ inventory, onAddItem, onRestock }) {
   const lowStockItems = inventory.filter((item) => Number(item.stock) <= Number(item.reorder)).length;
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <header className="premium-card p-6 md:p-8">
+    <div className="page-shell-premium animate-fade-in">
+      <div className="page-header-premium">
         <div className="max-w-3xl">
-          <div className="clinical-chip mb-4">Supply Chain Oversight</div>
-          <h1 className="text-[1.95rem] md:text-[2.4rem] leading-tight font-extrabold tracking-[-0.04em] text-[var(--text-strong)]">
-            Asset Logistics
-          </h1>
-          <p className="mt-3 text-[15px] md:text-base leading-7 text-[var(--text-muted)]">
-            Monitor clinical inventory, reorder thresholds, and asset registration with a cleaner operational view.
-          </p>
+          <div className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[9px] font-black uppercase tracking-widest inline-block mb-3 border border-indigo-100">Supply Chain Oversight</div>
+          <h1>Asset Logistics</h1>
+          <p className="mt-2">Monitor clinical inventory, reorder thresholds, and asset registration with a cleaner operational view.</p>
         </div>
-      </header>
+      </div>
 
       <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         <MetricCard
@@ -44,45 +40,45 @@ export default function InventoryPage({ inventory, onAddItem, onRestock }) {
 
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         <aside className="xl:col-span-4">
-          <article className="premium-card p-6 h-full">
-            <div className="mb-5">
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--text-soft)]">Asset Registration</p>
-              <h2 className="text-xl font-extrabold text-[var(--text-strong)] mt-2">Register a clinical supply item</h2>
-              <p className="text-sm leading-6 text-[var(--text-muted)] mt-2">
+          <article className="glass-panel p-8 h-full">
+            <div className="mb-8">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Asset Registration</p>
+              <h2 className="text-xl font-bold text-slate-900 mt-2 tracking-tight">Register supply item</h2>
+              <p className="text-xs font-medium text-slate-500 mt-2 leading-relaxed">
                 Add new supplies, medicines, consumables, or diagnostics into the facility inventory ledger.
               </p>
             </div>
 
-            <form onSubmit={onAddItem} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                  Identifier
+            <form onSubmit={onAddItem} className="space-y-6">
+              <div className="space-y-1.5 transition-all">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                  Institutional Identifier
                 </label>
                 <input
                   name="code"
                   placeholder="MED-721-X"
-                  className="clinical-input px-4 py-3 text-[15px] font-semibold"
+                  className="input-field py-4 px-5 bg-white font-mono font-bold"
                   required
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                  Nomenclature
+              <div className="space-y-1.5 transition-all">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                  Nomenclature (Asset Name)
                 </label>
                 <input
                   name="name"
                   placeholder="Sterile Saline 500ml"
-                  className="clinical-input px-4 py-3 text-[15px] font-semibold"
+                  className="input-field py-4 px-5 bg-white font-bold text-slate-800"
                   required
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                  Category
+              <div className="space-y-1.5 transition-all">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                  Category Classification
                 </label>
-                <select name="category" className="clinical-select px-4 py-3 text-[15px] font-semibold" required>
+                <select name="category" className="input-field h-[56px] px-5 bg-white font-bold text-slate-800" required>
                   <option value="Pharmaceuticals">Pharmaceuticals</option>
                   <option value="Consumables">Consumables</option>
                   <option value="Diagnostics">Diagnostics</option>
@@ -92,68 +88,70 @@ export default function InventoryPage({ inventory, onAddItem, onRestock }) {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                    Volume
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                    Stock Volume
                   </label>
                   <input
                     name="stock"
                     type="number"
                     placeholder="0"
-                    className="clinical-input px-4 py-3 text-[15px] font-semibold"
+                    className="input-field py-4 px-5 font-mono bg-white"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">
-                    Reorder Point
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">
+                    Critical Point
                   </label>
                   <input
                     name="reorder"
                     type="number"
                     placeholder="10"
-                    className="clinical-input px-4 py-3 text-[15px] font-semibold"
+                    className="input-field py-4 px-5 font-mono bg-white"
                     required
                   />
                 </div>
               </div>
 
-              <button type="submit" className="btn btn-primary w-full mt-2">
-                Commit to registry
-              </button>
+              <div className="pt-4">
+                <button type="submit" className="btn-primary w-full py-5 text-[10px] uppercase tracking-[0.2em] shadow-xl">
+                  Commit to Institutional Registry
+                </button>
+              </div>
             </form>
           </article>
         </aside>
 
         <main className="xl:col-span-8">
-          <article className="premium-card overflow-hidden">
-            <div className="px-6 py-5 border-b border-[var(--border)] flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--surface-muted)]">
+          <article className="premium-panel overflow-hidden">
+            <div className="panel-header-standard">
               <div>
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--text-soft)]">Global Stock Ledger</p>
-                <h2 className="text-xl font-extrabold text-[var(--text-strong)] mt-2">Inventory availability and logistics status</h2>
+                <h3 className="panel-title-text font-bold">Global Stock Ledger</h3>
+                <p className="panel-subtitle-text font-medium mt-1">Inventory availability and logistics status</p>
               </div>
               <input
                 type="text"
                 placeholder="Filter clinical items..."
-                className="clinical-input px-4 py-3 w-full md:w-72 text-sm font-semibold bg-white"
+                className="input-field py-3 w-72 bg-white"
               />
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-white">
-                  <tr className="border-b border-[var(--border)]">
-                    <th className="px-4 py-4 text-left text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Asset ID</th>
-                    <th className="px-4 py-4 text-left text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Nomenclature</th>
-                    <th className="px-4 py-4 text-left text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Availability</th>
-                    <th className="px-4 py-4 text-left text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Logistics Status</th>
-                    <th className="px-4 py-4 text-right text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Operations</th>
+            <div className="premium-table-container">
+              <table className="premium-table">
+                <thead>
+                  <tr>
+                    <th>Asset ID</th>
+                    <th>Nomenclature</th>
+                    <th>Availability</th>
+                    <th>Logistics Status</th>
+                    <th style={{ textAlign: 'right' }}>Operations</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-50">
                   {inventory.length === 0 ? (
                     <tr>
-                      <td colSpan="5" className="text-center px-6 py-20 text-[var(--text-muted)] text-sm italic">
+                      <td colSpan="5" className="text-center py-24 text-slate-400 italic font-medium">
                         No inventory units identified in the facility registry.
                       </td>
                     </tr>
@@ -162,46 +160,46 @@ export default function InventoryPage({ inventory, onAddItem, onRestock }) {
                     const stockPct = Math.min(100, (Number(item.stock) / (Number(item.reorder) * 3 || 1)) * 100);
 
                     return (
-                      <tr key={item.id} className="border-b border-[var(--border)]/70 hover:bg-[var(--surface-muted)] transition-colors">
-                        <td className="px-4 py-5">
-                          <code className="inline-flex rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-3 py-2 text-[11px] font-extrabold text-[var(--text-main)]">
+                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="w-32">
+                          <code className="text-[10px] font-bold font-mono text-slate-400 bg-slate-100 group-hover:bg-white px-2.5 py-1 rounded border border-slate-100 transition-colors">
                             {item.code}
                           </code>
                         </td>
-                        <td className="px-4 py-5">
-                          <div className="font-bold text-[var(--text-strong)] text-[1.05rem] leading-6">{item.name}</div>
-                          <div className="mt-1 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">
+                        <td>
+                          <div className="font-bold text-slate-900 text-sm leading-tight">{item.name}</div>
+                          <div className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-400 mt-1">
                             {item.category || 'General Supply'}
                           </div>
                         </td>
-                        <td className="px-4 py-5">
-                          <div className="w-48 space-y-2">
-                            <div className="flex justify-between text-[11px] font-bold uppercase tracking-[0.12em]">
-                              <span className="text-[var(--text-main)]">{item.stock} units</span>
-                              <span className="text-[var(--text-soft)]">crit: {item.reorder}</span>
+                        <td className="w-56">
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-end text-[10px] font-black uppercase tracking-widest">
+                              <span className="text-slate-800">{item.stock} UNITS</span>
+                              <span className="text-slate-400 text-[9px]">CRIT: {item.reorder}</span>
                             </div>
-                            <div className="h-2 bg-[var(--border)]/70 rounded-full overflow-hidden">
+                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-50">
                               <div
-                                className={`h-full rounded-full ${isLow ? 'bg-amber-500' : 'bg-teal-500'}`}
+                                className={`h-full rounded-full transition-all duration-700 ease-out ${isLow ? 'bg-rose-500' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]'}`}
                                 style={{ width: `${stockPct}%` }}
                               />
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-5">
-                          <div className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.14em] bg-[var(--surface-muted)]">
-                            <span className={`w-2 h-2 rounded-full ${isLow ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`} />
-                            <span className={isLow ? 'text-amber-700' : 'text-emerald-700'}>
-                              {isLow ? 'Reorder needed' : 'Optimal'}
-                            </span>
+                        <td>
+                          <div className={`inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[9px] font-black uppercase tracking-widest border border-slate-100 whitespace-nowrap shadow-sm ${
+                            isLow ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                          }`}>
+                            <span className={`w-2 h-2 rounded-full ${isLow ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'}`} />
+                            {isLow ? 'Reorder Needed' : 'Optimal Stock'}
                           </div>
                         </td>
-                        <td className="px-4 py-5 text-right">
+                        <td className="text-right">
                           <button
-                            className="btn btn-secondary !min-h-[38px] !px-4 !text-xs uppercase tracking-[0.14em]"
+                            className="px-4 py-2 bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white rounded-xl text-[9px] font-black uppercase tracking-[0.1em] transition-all border border-[var(--primary)]/10 shadow-sm active:scale-95"
                             onClick={() => onRestock(item.id)}
                           >
-                            Initiate restock
+                            Initiate Restock
                           </button>
                         </td>
                       </tr>

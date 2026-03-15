@@ -131,7 +131,7 @@ export default function Prescriber({ tenantId, patientId, onDrugsChange, initial
                     </div>
                     {safetyCheck.alerts?.map((alert, i) => (
                         <div key={i} className="mb-2 last:mb-0 bg-white p-2 rounded border border-red-100 flex items-start text-xs">
-                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold mr-2 mt-0.5 ${alert.severity === 'CRITICAL' ? 'bg-black text-white' :
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold mr-2 mt-0.5 ${alert.severity === 'CRITICAL' ? 'bg-black text-white' :
                                     alert.severity === 'MAJOR' ? 'bg-red-600 text-white' :
                                         'bg-amber-100 text-amber-800'
                                 }`}>
@@ -181,7 +181,7 @@ export default function Prescriber({ tenantId, patientId, onDrugsChange, initial
                                     <div className="font-bold text-slate-800">{drug.generic_name || drug.genericName} {drug.strength}</div>
                                     <div className="text-xs text-slate-500">{drug.dosage_form} • {drug.route} {(drug.brand_names || []).join(', ')}</div>
                                 </div>
-                                {drug.highAlertFlag && <span className="bg-red-100 text-red-600 text-[10px] px-1.5 py-0.5 rounded font-bold">HIGH ALERT</span>}
+                                {drug.highAlertFlag && <span className="bg-red-100 text-red-600 text-xs px-1.5 py-0.5 rounded font-bold">HIGH ALERT</span>}
                             </div>
                         ))}
                     </div>
@@ -199,20 +199,20 @@ export default function Prescriber({ tenantId, patientId, onDrugsChange, initial
                             onClick={() => removeItem(i)}
                         >✕</button>
                         <div className="font-bold text-emerald-700 mb-2 pb-2 border-b border-slate-200">
-                            {m.drugName} <div className="text-amber-600 font-bold uppercase text-[9px]">Critical</div> <span className="text-xs font-normal text-slate-500 bg-emerald-50 px-1 rounded ml-1">ID: {m.drugId.slice(0, 8)}</span>
+                            {m.drugName} <div className="text-amber-600 font-bold uppercase text-xs">Critical</div> <span className="text-xs font-normal text-slate-500 bg-emerald-50 px-1 rounded ml-1">ID: {m.drugId.slice(0, 8)}</span>
                         </div>
 
                         <div className="grid grid-cols-4 gap-2 mb-2">
                             <div>
-                                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Dose</label>
+                                <label className="block text-xs uppercase font-bold text-slate-500 mb-1">Dose</label>
                                 <input className="w-full text-sm p-1 border rounded" value={m.dose} onChange={e => updateItem(i, 'dose', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Unit</label>
+                                <label className="block text-xs uppercase font-bold text-slate-500 mb-1">Unit</label>
                                 <input className="w-full text-sm p-1 border rounded" value={m.doseUnit} onChange={e => updateItem(i, 'doseUnit', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Frequency</label>
+                                <label className="block text-xs uppercase font-bold text-slate-500 mb-1">Frequency</label>
                                 <select className="w-full text-sm p-1 border rounded bg-white" value={m.frequency} onChange={e => updateItem(i, 'frequency', e.target.value)}>
                                     <option value="QD">QD (Daily)</option>
                                     <option value="BID">BID (2x/day)</option>
@@ -222,18 +222,18 @@ export default function Prescriber({ tenantId, patientId, onDrugsChange, initial
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Days</label>
+                                <label className="block text-xs uppercase font-bold text-slate-500 mb-1">Days</label>
                                 <input className="w-full text-sm p-1 border rounded" type="number" min="1" value={m.durationDays} onChange={e => updateItem(i, 'durationDays', e.target.value)} />
                             </div>
                         </div>
 
                         <div className="grid grid-cols-4 gap-2">
                             <div className="col-span-3">
-                                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Instructions / Sig</label>
+                                <label className="block text-xs uppercase font-bold text-slate-500 mb-1">Instructions / Sig</label>
                                 <input className="w-full text-sm p-1 border rounded bg-white" value={m.instructions} onChange={e => updateItem(i, 'instructions', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-[10px] uppercase font-bold text-slate-500 mb-1">Dispense Qty</label>
+                                <label className="block text-xs uppercase font-bold text-slate-500 mb-1">Dispense Qty</label>
                                 <input className="w-full text-sm p-1 border rounded bg-white" type="number" value={m.quantity} onChange={e => updateItem(i, 'quantity', e.target.value)} />
                             </div>
                         </div>

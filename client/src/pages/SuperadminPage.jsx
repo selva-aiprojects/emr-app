@@ -66,14 +66,14 @@ function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTen
               <h3 className="text-lg font-bold text-slate-900">Facility Registry</h3>
               <p className="text-xs text-slate-500 font-medium tracking-tight">Real-time engagement across the healthcare network</p>
             </div>
-            <button className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 transition-all flex items-center gap-2 uppercase tracking-widest" onClick={handleExport}>
+            <button className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 transition-all flex items-center gap-2 uppercase tracking-widest" onClick={handleExport}>
               Export Report
             </button>
           </header>
           
           <div className="p-8">
             {/* HEADERS */}
-            <div className="grid grid-cols-12 px-4 py-3 bg-slate-50 rounded-lg mb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest border border-slate-100">
+            <div className="grid grid-cols-12 px-4 py-3 bg-slate-50 rounded-lg mb-4 text-xs font-bold text-slate-400 uppercase tracking-widest border border-slate-100">
               <div className="col-span-6">Organization</div>
               <div className="col-span-3 text-center">Identity Tier</div>
               <div className="col-span-3 text-right">Actions</div>
@@ -88,11 +88,11 @@ function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTen
                     </div>
                     <div>
                       <div className="text-sm font-bold text-slate-800">{tenant.name}</div>
-                      <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{tenant.code}</div>
+                      <div className="text-xs text-slate-400 font-bold uppercase tracking-widest">{tenant.code}</div>
                     </div>
                   </div>
                   <div className="col-span-3 text-center">
-                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase border ${
+                    <span className={`px-2 py-1 rounded text-xs font-bold uppercase border ${
                       tenant.subscription_tier === 'Enterprise' 
                         ? 'bg-blue-50 text-blue-700 border-blue-100' 
                         : 'bg-slate-50 text-slate-600 border-slate-100'
@@ -119,21 +119,21 @@ function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTen
             </div>
             <div>
               <h3 className="text-lg font-bold text-slate-900 tracking-tight">Network Integrity</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Global Service Audit</p>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">Global Service Audit</p>
             </div>
           </div>
           <div className="space-y-4">
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-4 group hover:border-blue-200 transition-all">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-lg shadow-emerald-500/50"></div>
               <div>
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 group-hover:text-blue-600">Core Engine</div>
+                <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-0.5 group-hover:text-blue-600">Core Engine</div>
                 <div className="text-xs font-bold text-slate-700">Participation Nominal</div>
               </div>
             </div>
             <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 flex items-center gap-4 group hover:border-blue-200 transition-all">
               <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse shadow-lg shadow-blue-500/50"></div>
               <div>
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 group-hover:text-blue-600">Load Balancer</div>
+                <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-0.5 group-hover:text-blue-600">Load Balancer</div>
                 <div className="text-xs font-bold text-slate-700">Latency: 14ms (Optimal)</div>
               </div>
             </div>
@@ -150,16 +150,16 @@ function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTen
           </div>
           <form className="space-y-6" onSubmit={onCreateTenant}>
             <div>
-              <label className="text-[10px] font-bold uppercase text-slate-400 mb-2 block tracking-widest">Full Organization Name</label>
+              <label className="text-xs font-bold uppercase text-slate-400 mb-2 block tracking-widest">Full Organization Name</label>
               <input name="name" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all outline-none font-medium" placeholder="E.g. City General Hospital" required />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-bold uppercase text-slate-400 mb-2 block tracking-widest">Shard Code</label>
+                <label className="text-xs font-bold uppercase text-slate-400 mb-2 block tracking-widest">Shard Code</label>
                 <input name="code" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-500 transition-all outline-none font-medium" placeholder="CGH" required />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase text-slate-400 mb-2 block tracking-widest">Domain Prefix</label>
+                <label className="text-xs font-bold uppercase text-slate-400 mb-2 block tracking-widest">Domain Prefix</label>
                 <input name="subdomain" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:border-blue-500 transition-all outline-none font-medium" placeholder="citygen" required />
               </div>
             </div>
@@ -176,7 +176,7 @@ function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTen
           </div>
           <form className="space-y-6" onSubmit={onCreateUser}>
             <div>
-              <label className="text-[10px] font-bold uppercase text-slate-400 mb-2 block tracking-widest">Target Organization</label>
+              <label className="text-xs font-bold uppercase text-slate-400 mb-2 block tracking-widest">Target Organization</label>
               <select name="tenantId" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium" required defaultValue="">
                 <option value="" disabled>Select facility shard...</option>
                 {Array.isArray(tenants) && tenants.map((t) => (
@@ -186,11 +186,11 @@ function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTen
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-bold uppercase text-slate-400 mb-2 block tracking-widest">Practitioner Name</label>
+                <label className="text-xs font-bold uppercase text-slate-400 mb-2 block tracking-widest">Practitioner Name</label>
                 <input name="name" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium" placeholder="Full Name" required />
               </div>
               <div>
-                <label className="text-[10px] font-bold uppercase text-slate-400 mb-2 block tracking-widest">Access Role</label>
+                <label className="text-xs font-bold uppercase text-slate-400 mb-2 block tracking-widest">Access Role</label>
                 <select name="role" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none font-medium" defaultValue="Admin">
                   <option>Admin</option>
                   <option>Doctor</option>

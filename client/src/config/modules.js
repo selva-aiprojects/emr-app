@@ -14,12 +14,13 @@ export const moduleMeta = {
   admin: { title: 'Admin', subtitle: 'Tenant and user management' },
   accounts: { title: 'Accounts Payable', subtitle: 'Expenses and cash flow' },
   lab: { title: 'Laboratory', subtitle: 'Test results and diagnostics' },
-  support: { title: 'Support', subtitle: 'Facility assistance and maintenance' }
+  support: { title: 'Support', subtitle: 'Facility assistance and maintenance' },
+  users: { title: 'Users', subtitle: 'Global Identity & Access' }
 };
 
 export const fallbackPermissions = {
   Superadmin: ['superadmin', 'dashboard', 'reports'],
-  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin'],
+  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users'],
   Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'reports'],
   Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inventory'],
   Lab: ['dashboard', 'patients', 'lab', 'reports'],

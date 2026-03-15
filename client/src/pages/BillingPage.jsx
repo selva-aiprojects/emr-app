@@ -99,70 +99,74 @@ export default function BillingPage({ tenant, patients,
   const sortedInvoices = [...invoices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   return (
-    <section className="view billing-workspace">
-      <div className="workspace-header">
-        <div className="tab-group premium-glass">
+    <div className="page-shell-premium">
+      <div className="action-bar-premium">
+        <div className="panel-title-group">
+          <h2 className="panel-title-text">Financial Operations</h2>
+          <p className="panel-subtitle-text">Institutional Ledger & Revenue Flow</p>
+        </div>
+        <div className="premium-tab-bar">
           <button
-            className={`tab-link ${activeView === 'list' ? 'active' : ''}`}
+            className={`premium-tab-item ${activeView === 'list' ? 'active' : ''}`}
             onClick={() => setActiveView('list')}
           >
-            <span className="icon">💳</span> Financial Ledger
+            Financial Ledger
           </button>
           <button
-            className={`tab-link ${activeView === 'create' ? 'active' : ''}`}
+            className={`premium-tab-item ${activeView === 'create' ? 'active' : ''}`}
             onClick={() => setActiveView('create')}
           >
-            <span className="icon">➕</span> New Statement
+            New Statement
           </button>
           <button
-            className={`tab-link ${activeView === 'settlement' ? 'active' : ''}`}
+            className={`premium-tab-item ${activeView === 'settlement' ? 'active' : ''}`}
             onClick={() => setActiveView('settlement')}
           >
-            <span className="icon">🏨</span> Bed Settlement
+            Bed Settlement
           </button>
         </div>
       </div>
 
-      <div className="billing-content-grid">
+      <div className="grid grid-cols-12 gap-6">
         {activeView === 'create' && (
-          <article className="panel create-invoice-card premium-glass">
-            <div className="panel-header-rich">
-              <div className="header-icon-box">💰</div>
-              <div className="header-text">
-                <h3>New Patient Statement</h3>
-                <p>Generate institutional bills for medical services rendered</p>
-              </div>
+          <article className="col-span-12 lg:col-span-8 lg:col-start-3 glass-panel p-10 animate-fade-in">
+            <div className="mb-10">
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">New Patient Statement</h3>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Generate institutional bills for medical services rendered</p>
             </div>
 
-            <form className="medical-form" onSubmit={(e) => {
+            <form className="space-y-10" onSubmit={(e) => {
               onIssueInvoice(e);
               setActiveView('list');
             }}>
-              <div className="form-grid-premium">
-                <div className="form-section">
-                  <h4 className="form-section-title">Client Selection</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-4">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 pb-2">Client Selection</h4>
                   <PatientSearch tenantId={tenant.id} />
                 </div>
 
-                <div className="form-section">
-                  <h4 className="form-section-title">Billing Particulars</h4>
-                  <div className="form-group">
-                    <label>Service Description</label>
-                    <input name="description" placeholder="e.g. Specialty Consult + Radiology" required />
+                <div className="space-y-6">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-50 pb-2">Financial Provisions</h4>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Service Narrative</label>
+                    <input name="description" className="input-field py-4" placeholder="e.g. Specialty Consult + Radiology" required />
                   </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Base Fee (₹)</label>
-                      <input name="amount" type="number" step="0.01" placeholder="0.00" required />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Base Fee (₹)</label>
+                      <input name="amount" type="number" step="0.01" className="input-field py-4 font-mono" placeholder="0.00" required />
                     </div>
-                    <div className="form-group">
-                      <label>GST / VAT (%)</label>
-                      <input name="taxPercent" type="number" step="0.1" defaultValue="5" />
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tax Provision (%)</label>
+                      <input name="taxPercent" type="number" step="0.1" className="input-field py-4 font-mono" defaultValue="5" />
                     </div>
                   </div>
-                  <div className="form-group">
-                    <label>Payment Mode Preference</label>
-                    <select name="paymentMethod" defaultValue="Card">
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Settlement Protocol</label>
+                    <select name="paymentMethod" className="input-field h-[54px]" defaultValue="Card">
                       <option>Cash</option>
                       <option>Card</option>
                       <option>UPI / NetBanking</option>
@@ -172,42 +176,48 @@ export default function BillingPage({ tenant, patients,
                 </div>
               </div>
 
-              <div className="form-actions-premium">
-                <button type="submit" className="save-btn-premium">Finalize Transaction</button>
-                <button type="button" className="cancel-btn-premium" onClick={() => setActiveView('list')}>Discard Statement</button>
+              <div className="pt-10 border-t border-slate-100 flex justify-end gap-3">
+                <button type="button" className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors" onClick={() => setActiveView('list')}>Discard Transaction</button>
+                <button type="submit" className="btn-primary px-12 py-4 text-[10px] uppercase tracking-[0.2em] shadow-xl">Finalize & Issue Statement</button>
               </div>
             </form>
           </article>
         )}
 
         {activeView === 'settlement' && (
-          <article className="settlement-workspace panel premium-glass" style={{ padding: '2rem' }}>
-            <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 900 }}>IPD Discharge & Settlement</h3>
-              <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Finalize financial clearance for patients awaiting clinical discharge.</p>
+          <article className="col-span-12 glass-panel p-10 animate-fade-in">
+            <div className="mb-10">
+              <h3 className="text-xl font-bold text-slate-900 tracking-tight">IPD Discharge & Settlement</h3>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Finalize financial clearance for patients awaiting clinical discharge</p>
             </div>
-            <div className="settlement-controls" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {patients.slice(0, 3).map(p => (
-                <div key={p.id} className="settlement-card premium-glass" style={{ padding: '1.5rem', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <div key={p.id} className="p-6 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all">
+                  <div className="flex justify-between items-start mb-6">
                     <div>
-                      <div style={{ fontWeight: 800, fontSize: '14px' }}>{p.name}</div>
-                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>WARD-B • ROOM 10{Math.floor(Math.random() * 9)}</div>
+                      <div className="text-sm font-extrabold text-slate-900 mb-1">{p.firstName} {p.lastName}</div>
+                      <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest">WARD-B • ROOM 10{Math.floor(Math.random() * 9)}</div>
                     </div>
-                    <span style={{ fontSize: '10px', fontWeight: 900, color: '#f59e0b', background: '#fffbeb', padding: '2px 8px', borderRadius: '4px' }}>WAITING</span>
+                    <span className="px-2 py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded text-[9px] font-black uppercase tracking-widest">WAITING</span>
                   </div>
-                  <div className="bill-summary" style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span>Bed Charges</span> <strong>{currency(12500)}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span>Medications</span> <strong>{currency(4200)}</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 900, marginTop: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
-                      <span>Total Due</span> <strong>{currency(16700)}</strong>
-                    </div>
+                  
+                  <div className="p-4 bg-slate-50 rounded-xl mb-6 space-y-2">
+                     <div className="flex justify-between text-[11px] font-bold text-slate-500">
+                        <span>Bed Charges</span>
+                        <span className="text-slate-900 font-mono">₹{currency(12500)}</span>
+                     </div>
+                     <div className="flex justify-between text-[11px] font-bold text-slate-500">
+                        <span>Medications</span>
+                        <span className="text-slate-900 font-mono">₹{currency(4200)}</span>
+                     </div>
+                     <div className="pt-2 border-t border-slate-200 flex justify-between text-xs font-black text-[var(--primary)] uppercase tracking-widest">
+                        <span>Total Due</span>
+                        <span>₹{currency(16700)}</span>
+                     </div>
                   </div>
-                  <button className="primary-submit-btn" style={{ background: '#10b981', color: 'white', border: 'none', padding: '10px', width: '100%', borderRadius: '8px', marginTop: '1rem', fontWeight: 800, fontSize: '12px', cursor: 'pointer' }}>
+
+                  <button className="btn-primary w-full py-3 text-[10px] uppercase tracking-widest shadow-lg">
                     Initiate Final Exit
                   </button>
                 </div>
@@ -217,36 +227,11 @@ export default function BillingPage({ tenant, patients,
         )}
 
         {activeView === 'list' && (
-          <article className="ledger-card premium-glass">
-            <div className="ledger-header">
-              <div className="title-stack">
-                <h3>Institutional Ledger</h3>
-                <p>Comprehensive monitoring of {sortedInvoices.length} recent financial transactions and departmental billings.</p>
-              </div>
-              <div className="ledger-stats analytics-cards">
-                <div className="stat-card premium-glass">
-                  <div className="card-icon color-emerald"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg></div>
-                  <div className="card-info">
-                    <span className="tiny-label">Realized Revenue</span>
-                    <strong className="val-main">{currency(sortedInvoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.total, 0))}</strong>
-                  </div>
-                  <div className="mini-graph">
-                    <div className="bar" style={{ height: '40%', opacity: 0.3 }}></div>
-                    <div className="bar" style={{ height: '60%', opacity: 0.5 }}></div>
-                    <div className="bar" style={{ height: '80%', opacity: 0.7 }}></div>
-                    <div className="bar active" style={{ height: '100%' }}></div>
-                  </div>
-                </div>
-                <div className="stat-card premium-glass">
-                  <div className="card-icon color-amber"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg></div>
-                  <div className="card-info">
-                    <span className="tiny-label">Awaiting Settlement</span>
-                    <strong className="val-main">{currency(sortedInvoices.filter(i => i.status !== 'paid').reduce((sum, i) => sum + i.total, 0))}</strong>
-                  </div>
-                  <div className="mini-graph">
-                    <div className="bar-trend error" style={{ width: '65%' }}></div>
-                  </div>
-                </div>
+          <article className="premium-panel col-span-12 animate-fade-in">
+            <div className="panel-header-standard">
+              <div className="panel-title-group">
+                <h3 className="panel-title-text">Institutional Ledger</h3>
+                <p className="panel-subtitle-text">Financial Node Monitoring</p>
               </div>
             </div>
 
@@ -255,7 +240,7 @@ export default function BillingPage({ tenant, patients,
               <span>Verify patient insurance eligibility before finalizing statements. Settled payments are finalized in real-time.</span>
             </div>
 
-            <div className="table-wrapper">
+            <div className="premium-table-container">
               <table className="premium-table">
                 <thead>
                   <tr>
@@ -268,39 +253,39 @@ export default function BillingPage({ tenant, patients,
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedInvoices.length === 0 && (
-                    <tr><td colSpan="6" className="empty-table-msg">No transactions recorded in the current fiscal period.</td></tr>
-                  )}
-                  {Array.isArray(sortedInvoices) && sortedInvoices.map((i) => (
-                    <tr key={i.id} className={`ledger-row ${i.status}`}>
-                      <td className="date-cell">
-                        {i.createdAt ? new Date(i.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Today'}
+                  {sortedInvoices.length === 0 ? (
+                    <tr><td colSpan="6" className="text-center py-24 text-slate-400 italic font-medium">No transactions recorded in the current fiscal period.</td></tr>
+                  ) : sortedInvoices.map((i) => (
+                    <tr key={i.id}>
+                      <td>
+                        <div className="text-sm font-bold text-slate-800">{i.createdAt ? new Date(i.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Today'}</div>
                       </td>
-                      <td className="id-cell"><code>{i.number}</code></td>
-                      <td className="patient-cell">
-                        <div
-                          className="clickable-patient"
-                          onClick={() => { setActivePatientId(i.patientId); setView('patients'); }}
-                        >
+                      <td><code className="text-[10px] font-bold font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">{i.number}</code></td>
+                      <td>
+                        <div className="font-bold text-slate-800 cursor-pointer hover:text-[var(--primary)] transition-colors" onClick={() => { setActivePatientId(i.patientId); setView('patients'); }}>
                           {patientName(i.patientId, patients) || 'Unknown File'}
                         </div>
-                        <span className="tiny-id">REF-{i.patientId?.slice(0, 6).toUpperCase()}</span>
+                        <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">REF-{i.patientId?.slice(0, 8).toUpperCase()}</div>
                       </td>
-                      <td className="amount-cell">{currency(i.total)}</td>
+                      <td className="font-bold text-slate-900">{currency(i.total)}</td>
                       <td>
-                        <span className={`status-chip ${i.status}`}>
+                        <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border ${i.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                           {i.status === 'paid' ? 'Settled' : 'Outstanding'}
                         </span>
                       </td>
-                      <td className="actions-cell">
-                        <div className="action-button-group">
+                      <td className="text-right">
+                        <div className="flex justify-end gap-2">
                           {i.status !== 'paid' && (
-                            <button className="ledger-btn settle" onClick={() => onMarkPaid(i.id)}>
+                            <button className="px-3 py-1.5 bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary-hover)]/10 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border border-[var(--primary)]/10" onClick={() => onMarkPaid(i.id)}>
                               Settle
                             </button>
                           )}
-                          <button className="ledger-btn print" onClick={() => printInvoice(i, patients, tenant)}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6z" /></svg>
+                          <button 
+                            className="p-1.5 text-slate-400 hover:text-[var(--primary)] hover:bg-slate-50 rounded-lg transition-all" 
+                            onClick={() => printInvoice(i, patients, tenant)}
+                            title="Print Transaction Record"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 14h12v8H6z" /></svg>
                           </button>
                         </div>
                       </td>
@@ -312,8 +297,6 @@ export default function BillingPage({ tenant, patients,
           </article>
         )}
       </div>
-</section>
+    </div>
   );
 }
-
-

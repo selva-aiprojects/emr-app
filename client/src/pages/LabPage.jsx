@@ -1,29 +1,21 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api.js';
-import MetricCard from '../components/MetricCard';
-import { 
-  StatusBadge, 
-  ActionCard, 
-  SectionHeader, 
-  SubSectionHeader, 
-  DataTable 
-} from '../components/ui';
 import { 
   Plus, 
   Search, 
-  Filter, 
   Download, 
-  FileText, 
   AlertCircle,
   CheckCircle,
   Clock,
   Play,
   Eye,
-  Edit,
-  Trash2,
-  FlaskConical,
   Activity,
-  Users
+  FlaskConical,
+  Beaker,
+  FileText,
+  ChevronRight,
+  TrendingUp,
+  UserSearch
 } from 'lucide-react';
 
 const COMMON_TESTS = [
@@ -35,8 +27,6 @@ const COMMON_TESTS = [
   { code: 'LIPID', name: 'Lipid Profile' },
   { code: 'TSH', name: 'Thyroid Stimulating Hormone' },
   { code: 'UA', name: 'Urinalysis' },
-  { code: 'XRAY', name: 'Chest X-Ray' },
-  { code: 'ECG', name: 'Electrocardiogram' },
 ];
 
 export default function LabPage({ tenant }) {
@@ -95,108 +85,12 @@ export default function LabPage({ tenant }) {
     }
   };
 
-  const handlePrint = (order) => {
-    const parsed = order.notes ? JSON.parse(order.notes) : {};
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Lab Report - ${order.patient_first_name} ${order.patient_last_name}</title>
-          <style>
-            body { font-family: 'Inter', system-ui, sans-serif; padding: 40px; color: #1e293b; line-height: 1.5; }
-            .header { border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
-            .report-title { font-size: 24px; font-weight: bold; color: #0f172a; margin-bottom: 5px; }
-            .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 40px; }
-            .meta-item { font-size: 14px; }
-            .meta-label { font-weight: bold; color: #64748b; text-transform: uppercase; font-size: 11px; margin-bottom: 2px; }
-            .results-area { background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; }
-            .results-text { font-family: 'JetBrains Mono', monospace; white-space: pre-wrap; margin-top: 15px; }
-            .critical { color: #dc2626; border: 2px solid #fecaca; padding: 10px; border-radius: 8px; font-weight: bold; margin-bottom: 20px; }
-            .footer { margin-top: 50px; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="report-title">LABORATORY INVESTIGATION REPORT</div>
-            <div>${tenant?.name || 'Healthcare Facility'}</div>
-          </div>
-          <div class="meta">
-            <div>
-              <div class="meta-item"><div class="meta-label">Patient</div>${order.patient_first_name} ${order.patient_last_name}</div>
-              <div class="meta-item"><div class="meta-label">Test</div>${order.display || order.code}</div>
-              <div class="meta-item"><div class="meta-label">Ordered By</div>${order.ordered_by_name || 'Staff'}</div>
-            </div>
-            <div>
-              <div class="meta-item"><div class="meta-label">Order Date</div>${new Date(order.created_at).toLocaleDateString()}</div>
-              <div class="meta-item"><div class="meta-label">Status</div>${order.status}</div>
-              <div class="meta-item"><div class="meta-label">Report ID</div>LAB-${order.id}</div>
-            </div>
-          </div>
-          ${parsed?.criticalFlag ? '<div class="critical">⚠️ CRITICAL RESULTS - URGENT ATTENTION REQUIRED</div>' : ''}
-          <div class="results-area">
-            <div class="meta-label">LABORATORY RESULTS</div>
-            <div class="results-text">${parsed?.results || 'Results pending...'}</div>
-          </div>
-          <div class="footer">
-            Generated on ${new Date().toLocaleString()} | Report ID: LAB-${order.id}
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.print();
-  };
-
   const filteredOrders = orders.filter(order => 
     order.patient_first_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
     order.patient_last_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
     order.display?.toLowerCase().includes(searchValue.toLowerCase()) ||
     order.code?.toLowerCase().includes(searchValue.toLowerCase())
   );
-
-  const tableColumns = [
-    { key: 'test', label: 'Test', render: (value, row) => (
-      <div>
-        <div className="font-medium text-clinical-text">{row.display || row.code}</div>
-        <div className="text-xs text-clinical-muted">{row.code}</div>
-      </div>
-    )},
-    { key: 'patient', label: 'Patient', render: (value, row) => (
-      <div>
-        <div className="font-medium text-clinical-text">
-          {row.patient_first_name} {row.patient_last_name}
-        </div>
-        <div className="text-xs text-clinical-muted">ID: {row.patient_id}</div>
-      </div>
-    )},
-    { key: 'ordered_by', label: 'Ordered By', render: (value, row) => (
-      <div className="text-sm">
-        {row.ordered_by_name || 'Staff'}
-      </div>
-    )},
-    { key: 'created_at', label: 'Date', render: (value, row) => (
-      <div className="text-sm">
-        {new Date(row.created_at).toLocaleDateString()}
-      </div>
-    )},
-    { key: 'status', label: 'Status', render: (value, row) => {
-      const parsed = row.notes ? JSON.parse(row.notes) : null;
-      return (
-        <div className="flex items-center gap-2">
-          <StatusBadge status={row.status} />
-          {parsed?.criticalFlag && (
-            <StatusBadge status="critical" size="sm" />
-          )}
-        </div>
-      );
-    }},
-  ];
-
-  const tableActions = [
-    { icon: Eye, label: 'View Details', onClick: (row) => console.log('View', row) },
-    { icon: Edit, label: 'Edit', onClick: (row) => console.log('Edit', row) },
-    { icon: Download, label: 'Download', onClick: (row) => handlePrint(row) },
-  ];
 
   const metrics = {
     pending: orders.filter(o => o.status === 'pending').length,
@@ -209,205 +103,288 @@ export default function LabPage({ tenant }) {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <SectionHeader
-        title="Laboratory Services"
-        subtitle="Diagnostic testing and pathology management"
-        badge={`${orders.length} Tests`}
-        showSearch
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        actions={[
-          { label: 'New Order', icon: Plus, variant: 'primary', onClick: () => console.log('New order') },
-          { label: 'Export', icon: Download, variant: 'secondary', onClick: () => console.log('Export') },
-        ]}
-      />
-
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          label="Pending Analysis"
-          value={metrics.pending}
-          icon={Clock}
-          change="Awaiting processing"
-          trend="down"
-          accent="warning"
-        />
-        <MetricCard
-          label="In Progress"
-          value={metrics.inProgress}
-          icon={Play}
-          change="Active processing"
-          trend="up"
-          accent="info"
-        />
-        <MetricCard
-          label="Completed Today"
-          value={metrics.completed}
-          icon={CheckCircle}
-          change="Finished tests"
-          trend="up"
-          accent="success"
-        />
-        <MetricCard
-          label="Critical Results"
-          value={metrics.critical}
-          icon={AlertCircle}
-          change="Requires attention"
-          trend="down"
-          accent="error"
-        />
+    <div className="page-shell-premium animate-fade-in">
+      <div className="page-header-premium mb-8">
+        <div>
+          <h1 className="flex items-center gap-3">
+            Laboratory Diagnostics
+            <span className="text-[10px] font-black bg-[var(--primary-soft)] text-[var(--primary)] px-3 py-1 rounded-full uppercase tracking-tighter border border-[var(--primary)]/10">Engine Active</span>
+          </h1>
+          <p>Precision diagnostic testing, pathology throughput, and verified clinical results.</p>
+        </div>
+        <button className="btn-primary py-4 px-10 text-[10px] uppercase tracking-[0.2em] shadow-xl group">
+           <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform" />
+           New Laboratory Order
+        </button>
       </div>
 
-      {/* Tabs */}
-      <div className="flex space-x-1 bg-clinical-bg rounded-lg p-1">
-        {['pending', 'in-progress', 'completed', 'all'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`
-              flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all
-              ${activeTab === tab
-                ? 'bg-white text-clinical-text shadow-sm'
-                : 'text-clinical-muted hover:text-clinical-text'
-              }
-            `}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1).replace('-', ' ')}
-          </button>
-        ))}
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Lab Orders Table */}
-        <div className="lg:col-span-2">
-          <SubSectionHeader
-            title="Lab Orders"
-            subtitle={`${filteredOrders.length} orders found`}
-            badge={activeTab}
-          />
-          
-          <DataTable
-            data={filteredOrders}
-            columns={tableColumns}
-            loading={loading}
-            emptyMessage="No lab orders found"
-            actions={tableActions}
-            onRowClick={(row) => setShowResultModal(row)}
-          />
+      {/* Stats Board */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="glass-panel p-6 border-l-4 border-l-amber-500 shadow-sm">
+           <div className="flex justify-between items-start">
+              <div>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Analysis</p>
+                 <h4 className="text-3xl font-black text-slate-900 mt-2">{metrics.pending}</h4>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
+                 <Clock className="w-6 h-6" />
+              </div>
+           </div>
+           <p className="text-[9px] font-black text-amber-600 mt-4 uppercase tracking-[0.1em] flex items-center gap-1">
+              <TrendingUp className="w-3 h-3" /> 14% Velocity increase
+           </p>
         </div>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <ActionCard
-            title="Quick Actions"
-            description="Common laboratory tasks"
-            icon={FlaskConical}
-          >
-            <div className="space-y-3">
-              <button className="w-full btn-secondary text-left justify-start">
-                <Plus className="w-4 h-4" />
-                New Lab Order
-              </button>
-              <button className="w-full btn-secondary text-left justify-start">
-                <Users className="w-4 h-4" />
-                Patient Lookup
-              </button>
-              <button className="w-full btn-secondary text-left justify-start">
-                <Activity className="w-4 h-4" />
-                Test Queue
-              </button>
-            </div>
-          </ActionCard>
+        <div className="glass-panel p-6 border-l-4 border-l-blue-500 shadow-sm">
+           <div className="flex justify-between items-start">
+              <div>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Processing (WIP)</p>
+                 <h4 className="text-3xl font-black text-slate-900 mt-2">{metrics.inProgress}</h4>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                 <Play className="w-6 h-6" />
+              </div>
+           </div>
+           <p className="text-[9px] font-black text-blue-600 mt-4 uppercase tracking-[0.1em]">Active clinical cycles</p>
+        </div>
 
-          {/* Common Tests Reference */}
-          <div className="clinical-card p-6">
-            <SubSectionHeader
-              title="Common Tests"
-              subtitle="Quick reference"
-            />
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {COMMON_TESTS.map(test => (
-                <div key={test.code} className="flex justify-between items-center py-2 border-b border-clinical-border/50">
-                  <span className="font-mono text-sm font-medium text-medical-blue">{test.code}</span>
-                  <span className="text-xs text-clinical-muted text-right">{test.name}</span>
-                </div>
-              ))}
+        <div className="glass-panel p-6 border-l-4 border-l-emerald-500 shadow-sm">
+           <div className="flex justify-between items-start">
+              <div>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Reported Today</p>
+                 <h4 className="text-3xl font-black text-slate-900 mt-2">{metrics.completed}</h4>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                 <CheckCircle className="w-6 h-6" />
+              </div>
+           </div>
+           <p className="text-[9px] font-black text-emerald-600 mt-4 uppercase tracking-[0.1em]">✓ Metadata synchronized</p>
+        </div>
+
+        <div className="glass-panel p-6 border-l-4 border-l-rose-500 shadow-sm">
+           <div className="flex justify-between items-start">
+              <div>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Critical Alerts</p>
+                 <h4 className="text-3xl font-black text-slate-900 mt-2">{metrics.critical}</h4>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center">
+                 <Activity className="w-6 h-6" />
+              </div>
+           </div>
+           <p className="text-[9px] font-black text-rose-600 mt-4 uppercase tracking-[0.1em]">Priority pathology queue</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-12 gap-8">
+        <div className="col-span-12 lg:col-span-9 space-y-8">
+          {/* Main Ledger */}
+          <article className="glass-panel p-0 overflow-hidden shadow-sm">
+            <div className="px-8 py-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-6 bg-slate-50/30">
+               <div>
+                  <div className="premium-tab-bar">
+                    {['pending', 'in-progress', 'completed', 'all'].map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`premium-tab-item ${activeTab === tab ? 'active' : ''}`}
+                      >
+                        {tab.replace('-', ' ')}
+                      </button>
+                    ))}
+                  </div>
+               </div>
+               <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <input 
+                    placeholder="Filter by MRN, patient or test..." 
+                    className="input-field pl-12 pr-6 py-4 w-full md:w-80 text-sm font-bold bg-white"
+                    value={searchValue}
+                    onChange={e => setSearchValue(e.target.value)}
+                  />
+               </div>
             </div>
-          </div>
+
+            <div className="overflow-x-auto">
+               <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Diagnostic Hub</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Patient Registry</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Chronology</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Clinical State</th>
+                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Terminal</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loading ? (
+                      <tr><td colSpan="5" className="px-8 py-32 text-center text-slate-400 animate-pulse font-bold tracking-tighter">SYNCHRONIZING WITH PATHOLOGY CLOUD...</td></tr>
+                    ) : filteredOrders.length === 0 ? (
+                      <tr><td colSpan="5" className="px-8 py-32 text-center text-slate-400 italic font-medium">No diagnostic requests detected in current clinical shard.</td></tr>
+                    ) : filteredOrders.map(order => (
+                      <tr key={order.id} className="hover:bg-slate-50/50 transition-all duration-300 group">
+                        <td className="px-8 py-6">
+                           <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-500 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                                <FlaskConical className="w-6 h-6" />
+                              </div>
+                              <div>
+                                <div className="text-sm font-black text-slate-900 lowercase first-letter:uppercase">{order.display || order.code}</div>
+                                <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">CODE: {order.code}</div>
+                              </div>
+                           </div>
+                        </td>
+                        <td className="px-8 py-6">
+                           <div className="text-sm font-bold text-slate-800">{order.patient_first_name} {order.patient_last_name}</div>
+                           <div className="text-[10px] text-slate-400 font-black uppercase mt-1">MRN: {order.patient_id?.slice(0, 8)}</div>
+                        </td>
+                        <td className="px-8 py-6">
+                           <div className="text-sm font-bold text-slate-700">{new Date(order.created_at).toLocaleDateString()}</div>
+                           <div className="text-[10px] text-slate-400 font-bold uppercase mt-1">Clinical Lead: {order.ordered_by_name || 'Staff'}</div>
+                        </td>
+                        <td className="px-8 py-6">
+                           <div className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-[9px] font-black uppercase tracking-widest border ${
+                             order.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                             order.status === 'in-progress' ? 'bg-blue-50 text-blue-600 border-blue-100 animate-pulse' :
+                             'bg-amber-50 text-amber-600 border-amber-100'
+                           }`}>
+                             <div className={`w-1.5 h-1.5 rounded-full ${order.status === 'completed' ? 'bg-emerald-500' : order.status === 'in-progress' ? 'bg-blue-500' : 'bg-amber-500'}`}></div>
+                             {order.status}
+                           </div>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                           <button 
+                             onClick={() => setShowResultModal(order)}
+                             className="px-4 py-2 bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                           >
+                              Manage Request
+                           </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+               </table>
+            </div>
+          </article>
+        </div>
+
+        <div className="col-span-12 lg:col-span-3 space-y-8">
+           {/* Workable Sidebar */}
+           <article className="glass-panel p-8">
+              <div className="flex items-center gap-3 mb-8">
+                 <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
+                    <Activity className="w-5 h-5" />
+                 </div>
+                 <div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-tighter">Fast-Track Terminal</h3>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Common Laboratory Node</p>
+                 </div>
+              </div>
+
+              <div className="space-y-4">
+                 {[
+                   { icon: Plus, label: 'Authorize Lab Order', color: 'bg-emerald-50 text-emerald-600' },
+                   { icon: UserSearch, label: 'Clinical Lookup', color: 'bg-blue-50 text-blue-600' },
+                   { icon: Download, label: 'Export Batch Ledger', color: 'bg-indigo-50 text-indigo-600' },
+                   { icon: FileText, label: 'Download Test List', color: 'bg-slate-50 text-slate-600' }
+                 ].map((action, idx) => (
+                   <button key={idx} className="w-full flex items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl hover:border-[var(--primary)] hover:shadow-md transition-all group overflow-hidden">
+                      <div className="flex items-center gap-4">
+                         <div className={`w-10 h-10 rounded-xl ${action.color} flex items-center justify-center transition-transform group-hover:scale-110`}>
+                            <action.icon className="w-5 h-5" />
+                         </div>
+                         <span className="text-[11px] font-black text-slate-700 uppercase tracking-tight">{action.label}</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-[var(--primary)] group-hover:translate-x-1 transition-all" />
+                   </button>
+                 ))}
+              </div>
+           </article>
+
+           {/* Reference Panel */}
+           <article className="glass-panel p-8">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Standard Nomenclature</h3>
+              <div className="space-y-3">
+                 {COMMON_TESTS.map(test => (
+                   <div key={test.code} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors px-2 rounded-lg group">
+                      <span className="text-[10px] font-black text-[var(--primary)] font-mono px-2 py-0.5 bg-[var(--primary-soft)] rounded group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">{test.code}</span>
+                      <span className="text-[11px] font-bold text-slate-500 whitespace-nowrap overflow-hidden text-ellipsis ml-4">{test.name}</span>
+                   </div>
+                 ))}
+              </div>
+           </article>
         </div>
       </div>
 
       {/* Result Entry Modal */}
       {showResultModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-pro overflow-hidden flex flex-col animate-slide-up">
-            <div className="p-6 border-b border-clinical-border flex justify-between items-center">
-              <h3 className="text-xl font-bold text-clinical-text">
-                Record Lab Results
-              </h3>
-              <button
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-2xl p-10 animate-fade-in shadow-2xl">
+            <div className="flex justify-between items-start mb-10">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Record Clinical Finding</h3>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2">Update diagnostic ledger for verification</p>
+              </div>
+              <button 
                 onClick={() => setShowResultModal(null)}
-                className="w-10 h-10 rounded-full hover:bg-clinical-bg flex items-center justify-center transition-colors text-clinical-muted"
+                className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors"
               >
-                ×
+                <Plus className="w-6 h-6 rotate-45 text-slate-400" />
               </button>
             </div>
             
-            <div className="p-6 space-y-4">
-              <div className="bg-clinical-bg p-4 rounded-lg">
-                <div className="text-sm text-clinical-muted">Patient</div>
-                <div className="font-medium text-clinical-text">
-                  {showResultModal.patient_first_name} {showResultModal.patient_last_name}
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target Account</label>
+                  <p className="text-sm font-black text-slate-800 mt-1">{showResultModal.patient_first_name} {showResultModal.patient_last_name}</p>
                 </div>
-                <div className="text-sm text-clinical-muted mt-1">
-                  Test: {showResultModal.display || showResultModal.code}
+                <div>
+                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Diagnostic Test</label>
+                   <p className="text-sm font-black text-indigo-600 mt-1 uppercase">{showResultModal.display || showResultModal.code}</p>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-clinical-text mb-2">
-                  Lab Results
-                </label>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Pathology Findings (Results)</label>
                 <textarea
                   value={resultText}
                   onChange={(e) => setResultText(e.target.value)}
-                  className="w-full h-32 px-3 py-2 border border-clinical-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/20 focus:border-medical-blue"
-                  placeholder="Enter lab results..."
+                  className="input-field py-4 min-h-[160px] bg-white text-sm font-mono border-slate-200"
+                  placeholder="Input detailed values, observations, or standard clinical conclusions..."
                 />
               </div>
 
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="critical"
-                  checked={criticalFlag}
-                  onChange={(e) => setCriticalFlag(e.target.checked)}
-                  className="rounded border-clinical-border text-medical-blue focus:ring-medical-blue/20"
-                />
-                <label htmlFor="critical" className="text-sm font-medium text-clinical-text">
-                  Mark as critical results
+              <div className="flex items-center gap-4 bg-rose-50/50 p-4 rounded-2xl border border-rose-100">
+                <div className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="critical"
+                    checked={criticalFlag}
+                    onChange={(e) => setCriticalFlag(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500"></div>
+                </div>
+                <label htmlFor="critical" className="text-[11px] font-black uppercase tracking-widest text-rose-700 select-none">
+                  Flag as Critical Narrative (High Priority Alert)
                 </label>
               </div>
-            </div>
 
-            <div className="p-6 border-t border-clinical-border flex justify-end gap-3">
-              <button
-                onClick={() => setShowResultModal(null)}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitResult}
-                disabled={submittingResult || !resultText.trim()}
-                className="btn-primary"
-              >
-                {submittingResult ? 'Saving...' : 'Save Results'}
-              </button>
+              <div className="pt-8 border-t border-slate-100 flex gap-4">
+                <button
+                  onClick={() => setShowResultModal(null)}
+                  className="flex-1 py-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={handleSubmitResult}
+                  disabled={submittingResult || !resultText.trim()}
+                  className="flex-[2] btn-primary py-4 px-10 text-[11px] uppercase tracking-[0.2em] shadow-xl disabled:opacity-50"
+                >
+                  {submittingResult ? 'Synchronizing...' : 'Finalize & Dispatch Report'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

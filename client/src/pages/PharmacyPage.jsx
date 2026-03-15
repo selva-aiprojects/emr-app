@@ -1,34 +1,21 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api.js';
-import MetricCard from '../components/MetricCard';
-import { 
-  StatusBadge, 
-  ActionCard, 
-  SectionHeader, 
-  SubSectionHeader, 
-  DataTable 
-} from '../components/ui';
 import { 
   Plus, 
   Search, 
-  Filter, 
-  Download, 
-  FileText, 
+  Package, 
   AlertCircle,
   CheckCircle,
   Clock,
-  Play,
   Eye,
-  Edit,
-  Trash2,
-  Pill,
-  Package,
+  Activity,
   ShoppingCart,
   Users,
-  TrendingUp,
-  TrendingDown,
-  Activity
+  SearchIcon,
+  Filter,
+  ArrowRight
 } from 'lucide-react';
+import { currency } from '../utils/format.js';
 
 export default function PharmacyPage({ tenant, onDispense }) {
   const [queue, setQueue] = useState([]);
@@ -38,7 +25,7 @@ export default function PharmacyPage({ tenant, onDispense }) {
   const [showDispenseModal, setShowDispenseModal] = useState(null);
 
   useEffect(() => {
-    if (activeTab === 'queue') {
+    if (activeTab === 'queue' && tenant) {
       loadQueue();
     }
   }, [activeTab, tenant]);
@@ -66,6 +53,7 @@ export default function PharmacyPage({ tenant, onDispense }) {
       });
       loadQueue();
       if (onDispense) onDispense();
+      setShowDispenseModal(null);
     } catch (err) {
       alert('Dispensation Error: ' + err.message);
     }
@@ -77,39 +65,6 @@ export default function PharmacyPage({ tenant, onDispense }) {
     item.brand_name?.toLowerCase().includes(searchValue.toLowerCase())
   );
 
-  const queueColumns = [
-    { key: 'medication', label: 'Medication', render: (value, row) => (
-      <div>
-        <div className="font-medium text-clinical-text">{row.generic_name}</div>
-        <div className="text-xs text-clinical-muted">{row.brand_name}</div>
-      </div>
-    )},
-    { key: 'patient', label: 'Patient', render: (value, row) => (
-      <div>
-        <div className="font-medium text-clinical-text">{row.patient_name}</div>
-        <div className="text-xs text-clinical-muted">ID: {row.patient_id}</div>
-      </div>
-    )},
-    { key: 'quantity', label: 'Quantity', render: (value, row) => (
-      <div className="text-sm">
-        {row.quantity_prescribed} {row.unit || 'units'}
-      </div>
-    )},
-    { key: 'prescribed_by', label: 'Prescribed By', render: (value, row) => (
-      <div className="text-sm">
-        {row.prescribed_by_name || 'Staff'}
-      </div>
-    )},
-    { key: 'status', label: 'Status', render: (value, row) => (
-      <StatusBadge status={row.status || 'pending'} />
-    )},
-  ];
-
-  const queueActions = [
-    { icon: Eye, label: 'View Details', onClick: (row) => console.log('View', row) },
-    { icon: Package, label: 'Dispense', onClick: (row) => handleDispenseItem(row.prescription_id, row) },
-  ];
-
   const metrics = {
     pending: queue.filter(item => item.status === 'pending').length,
     ready: queue.filter(item => item.status === 'ready').length,
@@ -118,271 +73,234 @@ export default function PharmacyPage({ tenant, onDispense }) {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <SectionHeader
-        title="Pharmacy Services"
-        subtitle="Medication dispensing and inventory management"
-        badge={`${queue.length} Prescriptions`}
-        showSearch
-        searchValue={searchValue}
-        onSearchChange={setSearchValue}
-        actions={[
-          { label: 'New Prescription', icon: Plus, variant: 'primary', onClick: () => console.log('New prescription') },
-          { label: 'Inventory', icon: Package, variant: 'secondary', onClick: () => console.log('Inventory') },
-        ]}
-      />
+    <div className="page-shell-premium animate-fade-in">
+      <div className="page-header-premium mb-8">
+        <div>
+          <h1>Pharmacy Services</h1>
+          <p>Institutional medication dispensing and inventory logistics.</p>
+        </div>
+        <div className="flex gap-3">
+          <button className="btn-primary py-4 px-8 text-[10px] uppercase tracking-widest shadow-xl">
+             <Plus className="w-4 h-4 mr-2" />
+             New Prescription
+          </button>
+        </div>
+      </div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          label="Pending Dispensing"
-          value={metrics.pending}
-          icon={Clock}
-          change="Awaiting processing"
-          trend="down"
-          accent="warning"
-        />
-        <MetricCard
-          label="Ready for Pickup"
-          value={metrics.ready}
-          icon={CheckCircle}
-          change="Prepared medications"
-          trend="up"
-          accent="success"
-        />
-        <MetricCard
-          label="Dispensed Today"
-          value={metrics.dispensed}
-          icon={Package}
-          change="Completed orders"
-          trend="up"
-          accent="info"
-        />
-        <MetricCard
-          label="Priority Orders"
-          value={metrics.critical}
-          icon={AlertCircle}
-          change="High priority"
-          trend="down"
-          accent="error"
-        />
+      {/* Metrics Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-amber-500">
+           <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Dispense</p>
+              <h4 className="text-3xl font-black text-slate-900 mt-1">{metrics.pending}</h4>
+              <p className="text-[9px] font-black text-amber-600 mt-2 uppercase tracking-widest">Queue Active</p>
+           </div>
+           <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
+              <Clock className="w-6 h-6" />
+           </div>
+        </div>
+
+        <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-emerald-500">
+           <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ready for Pickup</p>
+              <h4 className="text-3xl font-black text-slate-900 mt-1">{metrics.ready}</h4>
+              <p className="text-[9px] font-black text-emerald-600 mt-2 uppercase tracking-widest">Verified orders</p>
+           </div>
+           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+              <CheckCircle className="w-6 h-6" />
+           </div>
+        </div>
+
+        <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-blue-500">
+           <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dispensed Today</p>
+              <h4 className="text-3xl font-black text-slate-900 mt-1">{metrics.dispensed}</h4>
+              <p className="text-[9px] font-black text-blue-600 mt-2 uppercase tracking-widest">Fulfilled</p>
+           </div>
+           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center">
+              <Package className="w-6 h-6" />
+           </div>
+        </div>
+
+        <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-rose-500">
+           <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Critical Shortage</p>
+              <h4 className="text-3xl font-black text-slate-900 mt-1">12</h4>
+              <p className="text-[9px] font-black text-rose-600 mt-2 uppercase tracking-widest">Restock Needed</p>
+           </div>
+           <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center">
+              <AlertCircle className="w-6 h-6" />
+           </div>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex space-x-1 bg-clinical-bg rounded-lg p-1">
+      <div className="premium-tab-bar mb-8">
         {['queue', 'inventory', 'alerts', 'procurement'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`
-              flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all
-              ${activeTab === tab
-                ? 'bg-white text-clinical-text shadow-sm'
-                : 'text-clinical-muted hover:text-clinical-text'
-              }
-            `}
+            className={`premium-tab-item ${activeTab === tab ? 'active' : ''}`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
 
-      {/* Queue Tab */}
-      {activeTab === 'queue' && (
-        <div className="space-y-6">
-          <SubSectionHeader
-            title="Prescription Queue"
-            subtitle={`${filteredQueue.length} prescriptions in queue`}
-            badge="Active"
-          />
-          
-          <DataTable
-            data={filteredQueue}
-            columns={queueColumns}
-            loading={loading}
-            emptyMessage="No prescriptions in queue"
-            actions={queueActions}
-            onRowClick={(row) => setShowDispenseModal(row)}
-          />
-        </div>
-      )}
+      {/* Content Area */}
+      <div className="min-h-[400px]">
+        {activeTab === 'queue' && (
+          <article className="glass-panel p-0 overflow-hidden shadow-sm animate-fade-in">
+            <div className="px-8 py-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/30">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Rx Fulfillment Queue</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Authorized clinical prescriptions awaiting dispensation</p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input 
+                  placeholder="Search by patient or medication..." 
+                  className="input-field pl-12 pr-6 py-4 w-full md:w-80 text-sm font-bold bg-white"
+                  value={searchValue}
+                  onChange={e => setSearchValue(e.target.value)}
+                />
+              </div>
+            </div>
 
-      {/* Inventory Tab */}
-      {activeTab === 'inventory' && (
-        <div className="space-y-6">
-          <SubSectionHeader
-            title="Medication Inventory"
-            subtitle="Stock levels and availability"
-            actions={[
-              { icon: Plus, label: 'Add Medication', onClick: () => console.log('Add medication') },
-              { icon: Download, label: 'Export Inventory', onClick: () => console.log('Export') },
-            ]}
-          />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <ActionCard
-              title="Low Stock Alerts"
-              description="Medications requiring reorder"
-              icon={AlertCircle}
-              variant="danger"
-              onClick={() => console.log('View low stock')}
-            >
-              <div className="text-2xl font-bold text-error">12</div>
-              <div className="text-sm text-clinical-muted">items below minimum</div>
-            </ActionCard>
-            
-            <ActionCard
-              title="Expiring Soon"
-              description="Medications nearing expiration"
-              icon={Clock}
-              variant="warning"
-              onClick={() => console.log('View expiring')}
-            >
-              <div className="text-2xl font-bold text-warning">8</div>
-              <div className="text-sm text-clinical-muted">expire in 30 days</div>
-            </ActionCard>
-            
-            <ActionCard
-              title="Total Inventory"
-              description="Current medication stock value"
-              icon={Package}
-              variant="success"
-              onClick={() => console.log('View inventory')}
-            >
-              <div className="text-2xl font-bold text-success">$45,280</div>
-              <div className="text-sm text-clinical-muted">total value</div>
-            </ActionCard>
-          </div>
-        </div>
-      )}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Medication Entity</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Patient Account</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Dosage / Unit</th>
+                    <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Protocol</th>
+                    <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {loading ? (
+                    <tr><td colSpan="5" className="px-8 py-20 text-center text-slate-400 animate-pulse">Synchronizing with clinical ledger...</td></tr>
+                  ) : filteredQueue.length === 0 ? (
+                    <tr><td colSpan="5" className="px-8 py-20 text-center text-slate-400 italic">No prescriptions detected in fulfillment pool.</td></tr>
+                  ) : filteredQueue.map(item => (
+                    <tr key={item.item_id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-8 py-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center font-black">
+                            {item.generic_name?.[0] || 'M'}
+                          </div>
+                          <div>
+                            <div className="text-sm font-black text-slate-800">{item.generic_name}</div>
+                            <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{item.brand_name}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <div className="text-sm font-bold text-slate-800">{item.patient_name}</div>
+                        <div className="text-[10px] text-slate-400 font-black uppercase mt-0.5">REF: {item.patient_id?.slice(0, 8)}</div>
+                      </td>
+                      <td className="px-8 py-6">
+                         <div className="text-sm font-black text-slate-900">{item.quantity_prescribed} {item.unit || 'units'}</div>
+                      </td>
+                      <td className="px-8 py-6">
+                        <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border ${
+                          item.status === 'ready' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'
+                        }`}>
+                          {item.status || 'Pending'}
+                        </span>
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                         <div className="flex justify-end gap-2">
+                            <button 
+                              onClick={() => setShowDispenseModal(item)}
+                              className="px-4 py-2 bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                            >
+                              Finalize
+                            </button>
+                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        )}
 
-      {/* Alerts Tab */}
-      {activeTab === 'alerts' && (
-        <div className="space-y-6">
-          <SubSectionHeader
-            title="Pharmacy Alerts"
-            subtitle="System notifications and warnings"
-          />
-          
-          <div className="space-y-4">
-            <ActionCard
-              title="Critical Medication Shortage"
-              description="Amoxicillin 500mg is out of stock"
-              icon={AlertCircle}
-              variant="danger"
-            />
-            <ActionCard
-              title="High Priority Prescription"
-              description="Emergency medication requires immediate dispensing"
-              icon={Activity}
-              variant="warning"
-            />
-            <ActionCard
-              title="Inventory Reconciliation Required"
-              description="Monthly stock audit due this week"
-              icon={FileText}
-              variant="info"
-            />
+        {/* Placeholder for other tabs ... */}
+        {activeTab !== 'queue' && (
+          <div className="glass-panel p-20 text-center animate-fade-in">
+             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-200">
+                <Package className="w-10 h-10" />
+             </div>
+             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{activeTab} Interface</h3>
+             <p className="text-slate-400 text-sm mt-2">Section is currently undergoing synchronization with the core pharmacy ledger.</p>
           </div>
-        </div>
-      )}
-
-      {/* Procurement Tab */}
-      {activeTab === 'procurement' && (
-        <div className="space-y-6">
-          <SubSectionHeader
-            title="Procurement Management"
-            subtitle="Purchase orders and vendor management"
-            actions={[
-              { icon: Plus, label: 'New Purchase Order', onClick: () => console.log('New PO') },
-              { icon: ShoppingCart, label: 'Vendor Directory', onClick: () => console.log('Vendors') },
-            ]}
-          />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ActionCard
-              title="Pending Purchase Orders"
-              description="Orders awaiting processing"
-              icon={ShoppingCart}
-            >
-              <div className="text-2xl font-bold text-clinical-text">5</div>
-              <div className="text-sm text-clinical-muted">orders pending</div>
-            </ActionCard>
-            
-            <ActionCard
-              title="Active Vendors"
-              description="Current supplier relationships"
-              icon={Users}
-            >
-              <div className="text-2xl font-bold text-clinical-text">18</div>
-              <div className="text-sm text-clinical-muted">active vendors</div>
-            </ActionCard>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Dispense Modal */}
       {showDispenseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-pro overflow-hidden animate-slide-up">
-            <div className="p-6 border-b border-clinical-border">
-              <h3 className="text-xl font-bold text-clinical-text">
-                Dispense Medication
-              </h3>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <div className="glass-panel w-full max-w-lg p-8 animate-fade-in shadow-2xl">
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Finalize Dispensation</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Verify medication integrity and quantity</p>
+              </div>
+              <button onClick={() => setShowDispenseModal(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                <Plus className="w-6 h-6 rotate-45 text-slate-400" />
+              </button>
             </div>
             
-            <div className="p-6 space-y-4">
-              <div className="bg-clinical-bg p-4 rounded-lg">
-                <div className="text-sm text-clinical-muted">Patient</div>
-                <div className="font-medium text-clinical-text">
-                  {showDispenseModal.patient_name}
-                </div>
-                <div className="text-sm text-clinical-muted mt-1">
-                  Medication: {showDispenseModal.generic_name}
-                </div>
-                <div className="text-sm text-clinical-muted">
-                  Quantity: {showDispenseModal.quantity_prescribed} {showDispenseModal.unit || 'units'}
+            <div className="space-y-6">
+              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target Recipient</label>
+                    <p className="text-sm font-black text-slate-800">{showDispenseModal.patient_name}</p>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Medication</label>
+                    <p className="text-sm font-black text-blue-600">{showDispenseModal.generic_name}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-clinical-text mb-2">
-                    Dispensed Quantity
-                  </label>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Verified Quantity</label>
                   <input
                     type="number"
                     defaultValue={showDispenseModal.quantity_prescribed}
-                    className="w-full px-3 py-2 border border-clinical-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/20 focus:border-medical-blue"
+                    className="input-field py-4 bg-white font-mono font-bold"
                   />
                 </div>
                 
-                <div>
-                  <label className="block text-sm font-medium text-clinical-text mb-2">
-                    Notes
-                  </label>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Clinical Remarks</label>
                   <textarea
-                    className="w-full h-20 px-3 py-2 border border-clinical-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-medical-blue/20 focus:border-medical-blue"
-                    placeholder="Add dispensing notes..."
+                    className="input-field py-4 h-24 bg-white resize-none"
+                    placeholder="Add fulfillment notes or warnings..."
                   />
                 </div>
               </div>
-            </div>
 
-            <div className="p-6 border-t border-clinical-border flex justify-end gap-3">
-              <button
-                onClick={() => setShowDispenseModal(null)}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDispenseItem(showDispenseModal.prescription_id, showDispenseModal)}
-                className="btn-primary"
-              >
-                Confirm Dispense
-              </button>
+              <div className="pt-6 border-t border-slate-100 flex gap-4">
+                <button
+                  onClick={() => setShowDispenseModal(null)}
+                  className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400"
+                >
+                  Discard
+                </button>
+                <button
+                  onClick={() => handleDispenseItem(showDispenseModal.prescription_id, showDispenseModal)}
+                  className="flex-2 btn-primary py-4 px-10 text-[10px] uppercase tracking-widest shadow-xl"
+                >
+                  Confirm Fulfillment
+                </button>
+              </div>
             </div>
           </div>
         </div>

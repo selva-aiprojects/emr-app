@@ -61,7 +61,7 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
           </div>
           <div className="px-3 py-1 bg-teal-50 text-teal-600 rounded-full border border-teal-100 flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-[10px] font-black uppercase tracking-widest">
+            <span className="text-xs font-black uppercase tracking-widest">
               {isSuper ? 'NETWORK OVERVIEW ACTIVE' : 'SLM ANALYTICS ENGINE'}
             </span>
           </div>
@@ -112,18 +112,18 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
               </p>
               <div className="flex gap-2 mt-4">
                 {(isSuper ? ['Network Growth', 'Node Stability', 'Global Compliance'] : (slmInsights?.trends || ['Retention High', 'Flow Optimal'])).map((t) => (
-                  <span key={t} className="px-3 py-1 bg-white border border-slate-200 rounded-full text-[10px] font-black uppercase tracking-tighter text-slate-500">
+                  <span key={t} className="px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-black uppercase tracking-tighter text-slate-500">
                     {t}
                   </span>
                 ))}
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{isSuper ? 'Platform Forecast' : 'Growth Forecast'}</div>
+              <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">{isSuper ? 'Platform Forecast' : 'Growth Forecast'}</div>
               <div className="text-2xl font-black text-emerald-600 tracking-tight">
                 + {isSuper ? '18.4%' : currency(slmInsights?.forecast || avgRev * 1.12)}
               </div>
-              <div className="text-[9px] font-bold text-slate-400 uppercase">Projected expansion</div>
+              <div className="text-xs font-bold text-slate-400 uppercase">Projected expansion</div>
             </div>
           </div>
         </article>
@@ -134,7 +134,7 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
           <div className="flex-between mb-8 border-b border-slate-100 pb-4">
             <div>
               <h3 className="text-base font-bold text-slate-800 tracking-tight">Revenue Velocity</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Financial Performance Index • Last 6 Months</p>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Financial Performance Index • Last 6 Months</p>
             </div>
           </div>
           <div className="flex items-end justify-between h-48 gap-4 px-4">
@@ -149,12 +149,12 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
                       className="absolute bottom-0 w-full bg-teal-500/80 rounded-t-md group-hover:bg-teal-600 transition-all cursor-pointer" 
                       style={{ height: `${height}%` }}
                     >
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-xl">
+                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-xl">
                         {currency(m.amount)}
                       </div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{m.month}</span>
+                  <span className="text-xs font-black text-slate-400 uppercase tracking-tighter">{m.month}</span>
                 </div>
               );
             })}
@@ -165,7 +165,7 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
           <div className="p-5 border-b border-slate-100 flex-between bg-slate-50/20">
             <div>
               <h3 className="text-base font-bold text-slate-800 tracking-tight">Physician Performance Registry</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clinical Load & Revenue Share Analysis</p>
+              <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Clinical Load & Revenue Share Analysis</p>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -186,19 +186,19 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
                       <tr key={p.doctor_id}>
                         <td>
                           <div className="font-bold text-slate-800 tracking-tight">{p.doctor_name}</div>
-                          <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{p.role}</div>
+                          <div className="text-xs text-slate-400 font-black uppercase tracking-widest">{p.role}</div>
                         </td>
                         <td>
                           <div className="flex items-center gap-4">
                             <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                               <div className="h-full bg-teal-500 rounded-full" style={{ width: `${Math.min(100, (p.patient_count / 20) * 100)}%` }}></div>
                             </div>
-                            <span className="text-[11px] font-black text-slate-600 whitespace-nowrap">{p.patient_count} Encounters</span>
+                            <span className="text-xs font-black text-slate-600 whitespace-nowrap">{p.patient_count} Encounters</span>
                           </div>
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <div className="font-black text-slate-800 tracking-tight">{currency(p.total_revenue)}</div>
-                          <div className="text-[9px] font-black text-emerald-600 uppercase">Share: {currency(p.estimated_commission)}</div>
+                          <div className="text-xs font-black text-emerald-600 uppercase">Share: {currency(p.estimated_commission)}</div>
                         </td>
                       </tr>
                     ))

@@ -1266,6 +1266,42 @@ export async function getReportSummary(tenantId) {
     [tenantId]
   );
 
+  // Daily activity (last 14 days)
+  const dailyActivityResult = await query(
+    `WITH date_series AS (
+      SELECT generate_series(
+        current_date - interval '13 days',
+        current_date,
+        '1 day'::interval
+      )::date as day
+    ),
+    appointment_stats AS (
+      SELECT 
+        date_trunc('day', scheduled_start)::date as day,
+        count(*) as count
+      FROM emr.appointments
+      WHERE tenant_id = $1 AND scheduled_start >= current_date - interval '14 days'
+      GROUP BY 1
+    ),
+    revenue_stats AS (
+      SELECT
+        date_trunc('day', created_at)::date as day,
+        sum(paid) as amount
+      FROM emr.invoices
+      WHERE tenant_id = $1 AND created_at >= current_date - interval '14 days'
+      GROUP BY 1
+    )
+    SELECT 
+      ds.day,
+      COALESCE(ap.count, 0) as appointments,
+      COALESCE(rs.amount, 0) as revenue
+    FROM date_series ds
+    LEFT JOIN appointment_stats ap ON ds.day = ap.day
+    LEFT JOIN revenue_stats rs ON ds.day = rs.day
+    ORDER BY ds.day`,
+    [tenantId]
+  );
+
   return {
     periodical: {
       dailyAppointments: parseInt(periodicalResult.rows[0].daily_appointments),
@@ -1290,6 +1326,11 @@ export async function getReportSummary(tenantId) {
         amount: parseFloat(r.amount || 0),
       })),
     },
+    dailyActivity: dailyActivityResult.rows.map(r => ({
+      date: r.day,
+      appointments: parseInt(r.appointments),
+      revenue: parseFloat(r.revenue),
+    })),
     tax: {
       applicable: parseFloat(taxResult.rows[0].total_tax || 0) > 0,
       totalTax: parseFloat(taxResult.rows[0].total_tax || 0),

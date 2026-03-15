@@ -1,209 +1,389 @@
 import { useMemo, useState } from 'react';
-import { Building2, Plus, Search, ShieldCheck } from 'lucide-react';
-import MetricCard from '../components/MetricCard';
+import { Building2, Plus, Search, ShieldCheck, ArrowLeft, Send, ExternalLink, Calendar, Hash, User } from 'lucide-react';
+import { currency } from '../utils/format.js';
 
 export default function InsurancePage({ providers = [], claims = [], onCreateProvider, onCreateClaim }) {
+  const [activeTab, setActiveTab] = useState('list'); // 'list' | 'detail' | 'claims'
+  const [selectedProviderId, setSelectedProviderId] = useState(null);
   const [showRegister, setShowRegister] = useState(false);
+  const [showClaimModal, setShowClaimModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredProviders = useMemo(() => {
     if (!searchTerm) return providers;
-    return providers.filter((provider) => provider.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    return providers.filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
   }, [providers, searchTerm]);
 
-  const totalCoverage = claims.reduce((sum, claim) => sum + (Number(claim.amount) || 0), 0);
-  const pendingClaims = claims.filter((claim) => claim.status === 'Pending').length;
+  const selectedProvider = useMemo(() => 
+    providers.find(p => p.id === selectedProviderId), 
+  [providers, selectedProviderId]);
+
+  const providerClaims = useMemo(() => 
+    claims.filter(c => c.insuranceProviderId === selectedProviderId),
+  [claims, selectedProviderId]);
+
+  const stats = useMemo(() => {
+    const total = claims.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+    const pending = claims.filter(c => c.status === 'Pending').length;
+    return { total, pending };
+  }, [claims]);
+
+  if (selectedProvider && activeTab === 'detail') {
+    return (
+      <div className="page-shell-premium animate-fade-in">
+        <div className="action-bar-premium">
+          <button 
+            onClick={() => { setActiveTab('list'); setSelectedProviderId(null); }}
+            className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-slate-900 transition-colors font-bold text-xs uppercase tracking-widest"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Registry
+          </button>
+          <div className="flex gap-2">
+             <button className="btn-primary py-2 px-6 text-[10px] uppercase tracking-widest shadow-lg" onClick={() => setShowClaimModal(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Initialize New Claim
+             </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-12 gap-8 mt-6">
+          <div className="col-span-12 lg:col-span-4 space-y-6">
+            <article className="glass-panel p-8">
+              <div className="w-20 h-20 rounded-3xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center font-black text-3xl shadow-sm mb-6">
+                {selectedProvider.name[0]}
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">{selectedProvider.name}</h2>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] font-black uppercase tracking-widest">
+                  {selectedProvider.type} CATEGORY
+                </span>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest ${selectedProvider.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                  {selectedProvider.status}
+                </span>
+              </div>
+              
+              <div className="mt-8 space-y-4 pt-8 border-t border-slate-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                    <User className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Liaison Officer</label>
+                    <p className="text-sm font-bold text-slate-800">{selectedProvider.contactPerson || 'Assigned Pending'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest">Coverage Threshold</label>
+                    <p className="text-sm font-bold text-slate-800">{currency(selectedProvider.coverageLimit)}</p>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <div className="glass-panel p-6 bg-emerald-50/20 border-emerald-100 italic text-[11px] text-emerald-700 font-medium">
+              Note: Settlement velocity for this provider is currently optimal. All claims are processed within the standard 14-day clinical cycle.
+            </div>
+          </div>
+
+          <div className="col-span-12 lg:col-span-8 space-y-6">
+            <article className="glass-panel p-0 overflow-hidden">
+               <div className="px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">Historical Claims & Settlements</h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Registry of all authorized clinical billing requests</p>
+                  </div>
+               </div>
+               
+               <div className="overflow-x-auto">
+                 <table className="w-full">
+                   <thead>
+                     <tr className="bg-slate-50/50">
+                        <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Claim ID</th>
+                        <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Patient / Context</th>
+                        <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Quantum</th>
+                        <th className="px-8 py-4 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">State</th>
+                     </tr>
+                   </thead>
+                   <tbody className="divide-y divide-slate-100">
+                     {providerClaims.length === 0 ? (
+                       <tr>
+                         <td colSpan="4" className="px-8 py-20 text-center text-slate-400 italic text-sm">
+                            No claims detected for this institutional payer.
+                         </td>
+                       </tr>
+                     ) : providerClaims.map(claim => (
+                       <tr key={claim.id} className="hover:bg-slate-50/50 transition-colors">
+                         <td className="px-8 py-5">
+                           <code className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded">CLAIM-{claim.id.slice(0, 8).toUpperCase()}</code>
+                         </td>
+                         <td className="px-8 py-5">
+                            <div className="text-sm font-bold text-slate-800">Patient Account Ref</div>
+                            <div className="text-[10px] text-slate-400 font-black uppercase mt-0.5">Clinical interaction node</div>
+                         </td>
+                         <td className="px-8 py-5 font-bold text-slate-900">{currency(claim.amount)}</td>
+                         <td className="px-8 py-5">
+                            <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border ${
+                              claim.status === 'Settled' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                              claim.status === 'Denied' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                              'bg-amber-50 text-amber-600 border-amber-100'
+                            }`}>
+                              {claim.status}
+                            </span>
+                         </td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+            </article>
+          </div>
+        </div>
+
+        {showClaimModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            <div className="glass-panel w-full max-w-lg p-8 animate-fade-in shadow-2xl">
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Initialize Coverage Claim</h3>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Submit request for clinical service reimbursement</p>
+                </div>
+                <button onClick={() => setShowClaimModal(false)} className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors">
+                  <Plus className="w-5 h-5 rotate-45 text-slate-400" />
+                </button>
+              </div>
+
+              <form className="space-y-6" onSubmit={(e) => { onCreateClaim(e); setShowClaimModal(false); }}>
+                <input type="hidden" name="insuranceProviderId" value={selectedProviderId} />
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Clinical Narrative</label>
+                  <input name="description" className="input-field py-4" placeholder="e.g. Inpatient Orthopedic Surgery Package" required />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Claim Amount (₹)</label>
+                    <input name="amount" type="number" className="input-field py-4 font-mono" placeholder="0.00" required />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Service Category</label>
+                    <select name="type" className="input-field h-[54px]">
+                      <option>Emergency</option>
+                      <option>Outpatient</option>
+                      <option>IPD Surgery</option>
+                      <option>Diagnostics</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100 flex gap-4">
+                   <button type="button" className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400" onClick={() => setShowClaimModal(false)}>Discard</button>
+                   <button type="submit" className="flex-[2] btn-primary py-4 text-[10px] uppercase tracking-widest shadow-xl">Authorize & Dispatch Claim</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <section className="premium-card p-6 md:p-8">
-        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
-          <div className="max-w-3xl">
-            <div className="clinical-chip mb-4">
-              <ShieldCheck className="w-4 h-4 text-[var(--primary)]" />
-              Coverage and claims operations
-            </div>
-            <h1 className="text-[1.95rem] md:text-[2.4rem] leading-tight font-extrabold tracking-[-0.04em] text-[var(--text-strong)]">
-              Insurance Registry
-            </h1>
-            <p className="mt-3 text-[15px] md:text-base leading-7 text-[var(--text-muted)]">
-              Manage payer relationships, coverage capacity, and claims visibility with a cleaner operational workflow.
-            </p>
-          </div>
-
-          <button className="btn btn-primary self-start xl:self-auto" onClick={() => setShowRegister(true)}>
-            <Plus className="w-4 h-4" />
-            Register new provider
-          </button>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        <MetricCard
-          label="Active Providers"
-          value={providers.length}
-          icon="tenants"
-          accent="teal"
-          trend="Registered units"
-        />
-        <MetricCard
-          label="Pending Claims"
-          value={pendingClaims}
-          icon="appointments"
-          accent="amber"
-          trend="High-priority queue"
-        />
-        <MetricCard
-          label="Coverage Volume"
-          value={`Rs ${(totalCoverage / 100000).toFixed(1)}L`}
-          icon={Building2}
-          accent="emerald"
-          trend="Total liquidity"
-        />
-      </section>
-
-      <section className="premium-card overflow-hidden">
-        <div className="px-6 py-5 border-b border-[var(--border)] flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-[var(--surface-muted)]">
+    <div className="page-shell-premium animate-fade-in">
+       {/* HEADER SECTION */}
+       <div className="page-header-premium mb-8">
           <div>
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--text-soft)]">Provider Registry</p>
-            <h2 className="text-xl font-extrabold text-[var(--text-strong)] mt-2">Coverage institutions and payer directory</h2>
+             <h1 className="flex items-center gap-4">
+                Insurance Registry
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full uppercase tracking-tighter shadow-sm border border-emerald-200">System Live</span>
+             </h1>
+             <p>Manage institutional payer relationships and clinical throughput capacity.</p>
+          </div>
+          <button className="btn-primary py-4 px-8 text-[10px] uppercase tracking-[0.2em] shadow-xl group" onClick={() => setShowRegister(true)}>
+             <Plus className="w-4 h-4 mr-3 group-hover:rotate-90 transition-transform duration-300" />
+             Provision New Payer
+          </button>
+       </div>
+
+       {/* METRICS STRIP */}
+       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-emerald-500">
+             <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Active Providers</p>
+                <h4 className="text-3xl font-black text-slate-900 mt-1">{providers.length}</h4>
+                <p className="text-[9px] font-black text-emerald-600 mt-2 uppercase tracking-widest">✓ Operational Registry</p>
+             </div>
+             <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                <Building2 className="w-7 h-7" />
+             </div>
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-soft)] w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Filter registry..."
-              className="clinical-input pl-11 pr-4 py-3 w-full md:w-72 text-sm font-semibold bg-white"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-amber-500">
+             <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Pending Claims</p>
+                <h4 className="text-3xl font-black text-slate-900 mt-1">{stats.pending}</h4>
+                <p className="text-[9px] font-black text-amber-600 mt-2 uppercase tracking-widest">⚠ High-priority Queue</p>
+             </div>
+             <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
+                <Calendar className="w-7 h-7" />
+             </div>
           </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-[var(--border)]">
-                <th className="px-4 py-4 text-left text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Provider Identity</th>
-                <th className="px-4 py-4 text-left text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Category</th>
-                <th className="px-4 py-4 text-left text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Coverage Limit</th>
-                <th className="px-4 py-4 text-left text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Status</th>
-                <th className="px-4 py-4 text-right text-xs font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Management</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProviders.length > 0 ? filteredProviders.map((provider) => (
-                <tr key={provider.id} className="border-b border-[var(--border)]/70 hover:bg-[var(--surface-muted)] transition-colors">
-                  <td className="px-4 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center font-extrabold text-sm shadow-sm">
-                        {provider.name[0]}
+          <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-blue-500">
+             <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Coverage Volume</p>
+                <h4 className="text-3xl font-black text-slate-900 mt-1">₹{(stats.total / 100000).toFixed(1)}L</h4>
+                <p className="text-[9px] font-black text-blue-600 mt-2 uppercase tracking-widest">↗ Total Liquidity</p>
+             </div>
+             <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                <ShieldCheck className="w-7 h-7" />
+             </div>
+          </div>
+       </div>
+
+       {/* MAIN LISTING TABLE */}
+       <article className="glass-panel p-0 overflow-hidden shadow-sm">
+          <div className="px-8 py-6 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 bg-slate-50/30">
+             <div>
+                <h3 className="text-lg font-black text-slate-900 tracking-tight">Institutional Payer Directory</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Coverage institutions and secure claim endpoints</p>
+             </div>
+             <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <input 
+                   placeholder="Search institutional registry..." 
+                   className="input-field pl-12 pr-6 py-4 w-full lg:w-96 text-sm font-bold bg-white" 
+                   value={searchTerm}
+                   onChange={e => setSearchTerm(e.target.value)}
+                />
+             </div>
+          </div>
+
+          <div className="overflow-x-auto">
+             <table className="w-full">
+                <thead>
+                   <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Provider Hub</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Class</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Threshold</th>
+                      <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Connectivity</th>
+                      <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">Operational Logic</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                   {filteredProviders.length === 0 ? (
+                      <tr>
+                         <td colSpan="5" className="px-8 py-24 text-center text-slate-400 italic font-medium">No institutional providers detected in current clinical shard.</td>
+                      </tr>
+                   ) : filteredProviders.map(p => (
+                      <tr key={p.id} className="hover:bg-slate-50/50 transition-all duration-300 group">
+                         <td className="px-8 py-6">
+                            <div className="flex items-center gap-4">
+                               <div className="w-12 h-12 rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center font-black text-lg shadow-sm group-hover:scale-110 transition-transform">
+                                  {p.name[0]}
+                               </div>
+                               <div>
+                                  <div className="text-sm font-black text-slate-900">{p.name}</div>
+                                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ref: {p.id.slice(0, 8).toUpperCase()}</div>
+                               </div>
+                            </div>
+                         </td>
+                         <td className="px-8 py-6">
+                            <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-[9px] font-black uppercase tracking-widest border border-slate-200">
+                               {p.type}
+                            </span>
+                         </td>
+                         <td className="px-8 py-6 font-bold text-slate-800 text-sm">
+                            {currency(p.coverageLimit)}
+                         </td>
+                         <td className="px-8 py-6">
+                            <div className="flex items-center gap-2">
+                               <div className={`w-2 h-2 rounded-full ${p.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{p.status}</span>
+                            </div>
+                         </td>
+                         <td className="px-8 py-6">
+                            <div className="flex justify-end gap-3">
+                               <button 
+                                  onClick={() => { setSelectedProviderId(p.id); setActiveTab('detail'); }}
+                                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all"
+                               >
+                                  Details
+                               </button>
+                               <button 
+                                  onClick={() => { setSelectedProviderId(p.id); setActiveTab('detail'); }}
+                                  className="btn-primary py-2 px-5 text-[10px] uppercase tracking-widest shadow-md flex items-center gap-2"
+                               >
+                                  <ExternalLink className="w-3 h-3" />
+                                  Manage
+                               </button>
+                            </div>
+                         </td>
+                      </tr>
+                   ))}
+                </tbody>
+             </table>
+          </div>
+       </article>
+
+       {/* REGISTER MODAL */}
+       {showRegister && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+             <div className="glass-panel w-full max-w-2xl p-10 animate-fade-in shadow-2xl relative">
+                <button onClick={() => setShowRegister(false)} className="absolute top-6 right-6 w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors">
+                  <Plus className="w-6 h-6 rotate-45 text-slate-400" />
+                </button>
+
+                <div className="mb-10">
+                   <h3 className="text-2xl font-black text-slate-900 tracking-tight">Provision New Payer Endpoint</h3>
+                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2">Initialize institutional relationship & coverage threshold</p>
+                </div>
+
+                <form className="space-y-8" onSubmit={(e) => { onCreateProvider(e); setShowRegister(false); }}>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div className="space-y-2 md:col-span-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Institutional Identity</label>
+                         <input name="name" className="input-field py-4 font-bold" required placeholder="HealthGuard Assurance Global" />
                       </div>
-                      <div>
-                        <div className="font-bold text-[var(--text-strong)] tracking-tight">{provider.name}</div>
-                        <div className="text-[11px] text-[var(--text-soft)] font-extrabold uppercase tracking-[0.16em] mt-1">
-                          {provider.contact_person || 'Clinical liaison pending'}
-                        </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Asset Classification</label>
+                         <select name="type" className="input-field h-[56px] font-bold">
+                            <option value="Private">Private Corporate</option>
+                            <option value="Government">Government / Public</option>
+                            <option value="Corporate">Dedicated Employee Payer</option>
+                         </select>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-5">
-                    <span className="inline-flex rounded-full border border-[var(--primary)]/20 bg-[var(--primary-soft)] px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--primary)]">
-                      {provider.type}
-                    </span>
-                  </td>
-                  <td className="px-4 py-5 font-bold text-[var(--text-main)] text-sm">
-                    Rs {(Number(provider.coverage_limit) / 100000).toFixed(1)}L cap
-                  </td>
-                  <td className="px-4 py-5">
-                    <div className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-[11px] font-extrabold uppercase tracking-[0.14em] bg-[var(--surface-muted)]">
-                      <span className={`w-2 h-2 rounded-full ${provider.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
-                      <span className={provider.status === 'Active' ? 'text-emerald-700' : 'text-amber-700'}>
-                        {provider.status}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button className="btn btn-secondary !min-h-[38px] !px-4 !text-xs uppercase tracking-[0.14em]">
-                        Details
-                      </button>
-                      <button
-                        className="btn btn-primary !min-h-[38px] !px-4 !text-xs uppercase tracking-[0.14em]"
-                        onClick={() => alert('Claim analytical view coming soon')}
-                      >
-                        Access claims
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="5" className="px-6 py-20 text-center text-[var(--text-muted)] text-sm italic">
-                    No insurance providers detected in the registry.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Initial Liability Cap (₹)</label>
+                         <input name="coverageLimit" type="number" className="input-field py-4 font-mono font-bold" defaultValue="500000" required />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Lead Liaison Officer</label>
+                         <input name="contactPerson" className="input-field py-4" required placeholder="Name of primary contact" />
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Secure Comm Line</label>
+                         <input name="phone" className="input-field py-4" required placeholder="+91 ..." />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Official Endpoint (Email)</label>
+                         <input name="email" type="email" className="input-field py-4" required placeholder="corporate@payer-endpoint.com" />
+                      </div>
+                   </div>
 
-      {showRegister && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
-          <div className="premium-card w-full max-w-xl p-6 md:p-7">
-            <header className="flex items-start justify-between gap-4 mb-6">
-              <div>
-                <p className="text-[11px] font-extrabold uppercase tracking-[0.22em] text-[var(--text-soft)]">New Provider</p>
-                <h3 className="text-2xl font-extrabold text-[var(--text-strong)] mt-2">Register insurance provider</h3>
-              </div>
-              <button onClick={() => setShowRegister(false)} className="text-[var(--text-soft)] hover:text-[var(--text-main)] font-bold text-xl">
-                x
-              </button>
-            </header>
-
-            <form onSubmit={(e) => { onCreateProvider(e); setShowRegister(false); }} className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Institutional Identity</label>
-                  <input className="clinical-input px-4 py-3 text-[15px] font-semibold" name="name" required placeholder="HealthGuard Assurance" />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Classification</label>
-                  <select className="clinical-select px-4 py-3 text-[15px] font-semibold" name="type">
-                    <option value="Private">Private</option>
-                    <option value="Government">Government</option>
-                    <option value="Corporate">Corporate</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Liability Cap (Rs)</label>
-                  <input className="clinical-input px-4 py-3 text-[15px] font-semibold" name="coverageLimit" type="number" required defaultValue="500000" />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Contact Officer</label>
-                  <input className="clinical-input px-4 py-3 text-[15px] font-semibold" name="contactPerson" required placeholder="Registry Name" />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Secure Comm Line</label>
-                  <input className="clinical-input px-4 py-3 text-[15px] font-semibold" name="phone" required placeholder="+91 ..." />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-[11px] font-extrabold uppercase tracking-[0.18em] text-[var(--text-soft)]">Official Endpoint (Email)</label>
-                <input className="clinical-input px-4 py-3 text-[15px] font-semibold" name="email" type="email" required placeholder="corporate@endpoint.com" />
-              </div>
-
-              <div className="flex justify-end gap-3 mt-6">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowRegister(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary">Finalize registry</button>
-              </div>
-            </form>
+                   <div className="pt-10 border-t border-slate-100 flex gap-4">
+                      <button type="button" className="flex-1 py-4 text-[11px] font-black uppercase tracking-[.2em] text-slate-400" onClick={() => setShowRegister(false)}>Discard</button>
+                      <button type="submit" className="flex-2 btn-primary py-4 px-12 text-[11px] uppercase tracking-[.2em] shadow-xl">Finalize Provisioning</button>
+                   </div>
+                </form>
+             </div>
           </div>
-        </div>
-      )}
+       )}
     </div>
   );
 }

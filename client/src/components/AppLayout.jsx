@@ -162,7 +162,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
             <Stethoscope className="w-6 h-6 text-cyan-100" />
           </div>
           <div className="min-w-0">
-            <p className="text-[11px] uppercase tracking-[0.28em] text-cyan-100/70 font-extrabold">Healthcare EMR</p>
+            <p className="text-xs uppercase tracking-[0.28em] text-cyan-100/70 font-extrabold">Healthcare EMR</p>
             <h1 className="text-lg font-extrabold text-white leading-tight truncate">{facilityName}</h1>
             <p className="text-xs text-cyan-50/68 mt-1">Clinical operations, patient records, and service coordination</p>
           </div>
@@ -177,7 +177,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
                 <Grid2X2 className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-100/60 font-bold">Current module</p>
+                <p className="text-xs uppercase tracking-[0.24em] text-cyan-100/60 font-bold">Current module</p>
                 <p className="text-sm font-bold">{currentModule}</p>
               </div>
             </div>
@@ -203,7 +203,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
                   <span className="shrink-0">{navIcons[module]}</span>
                   <span className="flex-1 text-left min-w-0">
                     <span className="block font-semibold truncate">{moduleMeta[module]?.title || module}</span>
-                    <span className="block text-[11px] opacity-75 truncate">{moduleDescriptions[module] || "Clinical workspace"}</span>
+                    <span className="block text-xs opacity-75 truncate">{moduleDescriptions[module] || "Clinical workspace"}</span>
                   </span>
                   <ChevronRight className={`w-4 h-4 shrink-0 transition-transform ${isActive ? "translate-x-0.5" : ""}`} />
                 </button>
@@ -242,21 +242,21 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
           <div className="mt-4 grid grid-cols-3 gap-2">
             <button
               onClick={() => setActiveDialog("profile")}
-              className="flex items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/8 px-1.5 py-1.5 text-[9px] font-medium text-white/75 hover:bg-white/12 transition-colors"
+              className="flex items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/8 px-1.5 py-1.5 text-xs font-medium text-white/75 hover:bg-white/12 transition-colors"
             >
               <User className="w-2.5 h-2.5" />
               Profile
             </button>
             <button
               onClick={openSettings}
-              className="flex items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/8 px-1.5 py-1.5 text-[9px] font-medium text-white/75 hover:bg-white/12 transition-colors"
+              className="flex items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/8 px-1.5 py-1.5 text-xs font-medium text-white/75 hover:bg-white/12 transition-colors"
             >
               <Settings2 className="w-2.5 h-2.5" />
               Settings
             </button>
             <button
               onClick={() => setActiveDialog("help")}
-              className="flex items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/8 px-1.5 py-1.5 text-[9px] font-medium text-white/75 hover:bg-white/12 transition-colors"
+              className="flex items-center justify-center gap-1 rounded-xl border border-white/10 bg-white/8 px-1.5 py-1.5 text-xs font-medium text-white/75 hover:bg-white/12 transition-colors"
             >
               <HelpCircle className="w-2.5 h-2.5" />
               Help
@@ -304,7 +304,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
               </button>
 
               <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-[0.28em] text-[var(--text-soft)] font-extrabold">Clinical Workspace</p>
+                <p className="text-xs uppercase tracking-[0.28em] text-[var(--text-soft)] font-extrabold">Clinical Workspace</p>
                 <h2 className="text-2xl font-extrabold text-[var(--text-strong)] truncate">{currentModule}</h2>
                 <p className="text-sm text-[var(--text-muted)] truncate">
                   {moduleDescriptions[view] || "Efficient, patient-safe workflows for the care team."}
@@ -319,7 +319,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
                     <ShieldCheck className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--text-soft)] font-bold">System readiness</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-[var(--text-soft)] font-bold">System readiness</p>
                     <p className="text-sm font-bold leading-5 text-[var(--text-main)]">Care services available</p>
                   </div>
                 </div>
@@ -344,7 +344,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
               />
 
               <button
-                onClick={focusGlobalSearch}
+                onClick={() => searchInputRef.current?.focus()}
                 className="hidden lg:flex p-2 text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors shrink-0"
                 title="Global Search"
               >
@@ -363,29 +363,13 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
                 <HelpCircle className="w-5 h-5" />
               </button>
 
-              <ActionMenu
-                trigger={
-                  <div className="h-11 rounded-2xl border border-[var(--border)] bg-white/90 pl-3 pr-2 flex items-center justify-between gap-3 text-[var(--text-main)] shadow-sm hover:bg-[var(--surface-muted)] transition-colors shrink-0 min-w-[154px] xl:min-w-[168px]">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
-                        <User className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0 text-left">
-                        <div className="text-sm font-bold truncate">{activeUser?.name || "Clinical User"}</div>
-                        <div className="text-[11px] text-[var(--text-soft)] truncate capitalize">{formatRole(activeUser?.role)}</div>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[var(--text-soft)] shrink-0" />
-                  </div>
-                }
-                actions={[
-                  { icon: User, label: "Profile", onClick: () => setActiveDialog("profile") },
-                  { icon: Settings2, label: "Settings", onClick: openSettings },
-                  { icon: Search, label: "Global Search", onClick: focusGlobalSearch },
-                  { icon: HelpCircle, label: "Help", onClick: () => setActiveDialog("help") },
-                  { icon: LogOut, label: "Sign Out", onClick: onLogout }
-                ]}
-              />
+              <button
+                onClick={onLogout}
+                className="p-2.5 rounded-xl text-[var(--danger)] hover:bg-[var(--danger-soft)] transition-all shrink-0"
+                title="Sign Out"
+              >
+                <LogOut className="w-5.5 h-5.5" />
+              </button>
             </div>
           </div>
         </header>
@@ -412,7 +396,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
           <div className="relative premium-card w-full max-w-2xl p-6 md:p-7">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[11px] uppercase tracking-[0.24em] text-[var(--text-soft)] font-extrabold">
+                <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-soft)] font-extrabold">
                   {activeDialog === "profile" ? "User Profile" : "Help Center"}
                 </p>
                 <h3 className="text-2xl font-extrabold text-[var(--text-strong)] mt-2">

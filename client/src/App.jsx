@@ -17,6 +17,7 @@ import EmployeesPage from './pages/EmployeesPage.jsx';
 import AccountsPage from './pages/AccountsPage.jsx';
 import ReportsPage from './pages/ReportsPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
+import UsersPage from './pages/UsersPage.jsx';
 import LabPage from './pages/LabPage.jsx';
 import SupportPage from './pages/SupportPage.jsx';
 import Chatbot from './components/Chatbot.jsx';
@@ -608,6 +609,16 @@ export default function App() {
         )}
 
         {view === 'lab' && <LabPage tenant={tenant} activeUser={activeUser} />}
+
+        {view === 'users' && (
+          <UsersPage 
+            users={users}
+            activeUser={activeUser}
+            tenant={tenant}
+            onUpdateUserRole={(id, role) => withRefresh(() => api.updateUser(id, { role }))}
+            onResetPassword={(id) => alert('Password reset initialization sent to personnel email.')}
+          />
+        )}
 
         {view === 'support' && <SupportPage tenant={tenant} activeUser={activeUser} />}
 

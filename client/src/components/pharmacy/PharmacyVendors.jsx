@@ -124,7 +124,7 @@ export default function PharmacyVendors({ tenant }) {
                                             <td className="px-4 py-3">{v.contact_person}</td>
                                             <td className="px-4 py-3">
                                                 <div className="text-xs font-semibold text-slate-700">{v.email}</div>
-                                                <div className="text-[10px] text-slate-500">{v.phone}</div>
+                                                <div className="text-xs text-slate-500">{v.phone}</div>
                                             </td>
                                             <td className="px-4 py-3 text-center">
                                                 <span className="badge success">{v.status.toUpperCase()}</span>

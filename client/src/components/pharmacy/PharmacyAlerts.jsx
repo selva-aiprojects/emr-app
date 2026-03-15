@@ -94,7 +94,7 @@ export default function PharmacyAlerts({ tenant }) {
                             lowStockAlertType === 'warning' ? 'bg-amber-500 shadow-amber-500/50' : 'bg-blue-500'
                         }`}></div>
                         <div>
-                            <span className={`text-[10px] font-black uppercase tracking-[0.2em] block ${
+                            <span className={`text-xs font-black uppercase tracking-[0.2em] block ${
                                 lowStockAlertType === 'critical' ? 'text-red-700' : 
                                 lowStockAlertType === 'warning' ? 'text-amber-700' : 'text-slate-500'
                             }`}>{lowStockAlertMsg}</span>
@@ -124,7 +124,7 @@ export default function PharmacyAlerts({ tenant }) {
                                         <button
                                             onClick={() => handleReorder(item)}
                                             disabled={reordering === item.batchId}
-                                            className="text-[10px] text-blue-600 font-bold uppercase hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="text-xs text-blue-600 font-bold uppercase hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {reordering === item.batchId ? 'Creating PO...' : `Reorder ${item.suggestedOrderQuantity}`}
                                         </button>
@@ -140,9 +140,9 @@ export default function PharmacyAlerts({ tenant }) {
             <article className="clinical-card p-0 overflow-hidden shadow-xl">
                 <div className="px-5 py-8 border-b border-amber-100 bg-amber-50/30 flex justify-between items-center">
                     <div>
-                        <span className="text-[10px] text-amber-700 font-black uppercase tracking-[0.2em] block mb-1">Stock Volatility</span>
+                        <span className="text-xs text-amber-700 font-black uppercase tracking-[0.2em] block mb-1">Stock Volatility</span>
                         <h3 className="text-xl font-bold text-slate-900 tracking-tight">Expiring Batches</h3>
-                        <p className="text-[10px] text-amber-600 font-bold mt-1 uppercase">Threshold: 90 Days</p>
+                        <p className="text-xs text-amber-600 font-bold mt-1 uppercase">Threshold: 90 Days</p>
                     </div>
                     <div className="px-4 py-1.5 bg-amber-500 text-white rounded-full text-xs font-bold shadow-lg shadow-amber-500/20">{expiring.length} Alerts</div>
                 </div>
@@ -161,7 +161,7 @@ export default function PharmacyAlerts({ tenant }) {
                                         <div className={`font-bold ${item.daysUntilExpiry <= 30 ? 'text-amber-700' : 'text-amber-600'}`}>
                                             {item.daysUntilExpiry} Days
                                         </div>
-                                        <div className="text-[10px] text-slate-400 font-bold uppercase">{new Date(item.expiryDate).toLocaleDateString()}</div>
+                                        <div className="text-xs text-slate-400 font-bold uppercase">{new Date(item.expiryDate).toLocaleDateString()}</div>
                                     </div>
                                 </div>
                             ))}

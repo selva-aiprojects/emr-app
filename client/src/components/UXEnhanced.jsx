@@ -51,7 +51,7 @@ export function NotificationSystem() {
       title="Notifications"
     >
       <Bell className="w-5 h-5" />
-      <span className="absolute right-1.5 top-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--danger)] px-1 text-[10px] font-bold text-white">
+      <span className="absolute right-1.5 top-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--danger)] px-1 text-xs font-bold text-white">
         2
       </span>
     </button>

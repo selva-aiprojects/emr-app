@@ -61,30 +61,31 @@ export default function PatientSearch({ tenantId, onSelect, initialPatientId }) 
     };
 
     return (
-        <div className="premium-patient-search" ref={wrapperRef}>
+        <div className="relative w-full" ref={wrapperRef}>
             {/* Selected Patient Token */}
             {selectedPatient && (
-                <div className="selection-token">
-                    <div className="token-info">
-                        <strong>{selectedPatient.firstName} {selectedPatient.lastName}</strong>
-                        <span>{selectedPatient.mrn}</span>
+                <div className="flex items-center justify-between p-3 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-xl">
+                    <div className="flex-1 min-w-0">
+                        <strong className="block text-sm text-[var(--primary-dark)] truncate">{selectedPatient.firstName} {selectedPatient.lastName}</strong>
+                        <span className="block text-[10px] font-bold text-[var(--primary)] uppercase tracking-widest">{selectedPatient.mrn}</span>
                     </div>
                     <button
                         type="button"
                         onClick={(e) => { e.preventDefault(); setSelectedPatient(null); }}
-                        className="token-close"
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--primary)]/10 text-[var(--primary)] transition-colors shrink-0"
                     >
-                        ×
+                        ✕
                     </button>
                 </div>
             )}
 
             {/* Search Input Group */}
             {!selectedPatient && (
-                <div className="search-group">
-                    <div className="main-search-bar">
-                        <span className="search-icon">🔍</span>
+                <div className="flex flex-col gap-3 w-full relative">
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
                         <input
+                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all text-sm bg-white"
                             type="text"
                             placeholder="Find by Name, MRN, Phone..."
                             value={searchTerm}
@@ -93,19 +94,19 @@ export default function PatientSearch({ tenantId, onSelect, initialPatientId }) 
                         />
                     </div>
 
-                    <div className="filter-row">
-                        <div className="filter-item">
-                            <label>Context</label>
-                            <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                    <div className="flex gap-4">
+                        <div className="flex-1 space-y-1">
+                            <label className="text-[10px] font-bold uppercase text-slate-400">Context</label>
+                            <select className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                                 <option value="">Any</option>
                                 <option value="OPD">OPD</option>
                                 <option value="IPD">IPD</option>
                                 <option value="emergency">ER</option>
                             </select>
                         </div>
-                        <div className="filter-item">
-                            <label>Arrival</label>
-                            <input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
+                        <div className="flex-1 space-y-1">
+                            <label className="text-[10px] font-bold uppercase text-slate-400">Arrival</label>
+                            <input className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white" type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
                         </div>
                     </div>
                 </div>
@@ -113,11 +114,11 @@ export default function PatientSearch({ tenantId, onSelect, initialPatientId }) 
 
             {/* Search Dropdown */}
             {isOpen && !selectedPatient && (searchTerm || patients.length > 0) && (
-                <div className="search-dropdown premium-glass">
-                    {loading && <div className="dropdown-status">🔍 Scouring clinical records...</div>}
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-[300px] overflow-y-auto divide-y divide-slate-100">
+                    {loading && <div className="p-4 text-center text-sm text-slate-500">🔍 Scouring clinical records...</div>}
 
                     {!loading && patients.length === 0 && searchTerm && (
-                        <div className="dropdown-empty">
+                        <div className="p-4 text-center text-sm text-slate-500">
                             No match found for "<strong>{searchTerm}</strong>"
                         </div>
                     )}
@@ -126,18 +127,18 @@ export default function PatientSearch({ tenantId, onSelect, initialPatientId }) 
                         <div
                             key={p.id}
                             onClick={() => selectPatient(p)}
-                            className="result-row"
+                            className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition-colors"
                         >
-                            <div className="result-avatar">{(p.firstName || 'P')[0]}</div>
-                            <div className="result-main">
-                                <div className="result-name">{p.firstName} {p.lastName}</div>
-                                <div className="result-meta">
+                            <div className="w-10 h-10 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center font-bold">{(p.firstName || 'P')[0]}</div>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-sm font-bold text-slate-800 truncate">{p.firstName} {p.lastName}</div>
+                                <div className="text-xs text-slate-500 truncate">
                                     {p.mrn} • {new Date().getFullYear() - new Date(p.dob).getFullYear()}Y • {p.gender}
                                 </div>
                             </div>
-                            <div className="result-aside">
+                            <div className="shrink-0">
                                 {p.latest_encounter_type && (
-                                    <span className={`type-tag ${p.latest_encounter_type}`}>
+                                    <span className={`px-2 py-1 rounded bg-slate-100 text-[10px] font-bold uppercase text-slate-600`}>
                                         {p.latest_encounter_type}
                                     </span>
                                 )}

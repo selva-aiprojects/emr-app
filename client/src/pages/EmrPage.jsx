@@ -181,93 +181,97 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
   }
 
   return (
-    <section className="view clinical-workspace">
-      <div className="workspace-header">
-        <div className="tab-group premium-glass">
-          <button className={`tab-link ${activeTab === 'active' ? 'active' : ''}`} onClick={() => setActiveTab('active')}>
-            <span className="icon">🏥</span> Active Encounters
-          </button>
-          <button className={`tab-link ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-            <span className="icon">📚</span> Global History
-          </button>
-          <button className={`tab-link ${activeTab === 'new' ? 'active' : ''}`} onClick={() => setActiveTab('new')} id="new-consult-btn">
-            <span className="icon">➕</span> New Consultation
-          </button>
+    <div className="page-shell-premium">
+      <div className="action-bar-premium">
+        <div className="panel-title-group">
+          <h2 className="panel-title-text">Electronic Medical Records</h2>
+          <p className="panel-subtitle-text">Clinical Encounter Intelligence</p>
+        </div>
+        <div className="premium-tab-bar">
+          <button className={`premium-tab-item ${activeTab === 'active' ? 'active' : ''}`} onClick={() => setActiveTab('active')}>Active</button>
+          <button className={`premium-tab-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>History</button>
+          <button className={`premium-tab-item ${activeTab === 'new' ? 'active' : ''}`} onClick={() => setActiveTab('new')}>New</button>
         </div>
       </div>
 
-      {activeTab === 'new' && (
-        <div className="consultation-layout-grid">
+      <div className="grid grid-cols-12 gap-6">
+        {activeTab === 'new' && (
+          <>
+            <aside className="col-span-4 space-y-6">
+              <div className="glass-panel p-6">
+                <div className="mb-4">
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">1. Patient Selection</h4>
+                  <p className="text-xs font-bold text-slate-700">Identify the subject for clinical documentation</p>
+                </div>
+                <PatientSearch tenantId={tenant?.id} onSelect={(p) => setSelectedPatientId(p.id)} />
 
-          <aside className="clinical-sidebar premium-glass">
-            <div className="sidebar-header">
-              <h4>1. Selection</h4>
-              <p>Identify the subject patient</p>
-            </div>
-            <div className="sidebar-content">
-              <PatientSearch tenantId={tenant?.id} onSelect={(p) => setSelectedPatientId(p.id)} />
-
-              {selectedPatient && (
-                <div className="subject-profile-card">
-                  <div className="subject-header">
-                    <div className="subject-avatar">{(selectedPatient.firstName || 'P')[0]}</div>
-                    <div className="subject-names">
-                      <strong>{selectedPatient.firstName} {selectedPatient.lastName}</strong>
-                      <span>MRN: {selectedPatient.mrn || 'PENDING'}</span>
+                {selectedPatient && (
+                  <div className="mt-8 p-5 bg-slate-900 rounded-2xl border border-white/10 relative overflow-hidden group shadow-xl transition-all hover:scale-[1.02]">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)]/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                    <div className="relative z-10 flex items-center gap-4 mb-6">
+                      <div className="w-12 h-12 rounded-xl bg-[var(--primary)] flex items-center justify-center text-xl font-bold text-white shadow-lg">
+                        {(selectedPatient.firstName || 'P')[0]}
+                      </div>
+                      <div>
+                        <div className="text-sm font-bold text-white tracking-tight">{selectedPatient.firstName} {selectedPatient.lastName}</div>
+                        <div className="text-[10px] text-white/50 font-bold uppercase tracking-widest">MRN-{selectedPatient.mrn || 'PENDING'}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="relative z-10 space-y-4">
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                        <label className="block text-[9px] font-black uppercase tracking-[0.15em] text-white/40 mb-1">Allergies</label>
+                        <div className="text-[11px] font-bold text-red-400">{selectedPatient.medicalHistory?.allergies || 'NONE RECORDED'}</div>
+                      </div>
+                      <div className="p-3 bg-white/5 rounded-xl border border-white/10">
+                        <label className="block text-[9px] font-black uppercase tracking-[0.15em] text-white/40 mb-1">Chronic History</label>
+                        <div className="text-[11px] font-bold text-[var(--primary-soft)]">{selectedPatient.medicalHistory?.chronicConditions || 'CLEAR INVENTORY'}</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="subject-criticals">
-                    <div className="critical-item allergies">
-                      <label>Allergies</label>
-                      <strong>{selectedPatient.medicalHistory?.allergies || 'NONE RECORDED'}</strong>
-                    </div>
-                    <div className="critical-item chronic">
-                      <label>Chronic History</label>
-                      <strong>{selectedPatient.medicalHistory?.chronicConditions || 'CLEAR'}</strong>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </aside>
-
-          <main className="consultation-container">
-            {!selectedPatient ? (
-              <div className="panel select-placeholder premium-glass">
-                <div className="placeholder-content">
-                  <img src="/logo.svg" style={{ width: '80px', opacity: 0.1, marginBottom: '1rem' }} />
-                  <p>Identify a patient from the sidebar to begin clinical documentation</p>
-                </div>
+                )}
               </div>
-            ) : (
-              <form className="consultation-form panel premium-glass" onSubmit={handleEncounterSubmit}>
-                <div className="consult-header">
-                  <div className="header-meta">
-                    <h3>Clinical Record Input</h3>
-                    <p>Draft Electronic Medical Record & Prescription</p>
-                  </div>
-                  <div className="vitals-strip">
-                    <div className="vital-input">
-                      <label>BP</label>
-                      <input name="bp" placeholder="---/--" />
+            </aside>
+
+            <main className="col-span-8">
+              {!selectedPatient ? (
+                <div className="glass-panel h-full flex items-center justify-center p-12 text-center">
+                  <div>
+                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-slate-100 shadow-sm opacity-20">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                     </div>
-                    <div className="vital-input">
-                      <label>HR</label>
-                      <input name="hr" placeholder="--" />
+                    <p className="text-sm font-bold text-slate-400 italic">Select a patient from the registry to begin clinical oversight</p>
+                  </div>
+                </div>
+              ) : (
+              <form className="glass-panel p-8 space-y-8 animate-fade-in" onSubmit={handleEncounterSubmit}>
+                <div className="flex justify-between items-start border-b border-slate-100 pb-8">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Clinical Assessment</h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Institutional EMR Documentation Node</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">BP (mmHg)</label>
+                      <input name="bp" placeholder="---/--" className="input-field py-3 w-24 font-mono text-center bg-white" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Pulse (bpm)</label>
+                      <input name="hr" placeholder="--" className="input-field py-3 w-20 font-mono text-center bg-white" />
                     </div>
                   </div>
                 </div>
 
-                <div className="consult-form-grid">
-                  <div className="form-group-rich">
-                    <label>Attending Provider</label>
-                    <select name="providerId" required>
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Attending Provider</label>
+                    <select name="providerId" className="input-field h-[54px] bg-white font-bold text-slate-800" required>
                       {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
-                  <div className="form-group-rich">
-                    <label>Interaction Type</label>
-                    <select name="type">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Interaction Type</label>
+                    <select name="type" className="input-field h-[54px] bg-white font-bold text-slate-800">
                       <option>Out-patient</option>
                       <option>In-patient</option>
                       <option>Emergency</option>
@@ -275,98 +279,109 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
                   </div>
                 </div>
 
-                <div className="consult-form-grid-2">
-                  <div className="form-group-rich">
-                    <label>Chief Complaint</label>
-                    <input name="complaint" required placeholder="Subjective reasoning for visit..." />
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Chief Complaint</label>
+                    <input name="complaint" required placeholder="Subjective reasoning for visit..." className="input-field py-4 bg-white" />
                   </div>
-                  <div className="form-group-rich">
-                    <label>Provisional Diagnosis</label>
-                    <input name="diagnosis" required placeholder="Objective assessment..." />
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Provisional Diagnosis</label>
+                    <input name="diagnosis" required placeholder="Objective assessment..." className="input-field py-4 bg-white" />
                   </div>
                 </div>
 
-                <Prescriber
-                  tenantId={tenant?.id}
-                  patientId={selectedPatientId}
-                  initialMeds={prescriptionItems}
-                  onDrugsChange={handleDrugsChange}
-                />
-
-                <div className="form-group-rich">
-                  <label>Physician Advice & Narrative</label>
-                  <textarea name="notes" placeholder="Advice given, future investigations, follow-up..." style={{ height: '120px' }}></textarea>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                     <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Clinical Prescribing</h4>
+                     <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">✓ Validate Safety</span>
+                  </div>
+                  <Prescriber
+                    tenantId={tenant?.id}
+                    patientId={selectedPatientId}
+                    initialMeds={prescriptionItems}
+                    onDrugsChange={handleDrugsChange}
+                  />
                 </div>
 
-                <div className="form-actions-sticky">
-                  <button type="submit" className="finalize-btn-premium">Finalize Session & Print Rx</button>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Physician Advice & Narrative</label>
+                  <textarea name="notes" placeholder="Advice given, future investigations, follow-up..." className="input-field py-4 h-32 bg-white resize-none"></textarea>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100">
+                  <button type="submit" className="btn-primary w-full py-5 text-[10px] uppercase tracking-[0.2em] shadow-xl">
+                    Finalize Session & Authorize Prescription
+                  </button>
                 </div>
               </form>
             )}
           </main>
-        </div>
+        </>
       )}
 
-      {(activeTab === 'active' || activeTab === 'history') && (
-        <article className="ledger-card premium-glass">
-          <div className="ledger-header">
-            <div className="title-stack">
-              <h3>Clinical Encounter Ledger</h3>
-              <p>Monitoring {(activeTab === 'active' ? activeEncounters : lastSaved ? [lastSaved, ...pastEncounters] : pastEncounters).length} clinical events</p>
-            </div>
-          </div>
+        {(activeTab === 'active' || activeTab === 'history') && (
+          <main className="col-span-12 space-y-8">
+            <article className="premium-panel">
+              <div className="panel-header-standard">
+                <div className="panel-title-group">
+                  <h3 className="panel-title-text">Clinical Encounter Ledger</h3>
+                  <p className="panel-subtitle-text">Monitoring {(activeTab === 'active' ? activeEncounters : pastEncounters).length} clinical events</p>
+                </div>
+              </div>
 
-          <div className="table-wrapper">
-            <table className="premium-table">
-              <thead>
-                <tr>
-                  <th>Temporal Stamp</th>
-                  <th>Clinical Subject</th>
-                  <th>Dept/Type</th>
-                  <th>Diagnosis / Outcome</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(activeTab === 'active' ? activeEncounters : pastEncounters).length === 0 ? (
-                  <tr><td colSpan="5" className="empty-table-msg">No clinical encounters recorded in this view.</td></tr>
-                ) : (activeTab === 'active' ? activeEncounters : pastEncounters).map(e => {
-                  const pat = patients.find(p => p.id === (e.patient_id || e.patientId));
-                  return (
-                    <tr key={e.id} className="ledger-row">
-                      <td className="date-cell">
-                        <strong>{new Date(e.created_at || e.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</strong><br />
-                        {new Date(e.created_at || e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </td>
-                      <td className="patient-cell">
-                        <div className="p-link" onClick={() => { setSelectedPatientId(e.patient_id || e.patientId); setActiveTab('new'); }}>
-                          {pat ? `${pat.firstName} ${pat.lastName}` : (e.patientName || 'Unknown')}
-                        </div>
-                        <span className="tiny-id">MRN: {pat?.mrn || 'NEW'}</span>
-                      </td>
-                      <td>
-                        <span className={`status-chip ${(e.encounter_type || e.type || '').toLowerCase().replace('-', '')}`}>
-                          {e.encounter_type || e.type}
-                        </span>
-                      </td>
-                      <td className="diagnosis-cell">{e.diagnosis || 'Clinical Assessment...'}</td>
-                      <td className="actions-cell">
-                        <div className="action-button-group">
-                          <button className="ledger-btn print" onClick={() => printPrescription(e, pat || { firstName: 'Patient' }, [], providers.find(p => p.id === (e.provider_id || e.providerId)), tenant)}>Rx</button>
-                          {e.status === 'open' && (
-                            <button className="ledger-btn consult" onClick={() => { setSelectedPatientId(e.patient_id || e.patientId); setActiveTab('new'); }}>📝 Documentation</button>
-                          )}
-                        </div>
-                      </td>
+              <div className="premium-table-container">
+                <table className="premium-table">
+                  <thead>
+                    <tr>
+                      <th>Temporal Stamp</th>
+                      <th>Clinical Subject</th>
+                      <th>Dept/Type</th>
+                      <th>Diagnosis / Outcome</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </article>
-      )}
-    </section>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {(activeTab === 'active' ? activeEncounters : pastEncounters).length === 0 ? (
+                      <tr><td colSpan="5" className="text-center py-20 text-slate-400 italic">No clinical encounters recorded in this view.</td></tr>
+                    ) : (activeTab === 'active' ? activeEncounters : pastEncounters).map(e => {
+                      const pat = patients.find(p => p.id === (e.patient_id || e.patientId));
+                      return (
+                        <tr key={e.id}>
+                          <td>
+                            <div className="text-sm font-bold text-slate-800">{new Date(e.created_at || e.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</div>
+                            <div className="text-xs text-slate-400 font-bold uppercase">{new Date(e.created_at || e.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                          </td>
+                          <td>
+                            <div className="font-bold text-slate-800 cursor-pointer hover:text-[var(--primary)]" onClick={() => { setSelectedPatientId(e.patient_id || e.patientId); setActiveTab('new'); }}>
+                              {pat ? `${pat.firstName} ${pat.lastName}` : (e.patientName || 'Unknown')}
+                            </div>
+                            <div className="text-xs text-slate-400 font-bold uppercase">MRN: {pat?.mrn || 'NEW'}</div>
+                          </td>
+                          <td>
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-slate-100 text-slate-600`}>
+                              {e.encounter_type || e.type}
+                            </span>
+                          </td>
+                          <td className="text-xs font-medium text-slate-500">{e.diagnosis || 'Clinical Assessment...'}</td>
+                          <td className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <button className="text-xs font-bold text-[var(--primary)] hover:underline uppercase tracking-widest" onClick={() => printPrescription(e, pat || { firstName: 'Patient' }, [], providers.find(p => p.id === (e.provider_id || e.providerId)), tenant)}>Rx</button>
+                              {e.status === 'open' && (
+                                <button className="text-xs font-bold text-slate-500 hover:text-[var(--primary)] uppercase tracking-widest" onClick={() => { setSelectedPatientId(e.patient_id || e.patientId); setActiveTab('new'); }}>📝 Edit</button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </main>
+        )}
+      </div>
+    </div>
   );
 }
 

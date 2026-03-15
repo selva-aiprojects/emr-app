@@ -168,10 +168,10 @@ export default function SupportPage({ tenant, activeUser }) {
                                     <div className="flex items-center gap-2 mb-1">
                                         <span className="text-xs font-mono font-bold text-slate-500">{ticket.id}</span>
                                         <span className="font-bold text-slate-800">{ticket.type}</span>
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${STATUS_STYLES[ticket.status] || ''}`}>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold border uppercase ${STATUS_STYLES[ticket.status] || ''}`}>
                                             {ticket.status.replace('-', ' ')}
                                         </span>
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ticket.priority === 'Urgent' ? 'bg-red-100 text-red-700' : ticket.priority === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}`}>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${ticket.priority === 'Urgent' ? 'bg-red-100 text-red-700' : ticket.priority === 'High' ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}`}>
                                             {ticket.priority}
                                         </span>
                                     </div>

@@ -57,11 +57,11 @@ export default function MetricCard({ label, value, accent = 'blue', icon, change
   };
 
   return (
-    <div className="metric-card-pro bg-white rounded-panel shadow-clinical border border-clinical-border p-6 hover:shadow-pro transition-all duration-300">
+    <div className="metric-card-pro bg-white rounded-xl shadow-sm border border-slate-100 p-4 hover:shadow-md transition-all duration-300">
       {/* Header with icon and change indicator */}
-      <div className="flex justify-center items-center mb-6 relative min-h-[52px]">
-        <div className={`p-3 rounded-xl ${bgColors[accent] || bgColors.blue} border`}>
-          {Icon && <Icon className="w-6 h-6" />}
+      <div className="flex justify-center items-center mb-3 relative min-h-[40px]">
+        <div className={`p-2.5 rounded-xl ${bgColors[accent] || bgColors.blue} border`}>
+          {Icon && <Icon className="w-5 h-5" />}
         </div>
         {change && (
           <div className={`absolute right-0 top-0 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold ${bgColors[accent] || bgColors.blue}`}>
@@ -72,11 +72,11 @@ export default function MetricCard({ label, value, accent = 'blue', icon, change
       </div>
       
       {/* Value and label */}
-      <div className="space-y-2 text-center">
-        <div className="metric-value-pro text-3xl font-bold text-clinical-text tracking-tight">
+      <div className="space-y-1 text-center">
+        <div className="metric-value-pro text-2xl font-bold text-slate-800 tracking-tight">
           {value}
         </div>
-        <div className="metric-label-pro text-xs font-semibold text-clinical-muted uppercase tracking-wider">
+        <div className="metric-label-pro text-xs font-bold text-slate-400 uppercase tracking-widest">
           {label}
         </div>
       </div>

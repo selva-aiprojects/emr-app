@@ -94,7 +94,7 @@ export default function LoginPage({ onLogin, tenants }) {
               <HeartPulse className="w-9 h-9 text-cyan-100" />
             </div>
             <div>
-              <p className="text-[12px] uppercase tracking-[0.28em] text-cyan-100/72 font-extrabold">MedFlow EMR</p>
+              <p className="text-xs uppercase tracking-[0.28em] text-cyan-100/72 font-extrabold">MedFlow EMR</p>
               <h1 className="text-4xl md:text-5xl font-extrabold tracking-[-0.04em] text-white">Clinical systems built for calm, safe care delivery</h1>
             </div>
           </div>
@@ -141,7 +141,7 @@ export default function LoginPage({ onLogin, tenants }) {
             <h2 className="text-[1.55rem] md:text-[1.75rem] font-extrabold tracking-[-0.03em] text-[var(--primary)] whitespace-nowrap">
               Access your healthcare workspace
             </h2>
-            <p className="mt-3 text-[15px] leading-7 text-[var(--text-muted)]">
+            <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">
               Choose your organization and sign in with your assigned staff credentials.
             </p>
           </div>
@@ -151,7 +151,7 @@ export default function LoginPage({ onLogin, tenants }) {
               <label className="block text-sm font-bold text-[var(--text-main)] mb-2">Organization</label>
               <div className="relative">
                 <select
-                  className="clinical-select px-4 py-4 pr-12 text-[15px] font-semibold appearance-none"
+                  className="clinical-select px-4 py-4 pr-12 text-sm font-semibold appearance-none"
                   value={credentials.tenantId}
                   onChange={(e) => handleTenantChange(e.target.value)}
                 >
@@ -172,7 +172,7 @@ export default function LoginPage({ onLogin, tenants }) {
               <div className="relative">
                 <input
                   type="email"
-                  className="clinical-input pl-12 pr-4 py-4 text-[15px] font-semibold"
+                  className="clinical-input pl-12 pr-4 py-4 text-sm font-semibold"
                   placeholder="name@hospital.org"
                   value={credentials.email}
                   onChange={(e) => setCredentials((prev) => ({ ...prev, email: e.target.value }))}
@@ -187,7 +187,7 @@ export default function LoginPage({ onLogin, tenants }) {
               <div className="relative">
                 <input
                   type="password"
-                  className="clinical-input pl-12 pr-4 py-4 text-[15px] font-semibold"
+                  className="clinical-input pl-12 pr-4 py-4 text-sm font-semibold"
                   placeholder="Enter your secure password"
                   value={credentials.password}
                   onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}

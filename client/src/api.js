@@ -408,7 +408,7 @@ export async function createEmployeeLeave(employeeId, data) {
 // =====================================================
 
 export async function getReportSummary(tenantId) {
-  return await apiRequest(`/reports/summary?tenantId=${tenantId}`);
+  return await apiRequest(`/reports/summary/${tenantId}`);
 }
 
 export async function getDoctorPayouts(tenantId) {

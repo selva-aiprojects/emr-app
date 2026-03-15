@@ -10,8 +10,8 @@ export function StatusBadge({ status = "pending", size = "md" }) {
     default: "bg-slate-50 text-slate-700 border-slate-200"
   };
   const sizes = {
-    sm: "px-2 py-0.5 text-[10px]",
-    md: "px-2.5 py-1 text-[11px]"
+    sm: "px-2 py-0.5 text-xs",
+    md: "px-2.5 py-1 text-xs"
   };
 
   return (
@@ -36,7 +36,7 @@ export function SectionHeader({
         <div className="min-w-0">
           {badge ? <div className="clinical-chip mb-4">{badge}</div> : null}
           <h1 className="text-[1.95rem] md:text-[2.35rem] leading-tight font-extrabold tracking-[-0.04em] text-[var(--text-strong)]">{title}</h1>
-          {subtitle ? <p className="mt-3 max-w-3xl text-[15px] leading-7 text-[var(--text-muted)]">{subtitle}</p> : null}
+          {subtitle ? <p className="mt-3 max-w-3xl text-sm leading-7 text-[var(--text-muted)]">{subtitle}</p> : null}
         </div>
         <div className="flex flex-col gap-3 md:flex-row md:items-center">
           {showSearch ? (

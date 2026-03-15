@@ -102,7 +102,7 @@ export default function PharmacyProcurement({ tenant }) {
                                     {importing ? 'Processing Protocol...' : 'Upload Stock Manifest'}
                                 </button>
                             </div>
-                            <p className="text-[10px] text-slate-500 font-bold text-center uppercase tracking-widest">Accepted format: CSV (genericName, batchNumber, expiryDate, quantity)</p>
+                            <p className="text-xs text-slate-500 font-bold text-center uppercase tracking-widest">Accepted format: CSV (genericName, batchNumber, expiryDate, quantity)</p>
                         </div>
                     </div>
                 </article>
@@ -116,7 +116,7 @@ export default function PharmacyProcurement({ tenant }) {
                     <div className="grid grid-cols-2 gap-4">
                         {['pending', 'approved', 'received', 'cancelled'].map(s => (
                             <div key={s} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 hover:border-blue-200 transition-all group">
-                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-blue-600 transition-colors">{s}</div>
+                                <div className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-blue-600 transition-colors">{s}</div>
                                 <div className="text-3xl font-bold text-slate-900 tracking-tighter">
                                     {purchaseOrders.filter(p => p.status === s).length}
                                 </div>
@@ -136,24 +136,24 @@ export default function PharmacyProcurement({ tenant }) {
                             </div>
                             <div>
                                 <h3 className="font-bold text-slate-900">Manifest Summary</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Post-Import Validation</p>
+                                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Post-Import Validation</p>
                             </div>
                         </div>
                         <button onClick={() => setImportResults(null)} className="px-3 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-xs font-bold text-slate-500 uppercase tracking-tight transition-all">Dismiss</button>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                         <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                            <div className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Success</div>
+                            <div className="text-xs font-black text-emerald-600 uppercase tracking-widest mb-1">Success</div>
                             <div className="text-2xl font-bold text-emerald-700">{importResults.imported}</div>
                         </div>
                         <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
-                            <div className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-1">Skipped</div>
+                            <div className="text-xs font-black text-amber-600 uppercase tracking-widest mb-1">Skipped</div>
                             <div className="text-2xl font-bold text-amber-700">{importResults.skipped}</div>
                         </div>
                     </div>
                     {importResults.errors?.length > 0 && (
                         <div className="space-y-3">
-                            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
                                 Clinical Anomaly Logs
                             </h4>
@@ -161,7 +161,7 @@ export default function PharmacyProcurement({ tenant }) {
                                 {importResults.errors.map((e, i) => (
                                     <div key={i} className="text-xs p-3 bg-red-50/50 text-red-600 rounded-xl border border-red-100 flex justify-between items-center">
                                         <span className="font-semibold">{e.item}</span>
-                                        <span className="font-bold uppercase tracking-tighter text-[9px] px-1.5 py-0.5 bg-white rounded border border-red-100">{e.error}</span>
+                                        <span className="font-bold uppercase tracking-tighter text-xs px-1.5 py-0.5 bg-white rounded border border-red-100">{e.error}</span>
                                     </div>
                                 ))}
                             </div>
@@ -175,7 +175,7 @@ export default function PharmacyProcurement({ tenant }) {
                 <div className="px-8 py-6 border-b border-slate-100 bg-white flex justify-between items-center">
                     <div>
                         <h3 className="text-lg font-bold text-slate-900 tracking-tight">Procurement Pipeline</h3>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">Active Purchase Directives</p>
+                        <p className="text-xs text-slate-400 font-black uppercase tracking-[0.2em] mt-1">Active Purchase Directives</p>
                     </div>
                     <button onClick={loadPurchaseOrders} className="p-2 hover:bg-slate-50 rounded-lg text-blue-600 transition-all active:rotate-180 duration-500">
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
@@ -215,7 +215,7 @@ export default function PharmacyProcurement({ tenant }) {
                                             {po.total_amount ? `$${parseFloat(po.total_amount).toFixed(2)}` : '—'}
                                         </td>
                                         <td className="px-4 py-3 text-center">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${getStatusBadge(po.status)}`}>
+                                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${getStatusBadge(po.status)}`}>
                                                 {po.status}
                                             </span>
                                         </td>
