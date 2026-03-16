@@ -1,20 +1,26 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import PatientSearch from '../components/PatientSearch.jsx';
 import { currency, patientName } from '../utils/format.js';
+import { api } from '../api.js';
 import '../styles/critical-care.css';
 import { 
   Receipt, 
   Wallet, 
   Plus, 
   Search, 
-  Printer, 
   CheckCircle2, 
   AlertCircle,
   TrendingUp,
   Activity,
   CreditCard,
   Building,
-  ArrowRight
+  ArrowRight,
+  ShieldCheck,
+  History,
+  Scale,
+  Printer,
+  ExternalLink,
+  ChevronRight
 } from 'lucide-react';
 
 function printInvoice(invoice, patients, tenant) {
@@ -82,14 +88,12 @@ function printInvoice(invoice, patients, tenant) {
         <tbody>
           <tr>
             <td>${invoice.description || 'Institutional Consultation & Facility Services'}</td>
-            <td class="amount-col">${currency(invoice.subtotal)}</td>
+            <td class="amount-col">${currency(invoice.total)}</td>
           </tr>
         </tbody>
       </table>
 
       <div class="totals">
-        <div class="total-row"><span>Base Clinical Shard</span><span>${currency(invoice.subtotal)}</span></div>
-        <div class="total-row"><span>Institutional Tax (5.0%)</span><span>${currency(invoice.tax)}</span></div>
         <div class="total-row grand-total"><span>Total Finalized</span><span>${currency(invoice.total)}</span></div>
         ${invoice.status === 'paid' ? '<div style="margin-top: 20px; padding: 12px 28px; background: #F3F4F6; border: 2px solid #10B981; border-radius: 12px; color: #10B981; font-weight: 900; text-transform: uppercase; font-size: 14px; letter-spacing: 0.15em;">✓ PROTOCOL SETTLED</div>' : ''}
       </div>
@@ -104,25 +108,64 @@ function printInvoice(invoice, patients, tenant) {
   w.document.close();
 }
 
-export default function BillingPage({ tenant, patients,
-  invoices,
+export default function BillingPage({ 
+  tenant, 
+  patients = [],
+  invoices = [],
   setView,
   setActivePatientId,
   onIssueInvoice,
-  onMarkPaid }) {
+  onMarkPaid 
+}) {
   const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'settlement'
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showPaymentLink, setShowPaymentLink] = useState(null);
+
+  const handleSecurePayment = async (invoice) => {
+    setIsProcessing(true);
+    try {
+      // Insurance Calculation Shard (80% Coverage)
+      const insuranceCoverage = invoice.total * 0.8;
+      const patientLiability = invoice.total - insuranceCoverage;
+
+      // Simulate external payment gateway handshake
+      const gatewayRes = await api.simulatePaymentGateway(patientLiability, 'INR');
+      
+      if (gatewayRes.success) {
+        setShowPaymentLink({ ...invoice, insuranceCoverage, patientLiability, txnId: gatewayRes.transactionId });
+      }
+    } catch (err) {
+      alert('Payment Gateway Unreachable: ' + err.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const finalizePayment = async () => {
+    await onMarkPaid(showPaymentLink.id, 'PayLink-Gateway');
+    setShowPaymentLink(null);
+  };
+
+  if (!tenant) {
+    return (
+      <div className="flex items-center justify-center p-20 text-slate-400 font-black uppercase tracking-[0.2em]">
+        <div className="animate-pulse">Initializing Revenue Node...</div>
+      </div>
+    );
+  }
 
   const sortedInvoices = [...invoices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const stats = {
-    revenue: invoices.filter(i => i.status === 'paid').reduce((acc, curr) => acc + curr.total, 0),
-    outstanding: invoices.filter(i => i.status !== 'paid').reduce((acc, curr) => acc + curr.total, 0),
+    revenue: invoices.filter(i => i.status === 'paid').reduce((acc, curr) => acc + (Number(curr.total) || 0), 0),
+    outstanding: invoices.filter(i => i.status !== 'paid').reduce((acc, curr) => acc + (Number(curr.total) || 0), 0),
     pendingClearance: 3
   };
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      <div className="page-header-premium mb-8">
+      {/* 1. TRANSACTIONAL HEADER */}
+      <div className="page-header-premium mb-10">
         <div>
           <h1 className="flex items-center gap-3">
              Financial Governance Ledger
@@ -130,63 +173,65 @@ export default function BillingPage({ tenant, patients,
           </h1>
           <p className="dim-label">Institutional fiscal reconciliation and longitudinal settlement tracking</p>
         </div>
-        <div className="flex bg-white/50 backdrop-blur-sm p-1 rounded-2xl border border-slate-200 shadow-sm gap-1">
-          <button 
-            className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === 'list' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setActiveView('list')}
-          >
-            Ledger
-          </button>
-          <button 
-            className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === 'create' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setActiveView('create')}
-          >
-            New Statement
-          </button>
-          <button 
-            className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === 'settlement' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setActiveView('settlement')}
-          >
-            Bed Settlement
-          </button>
+        <div className="flex bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-slate-200 shadow-sm gap-1">
+          {[
+            { id: 'list', label: 'Ledger', icon: History },
+            { id: 'create', label: 'New Statement', icon: Plus },
+            { id: 'settlement', label: 'Bed Settlement', icon: Scale }
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+              onClick={() => setActiveView(tab.id)}
+            >
+              <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* 2. REVENUE VITALS */}
       <section className="vitals-monitor mb-10">
-        <div className="vital-node vital-node--safe shadow-sm">
+        <div className="vital-node vital-node--safe shadow-sm group hover:scale-[1.02] transition-transform">
            <div className="flex justify-between items-start">
               <span className="vital-label">Realized Revenue</span>
               <TrendingUp className="w-4 h-4 text-emerald-500 opacity-50" />
            </div>
-           <span className="vital-value tabular-nums mt-1 text-2xl">{currency(stats.revenue)}</span>
-           <p className="text-[10px] font-black text-emerald-600 mt-2 uppercase tracking-widest">Fiscal Cycle Influx</p>
+           <span className="vital-value tabular-nums mt-1">{currency(stats.revenue)}</span>
+           <p className="text-[10px] font-black text-emerald-600 mt-2 uppercase tracking-widest flex items-center gap-1">Valid for current cycle</p>
         </div>
 
-        <div className="vital-node vital-node--warning shadow-sm">
+        <div className="vital-node vital-node--warning shadow-sm group hover:scale-[1.02] transition-transform">
            <div className="flex justify-between items-start">
               <span className="vital-label">Accounts Receivable</span>
               <CreditCard className="w-4 h-4 text-amber-500 opacity-50" />
            </div>
-           <span className="vital-value tabular-nums mt-1 text-2xl">{currency(stats.outstanding)}</span>
-           <p className="text-[10px] font-black text-amber-600 mt-2 uppercase tracking-widest">Outstanding Shards</p>
+           <span className="vital-value tabular-nums mt-1">{currency(stats.outstanding)}</span>
+           <p className="text-[10px] font-black text-amber-600 mt-2 uppercase tracking-widest flex items-center gap-1">Outstanding Shards</p>
         </div>
 
-        <div className="vital-node vital-node--critical shadow-sm">
+        <div className="vital-node vital-node--critical shadow-sm group hover:scale-[1.02] transition-transform">
            <div className="flex justify-between items-start">
               <span className="vital-label">Awaiting Clearance</span>
               <Building className="w-4 h-4 text-rose-500 opacity-50" />
            </div>
-           <span className="vital-value tabular-nums mt-1 text-2xl">0{stats.pendingClearance}</span>
-           <p className="text-[10px] font-black text-rose-600 mt-2 uppercase tracking-widest">Blocked discharge nodes</p>
+           <span className="vital-value tabular-nums mt-1">0{stats.pendingClearance}</span>
+           <p className="text-[10px] font-black text-rose-600 mt-2 uppercase tracking-widest flex items-center gap-1">Inpatient Discharge Bloq</p>
         </div>
       </section>
 
+      {/* 3. WORKSPACE GRID */}
       <div className="grid grid-cols-12 gap-8">
         {activeView === 'create' && (
           <article className="col-span-12 lg:col-span-8 lg:col-start-3 clinical-card p-12 transition-all">
-            <header className="mb-12">
-               <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Authorized Statement Generation</h3>
-               <p className="dim-label uppercase tracking-widest text-[10px] mt-2 font-black">Fiscal provisioning protocol • Institutional Node</p>
+            <header className="mb-12 border-b border-slate-50 pb-8 flex justify-between items-end">
+               <div>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Authorized Statement Generation</h3>
+                  <p className="dim-label uppercase tracking-widest text-[10px] mt-2 font-black">Fiscal provisioning protocol • Institutional Node</p>
+               </div>
+               <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center">
+                  <Receipt className="w-6 h-6" />
+               </div>
             </header>
 
             <form className="space-y-12" onSubmit={(e) => {
@@ -195,33 +240,39 @@ export default function BillingPage({ tenant, patients,
             }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div className="space-y-4">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-50 pb-4">Recipient Identity Shard</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 mb-6">Recipient Identity Shard</h4>
                   <div className="p-1 bg-slate-50 border border-slate-100 rounded-2xl">
                      <PatientSearch tenantId={tenant.id} />
+                  </div>
+                  <div className="p-6 bg-emerald-50/30 rounded-2xl border border-emerald-100 flex items-start gap-4">
+                    <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <p className="text-[11px] font-medium text-emerald-900/60 leading-relaxed italic">
+                      Verify MRN identity before authorization of fiscal instruments.
+                    </p>
                   </div>
                 </div>
 
                 <div className="space-y-8">
-                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 border-b border-slate-50 pb-4">Fiscal Configuration</h4>
+                  <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 border-b border-slate-50 pb-4">Fiscal Configuration</h4>
                   
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Clinical Service Narrative</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Clinical Service Narrative</label>
                     <input name="description" className="input-field py-5 bg-slate-50 border-none rounded-2xl font-medium" placeholder="e.g. Specialty Consult + Diagnostic Protocol" required />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Base Node Fee (₹)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Base Node Fee (₹)</label>
                       <input name="amount" type="number" step="0.01" className="input-field py-5 bg-slate-50 border-none rounded-2xl font-black tabular-nums text-lg" placeholder="0.00" required />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Institutional Tax (%)</label>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Institutional Tax (%)</label>
                       <input name="taxPercent" type="number" step="0.1" className="input-field py-5 bg-slate-50 border-none rounded-2xl font-black tabular-nums text-lg" defaultValue="5" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Settlement Protocol</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Settlement Protocol</label>
                     <select name="paymentMethod" className="input-field h-[64px] bg-slate-50 border-none rounded-2xl font-black text-slate-800" defaultValue="Card">
                       <option>Cash</option>
                       <option>Card</option>
@@ -266,15 +317,15 @@ export default function BillingPage({ tenant, patients,
                   <div className="p-5 bg-slate-50 rounded-2xl mb-8 space-y-3">
                      <div className="flex justify-between text-[11px] font-black text-slate-400 uppercase tracking-tighter">
                         <span>Bed Node Duration</span>
-                        <span className="text-slate-900 tabular-nums">₹{currency(12500)}</span>
+                        <span className="text-slate-900 tabular-nums">{currency(12500)}</span>
                      </div>
                      <div className="flex justify-between text-[11px] font-black text-slate-400 uppercase tracking-tighter">
                         <span>Therapeutic Influx</span>
-                        <span className="text-slate-900 tabular-nums">₹{currency(4200)}</span>
+                        <span className="text-slate-900 tabular-nums">{currency(4200)}</span>
                      </div>
                      <div className="pt-3 border-t border-slate-200 flex justify-between text-[13px] font-black text-emerald-600 uppercase tracking-widest">
                         <span>AGGREGATE DUE</span>
-                        <span className="tabular-nums">₹{currency(16700)}</span>
+                        <span className="tabular-nums">{currency(16700)}</span>
                      </div>
                   </div>
 
@@ -284,6 +335,12 @@ export default function BillingPage({ tenant, patients,
                 </div>
               ))}
             </div>
+            {!patients.length && (
+              <div className="py-20 text-center flex flex-col items-center">
+                 <Building className="w-12 h-12 text-slate-100 mb-4" />
+                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No active bed shards requiring reconciliation.</p>
+              </div>
+            )}
           </article>
         )}
 
@@ -300,8 +357,8 @@ export default function BillingPage({ tenant, patients,
             </header>
 
             <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-4">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Verify clinical eligibility before finalizing fiscal shards. All settlements are non-reversible.</span>
+               <ShieldCheck className="w-4 h-4 text-emerald-500" />
+               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Verify clinical eligibility before finalizing fiscal shards. All settlements are non-reversible.</span>
             </div>
 
             <div className="premium-table-container">
@@ -343,8 +400,12 @@ export default function BillingPage({ tenant, patients,
                       <td className="text-right">
                         <div className="flex justify-end gap-3">
                           {i.status !== 'paid' && (
-                            <button className="clinical-btn bg-slate-900 text-white px-5 !min-h-[40px] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg border-none" onClick={() => onMarkPaid(i.id)}>
-                              Settle
+                            <button 
+                              className={`clinical-btn bg-slate-900 text-white px-5 !min-h-[40px] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg border-none transition-all ${isProcessing ? 'opacity-50' : 'hover:bg-emerald-600'}`} 
+                              disabled={isProcessing}
+                              onClick={() => handleSecurePayment(i)}
+                            >
+                              {isProcessing ? 'Handshake...' : 'PayLink'}
                             </button>
                           )}
                           <button 
@@ -364,6 +425,58 @@ export default function BillingPage({ tenant, patients,
           </article>
         )}
       </div>
+
+      {/* 4. PAYMENT GATEWAY MODAL */}
+      {showPaymentLink && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-fade-in" onClick={() => setShowPaymentLink(null)}>
+           <div className="relative clinical-card w-full max-w-lg p-0 overflow-hidden shadow-2xl animate-scale-up border-none" onClick={e => e.stopPropagation()}>
+              <div className="h-2 bg-emerald-500 w-full" />
+              <div className="p-10">
+                 <header className="flex justify-between items-start mb-10">
+                    <div>
+                       <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                          <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Financial Checkout</h3>
+                       </div>
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Trace ID: {showPaymentLink.txnId}</p>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center">
+                       <CreditCard className="w-6 h-6 text-slate-400" />
+                    </div>
+                 </header>
+
+                 <div className="space-y-6">
+                    <div className="p-6 bg-slate-50 rounded-2xl space-y-4">
+                       <div className="flex justify-between items-center text-xs">
+                          <span className="font-bold text-slate-400 uppercase">Gross Billing</span>
+                          <span className="font-black text-slate-900">{currency(showPaymentLink.total)}</span>
+                       </div>
+                       <div className="flex justify-between items-center text-xs pb-4 border-b border-slate-200">
+                          <span className="font-bold text-emerald-600 uppercase italic">Insurance Shard (80%)</span>
+                          <span className="font-black text-emerald-600">-{currency(showPaymentLink.insuranceCoverage)}</span>
+                       </div>
+                       <div className="flex justify-between items-center pt-2">
+                          <span className="text-sm font-black text-slate-900 uppercase">Subject Liability</span>
+                          <span className="text-2xl font-black text-indigo-600">{currency(showPaymentLink.patientLiability)}</span>
+                       </div>
+                    </div>
+
+                    <div className="p-4 bg-indigo-50 rounded-xl flex items-center gap-3 border border-indigo-100">
+                       <ShieldCheck className="w-4 h-4 text-indigo-500" />
+                       <span className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Secured by Institutional PayLink Node v4.2</span>
+                    </div>
+                 </div>
+
+                 <div className="mt-10 flex gap-4">
+                    <button onClick={finalizePayment} className="clinical-btn bg-slate-900 text-white flex-1 py-5 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-2xl transition-all hover:bg-emerald-600 border-none">
+                       Commit Settlement Shard
+                    </button>
+                    <button onClick={() => setShowPaymentLink(null)} className="clinical-btn bg-white border border-slate-200 text-slate-400 px-6 rounded-2xl text-xs font-black uppercase">Cancel</button>
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }

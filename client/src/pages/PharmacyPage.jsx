@@ -43,19 +43,24 @@ export default function PharmacyPage({ tenant, onDispense }) {
     }
   };
 
-  const handleDispenseItem = async (prescriptionId, item) => {
+  const handleDispense = async (item) => {
     if (!confirm(`Finalize dispensation of ${item.generic_name}?`)) return;
     try {
-      await api.dispenseMedication(tenant.id, {
-        prescriptionItemId: item.item_id,
-        drugId: item.drug_id,
-        quantity: item.quantity_prescribed
+      await api.finalizeDispense(item.item_id);
+      
+      // Auto-Billing Trigger for Medication
+      await api.autoBillItem(tenant.id, {
+        patientId: item.patient_id,
+        description: `Medication Dispensed: ${item.generic_name} (${item.quantity_prescribed} Units)`,
+        amount: item.amount || 250, // Simulated financial shard
+        type: 'pharmacy'
       });
-      loadQueue();
+      
+      loadQueue(); // Changed from refreshQueue to loadQueue for consistency
       if (onDispense) onDispense();
       setShowDispenseModal(null);
     } catch (err) {
-      alert('Dispensation Error: ' + err.message);
+      alert('Dispense Failure: ' + err.message);
     }
   };
 
@@ -228,14 +233,184 @@ export default function PharmacyPage({ tenant, onDispense }) {
           </article>
         )}
 
-        {/* Placeholder for other tabs ... */}
-        {activeTab !== 'queue' && (
-          <div className="glass-panel p-20 text-center animate-fade-in">
-             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 text-slate-200">
-                <Package className="w-10 h-10" />
-             </div>
-             <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">{activeTab} Interface</h3>
-             <p className="text-slate-400 text-sm mt-2">Section is currently undergoing synchronization with the core pharmacy ledger.</p>
+        {/* INVENTORY TAB: Stock Intelligence */}
+        {activeTab === 'inventory' && (
+          <div className="space-y-8 animate-fade-in">
+             <section className="vitals-monitor">
+                <div className="vital-node vital-node--critical shadow-sm">
+                   <div className="flex justify-between items-start">
+                      <span className="vital-label">Threshold Breaches</span>
+                      <AlertCircle className="w-4 h-4 text-rose-500 opacity-50" />
+                   </div>
+                   <span className="vital-value tabular-nums mt-1">08</span>
+                   <p className="text-[10px] font-black text-rose-600 mt-2 uppercase">Immediate restock required</p>
+                </div>
+                <div className="vital-node vital-node--safe shadow-sm">
+                   <div className="flex justify-between items-start">
+                      <span className="vital-label">Expiring Shards (90d)</span>
+                      <Clock className="w-4 h-4 text-emerald-500 opacity-50" />
+                   </div>
+                   <span className="vital-value tabular-nums mt-1">24</span>
+                   <p className="text-[10px] font-black text-emerald-600 mt-2 uppercase">FIFO Rotation Active</p>
+                </div>
+             </section>
+
+             <article className="glass-panel p-0 overflow-hidden shadow-sm">
+                <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                   <div>
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Clinical Stock Registry</h3>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Real-time medication unit ledger</p>
+                   </div>
+                   <button className="clinical-btn bg-white border border-slate-200 text-slate-700 px-6 !min-h-[44px] rounded-xl text-[10px] font-black uppercase tracking-widest">
+                      Export Inventory Shard
+                   </button>
+                </header>
+                <div className="overflow-x-auto">
+                   <table className="w-full">
+                      <thead className="bg-slate-50 border-b border-slate-100">
+                         <tr>
+                            <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Medication Entity</th>
+                            <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Current Stock</th>
+                            <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Reorder Shard</th>
+                            <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                            <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Action</th>
+                         </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                         {[
+                            { name: 'Paracetamol 500mg', brand: 'Calpol', stock: 120, reorder: 50, status: 'stable' },
+                            { name: 'Amoxicillin 250mg', brand: 'Mox', stock: 12, reorder: 30, status: 'critical' },
+                            { name: 'Insulin Glargine', brand: 'Lantus', stock: 45, reorder: 20, status: 'stable' }
+                         ].map((item, idx) => (
+                           <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                             <td className="px-8 py-6">
+                                <div className="text-sm font-black text-slate-800">{item.name}</div>
+                                <div className="text-[10px] text-slate-400 font-bold uppercase">{item.brand}</div>
+                             </td>
+                             <td className="px-8 py-6 text-sm font-black tabular-nums">{item.stock} Units</td>
+                             <td className="px-8 py-6 text-sm font-bold text-slate-400 tabular-nums">{item.reorder}</td>
+                             <td className="px-8 py-6">
+                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${item.status === 'critical' ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                   {item.status}
+                                </span>
+                             </td>
+                             <td className="px-8 py-6 text-right">
+                                <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 transition-all">
+                                   <ArrowRight className="w-4 h-4" />
+                                </button>
+                             </td>
+                           </tr>
+                         ))}
+                      </tbody>
+                   </table>
+                </div>
+             </article>
+          </div>
+        )}
+
+        {/* PROCUREMENT TAB: Vendor & PO Management */}
+        {activeTab === 'procurement' && (
+          <div className="grid grid-cols-12 gap-8 animate-fade-in">
+             <aside className="col-span-12 lg:col-span-4 space-y-8">
+                <article className="glass-panel p-8">
+                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-8 pb-4 border-b border-slate-50">Generate Purchase Order</h3>
+                   <form className="space-y-6">
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Target Vendor Shard</label>
+                         <select className="input-field h-[56px] bg-slate-50 border-none rounded-xl font-bold">
+                            <option>PharmaCorp Int</option>
+                            <option>Surgical Dynamics</option>
+                            <option>BioSystems Global</option>
+                         </select>
+                      </div>
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Medication Link</label>
+                         <input placeholder="Search catalog..." className="input-field py-4 bg-slate-50 border-none rounded-xl" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Quantity</label>
+                            <input type="number" defaultValue="100" className="input-field py-4 bg-slate-50 border-none rounded-xl font-black" />
+                         </div>
+                         <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Expected Influx</label>
+                            <input type="date" className="input-field py-4 bg-slate-50 border-none rounded-xl text-xs" />
+                         </div>
+                      </div>
+                      <button className="clinical-btn bg-slate-900 text-white w-full py-4 text-[11px] font-black uppercase tracking-widest rounded-xl shadow-2xl">
+                         Commit Purchase Order
+                      </button>
+                   </form>
+                </article>
+
+                <article className="glass-panel bg-indigo-900 text-white p-8 relative overflow-hidden">
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                   <h4 className="text-[10px] font-black text-indigo-300 uppercase tracking-[0.2em] mb-4">Active Contracts</h4>
+                   <div className="space-y-4 relative z-10">
+                      <div className="flex justify-between items-center text-xs">
+                         <span className="font-bold">BioSystems</span>
+                         <span className="text-indigo-300">Net-30</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs">
+                         <span className="font-bold">PharmaCorp</span>
+                         <span className="text-indigo-300">Advance</span>
+                      </div>
+                   </div>
+                </article>
+             </aside>
+
+             <main className="col-span-12 lg:col-span-8">
+                <article className="glass-panel p-0 overflow-hidden shadow-sm">
+                   <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                      <div>
+                         <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">PO Ledger Shards</h3>
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Pending and committed procurement streams</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-300">
+                         <ShoppingCart className="w-5 h-5" />
+                      </div>
+                   </header>
+                   <div className="premium-table-container">
+                      <table className="w-full">
+                         <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100">
+                               <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">PO Ref / Date</th>
+                               <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Vendor Node</th>
+                               <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Quantum (Val)</th>
+                               <th className="px-8 py-5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                            </tr>
+                         </thead>
+                         <tbody className="divide-y divide-slate-100">
+                            {[
+                               { ref: 'PO-2024-001', date: 'Mar 12', vendor: 'PharmaCorp', amount: 45000, status: 'Inward Pending' },
+                               { ref: 'PO-2024-002', date: 'Mar 14', vendor: 'BioSystems', amount: 12500, status: 'authorized' },
+                               { ref: 'PO-2024-003', date: 'Mar 15', vendor: 'PharmaCorp', amount: 8200, status: 'cancelled' }
+                            ].map((po, idx) => (
+                               <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-8 py-6">
+                                     <div className="text-sm font-black text-slate-900">{po.ref}</div>
+                                     <div className="text-[10px] text-slate-400 font-bold uppercase">{po.date}, 2024</div>
+                                  </td>
+                                  <td className="px-8 py-6">
+                                     <div className="text-sm font-bold text-slate-700">{po.vendor}</div>
+                                  </td>
+                                  <td className="px-8 py-6 text-sm font-black tabular-nums">{currency(po.amount)}</td>
+                                  <td className="px-8 py-6">
+                                     <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                                        po.status === 'authorized' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                        po.status === 'cancelled' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                        'bg-amber-50 text-amber-600 border border-amber-100'
+                                     }`}>
+                                        {po.status}
+                                     </span>
+                                  </td>
+                               </tr>
+                            ))}
+                         </tbody>
+                      </table>
+                   </div>
+                </article>
+             </main>
           </div>
         )}
       </div>

@@ -1645,6 +1645,52 @@ app.patch('/api/support/tickets/:id/status', requireTenant, async (req, res) => 
 });
 
 // =====================================================
+// INFRASTRUCTURE (Wards & Beds)
+// =====================================================
+
+app.get('/api/infrastructure/wards', requireTenant, async (req, res) => {
+  try {
+    const wards = await repo.getWards(req.tenantId);
+    res.json(wards);
+  } catch (error) {
+    console.error('Error fetching wards:', error);
+    res.status(500).json({ error: 'Failed to fetch wards' });
+  }
+});
+
+app.post('/api/infrastructure/wards', requireTenant, async (req, res) => {
+  try {
+    const ward = await repo.createWard({ ...req.body, tenantId: req.tenantId });
+    res.status(201).json(ward);
+  } catch (error) {
+    console.error('Error creating ward:', error);
+    res.status(500).json({ error: 'Failed to create ward' });
+  }
+});
+
+app.get('/api/infrastructure/beds', requireTenant, async (req, res) => {
+  try {
+    const { wardId } = req.query;
+    if (!wardId) return res.status(400).json({ error: 'wardId is required' });
+    const beds = await repo.getBeds(wardId);
+    res.json(beds);
+  } catch (error) {
+    console.error('Error fetching beds:', error);
+    res.status(500).json({ error: 'Failed to fetch beds' });
+  }
+});
+
+app.post('/api/infrastructure/beds', requireTenant, async (req, res) => {
+  try {
+    const bed = await repo.createBed({ ...req.body, tenant_id: req.tenantId });
+    res.status(201).json(bed);
+  } catch (error) {
+    console.error('Error creating bed:', error);
+    res.status(500).json({ error: 'Failed to create bed' });
+  }
+});
+
+// =====================================================
 // INPATIENT → BILLING BRIDGE
 // =====================================================
 

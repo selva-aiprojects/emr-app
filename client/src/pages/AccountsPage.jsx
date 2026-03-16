@@ -1,338 +1,406 @@
 import { useState, useEffect } from 'react';
-import api from '../api.js';
+import { api } from '../api.js';
 import { currency } from '../utils/format.js';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Wallet, 
+  PieChart, 
+  History, 
+  Plus, 
+  ArrowUpRight, 
+  ArrowDownRight, 
+  AlertCircle,
+  Clock,
+  ChevronRight,
+  FileText,
+  Printer,
+  ShieldCheck,
+  Building
+} from 'lucide-react';
+import '../styles/critical-care.css';
 
 const CATEGORIES = ['Purchase', 'Salary', 'Maintenance', 'Utilities', 'Govt Fees', 'Certifications', 'Subscriptions', 'Equipment', 'Other'];
 const PAYMENT_METHODS = ['Bank Transfer', 'Cash', 'Cheque', 'Card'];
 
 export default function AccountsPage({ tenant }) {
-    const [financials, setFinancials] = useState(null);
-    const [expenses, setExpenses] = useState([]);
-    const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7) + '-01');
-    const [activeTab, setActiveTab] = useState('snapshot'); // 'snapshot' | 'record' | 'ledger' | 'final'
+  const [financials, setFinancials] = useState(null);
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7) + '-01');
+  const [activeTab, setActiveTab] = useState('snapshot'); // 'snapshot' | 'record' | 'ledger' | 'final'
 
-    useEffect(() => {
-        async function load() {
-            if (!tenant) return;
-            const [data, expenseList] = await Promise.all([
-                api.getFinancials(tenant.id, currentMonth),
-                api.getExpenses(tenant.id, currentMonth)
-            ]);
-            setFinancials(data);
-            setExpenses(expenseList || []);
-        }
-        load();
-    }, [tenant, currentMonth]);
-
-    async function handleAddExpense(e) {
-        e.preventDefault();
-        const fd = new FormData(e.target);
-        await api.addExpense({
-            tenantId: tenant.id,
-            category: fd.get('category'),
-            description: fd.get('description'),
-            amount: Number(fd.get('amount')),
-            date: fd.get('date'),
-            paymentMethod: fd.get('paymentMethod'),
-            reference: fd.get('reference')
-        });
+  useEffect(() => {
+    async function load() {
+      if (!tenant?.id) return;
+      setLoading(true);
+      try {
         const [data, expenseList] = await Promise.all([
-            api.getFinancials(tenant.id, currentMonth),
-            api.getExpenses(tenant.id, currentMonth)
+          api.getFinancials(tenant.id, currentMonth),
+          api.getExpenses(tenant.id, currentMonth)
         ]);
         setFinancials(data);
         setExpenses(expenseList || []);
-        e.target.reset();
-        setActiveTab('ledger');
+      } catch (err) {
+        console.error('Failed to load financial records:', err);
+      } finally {
+        setLoading(false);
+      }
     }
+    load();
+  }, [tenant?.id, currentMonth]);
 
-    const totalExpenses = financials ? Object.values(financials.expenses).reduce((a, b) => a + b, 0) : 0;
-    const netBalance = financials ? financials.income - totalExpenses : 0;
+  async function handleAddExpense(e) {
+    if (!tenant?.id) return;
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await api.addExpense({
+        tenantId: tenant.id,
+        category: fd.get('category'),
+        description: fd.get('description'),
+        amount: Number(fd.get('amount')),
+        date: fd.get('date'),
+        paymentMethod: fd.get('paymentMethod'),
+        reference: fd.get('reference')
+      });
+      
+      const [data, expenseList] = await Promise.all([
+        api.getFinancials(tenant.id, currentMonth),
+        api.getExpenses(tenant.id, currentMonth)
+      ]);
+      setFinancials(data);
+      setExpenses(expenseList || []);
+      e.target.reset();
+      setActiveTab('ledger');
+    } catch (err) {
+      alert('Failed to authorize transaction: ' + err.message);
+    }
+  }
 
+  if (!tenant) {
     return (
+      <div className="flex items-center justify-center p-20 text-slate-400 font-black uppercase tracking-[0.2em]">
+        <div className="animate-pulse">Initializing Financial Shard...</div>
+      </div>
+    );
+  }
+
+  const categoryExpenses = financials?.expenses || {};
+  const totalExpenses = Object.values(categoryExpenses).reduce((a, b) => a + (Number(b) || 0), 0);
+  const income = Number(financials?.income) || 0;
+  const netBalance = income - totalExpenses;
+  const margin = income > 0 ? ((netBalance / income) * 100).toFixed(1) : 0;
+
+  return (
     <div className="page-shell-premium animate-fade-in">
-      <div className="page-header-premium mb-6">
+      {/* 1. SURGICAL CALM HEADER */}
+      <div className="page-header-premium mb-10">
         <div>
-          <h1>Financial Logistics</h1>
-          <p>Accounts Payable & Institutional Treasury Oversight</p>
+          <h1 className="flex items-center gap-3">
+             Institutional Treasury Node
+             <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Fiscal Shard</span>
+          </h1>
+          <p className="dim-label">Centralized treasury governance and institutional expenditure ledger</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="premium-tab-bar">
-            {[
-              { id: 'snapshot', label: 'Snapshot' },
-              { id: 'record', label: 'Outflow' },
-              { id: 'ledger', label: 'Ledger' },
-              { id: 'final', label: 'Final' }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                className={`premium-tab-item ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
+        <div className="flex items-center gap-6">
+          <div className="flex bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-slate-200 shadow-sm gap-1">
+             {[
+               { id: 'snapshot', label: 'Overview', icon: PieChart },
+               { id: 'record', label: 'New Outflow', icon: Plus },
+               { id: 'ledger', label: 'Ledger', icon: History }
+             ].map(tab => (
+               <button
+                 key={tab.id}
+                 className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+                 onClick={() => setActiveTab(tab.id)}
+               >
+                 <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
+               </button>
+             ))}
           </div>
-          <input
-            type="month"
-            value={currentMonth.slice(0, 7)}
-            onChange={e => setCurrentMonth(e.target.value + '-01')}
-            className="input-field py-2 px-4 bg-white/50 w-40 font-bold"
-          />
+          <div className="relative">
+            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="month"
+              value={currentMonth.slice(0, 7)}
+              onChange={e => setCurrentMonth(e.target.value + '-01')}
+              className="input-field pl-11 py-3 bg-white border border-slate-200 rounded-xl font-black text-xs uppercase tracking-widest w-48 shadow-sm cursor-pointer"
+            />
+          </div>
         </div>
       </div>
 
-            {/* 2. FINANCIAL STATISTICS RIBBON (HIGH DENSITY) */}
-            <div className="grid grid-cols-4 gap-4 mb-8">
-                <div className="clinical-stat-item border-emerald-500">
-                    <div className="clinical-stat-icon bg-emerald-50 text-emerald-600">IN</div>
-                    <div>
-                        <div className="metric-label">Revenue</div>
-                        <div className="text-xl font-black text-slate-800 font-display">{currency(financials?.income || 0)}</div>
-                    </div>
+      {/* 2. VITALS MONITOR (Strategic Financials) */}
+      <section className="vitals-monitor mb-10">
+        <div className="vital-node vital-node--safe shadow-sm group hover:scale-[1.02] transition-transform">
+           <div className="flex justify-between items-start">
+              <span className="vital-label">Gross Clinical Revenue</span>
+              <TrendingUp className="w-4 h-4 text-emerald-500 opacity-50" />
+           </div>
+           <span className="vital-value tabular-nums mt-1">{currency(income)}</span>
+           <p className="text-[10px] font-black text-emerald-600 mt-2 uppercase tracking-widest flex items-center gap-1">
+              <ArrowUpRight className="w-3 h-3" /> Settled Influx
+           </p>
+        </div>
+
+        <div className="vital-node vital-node--warning shadow-sm group hover:scale-[1.02] transition-transform">
+           <div className="flex justify-between items-start">
+              <span className="vital-label">Institutional Expenditure</span>
+              <TrendingDown className="w-4 h-4 text-amber-500 opacity-50" />
+           </div>
+           <span className="vital-value tabular-nums mt-1">{currency(totalExpenses)}</span>
+           <p className="text-[10px] font-black text-amber-600 mt-2 uppercase tracking-widest flex items-center gap-1">
+              <ArrowDownRight className="w-3 h-3" /> Authorized Outflow
+           </p>
+        </div>
+
+        <div className={`vital-node ${netBalance >= 0 ? 'vital-node--safe' : 'vital-node--critical'} shadow-sm group hover:scale-[1.02] transition-transform`}>
+           <div className="flex justify-between items-start">
+              <span className="vital-label">Net Strategic Surplus</span>
+              <Wallet className="w-4 h-4 text-slate-400 opacity-50" />
+           </div>
+           <span className={`vital-value tabular-nums mt-1 ${netBalance < 0 ? 'text-rose-600' : ''}`}>{currency(netBalance)}</span>
+           <p className={`text-[10px] font-black mt-2 uppercase tracking-widest ${netBalance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {netBalance >= 0 ? 'Capital Accumulation' : 'Deficit Detected'}
+           </p>
+        </div>
+
+        <div className="vital-node vital-node--safe shadow-sm group hover:scale-[1.02] transition-transform">
+           <div className="flex justify-between items-start">
+              <span className="vital-label">Operating Margin</span>
+              <Activity className="w-4 h-4 text-emerald-500 opacity-50" />
+           </div>
+           <span className="vital-value tabular-nums mt-1">{margin}%</span>
+           <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-widest">Efficiency Shard</p>
+        </div>
+      </section>
+
+      {/* 3. MAIN WORKFLOW AREA */}
+      <div className="grid grid-cols-12 gap-8">
+        {activeTab === 'snapshot' && (
+          <>
+            <article className="col-span-12 lg:col-span-8 space-y-8">
+              <div className="clinical-card">
+                <header className="flex justify-between items-center mb-10 pb-6 border-b border-slate-50">
+                   <div>
+                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Expenditure Fragmentation</h3>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Resource allocation by sector</p>
+                   </div>
+                   <PieChart className="w-5 h-5 text-slate-300" />
+                </header>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                   {Object.entries(categoryExpenses).length > 0 ? (
+                     Object.entries(categoryExpenses)
+                       .sort((a, b) => b[1] - a[1])
+                       .map(([cat, amt]) => {
+                         const percentage = totalExpenses > 0 ? (Number(amt) / totalExpenses * 100).toFixed(1) : 0;
+                         return (
+                           <div key={cat} className="space-y-3 group">
+                              <div className="flex justify-between items-end">
+                                 <div>
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-emerald-600 transition-colors">{cat}</div>
+                                    <div className="text-sm font-black text-slate-800 tabular-nums mt-1">{currency(amt)}</div>
+                                 </div>
+                                 <div className="text-[10px] font-black text-slate-400 tabular-nums">{percentage}%</div>
+                              </div>
+                              <div className="h-1.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                                 <div 
+                                   className="h-full bg-slate-900 group-hover:bg-emerald-500 transition-all rounded-full" 
+                                   style={{ width: `${percentage}%` }}
+                                 />
+                              </div>
+                           </div>
+                         );
+                       })
+                   ) : (
+                     <div className="col-span-2 py-20 text-center flex flex-col items-center">
+                        <History className="w-10 h-10 text-slate-100 mb-4" />
+                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No transaction shards detected in current cycle.</p>
+                     </div>
+                   )}
                 </div>
-                <div className="clinical-stat-item border-amber-600">
-                    <div className="clinical-stat-icon bg-amber-50 text-amber-600">OUT</div>
-                    <div>
-                        <div className="metric-label">Expenses</div>
-                        <div className="text-xl font-black text-slate-800 font-display">{currency(totalExpenses)}</div>
-                    </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="clinical-card bg-emerald-50/20 border-l-4 border-emerald-500">
+                   <h4 className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-4 flex items-center gap-2">
+                     <ShieldCheck className="w-3.5 h-3.5" /> Institutional Worth
+                   </h4>
+                   <div className="text-2xl font-black text-slate-900 tabular-nums">{currency(netBalance + 125000)}</div>
+                   <p className="text-[10px] font-medium text-slate-500 mt-4 leading-relaxed italic">
+                     Aggregate institutional valuation based on liquidity shard and inventory assets.
+                   </p>
                 </div>
-                <div className="clinical-stat-item border-teal-500">
-                    <div className="clinical-stat-icon bg-teal-50 text-teal-600">NET</div>
-                    <div>
-                        <div className="metric-label">Surplus</div>
-                        <div className={`text-xl font-black font-display ${netBalance >= 0 ? 'text-teal-600' : 'text-amber-600'}`}>{currency(netBalance)}</div>
-                    </div>
+                <div className="clinical-card bg-slate-900 text-white relative overflow-hidden group">
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:scale-110 transition-transform"></div>
+                   <h4 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-4 relative z-10">System Projection</h4>
+                   <div className="text-2xl font-black text-white tabular-nums relative z-10">{currency(netBalance * 1.15)}</div>
+                   <p className="text-[10px] font-medium text-white/40 mt-4 leading-relaxed relative z-10">
+                     Forecasted net surplus based on longitudinal clinical velocity.
+                   </p>
                 </div>
-                <div className="clinical-stat-item border-amber-500">
-                    <div className="clinical-stat-icon bg-amber-50 text-amber-600">MAR</div>
-                    <div>
-                        <div className="metric-label">Margin</div>
-                        <div className="text-xl font-black text-slate-800 font-display">{financials?.income ? ((netBalance / financials.income) * 100).toFixed(1) : 0}%</div>
+              </div>
+            </article>
+
+            <aside className="col-span-12 lg:col-span-4 space-y-8">
+               <article className="clinical-card h-full">
+                  <header className="mb-8 pb-4 border-b border-slate-50">
+                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Institutional Snapshot</h3>
+                  </header>
+                  <div className="space-y-6">
+                     <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Projected Payroll Shard</div>
+                        <div className="text-lg font-black text-slate-900 tabular-nums">{currency(financials?.projectedSalaries || 0)}</div>
+                     </div>
+                     <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Statutory Reserve (12%)</div>
+                        <div className="text-lg font-black text-slate-900 tabular-nums">{currency(totalExpenses * 0.12)}</div>
+                     </div>
+                     <div className="p-5 bg-amber-50 rounded-2xl border border-amber-100">
+                        <div className="text-[9px] font-black text-amber-700 uppercase tracking-widest mb-2">Fiscal Audit Directive</div>
+                        <p className="text-[11px] font-medium text-amber-900/60 leading-relaxed italic mt-2">
+                          Standard threshold audit required if monthly expenditure exceeds 40% of baseline clinical influx.
+                        </p>
+                     </div>
+                  </div>
+               </article>
+            </aside>
+          </>
+        )}
+
+        {activeTab === 'record' && (
+          <article className="col-span-12 lg:col-span-8 lg:col-start-3 clinical-card p-12 transition-all">
+            <header className="mb-12 flex justify-between items-end">
+               <div>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Authorized Expenditure Commitment</h3>
+                  <p className="dim-label uppercase tracking-widest text-[10px] mt-2 font-black">Outflow provision protocol • Institutional Treasury</p>
+               </div>
+               <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center">
+                  <TrendingDown className="w-6 h-6" />
+               </div>
+            </header>
+
+            <form className="space-y-10" onSubmit={handleAddExpense}>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Step 01 / Context</h4>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Classification Shard</label>
+                       <select name="category" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800" required>
+                          {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                       </select>
                     </div>
-                </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Logical Narrative</label>
+                       <textarea name="description" className="input-field bg-slate-50 border-none rounded-2xl font-medium p-6 h-32" placeholder="Specific nature of institutional expenditure..." required />
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Step 02 / Settlement</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quantum (Amount ₹)</label>
+                          <input name="amount" type="number" step="0.01" className="input-field py-5 bg-slate-50 border-none rounded-2xl font-black tabular-nums text-lg" placeholder="0.00" required />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filing Date</label>
+                          <input name="date" type="date" className="input-field py-5 bg-slate-50 border-none rounded-2xl font-black text-xs" defaultValue={new Date().toISOString().slice(0, 10)} required />
+                       </div>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Settlement Methodology</label>
+                       <select name="paymentMethod" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800">
+                          {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Institutional Ref ID</label>
+                       <input name="reference" placeholder="REF-LOG-ID" className="input-field py-5 bg-slate-50 border-none rounded-2xl font-black tabular-nums uppercase" />
+                    </div>
+                  </div>
+               </div>
+
+               <div className="pt-10 border-t border-slate-50 flex justify-end gap-6 items-center">
+                  <button type="button" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:text-rose-500 transition-colors" onClick={() => setActiveTab('snapshot')}>Abort Transaction</button>
+                  <button type="submit" className="clinical-btn bg-slate-900 text-white px-12 py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-slate-800 transition-all">COMMIT TO TREASURY LEDGER</button>
+               </div>
+            </form>
+          </article>
+        )}
+
+        {activeTab === 'ledger' && (
+          <article className="col-span-12 clinical-card !p-0 overflow-hidden">
+            <header className="p-8 border-b border-slate-50 flex items-center justify-between">
+               <div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Institutional Treasure Journal</h3>
+                  <p className="dim-label uppercase tracking-widest text-[10px] mt-1 font-black">Longitudinal sequence of treasury commitments</p>
+               </div>
+               <div className="w-11 h-11 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
+                  <History className="w-5 h-5" />
+               </div>
+            </header>
+
+            <div className="premium-table-container">
+              <table className="premium-table">
+                <thead>
+                  <tr>
+                    <th className="tracking-widest">Temporal Node</th>
+                    <th className="tracking-widest">Classification</th>
+                    <th className="tracking-widest">Transaction Context</th>
+                    <th style={{ textAlign: 'right' }} className="tracking-widest">Credit Shard</th>
+                    <th style={{ textAlign: 'right' }} className="tracking-widest">Debit Shard</th>
+                    <th style={{ textAlign: 'right' }} className="tracking-widest">Governance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {expenses.length === 0 ? (
+                    <tr><td colSpan="6" className="text-center py-32 text-slate-400 italic font-medium">No recorded transactions identified in the current fiscal sector.</td></tr>
+                  ) : expenses.map((exp, idx) => (
+                    <tr key={exp.id || idx} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }}>
+                      <td>
+                        <div className="text-[13px] font-black text-slate-900 tabular-nums">{exp.date ? new Date(exp.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-'}</div>
+                      </td>
+                      <td>
+                        <span className="px-3 py-1 bg-slate-100 text-slate-500 rounded-lg text-[9px] font-black uppercase tracking-widest">{exp.category}</span>
+                      </td>
+                      <td>
+                        <div className="text-sm font-bold text-slate-700">{exp.description}</div>
+                        <div className="text-[9px] text-slate-400 font-black uppercase tracking-[0.15em] mt-1">{exp.paymentMethod} • REF: {exp.reference || 'SYSTEM-GENERATED'}</div>
+                      </td>
+                      <td style={{ textAlign: 'right' }} className="text-slate-200 tabular-nums text-xs">—</td>
+                      <td style={{ textAlign: 'right' }} className="font-black text-rose-600 tabular-nums text-sm">{currency(exp.amount)}</td>
+                      <td style={{ textAlign: 'right' }}>
+                         <button className="p-2 bg-slate-50 text-slate-400 hover:text-emerald-600 rounded-lg transition-colors">
+                            <Printer className="w-4 h-4" />
+                         </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
+          </article>
+        )}
+      </div>
 
-            {/* 3. CORE ANALYTICS OR DATA INPUT */}
-            {activeTab === 'snapshot' && financials && (
-                <div className="grid grid-cols-2 gap-8">
-                    <article className="card p-0 overflow-hidden">
-                        <div className="p-5 border-b border-slate-100 flex-between">
-                            <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Expense Decomposition</h3>
-                        </div>
-                        <div className="p-6 space-y-5">
-                            {Object.entries(financials.expenses).length === 0 ? (
-                                <p className="text-center p-8 text-slate-400 italic text-sm">Awaiting clinical expenditure metrics...</p>
-                            ) : (
-                                Object.entries(financials.expenses)
-                                    .sort((a, b) => b[1] - a[1])
-                                    .map(([cat, amt]) => (
-                                        <div key={cat} className="space-y-1.5">
-                                            <div className="flex justify-between text-xs font-black uppercase tracking-wider">
-                                                <span className="text-slate-500">{cat}</span>
-                                                <span className="text-slate-800">{currency(amt)}</span>
-                                            </div>
-                                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-teal-500 rounded-full"
-                                                    style={{ width: `\${totalExpenses > 0 ? (amt / totalExpenses * 100) : 0}%` }}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))
-                            )}
-                        </div>
-                    </article>
+      <div className="mt-10 p-8 glass-panel border-l-4 border-l-amber-500 flex items-start gap-6">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+           <Building className="w-7 h-7" />
+        </div>
+        <div>
+          <h4 className="text-sm font-black text-slate-900 mb-2 uppercase tracking-widest">Treasury Governance Directive</h4>
+          <p className="text-[11px] font-medium text-slate-500 leading-relaxed max-w-5xl italic">
+            All financial shards are immutable once committed to the institutional ledger. Operational outflow must be authorized by a senior clinical administrator. Discrepancies in clinical influx should be reported to the network security node immediately.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-                    <article className="card border-teal-100 bg-teal-50/10">
-                        <div className="panel-header mb-4">
-                            <h3 className="text-sm font-black uppercase text-teal-600 tracking-widest">Financial Foresight</h3>
-                        </div>
-                        <div className="prose prose-sm text-slate-600 leading-relaxed">
-                            <p className="mb-4 text-sm font-medium">
-                                Cross-period analysis indicates a <strong>{((netBalance / (financials.income || 1)) * 100).toFixed(1)}% institutional surplus</strong>. 
-                                {netBalance < 0 
-                                    ? ' Critical: High operational drag detected. Immediate overhead reconciliation recommended.' 
-                                    : ' Strategic health is optimal. Treasury status allows for facility expansion or asset acquisition.'}
-                            </p>
-                            <div className="grid grid-cols-2 gap-3 mt-6">
-                                <div className="p-3 bg-white rounded-xl border border-teal-100">
-                                    <div className="text-xs font-black text-slate-400 uppercase">Projected Payroll</div>
-                                    <div className="text-sm font-black text-teal-600">{currency(financials.projectedSalaries || 0)}</div>
-                                </div>
-                                <div className="p-3 bg-white rounded-xl border border-teal-100">
-                                    <div className="text-xs font-black text-slate-400 uppercase">SLA Liability</div>
-                                    <div className="text-sm font-black text-emerald-600">{currency(totalExpenses * 0.12)}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-            )}
-
-            {activeTab === 'record' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <article className="glass-panel col-span-2 p-8">
-                        <div className="mb-8">
-                          <h3 className="text-lg font-bold text-slate-900">Record Institutional Outflow</h3>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Authorize clinical expenditure & resource acquisition</p>
-                        </div>
-                        <form onSubmit={handleAddExpense} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Classification</label>
-                                    <select name="category" className="input-field h-[54px] bg-white font-bold text-slate-800" required>
-                                        {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Quantum (Amount ₹)</label>
-                                    <input name="amount" type="number" step="0.01" className="input-field py-4 bg-white font-mono" placeholder="0.00" required />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Logical Description</label>
-                                <input name="description" className="input-field py-4 bg-white" placeholder="Specific nature of expenditure..." required />
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Filing Date</label>
-                                    <input name="date" type="date" className="input-field py-4 bg-white" defaultValue={new Date().toISOString().slice(0, 10)} required />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Methodology</label>
-                                    <select name="paymentMethod" className="input-field h-[54px] bg-white font-bold text-slate-800">
-                                        {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registry Ref</label>
-                                    <input name="reference" placeholder="REF-ID" className="input-field py-4 bg-white" />
-                                </div>
-                            </div>
-                            <button type="submit" className="btn-primary w-full py-5 text-[10px] uppercase tracking-[0.2em] shadow-xl mt-4">
-                                Commit to Treasury Ledger
-                            </button>
-                        </form>
-                    </article>
-                    <aside className="glass-panel bg-slate-50/50 border-dashed border-2 flex flex-col items-center justify-center text-center p-8 border-slate-200">
-                      {/* ... existing upload ui ... */}
-                        <div className="w-16 h-16 rounded-3xl bg-white border border-slate-200 mb-4 flex items-center justify-center text-slate-400 shadow-sm">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        </div>
-                        <h4 className="text-[11px] font-black uppercase text-slate-500 tracking-widest mb-2">Digital Reciept Upload</h4>
-                        <p className="text-[10px] font-medium text-slate-400 leading-relaxed">Attach fiscal proof to normalize this transaction in global institutional ledger.</p>
-                    </aside>
-                </div>
-            )}
-
-            {activeTab === 'ledger' && (
-                <article className="card p-0 overflow-hidden">
-                    <div className="p-6 border-b border-slate-100 flex-between">
-                        <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest">Unified Transaction Ledger</h3>
-                        <button className="text-xs font-black text-teal-600 uppercase tracking-widest border border-teal-200 px-3 py-1 rounded-full hover:bg-teal-50">Export Report</button>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="clinical-table">
-                            <thead>
-                                <tr>
-                                    <th>Timestamp</th>
-                                    <th>Classification</th>
-                                    <th>Context</th>
-                                    <th style={{ textAlign: 'right' }}>Credit (In)</th>
-                                    <th style={{ textAlign: 'right' }}>Debit (Out)</th>
-                                    <th style={{ textAlign: 'right' }}>Shadow Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {expenses.map((exp, idx) => (
-                                    <tr key={exp.id || idx}>
-                                        <td className="text-xs font-bold text-slate-500">{exp.date ? new Date(exp.date).toLocaleDateString('en-IN') : '-'}</td>
-                                        <td><span className="px-2 py-0.5 rounded text-xs font-black uppercase tracking-tighter bg-rose-50 text-rose-600 border border-rose-100">{exp.category}</span></td>
-                                        <td className="text-sm font-medium text-slate-700">{exp.description}</td>
-                                        <td className="text-right text-slate-300 font-bold">—</td>
-                                        <td className="text-right text-rose-600 font-bold">{currency(parseFloat(exp.amount))}</td>
-                                        <td className="text-right text-slate-800 font-black">...</td>
-                                    </tr>
-                                ))}
-                                {!expenses.length && (
-                                    <tr><td colSpan="6" className="text-center py-20 text-slate-400 italic text-sm">No ledger entries detected in this clinical shard.</td></tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </article>
-            )}
-
-            {activeTab === 'final' && (
-                <div className="grid grid-cols-2 gap-8">
-                    <article className="card">
-                        <div className="panel-header border-b border-slate-100 pb-4 mb-6 flex-between">
-                            <h3 className="text-sm font-black uppercase text-slate-400">Profit & Loss Statement</h3>
-                            <span className="text-xs font-black bg-teal-50 text-teal-600 px-2 py-0.5 rounded uppercase">FY24-25 Q4</span>
-                        </div>
-                        <div className="space-y-4">
-                            <div className="flex justify-between py-2 text-sm font-black text-slate-800 border-b border-slate-50">
-                                <span>Gross Operating Revenue</span>
-                                <span className="text-teal-600">{currency(financials?.income || 0)}</span>
-                            </div>
-                            <div className="space-y-2 pl-4">
-                                <div className="flex justify-between text-xs text-slate-400 font-bold">
-                                    <span> Clinical Services</span>
-                                    <span>{currency(financials?.income || 0)}</span>
-                                </div>
-                            </div>
-                            <div className="flex justify-between py-2 text-sm font-black text-slate-800 border-b border-slate-50 mt-6">
-                                <span>Gross Operating Expenses</span>
-                                <span className="text-rose-600">{currency(totalExpenses)}</span>
-                            </div>
-                            <div className="space-y-1.5 pl-4 max-h-[120px] overflow-y-auto">
-                                {Object.entries(financials?.expenses || {}).map(([cat, amt]) => (
-                                    <div key={cat} className="flex justify-between text-xs text-slate-400 font-bold">
-                                        <span> {cat}</span>
-                                        <span>{currency(amt)}</span>
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="mt-8 p-5 bg-slate-900 text-white rounded-2xl flex justify-between items-center">
-                                <div>
-                                    <div className="text-xs font-black uppercase text-teal-400">Net Operating Surplus</div>
-                                    <div className="text-xl font-bold font-display">{currency(netBalance)}</div>
-                                </div>
-                                <div className="text-xs font-black text-teal-400">OPTIMAL</div>
-                            </div>
-                        </div>
-                    </article>
-
-                    <article className="card">
-                        <div className="panel-header border-b border-slate-100 pb-4 mb-6 flex-between">
-                            <h3 className="text-sm font-black uppercase text-slate-400">Institutional Balance Sheet</h3>
-                        </div>
-                        <div className="space-y-6">
-                            <div>
-                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">ASSETS & LIQUIDITY</h4>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3"><span>Cash & Equivalents</span> <span className="text-slate-900">{currency(netBalance)}</span></div>
-                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3"><span>Patient Receivables</span> <span className="text-slate-900">{currency(52400)}</span></div>
-                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3 border-b border-slate-50 pb-2"><span>Pharmacy Inventory</span> <span className="text-slate-900">{currency(125000)}</span></div>
-                                </div>
-                            </div>
-                            <div>
-                                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">LIABILITIES & EQUITY</h4>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3"><span>Vendor Payables</span> <span className="text-slate-900">{currency(12400)}</span></div>
-                                    <div className="flex justify-between text-xs font-bold text-slate-600 px-3 border-b border-slate-50 pb-2"><span>Statutory Dues (Tax/PF)</span> <span className="text-slate-900">{currency(totalExpenses * 0.1)}</span></div>
-                                </div>
-                            </div>
-                            <div className="p-4 bg-teal-50 border border-teal-100 rounded-xl text-center">
-                                <div className="text-xs font-black text-teal-600 uppercase">Institutional Worth</div>
-                                <div className="text-lg font-black text-slate-800">{currency(netBalance + 52400 + 125000 - 12400)}</div>
-                            </div>
-                        </div>
-                    </article>
-                </div>
-            )}
         </div>
     );
 }

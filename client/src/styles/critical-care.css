@@ -1,163 +1,222 @@
 /**
- * CRITICAL CARE DESIGN SYSTEM (Life-Saving Standards)
+ * CRITICAL CARE DESIGN SYSTEM (Life-Saving Standards) - PREMIUM EDITION
  * Focused on speed, cognitive clarity, and adrenaline reduction.
+ * Implements Google's "Surgical Calm" recommendations with modern, premium aesthetics.
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Inter:wght@100..900&family=JetBrains+Mono:wght@100..800&display=swap');
+
 :root {
-  /* BRAIN-CALM PALETTE (80-90% of UI) */
-  --medical-bg-light: #F3F4F6;      /* Cool Gray (sterile, no-glare) */
-  --medical-bg-dark: #1F2937;       /* Deep Gunmetal Blue (night shift comfort) */
-  --medical-surface: #FFFFFF;
-  --medical-surface-dark: #374151;
-  --medical-text-primary: #1F2937;
-  --medical-text-secondary: #64748B; /* Soft Slate */
-  --medical-text-muted: #94A3B8;
-
-  /* SIGNAL & SAFETY ( Urgency Anchors) */
-  --medical-safe: #10B981;      /* Teal/Sage Green (stable homeostasis) */
-  --medical-warning: #F59E0B;   /* Warm Amber (attention required) */
-  --medical-critical: #EF4444;  /* Coral Red (life-critical only) */
+  /* BRAIN-CALM PALETTE (Surgical Calm) */
+  --medical-bg: #F8FAFC; 
+  --medical-surface: rgba(255, 255, 255, 0.9);
+  --medical-surface-solid: #FFFFFF;
   
+  /* SURGICAL ACCENTS */
+  --clinical-primary: #0F172A;     /* Deep Midnight */
+  --clinical-secondary: #475569;   /* Slate Gray */
+  --clinical-accent: #10B981;      /* Medical Emerald */
+  --clinical-accent-soft: #ECFDF5;
+  
+  /* STATUS TOKENS */
+  --status-safe: #10B981;
+  --status-warning: #F59E0B;
+  --status-critical: #EF4444;
+  --status-info: #3B82F6;
+
   /* TYPOGRAPHY */
-  --font-main: 'Roboto', 'Inter', system-ui, sans-serif;
-  --font-tabular: 'JetBrains Mono', monospace; /* Aligned numbers for scannability */
-  
-  /* UX QUANTUM */
-  --touch-target-min: 48px;
-  --radius-clinical: 12px;
-  --panel-padding: 24px;
+  --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* SHADOWS & BLURS */
+  --glass-blur: 16px;
+  --shadow-clinical: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-premium: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
 }
 
-/* HIGH-STRESS TYPOGRAPHY RULES */
+/* GLOBAL RESET FOR CLINICAL CALM */
 body {
-  font-family: var(--font-main);
-  background-color: var(--medical-bg-light);
-  color: var(--medical-text-primary);
-  line-height: 1.5;
+  font-family: var(--font-body);
+  background-color: var(--medical-bg);
+  color: var(--clinical-primary);
   -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.011em;
 }
 
-/* TABULAR LINING FIGURES - CRITICAL for vitals scannability */
-.vitals-data, 
-.tabular-nums, 
-[data-clinical-type="number"] {
-  font-family: var(--font-tabular);
-  font-feature-settings: "tnum" 1, "lnum" 1;
-  font-variant-numeric: tabular-nums lining-nums;
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
   letter-spacing: -0.02em;
 }
 
-/* MANDATORY DARK MODE FOR HIGH-SENSITIVITY ENVIRONMENTS */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --medical-bg-light: #111827;
-    --medical-surface: #1F2937;
-    --medical-text-primary: #F9FAFB;
-    --medical-text-secondary: #94A3B8;
-  }
-  
-  body {
-    background-color: var(--medical-bg-dark);
-    color: #F9FAFB;
-  }
+/* PREMIUM PAGE SHELL */
+.page-shell-premium {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 2rem;
+  animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* CLARITY OVER DECORATION */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* THE "SURGICAL CALM" CARD */
 .clinical-card {
   background: var(--medical-surface);
-  border-radius: var(--radius-clinical);
-  border: 1px solid rgba(0,0,0,0.05);
-  padding: var(--panel-padding);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: var(--shadow-clinical);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* TOUCH TARGETS (Mandatory 48px for Gloved/Hurried Taps) */
-.clinical-btn, 
-.clinical-action {
-  min-height: var(--touch-target-min);
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-size: 0.75rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
+.clinical-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-premium);
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
-/* SIGNAL COLORS */
-.status--safe { color: var(--medical-safe); }
-.status--warning { color: var(--medical-warning); }
-.status--critical { 
-  color: var(--medical-critical); 
-  font-weight: 900;
-  animation: pulse-critical 2s infinite;
-}
-
-@keyframes pulse-critical {
-  0% { opacity: 1; }
-  50% { opacity: 0.7; }
-  100% { opacity: 1; }
-}
-
-/* "NO-CLICK" INFORMATION DENSITY */
+/* VITALS MONITORING SYSTEM */
 .vitals-monitor {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  width: 100%;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
 }
 
 .vital-node {
-  padding: 16px;
-  background: var(--medical-surface);
-  border-left: 4px solid var(--medical-text-muted);
-  border-radius: 12px;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 24px;
+  border: 1px solid #f1f5f9;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.2s ease;
 }
 
-.vital-node--critical { border-left-color: var(--medical-critical); }
-.vital-node--warning { border-left-color: var(--medical-warning); }
-.vital-node--safe { border-left-color: var(--medical-safe); }
-
-.vital-value {
-  font-family: var(--font-tabular);
-  font-size: 2.25rem;
-  font-weight: 800;
-  line-height: 1;
-  display: block;
+.vital-node::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: #cbd5e1;
 }
+
+.vital-node--safe::after { background: var(--status-safe); }
+.vital-node--warning::after { background: var(--status-warning); }
+.vital-node--critical::after { background: var(--status-critical); }
 
 .vital-label {
-  font-size: 0.65rem;
-  font-weight: 900;
+  font-size: 0.75rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--medical-text-secondary);
-  margin-bottom: 4px;
+  color: var(--clinical-secondary);
+  margin-bottom: 0.5rem;
   display: block;
 }
 
-/* REDUCING COGNITIVE LOAD: Selective Contrast */
-.dim-label {
-  color: var(--medical-text-secondary);
+.vital-value {
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--clinical-primary);
+  line-height: 1;
+  letter-spacing: -0.05em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* PREMIUM ACTION BUTTONS */
+.clinical-btn {
+  background: var(--clinical-primary);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  padding: 12px 24px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.1);
+}
+
+.clinical-btn:hover {
+  background: var(--clinical-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.15);
+}
+
+.clinical-btn--accent {
+  background: var(--clinical-accent);
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
+}
+
+.clinical-btn--accent:hover {
+  background: #059669;
+}
+
+/* DATA TABLE PREMIUM */
+.premium-table-container {
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid #f1f5f9;
+  background: white;
+}
+
+.premium-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.premium-table th {
+  background: #f8fafc;
+  padding: 1rem 1.5rem;
+  text-align: left;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-size: 0.65rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.premium-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: var(--clinical-primary);
   font-weight: 500;
 }
 
-.high-contrast-value {
-  color: var(--medical-text-primary);
-  font-weight: 700;
+.premium-table tr:last-child td {
+  border-bottom: none;
 }
 
-/* UTILITY: Life-Saving Spacing */
-.m-critical { margin: 32px 0; }
-.gap-clinical { gap: 24px; }
+.premium-table tr:hover td {
+  background: #fcfdfe;
+}
 
-/* EXTRA CLASSES FOR LAYOUT INTEGRATION */
-.medical-bg-light { background-color: var(--medical-bg-light) !important; }
-.medical-bg-dark { background-color: var(--medical-bg-dark) !important; }
-.medical-surface { background-color: var(--medical-surface) !important; }
-.medical-text-primary { color: var(--medical-text-primary) !important; }
-.medical-text-secondary { color: var(--medical-text-secondary) !important; }
+/* UTILS */
+.tabular-nums { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.dim-label { color: var(--clinical-secondary); opacity: 0.8; }
+.glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.3); }
+
+/* ANIMATIONS */
+@keyframes pulse-critical {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.85; }
+}
+
+.pulse-critical {
+  animation: pulse-critical 2s infinite ease-in-out;
+}

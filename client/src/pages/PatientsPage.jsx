@@ -1,301 +1,305 @@
-import { useState } from 'react';
-import PatientSearch from '../components/PatientSearch.jsx';
+import { useState, useEffect } from 'react';
+import { api } from '../api.js';
+import { patientName } from '../utils/format.js';
 import '../styles/critical-care.css';
 import { 
   Users, 
-  UserPlus, 
   Search, 
-  History, 
-  Printer, 
-  Shield, 
+  Plus, 
+  UserPlus, 
+  Filter, 
+  ChevronRight, 
+  Calendar, 
   Activity, 
-  ChevronRight,
-  Database,
   Clock,
-  AlertCircle
+  ShieldCheck,
+  FileText,
+  Stethoscope,
+  MoreVertical,
+  ClipboardList
 } from 'lucide-react';
 
-export default function PatientsPage({
-  activeUser, session, patients, activePatient, activePatientId,
-  setActivePatientId, onCreatePatient, onAddClinical, onPrint
-}) {
-  const [activeView, setActiveView] = useState('list'); // 'list' | 'register'
-  const clinicalRecords = activePatient?.medicalHistory?.clinicalRecords || [];
+export default function PatientsPage({ tenant, setView, setActivePatientId }) {
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('registry'); // 'registry' | 'onboard'
+
+  useEffect(() => {
+    async function load() {
+      if (!tenant?.id) return;
+      setLoading(true);
+      try {
+        const data = await api.getPatients(tenant.id);
+        setPatients(data || []);
+      } catch (err) {
+        console.error('Failed to load patient registry:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [tenant?.id]);
+
+  async function handleOnboard(e) {
+    if (!tenant?.id) return;
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await api.createPatient({
+        tenantId: tenant.id,
+        firstName: fd.get('firstName'),
+        lastName: fd.get('lastName'),
+        email: fd.get('email'),
+        phone: fd.get('phone'),
+        dob: fd.get('dob'),
+        gender: fd.get('gender')
+      });
+      const data = await api.getPatients(tenant.id);
+      setPatients(data || []);
+      setActiveTab('registry');
+      e.target.reset();
+    } catch (err) {
+      alert('Admission Protocol Error: ' + err.message);
+    }
+  }
+
+  const filtered = patients.filter(p => {
+    const full = `${p.firstName} ${p.lastName}`.toLowerCase();
+    return full.includes(query.toLowerCase()) || p.id?.includes(query);
+  });
+
+  if (!tenant) {
+    return (
+      <div className="flex items-center justify-center p-20 text-slate-400 font-black uppercase tracking-[0.2em]">
+        <div className="animate-pulse">Initializing Identification Hub...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      {/* 1. SURGICAL CALM HEADER */}
-      <div className="page-header-premium mb-8">
+      {/* 1. CLINICAL HEADER */}
+      <header className="page-header-premium mb-10">
         <div>
           <h1 className="flex items-center gap-3">
              Master Clinical Registry
-             <span className="text-[10px] bg-slate-100 text-slate-600 px-3 py-1 rounded-full border border-slate-200 uppercase tracking-tighter font-black">Secure Database</span>
+             <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Central Node</span>
           </h1>
           <p className="dim-label">Centralized identity governance and longitudinal record management</p>
         </div>
-        <div className="flex bg-white/50 backdrop-blur-sm p-1 rounded-2xl border border-slate-200 shadow-sm gap-1">
-          <button 
-            className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === 'list' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setActiveView('list')}
-          >
-            <Database className="w-3.5 h-3.5 mr-2" /> Master Registry
-          </button>
-          {activeUser.role !== 'Patient' && (
-            <button 
-              className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === 'register' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-              onClick={() => setActiveView('register')}
-            >
-              <UserPlus className="w-3.5 h-3.5 mr-2" /> Admission Protocol
-            </button>
-          )}
+        <div className="flex items-center gap-6">
+           <div className="flex bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-slate-200 shadow-sm gap-1">
+             <button 
+               className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'registry' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+               onClick={() => setActiveTab('registry')}
+             >
+               <ClipboardList className="w-3.5 h-3.5 mr-2" /> Registry
+             </button>
+             <button 
+               className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'onboard' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+               onClick={() => setActiveTab('onboard')}
+             >
+               <UserPlus className="w-3.5 h-3.5 mr-2" /> New Admission
+             </button>
+           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-12 gap-8">
-        {/* LEFT COLUMN: REGISTRY & SEARCH (High Clarity) */}
-        {activeView === 'list' && (
-          <aside className="col-span-12 lg:col-span-4 space-y-8">
-            <article className="clinical-card">
-              <div className="flex items-center justify-between mb-6">
-                 <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Identity Verification</h3>
-                 <Search className="w-4 h-4 text-slate-300" />
-              </div>
-              <PatientSearch
-                tenantId={session?.tenantId}
-                onSelect={(p) => setActivePatientId(p.id)}
-                initialPatientId={activePatientId}
-              />
-            </article>
+      {/* 2. REGISTRY INTERFACE */}
+      {activeTab === 'registry' && (
+        <section className="space-y-8">
+          <div className="flex flex-col md:flex-row gap-6 items-stretch">
+             <div className="flex-1 relative group">
+                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                <input 
+                  type="text" 
+                  placeholder="Query identity by name, MRN, or diagnostic shard..." 
+                  className="input-field pl-16 py-6 bg-white border-2 border-slate-50 rounded-3xl shadow-sm focus:shadow-xl focus:border-emerald-100 transition-all font-medium text-slate-800 placeholder:text-slate-300 w-full"
+                  value={query}
+                  onChange={e => setQuery(e.target.value)}
+                />
+             </div>
+             <button className="clinical-btn bg-white text-slate-900 border border-slate-200 px-8 rounded-3xl hover:bg-slate-50 shadow-sm">
+                <Filter className="w-4 h-4 mr-2" /> Filter Registry
+             </button>
+          </div>
 
-            <article className="clinical-card p-0 overflow-hidden">
-              <div className="p-6 border-b border-slate-50 flex items-center justify-between">
-                <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Recent Encounters</h3>
-                <Clock className="w-4 h-4 text-slate-300" />
-              </div>
-              <div className="max-h-[500px] overflow-y-auto">
-                {Array.isArray(patients) && patients.slice(0, 10).map((p, idx) => (
-                  <button
-                    key={p.id}
-                    className={`w-full flex items-center gap-4 p-5 transition-all text-left border-l-4 ${activePatientId === p.id ? 'bg-emerald-50/50 border-emerald-500' : 'border-transparent hover:bg-slate-50/50'}`}
-                    onClick={() => setActivePatientId(p.id)}
-                  >
-                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-sm ${activePatientId === p.id ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-100 text-slate-400'}`}>
-                      {(p.firstName || 'P')[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className={`text-sm font-black truncate ${activePatientId === p.id ? 'text-emerald-900' : 'text-slate-700'}`}>{p.firstName} {p.lastName}</div>
-                      <div className="text-[10px] text-slate-400 font-black tracking-[0.15em] mt-0.5 tabular-nums">MRN-{p.mrn}</div>
-                    </div>
-                    {p.bloodGroup && (
-                      <div className="text-[10px] font-black px-2 py-1 rounded bg-white border border-slate-100 text-slate-500 uppercase">
-                        {p.bloodGroup}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </article>
-          </aside>
-        )}
-
-        {/* MAIN COLUMN: PROFILE OR ADMISSION */}
-        <main className={`${activeView === 'list' ? 'col-span-12 lg:col-span-8' : 'col-span-12'}`}>
-          {activeView === 'register' ? (
-            <article className="clinical-card max-w-4xl mx-auto">
-              <header className="mb-10 text-center">
-                 <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
-                    <UserPlus className="w-8 h-8" />
-                 </div>
-                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">Patient Admission Protocol</h2>
-                 <p className="dim-label uppercase tracking-widest text-[10px] mt-2 font-black">Authorized Enrollment Registry</p>
-              </header>
-
-              <form className="space-y-10" onSubmit={onCreatePatient}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div className="space-y-6">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Step 01 / Identity</h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">First Name</label>
-                        <input name="firstName" className="input-field py-4 bg-slate-50 border-none rounded-xl" required />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Surname</label>
-                        <input name="lastName" className="input-field py-4 bg-slate-50 border-none rounded-xl" required />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Date of Birth</label>
-                        <input name="dob" type="date" className="input-field py-4 bg-slate-50 border-none rounded-xl" required />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Clinical Gender</label>
-                        <select name="gender" className="input-field h-[56px] bg-slate-50 border-none rounded-xl font-bold" required>
-                          <option value="">Select...</option>
-                          <option>Female</option>
-                          <option>Male</option>
-                          <option>Other</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Step 02 / Config</h4>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Blood Group</label>
-                      <input name="bloodGroup" className="input-field py-4 bg-slate-50 border-none rounded-xl" placeholder="ABO / Rh" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Primary Contact</label>
-                      <input name="phone" className="input-field py-4 bg-slate-50 border-none rounded-xl" placeholder="Emergency Mobile" required />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 pt-10 border-t border-slate-50">
-                  <button type="submit" className="clinical-btn bg-slate-900 text-white px-12 text-xs shadow-xl hover:bg-slate-800 transition-all rounded-2xl">Finalize Enrollment</button>
-                  <button type="button" className="clinical-btn bg-white border border-slate-200 text-slate-400 px-8 text-xs hover:text-slate-600 transition-all rounded-2xl" onClick={() => setActiveView('list')}>Abort Protocol</button>
-                </div>
-              </form>
-            </article>
-          ) : activePatient ? (
-            <div className="space-y-10">
-              {/* PROFILE HEADER (Life-Saving Clarity) */}
-              <header className="rounded-[32px] flex flex-col md:flex-row items-center justify-between bg-slate-900 relative overflow-hidden p-8 group shadow-2xl">
-                <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full -mr-32 -mt-32 blur-[100px] transition-all group-hover:scale-110"></div>
-                <div className="flex items-center gap-8 relative z-10">
-                  <div className="w-20 h-20 rounded-2xl bg-emerald-500 flex items-center justify-center text-3xl font-black text-white shadow-xl">
-                    {(activePatient.firstName || 'P')[0]}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-4 mb-2">
-                      <h2 className="text-2xl font-black text-white tracking-tight">{activePatient.firstName} {activePatient.lastName}</h2>
-                      <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 text-emerald-400 tabular-nums">MRN-{activePatient.mrn}</span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-6 text-[10px] text-white/40 font-black uppercase tracking-[0.15em]">
-                      <span className="flex items-center gap-2"><Activity className="w-3 h-3" /> DOB: {new Date(activePatient.dob).toLocaleDateString()}</span>
-                      <span className="w-1 h-1 rounded-full bg-white/20"></span>
-                      <span>Gender: {activePatient.gender || 'NS'}</span>
-                      <span className="w-1 h-1 rounded-full bg-white/20"></span>
-                      <span className="text-emerald-500/80">{activePatient.insurance || 'Default Registry Node'}</span>
-                    </div>
-                  </div>
-                </div>
-                <button 
-                  className="mt-6 md:mt-0 clinical-btn bg-white/5 border border-white/10 text-white px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:border-emerald-500 transition-all shadow-md relative z-10" 
-                  onClick={() => onPrint('health-record')}
-                >
-                  <Printer className="w-4 h-4 mr-3" /> Authorize Extract
-                </button>
-              </header>
-
-              <div className="grid grid-cols-12 gap-8">
-                <div className="col-span-12 lg:col-span-8 space-y-10">
-                  {/* CLINICAL JOURNAL (No-Click Information) */}
-                  <article className="clinical-card">
-                    <div className="flex items-center justify-between mb-10 border-b border-slate-50 pb-6">
-                      <div>
-                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest text-lg">Clinical Journal</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Longitudinal Healthcare Ledger</p>
-                      </div>
-                      <span className="text-[10px] font-black uppercase tracking-tighter px-4 py-1.5 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">{clinicalRecords.length} EVENT NODES</span>
-                    </div>
-
-                    <div>
-                      {activeUser.role !== 'Patient' && (
-                        <div className="mb-10 bg-slate-50 border border-slate-100 rounded-2xl p-1 shadow-inner focus-within:border-emerald-200 transition-all">
-                          <form className="flex flex-col md:flex-row items-stretch md:items-center gap-2" onSubmit={onAddClinical}>
-                            <select name="section" className="bg-white border-none text-[10px] font-black uppercase tracking-widest px-6 py-4 rounded-xl text-slate-600 focus:outline-none focus:ring-0 w-full md:w-44 cursor-pointer shadow-sm">
-                              <option value="caseHistory">Observation</option>
-                              <option value="medications">Prescription</option>
-                              <option value="testReports">Lab Result</option>
-                            </select>
-                            <input name="text" className="bg-transparent border-none focus:outline-none focus:ring-0 text-sm flex-1 px-6 py-4 placeholder-slate-400 font-medium" placeholder="Capture clinical findings..." required />
-                            <div className="p-1 flex shrink-0">
-                              <button type="submit" className="clinical-btn bg-slate-900 text-white px-8 !min-h-[44px] text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg">Commit Node</button>
-                            </div>
-                          </form>
-                        </div>
-                      )}
-
-                      <div className="relative space-y-6 before:absolute before:left-3 before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-50">
-                        {clinicalRecords.length > 0 ? (
-                          clinicalRecords.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((rec, idx) => (
-                            <div key={idx} className="relative pl-10 animate-fade-in" style={{ animationDelay: `${idx * 40}ms` }}>
-                              <div className="absolute left-2.5 w-1.5 h-1.5 rounded-full bg-slate-200 border border-white top-2 transition-colors group-hover:bg-emerald-500"></div>
-                              <div className="clinical-card !p-5 bg-white hover:border-emerald-100 transition-all group">
-                                <div className="flex justify-between items-center mb-3">
-                                  <span className="px-2 py-1 bg-slate-100 text-slate-500 rounded-lg text-[9px] font-black uppercase tracking-widest group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">{rec.section}</span>
-                                  <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest tabular-nums">{new Date(rec.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                                </div>
-                                <div className="text-[13px] font-medium text-slate-600 leading-relaxed">
-                                  {rec.payload || rec.content}
-                                </div>
+          <div className="clinical-card !p-0 overflow-hidden border-none shadow-premium bg-white/40 backdrop-blur-xl">
+             <div className="premium-table-container">
+               <table className="premium-table">
+                  <thead>
+                    <tr>
+                      <th className="tracking-widest">Patient Identity</th>
+                      <th className="tracking-widest">Temporal Node (DOB)</th>
+                      <th className="tracking-widest">Registry ID</th>
+                      <th className="tracking-widest">Clinical Stream</th>
+                      <th className="tracking-widest text-right">Governance</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {loading ? (
+                       [...Array(5)].map((_, i) => (
+                         <tr key={i} className="animate-pulse">
+                           <td colSpan="5" className="p-8"><div className="h-6 bg-slate-100 rounded-lg w-full"></div></td>
+                         </tr>
+                       ))
+                    ) : filtered.length === 0 ? (
+                       <tr><td colSpan="5" className="py-32 text-center text-slate-400 font-bold uppercase tracking-widest">No identity shards found in clinical registry.</td></tr>
+                    ) : filtered.map((p, idx) => (
+                      <tr key={p.id || idx} className="group hover:bg-slate-50/80 transition-all cursor-pointer animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }} onClick={() => { setActivePatientId(p.id); setView('emr'); }}>
+                        <td className="!py-6">
+                           <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center font-black text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
+                                 {p.firstName?.charAt(0)}{p.lastName?.charAt(0)}
                               </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-12 flex flex-col items-center">
-                            <Database className="w-10 h-10 text-slate-100 mb-4" />
-                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">No clinical event logs detected.</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                </div>
+                              <div>
+                                 <div className="text-sm font-black text-slate-900 tracking-tight group-hover:translate-x-1 transition-transform">{p.firstName} {p.lastName}</div>
+                                 <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 flex items-center gap-2">
+                                    <ShieldCheck className="w-3 h-3 text-emerald-500" /> Active Profile
+                                 </div>
+                              </div>
+                           </div>
+                        </td>
+                        <td><div className="text-xs font-black text-slate-500 tabular-nums">{p.dob ? new Date(p.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div></td>
+                        <td><code className="text-[10px] font-black text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">MRN-{(p.id || 'X').slice(0, 10).toUpperCase()}</code></td>
+                        <td>
+                           <div className="flex gap-2">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shadow-lg shadow-emerald-500/50"></span>
+                              <div className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Monitoring Nominal</div>
+                           </div>
+                        </td>
+                        <td className="text-right">
+                           <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                              <button className="p-2.5 bg-white text-slate-400 hover:text-slate-900 rounded-xl border border-slate-100 shadow-sm transition-all"><FileText className="w-4 h-4" /></button>
+                              <button className="p-2.5 bg-slate-900 text-white hover:bg-emerald-600 rounded-xl shadow-md transition-all"><ChevronRight className="w-4 h-4" /></button>
+                           </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+               </table>
+             </div>
+          </div>
+        </section>
+      )}
 
-                <aside className="col-span-12 lg:col-span-4 space-y-8">
-                  <article className="clinical-card border-l-4 border-emerald-500 shadow-lg group hover:scale-[1.02] transition-transform">
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Serology Profile</div>
-                    <div className="text-5xl font-black text-slate-900 tracking-tighter tabular-nums group-hover:text-emerald-600 transition-colors">{activePatient.bloodGroup || 'NA'}</div>
-                    <div className="text-[10px] font-black text-emerald-600 mt-4 uppercase tracking-widest flex items-center gap-2">
-                      <Shield className="w-3 h-3" />
-                      Authorized Identity
-                    </div>
-                  </article>
+      {/* 3. ADMISSION PROTOCOL (Onboard) */}
+      {activeTab === 'onboard' && (
+        <section className="grid grid-cols-12 gap-8">
+           <article className="col-span-12 lg:col-span-8 clinical-card p-12 animate-slide-up">
+              <header className="mb-12 flex justify-between items-end">
+                 <div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Registry Admission Protocol</h3>
+                    <p className="dim-label uppercase tracking-widest text-[10px] mt-2 font-black">Identity Provisioning Protocol • Central Node</p>
+                 </div>
+                 <div className="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center shadow-2xl">
+                    <UserPlus className="w-7 h-7" />
+                 </div>
+              </header>
 
-                  <article className="clinical-card border-l-4 border-rose-500">
-                    <div className="flex items-center justify-between mb-8">
-                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Medical Sensitivity</h4>
-                      <AlertCircle className="w-4 h-4 text-rose-300" />
-                    </div>
+              <form className="space-y-12" onSubmit={handleOnboard}>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-6">
-                      <div className="p-5 bg-rose-50 border border-rose-100 rounded-2xl">
-                        <div className="text-[10px] font-black text-rose-700 uppercase tracking-[0.2em] mb-2">Allergy Node</div>
-                        <div className="text-[13px] font-bold text-rose-800 leading-relaxed">
-                          {activePatient.medicalHistory?.allergies || 'No high-risk contraindications.'}
-                        </div>
-                      </div>
-                      <div className="p-5 bg-amber-50 border border-amber-100 rounded-2xl">
-                        <div className="text-[10px] font-black text-amber-700 uppercase tracking-[0.2em] mb-2">Pathological History</div>
-                        <div className="text-[13px] font-bold text-amber-800 leading-relaxed">
-                          {activePatient.medicalHistory?.chronicConditions || 'Clear baseline inventory.'}
-                        </div>
-                      </div>
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Clinical Identity</h4>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Forename</label>
+                          <input name="firstName" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" required />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Surname</label>
+                          <input name="lastName" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" required />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Temporal Node (DOB)</label>
+                          <input name="dob" type="date" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-xs px-6" required />
+                       </div>
                     </div>
-                  </article>
-                </aside>
+
+                    <div className="space-y-6">
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Contact & Demographics</h4>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Phone Protocol</label>
+                          <input name="phone" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" placeholder="+91 00000 00000" />
+                       </div>
+                       <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gender Shard</label>
+                             <select name="gender" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6">
+                                <option>Male</option>
+                                <option>Female</option>
+                                <option>Other</option>
+                             </select>
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Identity Guard (Email)</label>
+                             <input name="email" type="email" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" placeholder="patient@node.com" />
+                          </div>
+                       </div>
+                       <div className="p-6 bg-emerald-50/40 rounded-3xl border border-emerald-100 flex items-start gap-4">
+                          <ShieldCheck className="w-5 h-5 text-emerald-600 mt-0.5" />
+                          <p className="text-[11px] font-medium text-emerald-800/60 leading-relaxed italic">
+                             Automated consent shard will be generated upon commitment to the clinical registry.
+                          </p>
+                       </div>
+                    </div>
+                 </div>
+
+                 <div className="pt-10 border-t border-slate-50 flex justify-end gap-6 items-center">
+                    <button type="button" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:text-rose-500 transition-colors" onClick={() => setActiveTab('registry')}>Abort Procedure</button>
+                    <button type="submit" className="clinical-btn bg-slate-900 text-white px-12 py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-slate-800 transition-all border-none">
+                       COMMIT TO CLINICAL REGISTRY
+                    </button>
+                 </div>
+              </form>
+           </article>
+
+           <aside className="col-span-12 lg:col-span-4 space-y-8">
+              <div className="clinical-card bg-slate-900 text-white relative overflow-hidden group h-full">
+                 <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full -mr-24 -mt-24 blur-3xl group-hover:scale-110 transition-transform"></div>
+                 <header className="relative z-10 mb-10">
+                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-emerald-400">Registry Integrity</h3>
+                    <p className="text-[10px] text-white/40 font-black uppercase mt-2">Global Service Status</p>
+                 </header>
+                 
+                 <div className="space-y-6 relative z-10">
+                    <div className="flex items-center gap-4">
+                       <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50"></div>
+                       <div className="text-[11px] font-black uppercase tracking-widest">Biometric Shard Sync: Nominal</div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                       <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50"></div>
+                       <div className="text-[11px] font-black uppercase tracking-widest">Encryption Layer: AES-256 Active</div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                       <div className="w-2 h-2 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50"></div>
+                       <div className="text-[11px] font-black uppercase tracking-widest">Network Latency: 12ms</div>
+                    </div>
+                 </div>
+
+                 <div className="mt-20 p-6 bg-white/5 rounded-2xl border border-white/10 relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                       <Activity className="w-4 h-4 text-emerald-400" />
+                       <span className="text-[10px] font-black uppercase tracking-widest">Security Directive</span>
+                    </div>
+                    <p className="text-[11px] text-white/50 leading-relaxed font-medium">
+                       Do not duplicate clinical identities. If MRN conflict occurs, initiate deep reconciliation via the Admin Console.
+                    </p>
+                 </div>
               </div>
-            </div>
-          ) : (
-            <article className="clinical-card h-full flex flex-col items-center justify-center py-40 text-center border-dashed border-2 bg-slate-50/10">
-              <div className="w-24 h-24 rounded-full bg-white shadow-xl flex items-center justify-center text-slate-100 mb-10 border border-slate-50">
-                <Users className="w-10 h-10" />
-              </div>
-              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Clinical Registry Open</h3>
-              <p className="text-sm text-slate-500 max-w-xs mt-4 font-medium leading-relaxed">Select an identity from the registry to initiate clinical oversight and ledger management.</p>
-              <div className="mt-10 flex gap-4">
-                 <div className="px-5 py-2 bg-slate-50 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocol V3.2</div>
-                 <div className="px-5 py-2 bg-emerald-50 rounded-full text-[10px] font-black text-emerald-600 uppercase tracking-widest">Secure session</div>
-              </div>
-            </article>
-          )}
-        </main>
-      </div>
+           </aside>
+        </section>
+      )}
+
+      {/* 4. FOOTER NOTE */}
+      <footer className="mt-12 py-8 border-t border-slate-100 flex justify-between items-center">
+         <div className="flex items-center gap-3 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+            <ShieldCheck className="w-4 h-4" /> SECURE DEPLOYMENT NODE • v1.0.4-BETA
+         </div>
+         <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+            {patients.length} ACTIVE SHARDS IN REGISTRY
+         </div>
+      </footer>
     </div>
   );
 }
-

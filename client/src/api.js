@@ -706,8 +706,17 @@ apiClient.createLabOrder = (data) => apiRequest('/lab/orders', { method: 'POST',
 apiClient.updateLabOrderStatus = (id, status) => apiRequest(`/lab/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
 apiClient.recordLabResults = (id, data) => apiRequest(`/lab/orders/${id}/results`, { method: 'POST', body: JSON.stringify(data) });
 
+// Infrastructure (Wards & Beds)
+apiClient.getWards = (tenantId) => apiRequest(`/infrastructure/wards?tenantId=${tenantId}`);
+apiClient.createWard = (data) => apiRequest('/infrastructure/wards', { method: 'POST', body: JSON.stringify(data) });
+apiClient.getBeds = (wardId) => apiRequest(`/infrastructure/beds?wardId=${wardId}`);
+apiClient.createBed = (data) => apiRequest('/infrastructure/beds', { method: 'POST', body: JSON.stringify(data) });
+apiClient.updateBedStatus = (id, status) => apiRequest(`/infrastructure/beds/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+
 // Inpatient → Billing bridge
 apiClient.createDischargeInvoice = (encounterId, data) => apiRequest(`/inpatient/${encounterId}/discharge-invoice`, { method: 'POST', body: JSON.stringify(data) });
+apiClient.autoBillItem = (tenantId, data) => apiRequest('/billing/auto-bill', { method: 'POST', body: JSON.stringify({ tenantId, ...data }) });
+apiClient.simulatePaymentGateway = (amount, currency) => new Promise((resolve) => setTimeout(() => resolve({ success: true, transactionId: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}` }), 1500));
 
 // Generic HTTP methods (for direct usage)
 apiClient.get = (url) => apiRequest(url);

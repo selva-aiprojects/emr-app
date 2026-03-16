@@ -1766,6 +1766,38 @@ export async function recordAttendance({ tenantId, employeeId, date, status, che
 
 
 
+export async function getWards(tenantId) {
+  const sql = 'SELECT * FROM emr.wards WHERE tenant_id = $1 ORDER BY name';
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function createWard({ tenantId, name, type, base_rate }) {
+  const sql = `
+    INSERT INTO emr.wards (tenant_id, name, type, base_rate)
+    VALUES ($1, $2, $3, $4)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, name, type, base_rate]);
+  return result.rows[0];
+}
+
+export async function getBeds(wardId) {
+  const sql = 'SELECT * FROM emr.beds WHERE ward_id = $1 ORDER BY bed_number';
+  const result = await query(sql, [wardId]);
+  return result.rows;
+}
+
+export async function createBed({ tenant_id, ward_id, bed_number }) {
+  const sql = `
+    INSERT INTO emr.beds (tenant_id, ward_id, bed_number)
+    VALUES ($1, $2, $3)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenant_id, ward_id, bed_number]);
+  return result.rows[0];
+}
+
 export default {
   // Tenants
   getTenants,
@@ -1841,6 +1873,12 @@ export default {
   createPrescription,
   updatePrescriptionStatus,
   dispensePrescription,
+
+  // Infrastructure
+  getWards,
+  createWard,
+  getBeds,
+  createBed,
 
   // Bootstrap
   getBootstrapData,

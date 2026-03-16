@@ -651,6 +651,14 @@ export default function App() {
                 patientId: fd.get('patientId') || null
               }));
             }}
+            onAddWard={async (data) => {
+              await api.createWard({ ...data, tenantId: session.tenantId });
+              refreshTenantData();
+            }}
+            onAddBed={async (data) => {
+              await api.createBed(data);
+              refreshTenantData();
+            }}
           />
         )}
       </AppLayout>
