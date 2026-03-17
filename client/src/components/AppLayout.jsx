@@ -166,66 +166,36 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
 
   const navContent = (
     <>
-      {/* Sidebar Header with Logo */}
-      <div className="sidebar-header flex items-center p-4 relative" style={{ minHeight: isCollapsed ? '60px' : '80px' }}>
-        <div className="logo-container" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <img 
-            src="/medflow-icon.svg" 
-            alt="MedFlow" 
-            style={{ 
-              width: '24px', 
-              height: '24px',
-              objectFit: 'contain'
-            }}
-          />
-          {!isCollapsed && <h1>MedFlow</h1>}
+      {/* Sidebar Header / Brand */}
+      <div className={`sidebar-header ${isCollapsed ? 'is-collapsed' : ''}`}>
+        <div className="brand">
+          <div className="brand-mark" aria-hidden="true">
+            <img src="/medflow-icon.svg" alt="" className="brand-icon" />
+          </div>
+          {!isCollapsed && (
+            <div className="brand-text">
+              <h1 className="brand-name">MedFlow</h1>
+              <div className="brand-subtitle">{facilityName}</div>
+            </div>
+          )}
         </div>
-        
-        {/* Toggle Button Inside Sidebar */}
+
         <button
+          type="button"
+          className="sidebar-collapse"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          style={{
-            position: 'absolute',
-            right: '12px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '8px',
-            width: '28px',
-            height: '28px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#fff',
-            cursor: 'pointer',
-            zIndex: 10,
-            transition: 'all 0.3s ease'
-          }}
+          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <ChevronRight style={{ 
-            transform: `rotate(${isCollapsed ? 0 : 180}deg)`,
-            transition: 'transform 0.3s ease'
-          }} size={16} />
+          <ChevronRight className={`sidebar-collapse-icon ${isCollapsed ? '' : 'rotated'}`} size={16} />
         </button>
       </div>
 
-      {/* Tenant Context Chip */}
-      <div style={{
-        marginBottom: '18px',
-        padding: isCollapsed ? '8px 4px' : '10px 14px',
-        background: 'rgba(255, 255, 255, 0.04)',
-        borderRadius: '12px',
-        border: '1px solid rgba(255,255,255,0.09)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '42px'
-      }}>
-        {!isCollapsed && (
-          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>
-            {facilityName}
-          </span>
+      {/* Tenant Context Chip (kept minimal; brand already shows facility) */}
+      <div className={`tenant-chip ${isCollapsed ? 'is-collapsed' : ''}`}>
+        {!isCollapsed ? (
+          <span className="tenant-chip-text">{currentModule}</span>
+        ) : (
+          <span className="tenant-chip-dot" aria-hidden="true" />
         )}
       </div>
 
@@ -242,7 +212,10 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
             return (
               <button
                 key={moduleName}
-                onClick={() => setView(moduleName)}
+                onClick={() => {
+                  setView(moduleName);
+                  setMobileOpen(false);
+                }}
                 className={`menu-item ${view === moduleName ? 'active' : ''}`}
                 title={isCollapsed ? moduleInfo?.title || moduleName : ''}
               >
@@ -280,7 +253,10 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
               return (
                 <button
                   key={moduleName}
-                  onClick={() => setView(moduleName)}
+                  onClick={() => {
+                    setView(moduleName);
+                    setMobileOpen(false);
+                  }}
                   className={`menu-item ${view === moduleName ? 'active' : ''}`}
                   title={isCollapsed ? moduleInfo?.title || moduleName : ''}
                 >
@@ -394,7 +370,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
   return (
     <div className="app-root">
       {/* Dark Sidebar */}
-      <aside className={`premium-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      <aside className={`premium-sidebar ${isCollapsed ? 'collapsed' : ''} ${mobileOpen ? 'open' : ''}`}>
         {navContent}
       </aside>
 
@@ -402,20 +378,27 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
       <main className="main-content">
         {/* Top Header Bar */}
         <header className="top-header">
-          <h1 className="header-title">Dashboard</h1>
-          <div className="header-actions">
-            <div className="search-box">
-              <Search className="search-icon" />
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                className="search-input"
-              />
+          <div>
+            <h1 className="header-title">{currentModule}</h1>
+            <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)]">
+              <span className="hidden sm:inline">{facilityName}</span>
+              <span className="hidden sm:inline">•</span>
+              <span>{today}</span>
+              {activeUser?.role && (
+                <>
+                  <span>•</span>
+                  <StatusIndicator label={formatRole(activeUser.role)} tone="default" />
+                </>
+              )}
             </div>
-            <button className="notification-btn">
-              <Bell className="w-5 h-5" />
-              <span className="notification-badge">3</span>
-            </button>
+          </div>
+          <div className="header-actions">
+            <SmartSearch
+              placeholder="Search patients, visits, medications"
+              onSearch={handleSearchResult}
+              inputRef={searchInputRef}
+            />
+            <NotificationSystem />
           </div>
         </header>
 
@@ -440,7 +423,10 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
           ) : (
             <>
               {/* Mobile Menu Toggle */}
-              <button className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200">
+              <button
+                className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200"
+                onClick={() => setMobileOpen(true)}
+              >
                 <Menu className="w-5 h-5 text-gray-600" />
               </button>
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { api } from '../api.js';
 import { patientName } from '../utils/format.js';
 import '../styles/critical-care.css';
@@ -19,18 +19,37 @@ import {
   ClipboardList
 } from 'lucide-react';
 
-export default function PatientsPage({ tenant, setView, setActivePatientId }) {
+export default function PatientsPage({
+  tenant,
+  session,
+  patients: patientsProp,
+  setView,
+  setActivePatientId,
+  onCreatePatient
+}) {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('registry'); // 'registry' | 'onboard'
 
+  const tenantId = tenant?.id || session?.tenantId || null;
+
+  const effectivePatients = useMemo(() => {
+    return Array.isArray(patientsProp) ? patientsProp : patients;
+  }, [patientsProp, patients]);
+
   useEffect(() => {
     async function load() {
-      if (!tenant?.id) return;
+      // If the shell already provides patient data, don't refetch here.
+      if (Array.isArray(patientsProp)) {
+        setLoading(false);
+        return;
+      }
+
+      if (!tenantId) return;
       setLoading(true);
       try {
-        const data = await api.getPatients(tenant.id);
+        const data = await api.getPatients(tenantId);
         setPatients(data || []);
       } catch (err) {
         console.error('Failed to load patient registry:', err);
@@ -39,15 +58,20 @@ export default function PatientsPage({ tenant, setView, setActivePatientId }) {
       }
     }
     load();
-  }, [tenant?.id]);
+  }, [tenantId, patientsProp]);
 
   async function handleOnboard(e) {
-    if (!tenant?.id) return;
+    if (onCreatePatient) {
+      // Delegate to App.jsx handler to keep global state consistent.
+      return onCreatePatient(e);
+    }
+
+    if (!tenantId) return;
     e.preventDefault();
     const fd = new FormData(e.target);
     try {
       await api.createPatient({
-        tenantId: tenant.id,
+        tenantId,
         firstName: fd.get('firstName'),
         lastName: fd.get('lastName'),
         email: fd.get('email'),
@@ -55,7 +79,7 @@ export default function PatientsPage({ tenant, setView, setActivePatientId }) {
         dob: fd.get('dob'),
         gender: fd.get('gender')
       });
-      const data = await api.getPatients(tenant.id);
+      const data = await api.getPatients(tenantId);
       setPatients(data || []);
       setActiveTab('registry');
       e.target.reset();
@@ -64,12 +88,12 @@ export default function PatientsPage({ tenant, setView, setActivePatientId }) {
     }
   }
 
-  const filtered = patients.filter(p => {
+  const filtered = effectivePatients.filter(p => {
     const full = `${p.firstName} ${p.lastName}`.toLowerCase();
     return full.includes(query.toLowerCase()) || p.id?.includes(query);
   });
 
-  if (!tenant) {
+  if (!tenantId) {
     return (
       <div className="flex items-center justify-center p-20 text-slate-400 font-black uppercase tracking-[0.2em]">
         <div className="animate-pulse">Initializing Identification Hub...</div>
@@ -147,7 +171,15 @@ export default function PatientsPage({ tenant, setView, setActivePatientId }) {
                     ) : filtered.length === 0 ? (
                        <tr><td colSpan="5" className="py-32 text-center text-slate-400 font-bold uppercase tracking-widest">No identity shards found in clinical registry.</td></tr>
                     ) : filtered.map((p, idx) => (
-                      <tr key={p.id || idx} className="group hover:bg-slate-50/80 transition-all cursor-pointer animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }} onClick={() => { setActivePatientId(p.id); setView('emr'); }}>
+                      <tr
+                        key={p.id || idx}
+                        className="group hover:bg-slate-50/80 transition-all cursor-pointer animate-fade-in"
+                        style={{ animationDelay: `${idx * 20}ms` }}
+                        onClick={() => {
+                          setActivePatientId?.(p.id);
+                          setView?.('emr');
+                        }}
+                      >
                         <td className="!py-6">
                            <div className="flex items-center gap-4">
                               <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center font-black text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
@@ -297,7 +329,7 @@ export default function PatientsPage({ tenant, setView, setActivePatientId }) {
             <ShieldCheck className="w-4 h-4" /> SECURE DEPLOYMENT NODE • v1.0.4-BETA
          </div>
          <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-            {patients.length} ACTIVE SHARDS IN REGISTRY
+            {effectivePatients.length} ACTIVE SHARDS IN REGISTRY
          </div>
       </footer>
     </div>

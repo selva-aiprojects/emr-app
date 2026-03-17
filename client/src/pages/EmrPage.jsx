@@ -170,43 +170,87 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
     }
   };
 
-  if (lastSaved) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 text-center animate-fade-in medical-bg-light h-full">
-        <div className="w-24 h-24 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mb-8 shadow-sm">
-           <Stethoscope className="w-10 h-10" />
-        </div>
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Clinical Record Committed</h2>
-        <p className="text-slate-500 mt-4 max-w-md mx-auto font-medium">Therapeutic trajectory for <strong>{patientName(lastSaved.patientId, patients)}</strong> has been securely logged in the institutional ledger.</p>
-        
-        <div className="flex gap-4 mt-12">
-          <button className="clinical-btn bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-200" onClick={() => {
-            printPrescription({ ...lastSaved, id: 'NEW' }, patients.find(p => p.id === lastSaved.patientId), lastSaved.medications, providers.find(p => p.id === lastSaved.providerId), tenant);
-          }}>
-            <Printer className="w-4 h-4 mr-3" /> Authorize Output
-          </button>
-          <button className="clinical-btn bg-white border border-slate-200 text-slate-700 hover:bg-slate-50" onClick={() => {
-            setLastSaved(null);
-            setSelectedPatientId('');
-            setActiveTab('active');
-          }}>
-            Clinical Hub
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="page-shell-premium animate-fade-in">
-      <div className="page-header-premium mb-8">
-        <div>
-          <h1 className="flex items-center gap-3">
-             Electronic Health Ledger
-             <span className="text-[10px] bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full border border-indigo-100 uppercase tracking-tighter">Clinical Persistence</span>
-          </h1>
-          <p className="dim-label">Longitudinal documentation node for professional oversight</p>
+    <div className="view-container animate-fade-in">
+      {/* Patient context bar */}
+      <div className="mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+              Electronic Medical Record
+            </h1>
+            <p className="text-xs text-slate-500 mt-1">
+              Structured clinical workspace for documenting visits and prescriptions.
+            </p>
+          </div>
+          {selectedPatient && (
+            <div className="bg-white rounded-2xl px-4 py-3 shadow-sm border border-slate-100 flex items-center gap-4 min-w-[260px]">
+              <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-sm font-bold">
+                {(selectedPatient.firstName || 'P')[0]}
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-slate-900">
+                  {selectedPatient.firstName} {selectedPatient.lastName}
+                </div>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  MRN {selectedPatient.mrn || 'PENDING'} ·{' '}
+                  {selectedPatient.gender || '—'} ·{' '}
+                  {selectedPatient.dob
+                    ? `${new Date().getFullYear() - new Date(selectedPatient.dob).getFullYear()} yrs`
+                    : 'Age N/A'}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+        {lastSaved && (
+          <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+                <Stethoscope className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-emerald-900">
+                  Clinical record committed for {patientName(lastSaved.patientId, patients)}
+                </p>
+                <p className="text-xs text-emerald-700">
+                  You can authorize the prescription output or return to the clinical hub.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="clinical-btn clinical-btn--accent"
+                onClick={() => {
+                  printPrescription(
+                    { ...lastSaved, id: 'NEW' },
+                    patients.find(p => p.id === lastSaved.patientId),
+                    lastSaved.medications,
+                    providers.find(p => p.id === lastSaved.providerId),
+                    tenant
+                  );
+                }}
+              >
+                <Printer className="w-4 h-4" /> Authorize output
+              </button>
+              <button
+                type="button"
+                className="clinical-btn bg-white text-slate-700 border border-slate-200"
+                onClick={() => {
+                  setLastSaved(null);
+                  setSelectedPatientId('');
+                  setActiveTab('active');
+                }}
+              >
+                Back to clinical hub
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="page-header-premium mb-8">
         <div className="premium-tab-bar">
           <button className={`premium-tab-item ${activeTab === 'active' ? 'active' : ''}`} onClick={() => setActiveTab('active')}>
              <Activity className="w-4 h-4" /> Active Registry

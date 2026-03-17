@@ -1,6 +1,4 @@
 import { useState, useEffect } from 'react';
-import MetricCard from '../components/MetricCard.jsx';
-import ComparisonChart from '../components/ComparisonChart.jsx';
 import {
   PatientOverviewChart,
   RevenueTrendChart,
@@ -219,50 +217,50 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant }) 
         </div>
       </div>
 
-      {/* Key Metrics Row - Clean White Cards */}
+      {/* Key Metrics Row - elevated cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="dashboard-card metric-card">
           <div className="flex items-center justify-between mb-4">
             <div className="bg-teal-100 rounded-lg p-3">
               <Users className="w-6 h-6 text-teal-600" />
             </div>
             <span className="text-xs text-teal-600 font-medium">+12%</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{realtimeMetrics.totalPatients}</p>
-          <p className="text-sm text-gray-600 mt-1">Total Patients</p>
+          <p className="metric-value">{realtimeMetrics.totalPatients}</p>
+          <p className="metric-label">Total Patients</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="dashboard-card metric-card">
           <div className="flex items-center justify-between mb-4">
             <div className="bg-blue-100 rounded-lg p-3">
               <Calendar className="w-6 h-6 text-blue-600" />
             </div>
             <span className="text-xs text-blue-600 font-medium">+8%</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{realtimeMetrics.totalAppointments}</p>
-          <p className="text-sm text-gray-600 mt-1">Appointments</p>
+          <p className="metric-value">{realtimeMetrics.totalAppointments}</p>
+          <p className="metric-label">Appointments</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="dashboard-card metric-card">
           <div className="flex items-center justify-between mb-4">
             <div className="bg-indigo-100 rounded-lg p-3">
               <DollarSign className="w-6 h-6 text-indigo-600" />
             </div>
             <span className="text-xs text-indigo-600 font-medium">+15%</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">${(realtimeMetrics.totalRevenue / 1000).toFixed(0)}K</p>
-          <p className="text-sm text-gray-600 mt-1">Revenue</p>
+          <p className="metric-value">${(realtimeMetrics.totalRevenue / 1000).toFixed(0)}K</p>
+          <p className="metric-label">Revenue</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="dashboard-card metric-card">
           <div className="flex items-center justify-between mb-4">
             <div className="bg-rose-100 rounded-lg p-3">
               <AlertCircle className="w-6 h-6 text-rose-600" />
             </div>
             <span className="text-xs text-rose-600 font-medium">3 urgent</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{hasAnyAlerts ? '3' : '0'}</p>
-          <p className="text-sm text-gray-600 mt-1">Critical Alerts</p>
+          <p className="metric-value">{hasAnyAlerts ? '3' : '0'}</p>
+          <p className="metric-label">Critical Alerts</p>
         </div>
       </div>
 
@@ -279,44 +277,67 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant }) 
         ))}
       </div>
 
-      {/* Charts Grid - Clean Professional Layout */}
+      {/* Charts Grid - rich clinical visuals */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Patient Flow Chart */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Patient Flow</h2>
-            <p className="text-sm text-gray-600 mt-1">Daily admission & discharge trends</p>
-          </div>
-          <div className="p-6">
-            <PatientOverviewChart data={reportData?.patientData || []} />
+        <div className="dashboard-card">
+          <div className="chart-container">
+            <div className="chart-header">
+              <div>
+                <h2 className="chart-title">Patient Flow</h2>
+                <p className="text-xs text-gray-500 mt-1">Daily admission & discharge trends</p>
+              </div>
+              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1">
+                Live cohort
+              </span>
+            </div>
+            <div className="chart-area">
+              <PatientOverviewChart data={reportData?.patientData || []} />
+            </div>
           </div>
         </div>
 
         {/* Department Status */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Department Status</h2>
-            <p className="text-sm text-gray-600 mt-1">Current department occupancy</p>
-          </div>
-          <div className="p-6">
-            <DepartmentDistributionChart data={reportData?.departmentDistribution || []} />
+        <div className="dashboard-card">
+          <div className="chart-container">
+            <div className="chart-header">
+              <div>
+                <h2 className="chart-title">Department Status</h2>
+                <p className="text-sm text-gray-600 mt-1">Current department occupancy</p>
+              </div>
+              <span className="text-[10px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-full px-3 py-1">
+                Bed & service mix
+              </span>
+            </div>
+            <div className="chart-area">
+              <div className="h-72">
+                <DepartmentDistributionChart data={reportData?.departmentDistribution || []} />
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Revenue Analytics */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Revenue Analytics</h2>
-            <p className="text-sm text-gray-600 mt-1">Monthly financial performance</p>
-          </div>
-          <div className="p-6">
-            <RevenueTrendChart data={reportData?.financialData || []} />
+        <div className="dashboard-card">
+          <div className="chart-container">
+            <div className="chart-header">
+              <div>
+                <h2 className="chart-title">Revenue Analytics</h2>
+                <p className="text-sm text-gray-600 mt-1">Monthly financial performance</p>
+              </div>
+              <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full px-3 py-1">
+                Collections trend
+              </span>
+            </div>
+            <div className="chart-area">
+              <RevenueTrendChart data={reportData?.financialData || []} />
+            </div>
           </div>
         </div>
       </div>
 
       {/* Bottom Section - Additional Clean Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {/* Appointment Requests */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
@@ -383,6 +404,28 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant }) 
             <div className="text-center p-3 bg-gray-50 rounded-lg">
               <p className="text-2xl font-bold text-orange-600">{realtimeMetrics.patientStats?.admitted_today || 0}</p>
               <p className="text-xs text-gray-600 mt-1">Admitted</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Operational snapshot (Appointment & Bed graphs) */}
+        <div className="dashboard-card p-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-widest">Appointment status</h3>
+              </div>
+              <div className="h-32">
+                <AppointmentStatusChart data={reportData?.appointmentStatus || []} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xs font-semibold text-gray-900 uppercase tracking-widest">Bed occupancy</h3>
+              </div>
+              <div className="h-24">
+                <BedOccupancyChart data={reportData?.bedOccupancy || []} />
+              </div>
             </div>
           </div>
         </div>

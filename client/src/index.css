@@ -1,10 +1,11 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
 :root {
   color-scheme: light;
-  --font-display: 'Outfit', sans-serif;
-  --font-sans: 'Inter', 'Roboto', system-ui, sans-serif;
+  /* One font across the product (healthcare-grade consistency) */
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
   /* GOOGLE RECOMMENDATION: SURGICAL CALM PALETTE (REFINED) */
@@ -36,6 +37,9 @@
 }
 
 * { box-sizing: border-box; }
+html {
+  font-family: var(--font-sans);
+}
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -43,6 +47,13 @@ body {
   color: var(--text-main);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 /* PREMIUM SIDEBAR - SURGICAL DARK */
@@ -67,7 +78,7 @@ body {
 }
 
 .sidebar-header h1 {
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-weight: 800;
   letter-spacing: -0.02em;
 }

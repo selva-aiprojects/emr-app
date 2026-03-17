@@ -37,13 +37,13 @@ const HEALTHCARE_COLORS = {
   grid: '#f1f5f9'           // Grid lines
 };
 
-// Simple Bar Chart Component
+// Simple Bar Chart Component - horizontal, for summaries
 export const SimpleBarChart = ({ data = [], title, color = HEALTHCARE_COLORS.primary }) => {
   const maxValue = Math.max(...data.map(d => d.value), 1);
   
   return (
     <div className="w-full h-full flex flex-col">
-      <h3 className="text-sm font-semibold text-gray-900 mb-2">{title}</h3>
+      {title && <h3 className="text-sm font-semibold text-gray-900 mb-2">{title}</h3>}
       <div className="flex-1 space-y-2 min-h-0">
         {data.map((item, index) => (
           <div key={index} className="flex items-center gap-2">
@@ -56,7 +56,6 @@ export const SimpleBarChart = ({ data = [], title, color = HEALTHCARE_COLORS.pri
                   backgroundColor: color || HEALTHCARE_COLORS.primary
                 }}
               >
-                {/* Gradient overlay for depth */}
                 <div 
                   className="absolute inset-0 opacity-20"
                   style={{
@@ -269,36 +268,119 @@ export const SimplePieChart = ({ data = [], title }) => {
   );
 };
 
-// Patient Overview Chart
+// Patient Overview Chart - rich grouped bar style
 export const PatientOverviewChart = ({ data = [] }) => {
   const chartData = data.length > 0 ? data : [
-    { label: 'Mon', value1: 45, value2: 32 },
-    { label: 'Tue', value1: 52, value2: 38 },
-    { label: 'Wed', value1: 48, value2: 41 },
-    { label: 'Thu', value1: 58, value2: 45 },
-    { label: 'Fri', value1: 62, value2: 48 },
-    { label: 'Sat', value1: 41, value2: 28 },
-    { label: 'Sun', value1: 38, value2: 25 }
+    { label: '25 May', value1: 45, value2: 32 },
+    { label: '26 May', value1: 52, value2: 38 },
+    { label: '27 May', value1: 48, value2: 41 },
+    { label: '28 May', value1: 58, value2: 45 },
+    { label: '29 May', value1: 62, value2: 48 },
+    { label: '30 May', value1: 41, value2: 28 },
+    { label: '31 May', value1: 38, value2: 25 }
   ];
+
+  const maxValue = Math.max(
+    ...chartData.map(d => Math.max(d.value1, d.value2)),
+    1
+  );
+
+  const barWidth = 10; // in svg viewBox units
+  const groupWidth = 20;
 
   return (
     <div className="space-y-4">
-      <SimpleLineChart data={chartData} title="Patient Trends" />
-      <div className="flex justify-center gap-6 text-xs">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-teal-500 rounded-full" />
-          <span className="text-gray-600">Total Patients</span>
+      <div className="flex items-center justify-between text-xs text-gray-500">
+        <div className="font-medium text-gray-900">Patients statistics</div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
+            <span className="inline-block w-3 h-3 rounded-full bg-blue-500" />
+            <span>New patients</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="inline-block w-3 h-3 rounded-full bg-sky-300" />
+            <span>Old patients</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-emerald-500 rounded-full" />
-          <span className="text-gray-600">Appointments</span>
-        </div>
+      </div>
+
+      <div className="relative h-56">
+        <svg viewBox="0 0 100 100" className="w-full h-full">
+          {/* horizontal grid lines */}
+          {[0, 25, 50, 75, 100].map((pct) => (
+            <line
+              key={pct}
+              x1="5"
+              x2="95"
+              y1={100 - pct}
+              y2={100 - pct}
+              stroke={HEALTHCARE_COLORS.grid}
+              strokeWidth="0.4"
+            />
+          ))}
+
+          {/* grouped bars */}
+          {chartData.map((item, index) => {
+            const groupX = 10 + index * groupWidth;
+            const newHeight = (item.value1 / maxValue) * 70;
+            const oldHeight = (item.value2 / maxValue) * 70;
+
+            return (
+              <g key={item.label}>
+                {/* new patients (darker) */}
+                <defs>
+                  <linearGradient id={`newGrad-${index}`} x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity="0.85" />
+                  </linearGradient>
+                  <linearGradient id={`oldGrad-${index}`} x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#93c5fd" stopOpacity="0.95" />
+                    <stop offset="100%" stopColor="#bfdbfe" stopOpacity="0.9" />
+                  </linearGradient>
+                </defs>
+
+                <rect
+                  x={groupX - barWidth}
+                  y={95 - newHeight}
+                  width={barWidth - 1}
+                  height={newHeight}
+                  rx="2"
+                  fill={`url(#newGrad-${index})`}
+                />
+                <rect
+                  x={groupX}
+                  y={95 - oldHeight}
+                  width={barWidth - 1}
+                  height={oldHeight}
+                  rx="2"
+                  fill={`url(#oldGrad-${index})`}
+                />
+              </g>
+            );
+          })}
+
+          {/* x-axis labels */}
+          {chartData.map((item, index) => {
+            const groupX = 10 + index * groupWidth;
+            return (
+              <text
+                key={`label-${item.label}`}
+                x={groupX - 2}
+                y="99"
+                fontSize="2.5"
+                fill={HEALTHCARE_COLORS.textMuted}
+              >
+                {item.label.split(' ')[0]}
+              </text>
+            );
+          })}
+        </svg>
       </div>
     </div>
   );
 };
 
-// Revenue Trend Chart
+// Revenue Trend Chart - vertical bars with smooth area overlay
 export const RevenueTrendChart = ({ data = [] }) => {
   const chartData = data.length > 0 ? data : [
     { label: 'Jan', value: 45000 },
@@ -309,10 +391,104 @@ export const RevenueTrendChart = ({ data = [] }) => {
     { label: 'Jun', value: 67000 }
   ];
 
-  return <SimpleBarChart data={chartData} title="Revenue Trend" color={HEALTHCARE_COLORS.success} />;
+  const maxValue = Math.max(...chartData.map(d => d.value), 1);
+
+  return (
+    <div className="relative w-full h-full">
+      <svg viewBox="0 0 100 100" className="w-full h-full">
+        {/* grid */}
+        {[0, 25, 50, 75, 100].map((pct) => (
+          <line
+            key={pct}
+            x1="5"
+            x2="95"
+            y1={100 - pct}
+            y2={100 - pct}
+            stroke={HEALTHCARE_COLORS.grid}
+            strokeWidth="0.4"
+          />
+        ))}
+
+        {/* area under line */}
+        <defs>
+          <linearGradient id="revenueArea" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="#bbf7d0" stopOpacity="0.05" />
+          </linearGradient>
+        </defs>
+
+        <path
+          d={`
+            M 5 95
+            ${chartData
+              .map((item, index) => {
+                const x = 10 + (index * 12);
+                const y = 95 - (item.value / maxValue) * 70;
+                return `L ${x} ${y}`;
+              })
+              .join(' ')}
+            L 95 95 Z
+          `}
+          fill="url(#revenueArea)"
+          stroke="none"
+        />
+
+        {/* bars + line */}
+        <polyline
+          fill="none"
+          stroke={HEALTHCARE_COLORS.success}
+          strokeWidth="1.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          points={chartData
+            .map((item, index) => {
+              const x = 10 + (index * 12);
+              const y = 95 - (item.value / maxValue) * 70;
+              return `${x},${y}`;
+            })
+            .join(' ')}
+        />
+
+        {chartData.map((item, index) => {
+          const x = 10 + (index * 12);
+          const barHeight = (item.value / maxValue) * 70;
+          return (
+            <g key={item.label}>
+              <rect
+                x={x - 3}
+                y={95 - barHeight}
+                width="6"
+                height={barHeight}
+                rx="2"
+                fill="#4ade80"
+                opacity="0.9"
+              />
+              <circle
+                cx={x}
+                cy={95 - barHeight}
+                r="1.8"
+                fill="white"
+                stroke="#16a34a"
+                strokeWidth="0.8"
+              />
+              <text
+                x={x}
+                y="99"
+                fontSize="2.5"
+                textAnchor="middle"
+                fill={HEALTHCARE_COLORS.textMuted}
+              >
+                {item.label}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
 };
 
-// Department Distribution Chart
+// Department Distribution Chart - donut with center summary
 export const DepartmentDistributionChart = ({ data = [] }) => {
   const chartData = data.length > 0 ? data : [
     { label: 'Emergency', value: 35, color: HEALTHCARE_COLORS.danger },
@@ -322,7 +498,36 @@ export const DepartmentDistributionChart = ({ data = [] }) => {
     { label: 'Lab', value: 5, color: HEALTHCARE_COLORS.info }
   ];
 
-  return <SimplePieChart data={chartData} title="Department Distribution" />;
+  const total = chartData.reduce((sum, item) => sum + item.value, 0) || 1;
+
+  return (
+    <div className="flex flex-col lg:flex-row items-stretch gap-4 h-full">
+      <div className="flex-1 flex items-center justify-center">
+        <SimplePieChart data={chartData} title={null} />
+        <div className="absolute text-center">
+          <div className="text-xs text-gray-500">Total load</div>
+          <div className="text-lg font-semibold text-gray-900">{total}</div>
+        </div>
+      </div>
+      <div className="flex-1 space-y-2 text-xs">
+        {chartData.map((item) => {
+          const pct = Math.round((item.value / total) * 100);
+          return (
+            <div key={item.label} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block w-2 h-2 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-gray-700">{item.label}</span>
+              </div>
+              <span className="font-medium text-gray-900">{pct}%</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
 
 // Appointment Status Chart

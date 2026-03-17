@@ -14,47 +14,66 @@ const pool = new Pool({
 const TEST_PASSWORD_HASH = bcrypt.hashSync('Test@123', 10);
 
 async function seedNewAgeHospital() {
-  console.log('🚀 Starting Fresh Seeding for New Age Hospital...');
+  if (process.env.DEMO_SEED !== '1') {
+    console.error('❌ Refusing to run seed_new_age_hospital without DEMO_SEED=1');
+    process.exit(1);
+  }
+
+  console.log('🚀 Seeding demo tenant "New Age Hospital" (tenant-scoped only)...');
   const client = await pool.connect();
 
   try {
-    // 0. Full Cleanup across all tenants
-    console.log('--- Wiping All Existing Records (Multi-Tenant Cleanup) ---');
-    const tablesToClear = [
-      'emr.audit_logs',
-      'emr.prescription_items',
-      'emr.prescriptions',
-      'emr.claims',
-      'emr.invoice_items',
-      'emr.invoices',
-      'emr.drug_batches',
-      'emr.pharmacy_inventory',
-      'emr.purchase_order_items',
-      'emr.purchase_orders',
-      'emr.attendance',
-      'emr.employee_leaves',
-      'emr.employees',
-      'emr.encounters',
-      'emr.appointments',
-      'emr.clinical_records',
-      'emr.walkins',
-      'emr.patients',
-      'emr.beds',
-      'emr.wards',
-      'emr.insurance_providers',
-      'emr.vendors',
-      'emr.drug_master',
-      'emr.sessions',
-      'emr.users',
-      'emr.tenants'
-    ];
-    
-    await client.query(`TRUNCATE ${tablesToClear.join(', ')} RESTART IDENTITY CASCADE`);
-    console.log('✅ Database wiped successfully. Starting fresh.');
-
     await client.query('BEGIN');
 
-    // 1. Create Tenant
+    // 0. Clean up ONLY existing New Age Hospital tenant (if present)
+    console.log('--- Cleaning existing New Age Hospital demo data (if any) ---');
+    const existingTenant = await client.query(
+      'SELECT id FROM emr.tenants WHERE code = $1',
+      ['NAH']
+    );
+    if (existingTenant.rowCount) {
+      const existingTenantId = existingTenant.rows[0].id;
+      console.log('   Found existing NAH tenant, cleaning tenant-scoped data...');
+
+      const tenantTablesInOrder = [
+        'emr.audit_logs',
+        'emr.prescription_items',
+        'emr.prescriptions',
+        'emr.claims',
+        'emr.invoice_items',
+        'emr.invoices',
+        'emr.drug_batches',
+        'emr.pharmacy_inventory',
+        'emr.purchase_order_items',
+        'emr.purchase_orders',
+        'emr.attendance',
+        'emr.employee_leaves',
+        'emr.encounters',
+        'emr.appointments',
+        'emr.clinical_records',
+        'emr.walkins',
+        'emr.patients',
+        'emr.beds',
+        'emr.wards',
+        'emr.insurance_providers',
+        'emr.vendors',
+        'emr.drug_master',
+        'emr.sessions',
+        'emr.users'
+      ];
+
+      for (const tableName of tenantTablesInOrder) {
+        await client.query(
+          `DELETE FROM ${tableName} WHERE tenant_id = $1`,
+          [existingTenantId]
+        );
+      }
+
+      await client.query('DELETE FROM emr.tenants WHERE id = $1', [existingTenantId]);
+      console.log('   Previous NAH tenant and associated data removed.');
+    }
+
+    // 1. Create Tenant (demo-only)
     console.log('--- Creating Tenant ---');
     const tenantResult = await client.query(`
       INSERT INTO emr.tenants (name, code, subdomain, theme, features, status)
