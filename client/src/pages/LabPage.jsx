@@ -12,6 +12,7 @@ import {
   FileText,
   ShieldAlert
 } from 'lucide-react';
+import { EmptyState } from '../components/ui/index.jsx';
 
 export default function LabPage({ tenant, activeUser }) {
   const [labOrders, setLabOrders] = useState([]);
@@ -129,12 +130,15 @@ export default function LabPage({ tenant, activeUser }) {
                     {loading ? (
                       <tr><td colSpan="5" className="text-center py-24 text-slate-300 italic font-black uppercase tracking-widest">Syncing diagnostic feed...</td></tr>
                     ) : labOrders.length === 0 ? (
-                      <tr><td colSpan="5" className="text-center py-24">
-                         <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <FlaskConical className="w-8 h-8 text-slate-300" />
-                         </div>
-                         <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">No pathalogs identified in residency.</p>
-                      </td></tr>
+                      <tr>
+                        <td colSpan="5">
+                          <EmptyState 
+                            title="No pathological shards identified" 
+                            subtitle="The diagnostic intelligence node has found no active identity shards in the current pathological residency."
+                            icon={FlaskConical}
+                          />
+                        </td>
+                      </tr>
                     ) : labOrders.map((order, idx) => (
                       <tr key={order.id} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 30}ms` }}>
                         <td>

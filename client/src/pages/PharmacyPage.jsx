@@ -16,6 +16,8 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { currency } from '../utils/format.js';
+import { EmptyState } from '../components/ui/index.jsx';
+import { Pill } from 'lucide-react';
 
 export default function PharmacyPage({ tenant, onDispense }) {
   const [queue, setQueue] = useState([]);
@@ -187,7 +189,15 @@ export default function PharmacyPage({ tenant, onDispense }) {
                   {loading ? (
                     <tr><td colSpan="5" className="text-center py-20 text-slate-400 animate-pulse">Synchronizing with clinical ledger...</td></tr>
                   ) : filteredQueue.length === 0 ? (
-                    <tr><td colSpan="5" className="text-center py-20 text-slate-400 italic">No prescriptions detected in fulfillment pool.</td></tr>
+                    <tr>
+                      <td colSpan="5">
+                        <EmptyState 
+                          title="No prescriptions detected in fulfillment pool" 
+                          subtitle="The pharmacy dispatch node is currently idle. No authorized clinical orders are awaiting dispensation."
+                          icon={Pill}
+                        />
+                      </td>
+                    </tr>
                   ) : filteredQueue.map(item => (
                     <tr key={item.item_id} className="hover:bg-slate-50/50 transition-colors group">
                       <td>

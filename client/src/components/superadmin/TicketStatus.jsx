@@ -1,4 +1,6 @@
 import React from 'react';
+import { EmptyState } from '../ui/index.jsx';
+import { ShieldCheck } from 'lucide-react';
 
 export default function TicketStatus({ tickets, onResolveTicket }) {
   const openTickets = tickets.filter(t => t.status !== 'resolved' && t.status !== 'closed');
@@ -23,9 +25,11 @@ export default function TicketStatus({ tickets, onResolveTicket }) {
       </div>
       <div className="divide-y divide-slate-50 max-h-[400px] overflow-y-auto">
         {openTickets.length === 0 ? (
-          <div className="p-8 text-center">
-            <p className="text-[10px] font-black uppercase text-slate-400">All queues are clear</p>
-          </div>
+          <EmptyState 
+            title="All queues are clear" 
+            subtitle="No priority tenant support requests are currently awaiting platform-level intervention."
+            icon={ShieldCheck}
+          />
         ) : openTickets.map(t => (
           <div key={t.id} className="p-4 hover:bg-slate-50/50 transition-colors">
             <div className="flex justify-between items-start mb-2">

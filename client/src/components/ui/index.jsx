@@ -189,3 +189,21 @@ export function DataTable({
     </div>
   );
 }
+
+export function EmptyState({ 
+  title = "No informational records identified", 
+  subtitle = "The requested registry is currently empty or the applied filters returned no matching identity protocols.",
+  icon: Icon = ShieldCheck 
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 px-6 text-center animate-fade-in">
+      <div className="w-20 h-20 rounded-[28px] bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-200 mb-6">
+        <Icon className="w-10 h-10 stroke-[1.5]" />
+      </div>
+      <h3 className="text-base font-black text-slate-900 uppercase tracking-widest">{title}</h3>
+      <p className="mt-2 text-[10px] text-slate-400 font-bold uppercase tracking-tight max-w-xs leading-relaxed">
+        {subtitle}
+      </p>
+    </div>
+  );
+}

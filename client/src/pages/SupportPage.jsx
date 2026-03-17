@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api.js';
+import { EmptyState } from '../components/ui/index.jsx';
+import { Wrench } from 'lucide-react';
 
 const TICKET_TYPES = ['Maintenance', 'Cleaning', 'Equipment Repair', 'IT Support', 'Security', 'Housekeeping', 'Other'];
 const STATUS_STYLES = {
@@ -156,10 +158,11 @@ export default function SupportPage({ tenant, activeUser }) {
                 {loading ? (
                     <div className="p-12 text-center text-slate-400"><p>Loading tickets...</p></div>
                 ) : tickets.length === 0 ? (
-                    <div className="p-12 text-center text-slate-400">
-                        <div className="text-4xl mb-4 opacity-20">🔧</div>
-                        <p className="font-medium">No {filter !== 'all' ? filter : ''} tickets</p>
-                    </div>
+                    <EmptyState 
+                      title={`No ${filter !== 'all' ? filter : ''} tickets found`}
+                      subtitle="There are currently no active support requests in this operational queue."
+                      icon={Wrench}
+                    />
                 ) : (
                     <div className="divide-y divide-slate-100">
                         {tickets.map(ticket => (

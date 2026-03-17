@@ -1,3 +1,5 @@
+import { BRAND } from './branding.js';
+
 export const helpContent = {
     Superadmin: `
     <h3>Platform Superadmin</h3>
@@ -73,7 +75,7 @@ export const helpContent = {
   `,
     default: `
     <h3>Help & Support</h3>
-    <p>Welcome to MedFlow EMR. Navigate using the sidebar menu.</p>
-    <p>Contact your system administrator for specific access rights.</p>
+    <p>Welcome to ${BRAND.name}. Navigate using the clinical toolbar to access platform nodes.</p>
+    <p>Operational assistance contact: ${BRAND.support.email}</p>
   `
 };

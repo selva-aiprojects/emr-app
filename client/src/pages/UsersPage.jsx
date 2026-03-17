@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ShieldCheck, Mail, Shield, UserX, UserCheck, Search, Filter, MoreVertical, Terminal, Key } from 'lucide-react';
 import { userName } from '../utils/format.js';
+import { EmptyState } from '../components/ui/index.jsx';
 
 export default function UsersPage({ users = [], activeUser, tenant, onUpdateUserRole, onResetPassword }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,7 +74,15 @@ export default function UsersPage({ users = [], activeUser, tenant, onUpdateUser
             </thead>
             <tbody className="divide-y divide-slate-50">
               {filteredUsers.length === 0 ? (
-                <tr><td colSpan="5" className="text-center py-24 text-slate-400 italic">No personnel identified in the registry matching the current filters.</td></tr>
+                <tr>
+                  <td colSpan="5">
+                    <EmptyState 
+                      title="No personnel identities found" 
+                      subtitle="The security registry returned no matching records for the current identity filter."
+                      icon={UserX}
+                    />
+                  </td>
+                </tr>
               ) : filteredUsers.map((user, idx) => (
                 <tr key={user.id} className="hover:bg-slate-50/50 transition-colors slide-up" style={{ animationDelay: `${idx * 20}ms` }}>
                   <td>

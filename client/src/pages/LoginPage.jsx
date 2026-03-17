@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
+import { BRAND } from '../config/branding.js';
 import {
   Activity,
   AlertCircle,
@@ -119,9 +120,9 @@ export default function LoginPage({ onLogin, tenants }) {
         <div className="relative z-10 max-w-2xl text-center">
           <div className="mb-8 mt-0">
             <div className="w-40 h-40 mx-auto flex items-center justify-center">
-              <img src="/medflow_logo_8k.svg" alt="MedFlow EMR" className="w-full h-full" />
+              <img src="/medflow_logo_8k.svg" alt={BRAND.name} className="w-full h-full" />
             </div>
-            <p className="text-xs uppercase tracking-[0.28em] text-cyan-100/72 font-extrabold mt-3">MedFlow EMR</p>
+            <p className="text-xs uppercase tracking-[0.28em] text-cyan-100/72 font-extrabold mt-3">{BRAND.name}</p>
           </div>
           
           <div className="clinical-chip !bg-white/10 !border-white/15 !text-white mb-8">
@@ -200,7 +201,7 @@ export default function LoginPage({ onLogin, tenants }) {
               Secure staff sign-in
             </div>
             <h2 className="text-[1.55rem] md:text-[1.75rem] font-extrabold tracking-[-0.03em] text-[var(--primary)] whitespace-nowrap">
-              Access your healthcare workspace
+              {BRAND.slogan}
             </h2>
             <p className="mt-3 text-sm leading-7 text-[var(--text-muted)]">
               Choose your organization and sign in with your assigned staff credentials.

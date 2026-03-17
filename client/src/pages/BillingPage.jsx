@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import PatientSearch from '../components/PatientSearch.jsx';
 import { currency, patientName } from '../utils/format.js';
 import { api } from '../api.js';
+import { EmptyState } from '../components/ui/index.jsx';
 import '../styles/critical-care.css';
 import { 
   Receipt, 
@@ -336,10 +337,11 @@ export default function BillingPage({
               ))}
             </div>
             {!patients.length && (
-              <div className="py-20 text-center flex flex-col items-center">
-                 <Building className="w-12 h-12 text-slate-100 mb-4" />
-                 <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No active bed shards requiring reconciliation.</p>
-              </div>
+              <EmptyState 
+                title="No active bed shards" 
+                subtitle="All therapeutic wards are currently reconciled. No active bed shards requiring discharge clearance."
+                icon={Building}
+              />
             )}
           </article>
         )}
@@ -375,7 +377,15 @@ export default function BillingPage({
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {sortedInvoices.length === 0 ? (
-                    <tr><td colSpan="6" className="text-center py-32 text-slate-400 italic font-medium">No recorded transactions identified in the current fiscal sector.</td></tr>
+                    <tr>
+                      <td colSpan="6">
+                        <EmptyState 
+                          title="No recorded transactions identified" 
+                          subtitle="The institutional fiscal ledger contains no committed transaction shards in the current financial sector."
+                          icon={Receipt}
+                        />
+                      </td>
+                    </tr>
                   ) : sortedInvoices.map((i, idx) => (
                     <tr key={i.id} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }}>
                       <td>

@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   Building
 } from 'lucide-react';
+import { EmptyState } from '../components/ui/index.jsx';
 import '../styles/critical-care.css';
 
 const CATEGORIES = ['Purchase', 'Salary', 'Maintenance', 'Utilities', 'Govt Fees', 'Certifications', 'Subscriptions', 'Equipment', 'Other'];
@@ -215,10 +216,13 @@ export default function AccountsPage({ tenant }) {
                          );
                        })
                    ) : (
-                     <div className="col-span-2 py-20 text-center flex flex-col items-center">
-                        <History className="w-10 h-10 text-slate-100 mb-4" />
-                        <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">No transaction shards detected in current cycle.</p>
-                     </div>
+                     <div className="col-span-2">
+                        <EmptyState 
+                          title="No transaction shards detected" 
+                          subtitle="The treasury node has identified no clinical outflow or revenue commitments for the current temporal cycle."
+                          icon={History}
+                        />
+                      </div>
                    )}
                 </div>
               </div>
@@ -357,7 +361,15 @@ export default function AccountsPage({ tenant }) {
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {expenses.length === 0 ? (
-                    <tr><td colSpan="6" className="text-center py-32 text-slate-400 italic font-medium">No recorded transactions identified in the current fiscal sector.</td></tr>
+                    <tr>
+                      <td colSpan="6">
+                        <EmptyState 
+                          title="No recorded transactions identified" 
+                          subtitle="The institutional treasure journal contains no committed transaction shards in the current fiscal sector."
+                          icon={History}
+                        />
+                      </td>
+                    </tr>
                   ) : expenses.map((exp, idx) => (
                     <tr key={exp.id || idx} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }}>
                       <td>

@@ -16,8 +16,10 @@ import {
   FileText,
   Stethoscope,
   MoreVertical,
-  ClipboardList
+  ClipboardList,
+  UserX
 } from 'lucide-react';
+import { EmptyState } from '../components/ui/index.jsx';
 
 export default function PatientsPage({
   tenant,
@@ -169,7 +171,15 @@ export default function PatientsPage({
                          </tr>
                        ))
                     ) : filtered.length === 0 ? (
-                       <tr><td colSpan="5" className="py-32 text-center text-slate-400 font-bold uppercase tracking-widest">No identity shards found in clinical registry.</td></tr>
+                       <tr>
+                         <td colSpan="5">
+                           <EmptyState 
+                             title="No identity shards found in clinical registry" 
+                             subtitle="The master identification hub returned no matching clinical shards for your current search criteria."
+                             icon={UserX}
+                           />
+                         </td>
+                       </tr>
                     ) : filtered.map((p, idx) => (
                       <tr
                         key={p.id || idx}

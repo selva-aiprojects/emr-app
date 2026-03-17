@@ -1,4 +1,6 @@
 import React from 'react';
+import { EmptyState } from '../ui/index.jsx';
+import { ShieldCheck } from 'lucide-react';
 
 export default function IssuesTable({ issues }) {
   return (
@@ -23,7 +25,15 @@ export default function IssuesTable({ issues }) {
           </thead>
           <tbody className="divide-y divide-slate-50">
             {issues.length === 0 ? (
-              <tr><td colSpan="6" className="text-center py-8 text-[10px] font-black uppercase text-slate-400">No active issues recorded</td></tr>
+              <tr>
+                <td colSpan="6">
+                  <EmptyState 
+                    title="No system faults identified" 
+                    subtitle="Platform infrastructure nodes are reporting nominal status. No active issues detected."
+                    icon={ShieldCheck}
+                  />
+                </td>
+              </tr>
             ) : issues.map((iss, i) => (
               <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                 <td><div className="font-black text-slate-900">{iss.tenant}</div></td>

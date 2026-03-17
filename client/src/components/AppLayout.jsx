@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { moduleMeta } from "../config/modules.js";
+import { BRAND } from "../config/branding.js";
 import { helpContent } from "../config/helpContent.js";
 import { ModuleGate, useFeatureAccess } from "./FeatureGate.jsx";
 import {
@@ -90,7 +91,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
   const accessibleModules = getAccessibleModules(allowedViews);
   const searchInputRef = useRef(null);
 
-  const facilityName = tenant?.name || "MedFlow Care Platform";
+  const facilityName = tenant?.name || `${BRAND.name} Care Platform`;
   const currentModule = moduleMeta[view]?.title || "Clinical Workspace";
   const today = useMemo(
     () =>
@@ -174,7 +175,7 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
           </div>
           {!isCollapsed && (
             <div className="brand-text">
-              <h1 className="brand-name">MedFlow</h1>
+              <h1 className="brand-name">{BRAND.name}</h1>
               <div className="brand-subtitle">{facilityName}</div>
             </div>
           )}
