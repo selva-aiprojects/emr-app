@@ -312,15 +312,7 @@ export default function App() {
           <SuperadminPage
             superOverview={superOverview}
             tenants={tenants}
-            onCreateTenant={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
-              withRefresh(() => api.createTenant({
-                name: fd.get('name'), code: fd.get('code'), subdomain: fd.get('subdomain'),
-                primaryColor: fd.get('primaryColor'), accentColor: fd.get('accentColor')
-              }));
-              e.target.reset();
-            }}
+            onCreateTenant={(data) => withRefresh(() => api.createTenant(data))}
             onCreateUser={(e) => {
               e.preventDefault();
               const fd = new FormData(e.target);
@@ -337,7 +329,7 @@ export default function App() {
           />
         )}
 
-        {view === 'dashboard' && <DashboardPage metrics={metrics} activeUser={activeUser} setView={setView} tenant={session?.tenantId ? { id: session.tenantId, ...tenant } : null} />}
+        {view === 'dashboard' && <DashboardPage metrics={metrics} activeUser={activeUser} setView={setView} tenant={session?.tenantId ? { id: session.tenantId, ...tenant } : null} view={view} />}
 
         {view === 'patients' && (
           <PatientsPage

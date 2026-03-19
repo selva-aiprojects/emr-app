@@ -50,6 +50,7 @@ app.get('/api/health', (_req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { tenantId, email, password } = req.body;
+    console.log(`[LOGIN_DEBUG] tenantId=${tenantId}, email=${email}`);
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -206,7 +207,7 @@ app.use('/api/pharmacy/v1', requireTenant, pharmacyRoutes);
 
 app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
   try {
-    const { name, code, subdomain, primaryColor, accentColor } = req.body;
+    const { name, code, subdomain, primaryColor, accentColor, subscriptionTier } = req.body;
 
     if (!name || !code || !subdomain) {
       return res.status(400).json({ error: 'name, code, and subdomain are required' });
@@ -217,7 +218,14 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
       accent: accentColor || '#f57f17',
     };
 
+    // Create the tenant record
     const tenant = await repo.createTenant({ name, code, subdomain, theme });
+
+    // Apply subscription tier if provided (defaults to Basic in DB if not set)
+    if (subscriptionTier && ['Free', 'Basic', 'Professional', 'Enterprise'].includes(subscriptionTier)) {
+      await repo.setTenantTier(tenant.id, subscriptionTier);
+      tenant.subscription_tier = subscriptionTier;
+    }
 
     await repo.createAuditLog({
       tenantId: tenant.id,
@@ -226,15 +234,17 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
       action: 'tenant.create',
       entityName: 'tenant',
       entityId: tenant.id,
+      details: { code, subscriptionTier: subscriptionTier || 'Basic' },
     });
 
     res.status(201).json(tenant);
   } catch (error) {
     console.error('Error creating tenant:', error);
-    if (error.constraint) {
-      return res.status(409).json({ error: 'Tenant code or subdomain already exists' });
+    // Postgres unique constraint violation
+    if (error.constraint || error.code === '23505') {
+      return res.status(409).json({ error: 'Tenant code or subdomain already exists. Please choose a different one.' });
     }
-    res.status(500).json({ error: 'Failed to create tenant' });
+    res.status(500).json({ error: 'Failed to create tenant: ' + error.message });
   }
 });
 
@@ -661,7 +671,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
     // Get real-time metrics from database
     const [totalPatients, totalAppointments, totalRevenue, criticalAlerts] = await Promise.all([
       query('SELECT COUNT(*) as count FROM emr.patients WHERE tenant_id = $1', [tenantId]),
-      query('SELECT COUNT(*) as count FROM emr.appointments WHERE tenant_id = $1 AND DATE(start_time) = CURRENT_DATE', [tenantId]),
+      query('SELECT COUNT(*) as count FROM emr.appointments WHERE tenant_id = $1 AND DATE(scheduled_start) = CURRENT_DATE', [tenantId]),
       query('SELECT COALESCE(SUM(amount), 0) as total FROM emr.invoices WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE', [tenantId]),
       query('SELECT COUNT(*) as count FROM emr.service_requests WHERE tenant_id = $1 AND category = \'urgent\' AND status = \'pending\'', [tenantId])
     ]);
@@ -679,10 +689,10 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
       
       query(`
         SELECT 
-          COUNT(CASE WHEN status = 'scheduled' AND DATE(start_time) = CURRENT_DATE THEN 1 END) as scheduled_today,
-          COUNT(CASE WHEN status = 'completed' AND DATE(start_time) = CURRENT_DATE THEN 1 END) as completed_today,
-          COUNT(CASE WHEN status = 'cancelled' AND DATE(start_time) = CURRENT_DATE THEN 1 END) as cancelled_today,
-          COUNT(CASE WHEN status = 'no-show' AND DATE(start_time) = CURRENT_DATE THEN 1 END) as no_show_today
+          COUNT(CASE WHEN status = 'scheduled' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as scheduled_today,
+          COUNT(CASE WHEN status = 'completed' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as completed_today,
+          COUNT(CASE WHEN status = 'cancelled' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as cancelled_today,
+          COUNT(CASE WHEN status = 'no-show' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as no_show_today
         FROM emr.appointments 
         WHERE tenant_id = $1
       `, [tenantId]),

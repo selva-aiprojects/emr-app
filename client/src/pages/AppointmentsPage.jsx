@@ -182,10 +182,14 @@ export default function AppointmentsPage({
                            <Activity className="w-2.5 h-2.5 opacity-50" /> WITH {userName(a.providerId, users)}
                         </div>
                         <div className="mt-4 flex items-center gap-2">
+                           {a.status === 'checked_in' && <span className="px-2 py-0.5 bg-sky-50 text-sky-600 rounded text-[9px] font-black uppercase tracking-widest border border-sky-100">ARRIVED</span>}
+                           {a.status === 'triaged' && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[9px] font-black uppercase tracking-widest border border-indigo-100 shadow-sm animate-pulse">TRIAGED (VITALS CAPTURED)</span>}
+                           {a.status === 'completed' && <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black uppercase tracking-widest border border-emerald-100">ENCOUNTERED</span>}
                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
                              a.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                              a.status === 'scheduled' ? 'bg-blue-50 text-blue-600 border-blue-100' :
                              a.status === 'checked_in' ? 'bg-indigo-50 text-indigo-600 border-indigo-100 shadow-[0_4px_12px_rgba(99,102,241,0.1)]' :
+                             a.status === 'triaged' ? 'bg-purple-50 text-purple-600 border-purple-100 shadow-[0_4px_12px_rgba(124,58,237,0.1)]' : // Added triaged status
                              'bg-slate-50 text-slate-500 border-slate-100'
                            }`}>{a.status.replace('_', ' ')}</span>
                         </div>

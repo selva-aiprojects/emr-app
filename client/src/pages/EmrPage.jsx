@@ -14,7 +14,8 @@ import {
   Printer, 
   AlertCircle,
   Clock,
-  ChevronRight
+  ChevronRight,
+  ShieldCheck
 } from 'lucide-react';
 
 function printPrescription(enc, patient, medications, provider, tenant) {

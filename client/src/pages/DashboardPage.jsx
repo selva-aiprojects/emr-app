@@ -23,7 +23,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 
-export default function DashboardPage({ metrics, activeUser, setView, tenant }) {
+export default function DashboardPage({ metrics, activeUser, setView, tenant, view }) {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
@@ -76,8 +76,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant }) 
         return;
       }
       
-      const response = await api.get(`/dashboard/metrics?tenantId=${tenant.id}`);
-      const data = response.data;
+      const data = await api.get(`/dashboard/metrics?tenantId=${tenant.id}`);
       
       setRealtimeMetrics({
         totalPatients: data.totalPatients || 0,

@@ -24,14 +24,17 @@ export const MODULE_FLAG_MAPPING = {
   lab: FEATURE_FLAGS.PHARMACY_LAB_ACCESS,
   inventory: FEATURE_FLAGS.CORE_ENGINE_ACCESS,
   reports: FEATURE_FLAGS.CORE_ENGINE_ACCESS,
-  support: FEATURE_FLAGS.CUSTOMER_SUPPORT_ACCESS
+  support: FEATURE_FLAGS.CUSTOMER_SUPPORT_ACCESS,
+  ticketing: FEATURE_FLAGS.CUSTOMER_SUPPORT_ACCESS,
+  insurance: FEATURE_FLAGS.ACCOUNTS_ACCESS,
+  admin: FEATURE_FLAGS.CORE_ENGINE_ACCESS,
+  users: FEATURE_FLAGS.CORE_ENGINE_ACCESS
 };
 
 // Default feature flags by subscription tier
 const DEFAULT_FEATURES_BY_TIER = {
   'Free': [
-    FEATURE_FLAGS.CORE_ENGINE_ACCESS,
-    FEATURE_FLAGS.CUSTOMER_SUPPORT_ACCESS
+    FEATURE_FLAGS.CORE_ENGINE_ACCESS
   ],
   'Basic': [
     FEATURE_FLAGS.CORE_ENGINE_ACCESS,
@@ -42,7 +45,8 @@ const DEFAULT_FEATURES_BY_TIER = {
     FEATURE_FLAGS.CORE_ENGINE_ACCESS,
     FEATURE_FLAGS.CUSTOMER_SUPPORT_ACCESS,
     FEATURE_FLAGS.PHARMACY_LAB_ACCESS,
-    FEATURE_FLAGS.INPATIENT_ACCESS
+    FEATURE_FLAGS.INPATIENT_ACCESS,
+    FEATURE_FLAGS.ACCOUNTS_ACCESS
   ],
   'Enterprise': [
     FEATURE_FLAGS.CORE_ENGINE_ACCESS,
@@ -123,6 +127,39 @@ export async function evaluateFeatureFlag(tenantId, flag) {
 }
 
 /**
+ * Get all available feature flags and their status for a tenant
+ * Returns an object suitable for the frontend: { "flag-name": { enabled: true/false } }
+ */
+export async function getFeatureFlagStatus(tenantId) {
+  try {
+    const tier = await getTenantTier(tenantId);
+    const defaultFeatures = DEFAULT_FEATURES_BY_TIER[tier] || [];
+    const customFeatures = await getTenantCustomFeatures(tenantId);
+    const killSwitches = await getGlobalKillSwitches();
+
+    const enabledList = [...defaultFeatures, ...customFeatures];
+    const status = {};
+
+    // Initialize all known flags as disabled
+    Object.values(FEATURE_FLAGS).forEach(flag => {
+      status[flag] = { enabled: false };
+    });
+
+    // Mark as enabled if part of tier/custom and not killed
+    enabledList.forEach(flag => {
+      if (!killSwitches[flag]) {
+        status[flag] = { enabled: true };
+      }
+    });
+
+    return status;
+  } catch (error) {
+    console.error('Error getting feature flag status:', error);
+    return {};
+  }
+}
+
+/**
  * Get all enabled feature flags for a tenant
  */
 export async function getTenantFeatureFlags(tenantId) {
@@ -171,17 +208,5 @@ export async function setGlobalKillSwitch(flag, enabled, userId, reason) {
   } catch (error) {
     console.error('Error setting global kill switch:', error);
     return false;
-  }
-}
-
-/**
- * Get all available feature flags and their status for a tenant
- */
-export async function getFeatureFlagStatus(tenantId) {
-  try {
-    return await repo.getTenantFeatureStatus(tenantId);
-  } catch (error) {
-    console.error('Error getting feature flag status:', error);
-    return {};
   }
 }

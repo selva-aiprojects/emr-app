@@ -1,4 +1,4 @@
-import { Shield, Layout, Palette, Users, Save, Plus, Settings, Activity, Lock, Building, CreditCard } from 'lucide-react';
+import { Shield, Layout, Palette, Users, Save, Plus, Settings, Activity, Lock, Building, CreditCard, ShieldCheck } from 'lucide-react';
 import '../styles/critical-care.css';
 
 export default function AdminPage({ tenant, patients, onSaveSettings, onCreateUser }) {

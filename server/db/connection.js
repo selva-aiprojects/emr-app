@@ -10,7 +10,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
   max: 10, // Maximum number of clients in the pool
   idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: 10000, // Increased timeout for Neon
+  connectionTimeoutMillis: 30000, // Increased timeout for Neon
   query_timeout: 30000, // Query timeout
 });
 

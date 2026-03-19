@@ -397,9 +397,9 @@ export async function updateInventoryStock(itemId, tenantId, delta) {
   });
 }
 
-// =====================================================
-// EMPLOYEES
-// =====================================================
+export async function getEmployees(tenantId) {
+  return await apiRequest(`/users?tenantId=${tenantId}&role=Doctor,Nurse,Pharmacist,Lab,Admin`);
+}
 
 export async function createEmployee(data) {
   return await apiRequest('/employees', {
@@ -706,6 +706,7 @@ apiClient.addInvoice = createInvoice;
 apiClient.markInvoicePaid = payInvoice;
 apiClient.addInventory = createInventoryItem;
 apiClient.addEmployee = createEmployee;
+apiClient.getEmployees = getEmployees;
 apiClient.addEmployeeLeave = createEmployeeLeave;
 apiClient.getSupportTickets = getSupportTickets;
 apiClient.addSupportTicket = createSupportTicket;

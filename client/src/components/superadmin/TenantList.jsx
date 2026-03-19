@@ -30,6 +30,7 @@ export default function TenantList({ tenants, onSelect }) {
                    <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border ${
                      tenant.subscription_tier === 'Enterprise' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 
                      tenant.subscription_tier === 'Professional' ? 'bg-amber-50 text-amber-700 border-amber-200' : 
+                     tenant.subscription_tier === 'Free' ? 'bg-purple-50 text-purple-700 border-purple-200' : 
                      'bg-slate-50 text-slate-600 border-slate-200'
                    }`}>
                      {tenant.subscription_tier || 'Basic'}

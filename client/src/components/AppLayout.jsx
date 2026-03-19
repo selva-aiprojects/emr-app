@@ -76,11 +76,9 @@ const moduleDescriptions = {
   admin: "Facility settings, users, and access controls",
   lab: "Orders, samples, and result tracking",
   superadmin: "Platform Hub",
-  dashboard: "Platform Metrics & Trends",
   tenants: "Multi-tenant Governance",
   support: "Support Channels",
-  ticketing: "Issue Resolution",
-  admin: "Infrastructural Config"
+  ticketing: "Issue Resolution"
 };
 
 function formatRole(role) {

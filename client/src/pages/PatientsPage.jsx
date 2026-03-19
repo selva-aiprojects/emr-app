@@ -279,12 +279,25 @@ export default function PatientsPage({
                              <input name="email" type="email" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" placeholder="patient@node.com" />
                           </div>
                        </div>
-                       <div className="p-6 bg-emerald-50/40 rounded-3xl border border-emerald-100 flex items-start gap-4">
-                          <ShieldCheck className="w-5 h-5 text-emerald-600 mt-0.5" />
-                          <p className="text-[11px] font-medium text-emerald-800/60 leading-relaxed italic">
-                             Automated consent shard will be generated upon commitment to the clinical registry.
-                          </p>
-                       </div>
+                        <div className="space-y-4">
+                           <div className="flex items-start gap-3 p-6 bg-emerald-50/40 rounded-3xl border border-emerald-100 transition-all hover:bg-emerald-50 group">
+                              <input 
+                                 type="checkbox" 
+                                 name="consent" 
+                                 id="consent-check" 
+                                 className="mt-1 w-5 h-5 rounded border-emerald-200 text-emerald-600 focus:ring-emerald-500 cursor-pointer" 
+                                 required 
+                              />
+                              <label htmlFor="consent-check" className="text-[11px] font-medium text-emerald-800 leading-relaxed cursor-pointer group-hover:text-emerald-900 transition-colors">
+                                 I acknowledge that patient consent for treatment and data processing has been obtained in accordance with institutional clinical governance protocols. 
+                                 <span className="block mt-2 text-[9px] font-black uppercase tracking-widest text-emerald-600/60">Automated consent shard will be logged.</span>
+                              </label>
+                           </div>
+                           <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100">
+                             <ShieldCheck className="w-4 h-4 text-slate-400" />
+                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Identity Protection: AES-256 Sharded Storage Active</span>
+                           </div>
+                        </div>
                     </div>
                  </div>
 

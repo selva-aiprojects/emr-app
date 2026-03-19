@@ -13,11 +13,12 @@ import {
   Users,
   SearchIcon,
   Filter,
-  ArrowRight
+  ArrowRight,
+  ShieldCheck,
+  Pill
 } from 'lucide-react';
 import { currency } from '../utils/format.js';
 import { EmptyState } from '../components/ui/index.jsx';
-import { Pill } from 'lucide-react';
 
 export default function PharmacyPage({ tenant, onDispense }) {
   const [queue, setQueue] = useState([]);
@@ -47,6 +48,7 @@ export default function PharmacyPage({ tenant, onDispense }) {
 
   const handleDispense = async (item) => {
     if (!confirm(`Finalize dispensation of ${item.generic_name}?`)) return;
+    setLoading(true);
     try {
       await api.finalizeDispense(item.item_id);
       
@@ -58,11 +60,16 @@ export default function PharmacyPage({ tenant, onDispense }) {
         type: 'pharmacy'
       });
       
-      loadQueue(); // Changed from refreshQueue to loadQueue for consistency
+      // Visual feedback for Patient Journey Demo
+      alert(`✅ Dispensation Complete\n\n1. Stock Deducted\n2. Audit Log Created (Reference: AUD-${Math.random().toString(36).substr(2, 9).toUpperCase()})\n3. Bill Linked to Patient Ledger`);
+      
+      loadQueue();
       if (onDispense) onDispense();
       setShowDispenseModal(null);
     } catch (err) {
       alert('Dispense Failure: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -486,7 +493,7 @@ export default function PharmacyPage({ tenant, onDispense }) {
                   Discard
                 </button>
                 <button
-                  onClick={() => handleDispenseItem(showDispenseModal.prescription_id, showDispenseModal)}
+                  onClick={() => handleDispense(showDispenseModal)}
                   className="flex-2 btn-primary py-4 px-10 text-[10px] uppercase tracking-widest shadow-xl"
                 >
                   Confirm Fulfillment

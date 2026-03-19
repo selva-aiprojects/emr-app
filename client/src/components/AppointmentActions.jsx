@@ -31,6 +31,12 @@ export default function AppointmentActions({ appointment, user, onStatus, onResc
           Check-in
         </button>
       )}
+      {appointment.status === 'checked_in' && (
+        <button type="button" className="px-2 py-0.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-md text-[9px] font-black uppercase tracking-tight transition-colors shadow-md animate-pulse" 
+          onClick={() => onStatus('triaged')}>
+          Triage (Vitals)
+        </button>
+      )}
       {['scheduled', 'checked_in'].includes(appointment.status) && (
         <button type="button" className="px-2 py-0.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md text-[9px] font-black uppercase tracking-tight transition-colors border border-emerald-100" onClick={() => onStatus('completed')}>
           Complete

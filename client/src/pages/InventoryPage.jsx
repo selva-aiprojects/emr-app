@@ -1,3 +1,4 @@
+import { ShieldCheck } from 'lucide-react';
 import MetricCard from '../components/MetricCard';
 
 export default function InventoryPage({ inventory, onAddItem, onRestock }) {
