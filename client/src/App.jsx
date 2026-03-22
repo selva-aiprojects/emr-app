@@ -236,12 +236,13 @@ export default function App() {
       setSession(loginData);
 
       if (loginData.role === 'Superadmin') {
-        setView('superadmin');
         await refreshSuperadmin();
+        setView('superadmin');
       } else {
-        setView('dashboard');
-        // CRITICAL FIX: Fetch tenant data after login
+        // Fetch tenant data FIRST
         await refreshTenantData(loginData.tenantId, loginData.user.id, loginData.user.role);
+        // Only show dashboard AFTER data is loaded
+        setView('dashboard');
       }
     } catch (err) {
       console.error('DIAGNOSTIC: Login process failed at step:', err);

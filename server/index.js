@@ -28,6 +28,10 @@ const isDirectRun =
 app.use(cors());
 app.use(express.json());
 
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-secret-key-change-in-production') {
+  console.warn('⚠️ WARNING: JWT_SECRET is not properly configured. Using insecure default.');
+}
+
 // DEBUG: Log all requests
 app.use((req, res, next) => {
   console.log(`[REQUEST] ${req.method} ${req.path}`);

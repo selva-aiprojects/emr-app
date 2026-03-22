@@ -25,37 +25,23 @@ export async function authenticate(req, res, next) {
     let decoded;
     try {
       decoded = verifyToken(token);
-      console.log('[AUTH_DEBUG] Token verified for user:', decoded.userId);
-
-      // Normalize role to PascalCase (e.g., "doctor" -> "Doctor", "DOCTOR" -> "Doctor")
-      if (decoded.role) {
-        decoded.role = decoded.role.charAt(0).toUpperCase() + decoded.role.slice(1).toLowerCase();
-        // Special handling for multi-word roles if needed, though most here are single word or handled
-        if (decoded.role === 'Front office') decoded.role = 'Front Office';
-        if (decoded.role === 'Support staff') decoded.role = 'Support Staff';
-        if (decoded.role === 'Hr') decoded.role = 'HR';
+      if (!decoded || !decoded.userId) {
+        throw new Error('Token payload missing userId');
       }
-
     } catch (error) {
-      console.error('[AUTH_DEBUG] JWT Verification failed:', error.message);
-      return res.status(401).json({
-        error: 'Invalid token',
-        message: error.message
-      });
+      console.error('[AUTH_ERROR] JWT Verification failed:', error.message);
+      return res.status(401).json({ error: 'Invalid token', message: error.message });
     }
 
-    // Fetch user from database to ensure they still exist and are active
+    // Fetch user from database
     const userResult = await query(
       'SELECT id, tenant_id, email, name, role, patient_id, is_active FROM emr.users WHERE id = $1',
       [decoded.userId]
     );
 
     if (userResult.rows.length === 0) {
-      console.log('[AUTH_DEBUG] User not found in DB for ID:', decoded.userId);
-      return res.status(401).json({
-        error: 'User not found',
-        message: 'User account no longer exists'
-      });
+      console.error('[AUTH_ERROR] User not found in database for ID:', decoded.userId);
+      return res.status(401).json({ error: 'User not found' });
     }
 
     const user = userResult.rows[0];
