@@ -83,20 +83,20 @@ async function apiRequest(endpoint, options = {}) {
   try {
     const response = await fetch(url, config);
 
-    // Handle 401 Unauthorized
-    if (response.status === 401) {
-      // If it's a login attempt, don't say "Session expired"
-      if (endpoint === '/login') {
-        throw new Error('Invalid email or password');
-      }
+      // Handle 401 Unauthorized
+      if (response.status === 401) {
+        // If it's a login attempt, don't say "Session expired"
+        if (endpoint === '/login') {
+          throw new Error('Invalid email or password');
+        }
 
-      // Only clear auth and redirect if we actually have a token
-      if (getToken()) {
-        clearAuth();
-        window.location.href = '/'; // Redirect to login
+        // We removed the forced window.location.href = '/' to allow 
+        // the frontend to show diagnostic error messages.
+        if (getToken()) {
+          clearAuth();
+        }
+        throw new Error('Session expired or unauthorized. Please login again.');
       }
-      throw new Error('Session expired. Please login again.');
-    }
 
     // Parse JSON response safely
     let data = {};
