@@ -18,8 +18,12 @@ const app = express();
 const PORT = Number(process.env.PORT || 4000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Only start listening when running directly (not when imported as a module)
-const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url);
+// Robust check: Render or other environments might call the script in different ways.
+const currentFilePath = fileURLToPath(import.meta.url);
+const isDirectRun = 
+  process.argv[1] === currentFilePath || 
+  process.argv[1]?.endsWith('server/index.js') ||
+  process.env.RENDER === 'true'; // Force listen if on Render
 
 app.use(cors());
 app.use(express.json());
@@ -37,12 +41,14 @@ testConnection();
 // PUBLIC ROUTES (No authentication required)
 // =====================================================
 
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', async (_req, res) => {
+  const dbStatus = await testConnection();
   res.json({
     ok: true,
     service: 'emr-api',
     version: '2.0.0',
-    database: 'postgresql',
+    database: dbStatus ? 'connected' : 'ERROR',
+    env: process.env.NODE_ENV,
     now: new Date().toISOString()
   });
 });
@@ -50,7 +56,7 @@ app.get('/api/health', (_req, res) => {
 app.post('/api/login', async (req, res) => {
   try {
     const { tenantId, email, password } = req.body;
-    console.log(`[LOGIN_DEBUG] tenantId=${tenantId}, email=${email}`);
+    console.log(`[LOGIN_DEBUG] Attempting login: tenantId=${tenantId}, email=${email}`);
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
