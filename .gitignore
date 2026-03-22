@@ -1,6 +1,12 @@
 node_modules/
 .env
-server.log
-debug_login.log
+*.log
+*.txt
 dist/
 .netlify/
+test-results/
+playwright-report/
+blob-report/
+test-results/
+.qoder/
+.run-pids
