@@ -6,6 +6,7 @@ import { query } from '../db/connection.js';
  * Extracts token from Authorization header and verifies it
  */
 export async function authenticate(req, res, next) {
+  console.log(`[AUTH_DIAGNOSTIC] Hit middleware for path: ${req.path}`);
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;

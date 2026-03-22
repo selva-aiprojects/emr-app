@@ -181,6 +181,50 @@ app.post('/api/login', async (req, res) => {
 });
 
 // =====================================================
+// DEBUG TOKEN (Diagnostic only)
+// =====================================================
+
+app.get('/api/debug-token', async (req, res) => {
+  try {
+    const token = req.query.token;
+    if (!token) return res.status(400).json({ error: 'Token query param required' });
+
+    // Directly use the utility functions
+    const { verifyToken, decodeToken } = (await import('./services/auth.service.js'));
+    const decoded = decodeToken(token);
+    
+    let verified = false;
+    let verifyError = null;
+    try {
+      verifyToken(token);
+      verified = true;
+    } catch (e) {
+      verifyError = e.message;
+    }
+
+    let userInDb = null;
+    if (decoded?.userId) {
+      const result = await query('SELECT id, email, role, is_active FROM emr.users WHERE id = $1', [decoded.userId]);
+      userInDb = result.rows[0];
+    }
+
+    res.json({
+      tokenProvided: !!token,
+      decoded,
+      verified,
+      verifyError,
+      userInDb,
+      env: {
+        nodeEnv: process.env.NODE_ENV,
+        hasSecret: !!process.env.JWT_SECRET
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// =====================================================
 // PUBLIC ROUTES (for login page)
 // =====================================================
 
