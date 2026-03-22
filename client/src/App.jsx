@@ -246,7 +246,13 @@ export default function App() {
     } catch (err) {
       console.error('DIAGNOSTIC: Login process failed at step:', err);
       setError('System Error: ' + (err.message || 'Unknown error during startup'));
-      // Removed api.logout() to prevent silent redirect so user can see the error
+      
+      // If unauthorized, we must clear state to allow a fresh login
+      if (err.message.includes('401') || err.message.includes('unauthorized')) {
+        setSession(null);
+        setView('login');
+        api.clearAuth();
+      }
     } finally {
       setLoading(false);
     }

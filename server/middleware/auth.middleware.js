@@ -11,6 +11,7 @@ export async function authenticate(req, res, next) {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('[AUTH_DEBUG] No Bearer token found in header');
       return res.status(401).json({
         error: 'No token provided',
         message: 'Authorization header with Bearer token is required'
@@ -23,6 +24,7 @@ export async function authenticate(req, res, next) {
     let decoded;
     try {
       decoded = verifyToken(token);
+      console.log('[AUTH_DEBUG] Token verified for user:', decoded.userId);
 
       // Normalize role to PascalCase (e.g., "doctor" -> "Doctor", "DOCTOR" -> "Doctor")
       if (decoded.role) {
@@ -34,6 +36,7 @@ export async function authenticate(req, res, next) {
       }
 
     } catch (error) {
+      console.error('[AUTH_DEBUG] JWT Verification failed:', error.message);
       return res.status(401).json({
         error: 'Invalid token',
         message: error.message
@@ -47,6 +50,7 @@ export async function authenticate(req, res, next) {
     );
 
     if (userResult.rows.length === 0) {
+      console.log('[AUTH_DEBUG] User not found in DB for ID:', decoded.userId);
       return res.status(401).json({
         error: 'User not found',
         message: 'User account no longer exists'
