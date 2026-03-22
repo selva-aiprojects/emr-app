@@ -244,8 +244,9 @@ export default function App() {
         await refreshTenantData(loginData.tenantId, loginData.user.id, loginData.user.role);
       }
     } catch (err) {
-      setError('Login failed: ' + (err.message || 'Unknown error'));
-      await api.logout(); // Clear potentially bad state
+      console.error('DIAGNOSTIC: Login process failed at step:', err);
+      setError('System Error: ' + (err.message || 'Unknown error during startup'));
+      // Removed api.logout() to prevent silent redirect so user can see the error
     } finally {
       setLoading(false);
     }
