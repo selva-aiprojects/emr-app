@@ -20,8 +20,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Robust check: Render or other environments might call the script in different ways.
 const currentFilePath = fileURLToPath(import.meta.url);
-const isDirectRun = 
-  process.argv[1] === currentFilePath || 
+const isDirectRun =
+  process.argv[1] === currentFilePath ||
   process.argv[1]?.endsWith('server/index.js') ||
   process.env.RENDER === 'true'; // Force listen if on Render
 
@@ -196,7 +196,7 @@ app.get('/api/debug-token', async (req, res) => {
     // Directly use the utility functions
     const { verifyToken, decodeToken } = (await import('./services/auth.service.js'));
     const decoded = decodeToken(token);
-    
+
     let verified = false;
     let verifyError = null;
     try {
@@ -436,12 +436,12 @@ app.patch('/api/admin/tenants/:id/tier', authenticate, requireRole('Superadmin')
   try {
     const { id } = req.params;
     const { tier } = req.body;
-    
+
     if (!tier) return res.status(400).json({ error: 'tier is required' });
-    
+
     const { setTenantTier } = await import('./db/repository.js');
     const tenant = await setTenantTier(id, tier);
-    
+
     await repo.createAuditLog({
       userId: req.user.id,
       userName: req.user.name,
@@ -450,7 +450,7 @@ app.patch('/api/admin/tenants/:id/tier', authenticate, requireRole('Superadmin')
       entityId: id,
       details: { tier }
     });
-    
+
     res.json(tenant);
   } catch (error) {
     console.error('Error updating tenant tier:', error);
@@ -462,14 +462,14 @@ app.post('/api/admin/tenants/:id/features', authenticate, requireRole('Superadmi
   try {
     const { id } = req.params;
     const { featureFlag, enabled } = req.body;
-    
+
     if (!featureFlag || typeof enabled !== 'boolean') {
       return res.status(400).json({ error: 'featureFlag and enabled are required' });
     }
-    
+
     const { setTenantFeatureOverride } = await import('./db/repository.js');
     const override = await setTenantFeatureOverride(id, featureFlag, enabled);
-    
+
     await repo.createAuditLog({
       userId: req.user.id,
       userName: req.user.name,
@@ -478,7 +478,7 @@ app.post('/api/admin/tenants/:id/features', authenticate, requireRole('Superadmi
       entityId: id,
       details: { featureFlag, enabled }
     });
-    
+
     res.json(override);
   } catch (error) {
     console.error('Error updating tenant feature override:', error);
@@ -721,7 +721,7 @@ app.get('/api/superadmin/overview', authenticate, requireRole('Superadmin'), asy
 app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'), async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    
+
     // Get real-time metrics from database
     const [totalPatients, totalAppointments, totalRevenue, criticalAlerts] = await Promise.all([
       query('SELECT COUNT(*) as count FROM emr.patients WHERE tenant_id = $1', [tenantId]),
@@ -740,7 +740,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
         FROM emr.patients 
         WHERE tenant_id = $1
       `, [tenantId]),
-      
+
       query(`
         SELECT 
           COUNT(CASE WHEN status = 'scheduled' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as scheduled_today,
@@ -750,7 +750,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
         FROM emr.appointments 
         WHERE tenant_id = $1
       `, [tenantId]),
-      
+
       query(`
         SELECT 
           COUNT(CASE WHEN status = 'occupied' THEN 1 END) as occupied,
@@ -838,7 +838,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
 function getDepartmentColor(department) {
   const colors = {
     'Cardiology': '#ef4444',
-    'Neurology': '#3b82f6', 
+    'Neurology': '#3b82f6',
     'Pediatrics': '#10b981',
     'Orthopedics': '#f59e0b',
     'Emergency': '#dc2626',
@@ -1872,7 +1872,7 @@ app.post('/api/support/tickets', requireTenant, async (req, res) => {
   try {
     const { type, location, description, priority } = req.body;
     if (!type || !description) return res.status(400).json({ error: 'type and description are required' });
-    
+
     const ticket = await repo.createSupportTicket({
       tenantId: req.tenantId,
       userId: req.user.id,
