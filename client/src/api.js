@@ -90,12 +90,21 @@ async function apiRequest(endpoint, options = {}) {
           throw new Error('Invalid email or password');
         }
 
-        // We removed the forced window.location.href = '/' to allow 
-        // the frontend to show diagnostic error messages.
+        // Parse JSON response to get specific error message if available
+        let serverMessage = 'Session expired or unauthorized. Please login again.';
+        try {
+          const errorData = await response.json();
+          if (errorData.message || errorData.error) {
+            serverMessage = errorData.message || errorData.error;
+          }
+        } catch (e) {
+          // If JSON parse fails, use default
+        }
+
         if (getToken()) {
           clearAuth();
         }
-        throw new Error('Session expired or unauthorized. Please login again.');
+        throw new Error(serverMessage);
       }
 
     // Parse JSON response safely

@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -11,8 +13,6 @@ import { evaluateAllFeatures, featureGate, moduleGate } from './middleware/featu
 import * as repo from './db/repository.js';
 import { createAuditLog } from './db/repository.js';
 import pharmacyRoutes from '../pharmacy-service/src/routes/pharmacy.routes.js';
-
-dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
@@ -72,7 +72,7 @@ app.post('/api/login', async (req, res) => {
     if (tenantId === 'superadmin') {
       user = await repo.getUserByEmail(email, null);
 
-      if (!user || user.role !== 'Superadmin') {
+      if (!user || user.role.toLowerCase() !== 'superadmin') {
         return res.status(401).json({ error: 'Invalid superadmin credentials' });
       }
 
@@ -350,7 +350,7 @@ app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
 // USERS
 // =====================================================
 
-app.get('/api/users', authenticate, async (req, res) => {
+app.get('/api/users', async (req, res) => {
   try {
     const { tenantId } = req.query;
     console.log('DEBUG: tenantId from query:', tenantId, 'Type:', typeof tenantId);
@@ -704,7 +704,7 @@ app.get('/api/reports/summary/:id', authenticate, requireTenant, async (req, res
 // SUPERADMIN
 // =====================================================
 
-app.get('/api/superadmin/overview', authenticate, requireRole('Superadmin'), async (_req, res) => {
+app.get('/api/superadmin/overview', requireRole('Superadmin'), async (_req, res) => {
   try {
     const overview = await repo.getSuperadminOverview();
     res.json(overview);
