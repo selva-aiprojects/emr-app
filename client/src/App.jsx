@@ -246,14 +246,8 @@ export default function App() {
       }
     } catch (err) {
       console.error('DIAGNOSTIC: Login process failed at step:', err);
+      // Let the user see the Error on the current page instead of kicking them out
       setError('System Error: ' + (err.message || 'Unknown error during startup'));
-      
-      // If unauthorized, we must clear state to allow a fresh login
-      if (err.message.includes('401') || err.message.includes('unauthorized')) {
-        setSession(null);
-        setView('login');
-        api.clearAuth();
-      }
     } finally {
       setLoading(false);
     }
