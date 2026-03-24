@@ -13,3 +13,5 @@ services:
         value: 7d
       - key: NODE_VERSION
         value: 20
+      - key: RENDER
+        value: "true"

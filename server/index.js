@@ -23,7 +23,7 @@ const currentFilePath = fileURLToPath(import.meta.url);
 const isDirectRun =
   process.argv[1] === currentFilePath ||
   process.argv[1]?.endsWith('server/index.js') ||
-  process.env.RENDER === 'true'; // Force listen if on Render
+  !!process.env.RENDER; // Force listen if on Render
 
 app.use(cors());
 app.use(express.json());

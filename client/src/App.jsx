@@ -75,7 +75,29 @@ export default function App() {
     const normalizedRole = roleKey === 'Front office' ? 'Front Office' : (roleKey === 'Support staff' ? 'Support Staff' : roleKey);
 
     const roleViews = permissions[normalizedRole] || permissions[activeUser.role] || ['dashboard'];
-    return roleViews.filter((item) => !(item === 'inventory' && !tenant?.features?.inventory));
+    
+    return roleViews.filter((item) => {
+      if (item === 'dashboard') return true;
+      
+      const tier = tenant?.subscription_tier || 'Free';
+      
+      // Feature visibility matrix by subscription tier
+      if (tier === 'Free') {
+        // Free: Only Core EMR & Appointments
+        const freeModules = ['dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support'];
+        if (!freeModules.includes(item)) return false;
+      } else if (tier === 'Basic') {
+        // Basic: + Pharmacy, Lab, Inventory
+        const premiumModules = ['inpatient', 'billing', 'accounts', 'insurance', 'employees'];
+        if (premiumModules.includes(item)) return false;
+      } else if (tier === 'Professional') {
+        // Professional: + Inpatient, Financials
+        const enterpriseModules = ['employees'];
+        if (enterpriseModules.includes(item)) return false;
+      }
+      
+      return true;
+    });
   }, [permissions, activeUser, tenant]);
 
   const slmInsights = useMemo(() => {

@@ -211,13 +211,13 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       </header>
 
       {/* 2. NAVIGATION OVERLAYS */}
-      <div className="mb-10">
-        <div className="flex bg-slate-100/50 backdrop-blur-sm p-1.5 rounded-[22px] border border-slate-200 w-fit gap-1">
+      <div className="mb-10 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex bg-slate-100/50 backdrop-blur-sm p-1.5 rounded-[22px] border border-slate-200 w-fit gap-1 min-w-max">
           {['dashboard', 'patients', 'appointments', 'billing', 'pharmacy', 'emr'].map((v) => (
              <button
                 key={v}
                 onClick={() => setView(v)}
-                className={`px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${view === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`px-4 sm:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${view === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
              >
                 {v}
              </button>

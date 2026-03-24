@@ -429,20 +429,18 @@ export default function AppLayout({ tenant, activeUser, allowedViews, view, setV
             <>
               {/* Mobile Menu Toggle */}
               <button
-                className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border border-gray-200"
-                onClick={() => setMobileOpen(true)}
+                className="lg:hidden fixed top-3 left-4 z-[110] p-2.5 bg-white rounded-xl shadow-xl border border-gray-100 transition-all hover:bg-gray-50 active:scale-95"
+                onClick={() => setMobileOpen(!mobileOpen)}
               >
-                <Menu className="w-5 h-5 text-gray-600" />
+                {mobileOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
               </button>
 
-              {/* Mobile Menu */}
+              {/* Sidebar Backdrop */}
               {mobileOpen && (
-                <div className="fixed inset-0 z-[100] bg-slate-950/45 backdrop-blur-sm lg:hidden">
-                  <div className="absolute inset-0" onClick={() => setMobileOpen(false)} />
-                  <div className="absolute left-4 top-4 bottom-4 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 overflow-y-auto">
-                    {navContent}
-                  </div>
-                </div>
+                <div 
+                  className="fixed inset-0 z-[90] bg-slate-900/60 backdrop-blur-[2px] lg:hidden animate-fade-in"
+                  onClick={() => setMobileOpen(false)}
+                />
               )}
 
               {/* Page Content */}

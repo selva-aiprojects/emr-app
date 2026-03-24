@@ -29,7 +29,14 @@ The easiest way to deploy is using the **Render Blueprint** included in this rep
 2.  **Build Command:** `npm install && npm run build`
 3.  **Start Command:** `npm start`
 4.  **Environment Variables:**
-    *   `DATABASE_URL`
-    *   `JWT_SECRET`
-    *   `JWT_EXPIRES_IN` = `7d`
-    *   `NODE_VERSION` = `20`
+    *   `DATABASE_URL`: (Copy from your `.env`)
+    *   `JWT_SECRET`: (Copy from your `.env`)
+    *   `JWT_EXPIRES_IN`: `7d`
+    *   `NODE_VERSION`: `20`
+    *   `RENDER`: `true` (CRITICAL: Ensures the server listens on the correct port)
+
+## Post-Deployment Verification
+
+Once deployed, check the application logs in the Render Dashboard. You should see:
+`✅ Connected to PostgreSQL database`
+`Server running on port 10000`

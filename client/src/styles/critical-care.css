@@ -172,6 +172,7 @@ h1, h2, h3, h4, .font-display {
   transition: all 0.2s ease;
   cursor: pointer;
   box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.1);
+  max-width: 100%;
 }
 
 .clinical-btn:hover {
@@ -363,6 +364,17 @@ h1, h2, h3, h4, .font-display {
   border-color: #10B981;
   background: white;
   box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+}
+
+@media (max-width: 640px) {
+  .clinical-card {
+    padding: 1rem;
+  }
+  
+  .clinical-input, .clinical-select {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
 
 .clinical-select {
@@ -789,18 +801,17 @@ h1, h2, h3, h4, .font-display {
 /* FORCE LAYOUT - Override any conflicting styles */
 .app-root > aside {
   flex: 0 0 16rem;
-  position: static !important;
   height: 100vh;
-  transition: flex 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .app-root > aside.collapsed {
-  flex: 0 0 3rem;
+  flex: 0 0 4.75rem;
 }
 
 .app-root > main {
   flex: 1;
-  position: static !important;
+  min-width: 0;
   overflow-x: hidden;
 }
 
@@ -824,6 +835,8 @@ h1, h2, h3, h4, .font-display {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .header-title {
@@ -842,6 +855,20 @@ h1, h2, h3, h4, .font-display {
 .search-box {
   position: relative;
   width: 250px;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .top-header {
+    padding-top: 3.5rem; /* Push down to clear fixed toggle and notification dot area */
+    justify-content: flex-start;
+  }
+  
+  .search-box {
+    width: 100%;
+    order: 3;
+    margin-top: 0.5rem;
+  }
 }
 
 .search-input {
@@ -1078,28 +1105,47 @@ h1, h2, h3, h4, .font-display {
 /* Responsive fixes */
 @media (max-width: 1024px) {
   .app-root {
-    grid-template-columns: 1fr;
+    display: block;
   }
   
-  .premium-sidebar {
+  .app-root > aside {
     position: fixed;
     left: -100%;
     top: 0;
+    width: 280px;
+    max-width: 85vw;
     height: 100vh;
-    z-index: 50;
-    transition: left 0.3s ease;
+    z-index: 100;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 20px 0 50px rgba(0,0,0,0.3);
+    flex: none;
   }
   
-  .premium-sidebar.open {
+  .app-root > aside.open {
     left: 0;
   }
   
   .main-content {
     margin-left: 0;
+    max-height: none;
+    height: auto;
+    min-height: 100vh;
   }
   
   .view-container {
     padding: 1rem;
+    overflow-y: visible;
+  }
+
+  .top-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding-left: 4rem; /* Space for mobile menu toggle */
+  }
+
+  .premium-sidebar.collapsed {
+    width: 280px; /* Don't collapse on mobile when open as a drawer */
   }
 }
 
