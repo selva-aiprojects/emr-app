@@ -268,61 +268,62 @@ h1, h2, h3, h4, .font-display {
 .dim-label { color: var(--clinical-secondary); opacity: 0.8; }
 .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); border-radius: 24px; border: 1px solid rgba(255, 255, 255, 0.3); }
 
-/* LOGIN PAGE STYLES - RICH HEALTHCARE HIGH IMPACT */
-.login-split-portal {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #0B2545 0%, #0077B6 50%, #00B4D8 100%);
-}
-
-@media (max-width: 1024px) {
-  .login-split-portal {
-    grid-template-columns: 1fr;
-  }
-  .login-brand-panel {
-    display: none; /* Focus strictly on clinical login context for mobile mobility */
-  }
-}
-
-.login-brand-panel {
-  background: linear-gradient(135deg, #0B2545 0%, #13315C 100%);
-  color: white;
-  padding: 2rem 3rem;
+/* LOGIN PAGE STYLES - CENTERED PANEL VIEW (PREMIUM SIMPLICITY) */
+.login-centered-portal {
   display: flex;
   align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #F0F4F8 0%, #E2E8F0 100%);
+  padding: 1.5rem;
   position: relative;
   overflow: hidden;
 }
 
-.login-brand-panel::before {
+.login-centered-portal::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(circle at 30% 20%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 70% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+  top: -10%;
+  right: -10%;
+  width: 40%;
+  height: 40%;
+  background: radial-gradient(circle, rgba(0, 119, 182, 0.05) 0%, transparent 70%);
   pointer-events: none;
 }
 
-.login-form-panel {
-  background: #F8FAFC;
-  padding: 2rem 3rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.login-centered-portal::after {
+  content: '';
+  position: absolute;
+  bottom: -10%;
+  left: -10%;
+  width: 40%;
+  height: 40%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .login-pro-card {
   background: white;
   border-radius: 32px;
-  padding: 2.5rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-  border: 1px solid #E2E8F0;
+  padding: 3rem;
+  box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.1);
+  border: 1px solid white;
   width: 100%;
-  max-width: 480px;
+  max-width: 520px;
+  z-index: 10;
+  animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.login-pro-card .logo-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2.5rem;
 }
 
 .clinical-chip {

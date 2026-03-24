@@ -115,214 +115,154 @@ export default function LoginPage({ onLogin, tenants }) {
   };
 
   return (
-    <div className="login-split-portal animate-fade-in">
-      <section className="login-brand-panel">
-        <div className="relative z-10 max-w-2xl text-center">
-          <div className="mb-4 mt-0">
-            <div className="w-24 h-24 mx-auto flex items-center justify-center">
-              <img src="/medflow_logo_8k.svg" alt={BRAND.name} className="w-full h-full" />
-            </div>
-            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40 font-black mt-2">{BRAND.name}</p>
+    <div className="login-centered-portal">
+      <div className="login-pro-card">
+        {/* Branding Area */}
+        <div className="logo-area">
+          <div className="w-20 h-20 bg-[var(--primary-soft)] rounded-[24px] flex items-center justify-center mb-4 shadow-sm">
+            <img src="/medflow_logo_8k.svg" alt={BRAND.name} className="w-12 h-12" />
           </div>
-          
-          <div className="clinical-chip !bg-white/10 !border-white/15 !text-white mb-6">
-            <ShieldCheck className="w-4 h-4" />
-            Operational Healthcare Lifecycle Platform
+          <h1 className="text-xl font-black uppercase tracking-[0.25em] text-[var(--medical-navy)] mb-1">
+            {BRAND.name}
+          </h1>
+          <div className="clinical-chip !bg-[var(--accent-soft)] !text-[var(--clinical-blue)] !border-[var(--clinical-blue)]/10 font-bold">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Clinical Command Center
+          </div>
+        </div>
+
+        {/* Login Form Header */}
+        <div className="mb-8 text-center">
+          <h2 className="text-2xl font-black tracking-tight text-[var(--text-strong)] mb-2">
+            Workspace Authentication
+          </h2>
+          <p className="text-sm font-medium text-[var(--text-muted)]">
+            Institutional access for authorized clinical personnel
+          </p>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="clinical-grid">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-soft)] ml-1">Organization</label>
+            <div className="relative">
+              <select
+                name="tenantId"
+                className="clinical-select px-4 py-4 pr-12 text-sm font-bold bg-slate-50 border-slate-100 appearance-none focus:bg-white transition-all"
+                value={credentials.tenantId}
+                onChange={(e) => handleTenantChange(e.target.value)}
+              >
+                <option value="">Select facility node...</option>
+                <option value="superadmin">Platform Governance</option>
+                {tenantOptions.map((tenant) => (
+                  <option key={tenant.id} value={tenant.code || tenant.id}>
+                    {tenant.name}
+                  </option>
+                ))}
+              </select>
+              <Building2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-soft)] pointer-events-none" />
+            </div>
           </div>
 
-          <div className="mb-6">
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center">
-                {(() => {
-                  const Icon = features[currentFeatureIndex].icon;
-                  return <Icon className="w-6 h-6 text-white" />;
-                })()}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-soft)] ml-1">Identity (Email)</label>
+            <div className="relative">
+              <input
+                type="email"
+                className="clinical-input pl-12 pr-4 py-4 text-sm font-bold bg-slate-50 border-slate-100 focus:bg-white transition-all"
+                placeholder="registered.staff@facility.org"
+                value={credentials.email}
+                onChange={(e) => setCredentials((prev) => ({ ...prev, email: e.target.value }))}
+                required
+              />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-soft)]" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-soft)] ml-1">Secure Key</label>
+            <div className="relative">
+              <input
+                type="password"
+                className="clinical-input pl-12 pr-4 py-4 text-sm font-bold bg-slate-50 border-slate-100 focus:bg-white transition-all"
+                placeholder="••••••••••••"
+                value={credentials.password}
+                onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
+                required
+              />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-soft)]" />
+            </div>
+          </div>
+
+          {error && (
+            <div className="rounded-[18px] border border-[var(--danger)]/20 bg-[var(--danger-soft)] px-4 py-3 animate-fade-in">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-[var(--danger)] mt-0.5" />
+                <p className="text-sm font-bold text-[var(--danger)]">{error}</p>
               </div>
             </div>
-            <h2 className="text-2xl md:text-3xl font-extrabold tracking-[-0.04em] text-white mb-2 transition-all duration-500">
-              {features[currentFeatureIndex].title}
-            </h2>
-            <p className="text-base text-white/80 leading-relaxed mb-3 transition-all duration-500">
-              {features[currentFeatureIndex].description}
-            </p>
-            <div className="inline-flex items-center px-3 py-1 bg-white/10 rounded-full">
-              <span className="text-xs font-bold text-white/90">{features[currentFeatureIndex].stats}</span>
+          )}
+
+          <button 
+            type="submit" 
+            disabled={isLoading} 
+            className="btn btn-primary w-full !h-16 !rounded-[20px] flex items-center justify-center gap-3 shadow-xl shadow-[var(--primary)]/15 hover:shadow-2xl hover:shadow-[var(--primary)]/25 active:scale-[0.98] transition-all"
+          >
+            {isLoading ? (
+              <>
+                <span className="w-5 h-5 rounded-full border-2 border-white/70 border-t-transparent animate-spin" />
+                Validating Node...
+              </>
+            ) : (
+              <>
+                Continue to Workflow
+                <ArrowRight className="w-5 h-5" />
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Demo Access */}
+        <div className="mt-8 pt-8 border-t border-slate-50">
+          <button
+            type="button"
+            onClick={() => setShowDemoCredentials((prev) => !prev)}
+            className="w-full flex items-center justify-between gap-4 text-left group"
+          >
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--text-soft)] mb-1">Developer Sandbox</p>
+              <p className="text-xs font-bold text-[var(--text-main)] group-hover:text-[var(--clinical-blue)] transition-colors">Launch with development credentials</p>
             </div>
-          </div>
+            <div className={`p-2 rounded-lg bg-slate-50 text-[var(--text-soft)] transition-all ${showDemoCredentials ? 'rotate-90 bg-[var(--accent-soft)] text-[var(--clinical-blue)]' : ''}`}>
+              <ArrowRight className="w-4 h-4" />
+            </div>
+          </button>
 
-          <div className="flex justify-center space-x-2 mb-6">
-            {features.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentFeatureIndex(index)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  index === currentFeatureIndex 
-                    ? 'bg-white w-8' 
-                    : 'bg-white/30 hover:bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
-
-          <div className="grid gap-3 md:grid-cols-2">
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              return (
-                <div
-                  key={index}
-                  className={`rounded-[20px] border p-4 backdrop-blur-sm transition-all duration-300 cursor-pointer ${
-                    index === currentFeatureIndex
-                      ? 'border-white/30 bg-white/20'
-                      : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
-                  }`}
-                  onClick={() => setCurrentFeatureIndex(index)}
+          {showDemoCredentials && (
+            <div className="mt-4 grid gap-2 animate-fade-in">
+              {Object.entries(demoCredentials).map(([key, demo]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => useDemoCredentials(key)}
+                  className="flex items-center justify-between gap-3 rounded-[18px] border border-slate-100 bg-slate-50/50 px-4 py-3 text-left transition-all hover:bg-white hover:border-[var(--accent)]/30 hover:shadow-md group"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-                      <Icon className="w-5 h-5 text-white" />
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0 group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
+                      <Building2 className="w-4 h-4" />
                     </div>
-                    <div className="text-left">
-                      <h3 className="text-sm font-bold text-white">{feature.title}</h3>
-                      <p className="text-xs text-white/60">{feature.stats}</p>
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-black text-[var(--text-main)] uppercase tracking-tight truncate">{demo.label}</div>
+                      <div className="text-[10px] font-medium text-[var(--text-muted)] truncate">{demo.email}</div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                  <Zap className="w-4 h-4 text-amber-400 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      </section>
-
-      <section className="login-form-panel">
-        <div className="login-pro-card">
-          <div className="mb-6">
-            <div className="clinical-chip mb-3">
-              <Lock className="w-4 h-4 text-[var(--primary)]" />
-              Secure staff sign-in
-            </div>
-            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-[var(--primary)] font-display">
-              {BRAND.slogan}
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--text-muted)]">
-              Choose your organization and sign in with your staff credentials.
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="clinical-grid">
-            <div>
-              <label className="block text-sm font-bold text-[var(--text-main)] mb-2">Organization</label>
-              <div className="relative">
-                <select
-                  name="tenantId"
-                  className="clinical-select px-4 py-4 pr-12 text-sm font-semibold appearance-none"
-                  value={credentials.tenantId}
-                  onChange={(e) => handleTenantChange(e.target.value)}
-                >
-                  <option value="">Select platform or facility</option>
-                  <option value="superadmin">Platform Services</option>
-                  {tenantOptions.map((tenant) => (
-                    <option key={tenant.id} value={tenant.code || tenant.id}>
-                      {tenant.name}
-                    </option>
-                  ))}
-                </select>
-                <Building2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-soft)] pointer-events-none" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-[var(--text-main)] mb-2">Email address</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  className="clinical-input pl-12 pr-4 py-4 text-sm font-semibold"
-                  placeholder="name@hospital.org"
-                  value={credentials.email}
-                  onChange={(e) => setCredentials((prev) => ({ ...prev, email: e.target.value }))}
-                  required
-                />
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-soft)]" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-bold text-[var(--text-main)] mb-2">Password</label>
-              <div className="relative">
-                <input
-                  type="password"
-                  className="clinical-input pl-12 pr-4 py-4 text-sm font-semibold"
-                  placeholder="Enter your secure password"
-                  value={credentials.password}
-                  onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
-                  required
-                />
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-soft)]" />
-              </div>
-            </div>
-
-            {error && (
-              <div className="rounded-[18px] border border-[var(--danger)]/20 bg-[var(--danger-soft)] px-4 py-3">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-[var(--danger)] mt-0.5" />
-                  <p className="text-sm font-semibold text-[var(--danger)]">{error}</p>
-                </div>
-              </div>
-            )}
-
-            <button type="submit" disabled={isLoading} className="btn btn-primary w-full !h-14 !rounded-[18px] flex items-center justify-center gap-3">
-              {isLoading ? (
-                <>
-                  <span className="w-5 h-5 rounded-full border-2 border-white/70 border-t-transparent animate-spin" />
-                  Signing in
-                </>
-              ) : (
-                <>
-                  Continue to workspace
-                  <ArrowRight className="w-4 h-4 flex-shrink-0" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 rounded-[22px] border border-[var(--border)] bg-[var(--surface-muted)] p-4">
-            <button
-              type="button"
-              onClick={() => setShowDemoCredentials((prev) => !prev)}
-              className="w-full flex items-center justify-between gap-4 text-left"
-            >
-              <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-[var(--text-soft)]">Developer Access</p>
-                <p className="text-sm font-bold text-[var(--text-main)] mt-1">Use seeded demo accounts for validation</p>
-              </div>
-              <ArrowRight className={`w-4 h-4 text-[var(--text-soft)] transition-transform ${showDemoCredentials ? 'rotate-90' : ''}`} />
-            </button>
-
-            {showDemoCredentials && (
-              <div className="mt-4 grid gap-3">
-                {Object.entries(demoCredentials).map(([key, demo]) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => useDemoCredentials(key)}
-                    className="flex items-center justify-between gap-3 rounded-[18px] border border-[var(--border)] bg-white px-4 py-3 text-left transition-all hover:border-[var(--accent)]/30 hover:shadow-sm"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-2xl bg-[var(--primary-soft)] text-[var(--primary)] flex items-center justify-center shrink-0">
-                        <Building2 className="w-5 h-5" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-bold text-[var(--text-main)] truncate">{demo.label}</div>
-                        <div className="text-xs text-[var(--text-muted)] truncate">{demo.email}</div>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-[var(--text-soft)] shrink-0" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
+      </div>
     </div>
   );
 }
