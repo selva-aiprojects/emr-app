@@ -22,6 +22,7 @@ import {
 import { EmptyState } from '../components/ui/index.jsx';
 
 export default function PatientsPage({
+  activeUser,
   tenant,
   session,
   patients: patientsProp,
@@ -33,6 +34,7 @@ export default function PatientsPage({
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('registry'); // 'registry' | 'onboard'
+  const isDoctor = (activeUser?.role || '').toLowerCase() === 'doctor';
 
   const tenantId = tenant?.id || session?.tenantId || null;
 
@@ -109,7 +111,7 @@ export default function PatientsPage({
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
            <h1 className="flex items-center gap-3">
-              Master Clinical Registry
+              {isDoctor ? 'My Patients Registry' : 'Master Clinical Registry'}
               <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Identity Node</span>
            </h1>
            <p className="dim-label">Centralized identity governance and longitudinal record management for {tenant?.name || 'Facility'}.</p>

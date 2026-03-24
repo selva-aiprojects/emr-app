@@ -180,14 +180,14 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
   return (
     <div className="page-shell-premium animate-fade-in overflow-x-hidden">
       {/* 1. CLINICAL GOVERNANCE HEADER */}
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium mb-10 pb-6 border-b border-[var(--accent-soft)]">
         <div>
            <h1 className="flex items-center gap-3">
               Institutional Dashboard
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Clinical Node</span>
+              <span className="text-[10px] bg-[var(--clinical-primary)] text-white px-3 py-1 rounded-full border border-[var(--clinical-secondary)]/20 uppercase tracking-tighter font-black">Clinical Node</span>
            </h1>
            <p className="dim-label">Monitor institutional health, revenue trends, and operational capacity for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
+           <p className="text-[10px] font-black text-[var(--clinical-secondary)] uppercase tracking-widest mt-2 flex items-center gap-2">
               <ShieldCheck className="w-3 h-3 text-emerald-500" /> {today} • Platform Operational
            </p>
         </div>
@@ -202,7 +202,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           </button>
           <button 
             onClick={handleExportReport}
-            className="px-6 py-2.5 bg-white border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all text-xs font-black uppercase tracking-widest text-slate-600 shadow-sm flex items-center"
+            className="px-6 py-2.5 bg-white border border-[var(--accent-soft)] rounded-2xl hover:bg-[var(--accent-soft)]/40 transition-all text-xs font-black uppercase tracking-widest text-[var(--clinical-secondary)] shadow-sm flex items-center"
           >
             <FileText className="w-4 h-4 mr-2" />
             Export Shard
@@ -212,12 +212,12 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
 
       {/* 2. NAVIGATION OVERLAYS */}
       <div className="mb-10 overflow-x-auto pb-2 scrollbar-hide">
-        <div className="flex bg-slate-100/50 backdrop-blur-sm p-1.5 rounded-[22px] border border-slate-200 w-fit gap-1 min-w-max">
+        <div className="flex bg-[var(--accent-soft)]/60 backdrop-blur-sm p-1.5 rounded-[22px] border border-[var(--accent-soft)] w-fit gap-1 min-w-max">
           {['dashboard', 'patients', 'appointments', 'billing', 'pharmacy', 'emr'].map((v) => (
              <button
                 key={v}
                 onClick={() => setView(v)}
-                className={`px-4 sm:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${view === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                className={`px-4 sm:px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${view === v ? 'bg-[var(--clinical-primary)] text-white shadow-sm' : 'text-[var(--clinical-secondary)] hover:text-[var(--clinical-primary)]'}`}
              >
                 {v}
              </button>
@@ -275,12 +275,12 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       {/* Quick Actions - Clean White Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         {quickActions.map((action, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 text-center">
+          <div key={index} className="bg-white rounded-xl shadow-sm border border-[var(--accent-soft)] p-6 text-center">
             <div className="bg-[var(--accent-soft)] rounded-lg p-3 w-12 h-12 mx-auto mb-4 flex items-center justify-center">
               <action.icon className="w-6 h-6 text-[var(--clinical-blue)]" />
             </div>
-            <p className="text-sm font-medium text-gray-900">{action.label}</p>
-            <p className="text-xs text-gray-600 mt-1">{action.desc}</p>
+            <p className="text-sm font-medium text-[var(--clinical-primary)]">{action.label}</p>
+            <p className="text-xs text-[var(--clinical-secondary)] mt-1">{action.desc}</p>
           </div>
         ))}
       </div>

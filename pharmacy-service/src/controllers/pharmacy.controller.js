@@ -29,7 +29,15 @@ export const createPrescription = async (req, res) => {
 
     const { patientId, encounterId, items } = req.body;
     const providerId = req.user?.id; // From auth middleware
+    const role = (req.user?.role || '').toLowerCase();
     const tenantId = req.headers['x-tenant-id'];
+
+    if (role !== 'doctor') {
+      return res.status(403).json({
+        success: false,
+        error: 'Only doctors can create prescriptions'
+      });
+    }
 
     if (!items || items.length === 0) {
       return res.status(400).json({

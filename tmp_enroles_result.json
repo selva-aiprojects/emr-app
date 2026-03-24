@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "error": "Inputs not found after login navigation attempts",
+  "title": "404 Page Not Found",
+  "url": "http://launch.enroles.com/128/admin/login",
+  "body": [
+    "404 Page Not Found",
+    "The page you requested was not found."
+  ]
+}

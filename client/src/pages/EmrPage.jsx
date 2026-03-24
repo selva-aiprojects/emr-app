@@ -109,9 +109,10 @@ function printPrescription(enc, patient, medications, provider, tenant) {
   w.document.close();
 }
 
-export default function EmrPage({ tenant, patients, providers, encounters, onCreateEncounter, onDischarge }) {
+export default function EmrPage({ tenant, activeUser, patients, providers, encounters, onCreateEncounter, onDischarge }) {
   const [activeTab, setActiveTab] = useState('active');
   const [selectedPatientId, setSelectedPatientId] = useState('');
+  const canPrescribe = (activeUser?.role || '').toLowerCase() === 'doctor';
 
   const [prescriptionItems, setPrescriptionItems] = useState([]);
   const [safetyData, setSafetyData] = useState({ safetyCheck: null, overrideSafety: false });
@@ -141,12 +142,12 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
       return;
     }
 
-    const legacyMeds = prescriptionItems.map(m => ({
+    const legacyMeds = canPrescribe ? prescriptionItems.map(m => ({
       name: m.drugName,
       dosage: `${m.dose} ${m.doseUnit} ${m.frequency}`,
       duration: `${m.durationDays} days`,
       instructions: m.instructions
-    }));
+    })) : [];
 
     const data = {
       patientId: selectedPatientId,
@@ -158,7 +159,7 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
       bp: fd.get('bp'),
       hr: fd.get('hr'),
       medications: legacyMeds,
-      pharmacyItems: prescriptionItems
+      pharmacyItems: canPrescribe ? prescriptionItems : []
     };
 
     try {
@@ -387,6 +388,7 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
                   </div>
                 </div>
 
+                {canPrescribe ? (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
                      <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Therapeutic Prescribing Node</h4>
@@ -401,6 +403,13 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
                     />
                   </div>
                 </div>
+                ) : (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+                    <p className="text-[11px] font-black uppercase tracking-widest text-amber-700">
+                      Prescription authoring is restricted to Doctor role.
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Clinical Advice & Institutional Narrative</label>
@@ -409,7 +418,7 @@ export default function EmrPage({ tenant, patients, providers, encounters, onCre
 
                 <div className="pt-8 border-t border-slate-50">
                   <button type="submit" className="clinical-btn bg-slate-900 text-white w-full py-6 text-xs shadow-2xl hover:bg-slate-800 transition-all rounded-2xl">
-                    Commit Assessment & Authorize Prescription
+                    {canPrescribe ? 'Commit Assessment & Authorize Prescription' : 'Commit Clinical Assessment'}
                   </button>
                 </div>
               </form>

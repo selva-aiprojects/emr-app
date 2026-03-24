@@ -15,23 +15,25 @@ export const moduleMeta = {
   accounts: { title: 'Accounts Payable', subtitle: 'Expenses and cash flow' },
   lab: { title: 'Laboratory', subtitle: 'Test results and diagnostics' },
   support: { title: 'Support', subtitle: 'Facility assistance and maintenance' },
-  users: { title: 'Users', subtitle: 'Global Identity & Access' }
+  users: { title: 'Users', subtitle: 'Global Identity & Access' },
+  communication: { title: 'Communication', subtitle: 'Notice board and internal alerts' },
+  documents: { title: 'Document Vault', subtitle: 'Clinical and administrative records' }
 };
 
 export const fallbackPermissions = {
   Superadmin: ['superadmin', 'dashboard', 'admin', 'reports', 'support'],
-  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users'],
-  Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'reports', 'lab', 'pharmacy'],
-  Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'inventory'],
-  Lab: ['dashboard', 'patients', 'lab', 'reports'],
-  Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports'],
-  'Support Staff': ['dashboard', 'inventory', 'support'],
-  'Front Office': ['dashboard', 'appointments', 'patients', 'billing', 'inpatient'],
+  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'communication', 'documents'],
+  Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'reports', 'lab', 'pharmacy', 'communication', 'documents'],
+  Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'inventory', 'communication', 'documents'],
+  Lab: ['dashboard', 'patients', 'lab', 'reports', 'communication', 'documents'],
+  Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports', 'communication', 'documents'],
+  'Support Staff': ['dashboard', 'inventory', 'support', 'communication'],
+  'Front Office': ['dashboard', 'appointments', 'patients', 'billing', 'inpatient', 'communication', 'documents'],
   Billing: ['dashboard', 'billing', 'accounts', 'insurance', 'reports'],
   Insurance: ['dashboard', 'insurance', 'reports'],
-  HR: ['dashboard', 'employees', 'reports'],
+  HR: ['dashboard', 'employees', 'reports', 'communication', 'documents'],
   Accounts: ['dashboard', 'billing', 'accounts', 'insurance', 'reports'],
-  Management: ['dashboard', 'reports', 'employees', 'billing', 'accounts', 'insurance', 'inpatient'],
+  Management: ['dashboard', 'reports', 'employees', 'billing', 'accounts', 'insurance', 'inpatient', 'communication', 'documents'],
   Inventory: ['dashboard', 'inventory', 'pharmacy', 'reports'],
   Auditor: ['dashboard', 'reports'],
   Patient: ['dashboard', 'appointments', 'patients']

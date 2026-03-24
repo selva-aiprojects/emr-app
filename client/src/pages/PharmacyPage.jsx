@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api.js';
 import { 
   Plus, 
@@ -20,7 +20,7 @@ import {
 import { currency } from '../utils/format.js';
 import { EmptyState } from '../components/ui/index.jsx';
 
-export default function PharmacyPage({ tenant, onDispense }) {
+export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('queue');
@@ -78,6 +78,21 @@ export default function PharmacyPage({ tenant, onDispense }) {
     item.generic_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
     item.brand_name?.toLowerCase().includes(searchValue.toLowerCase())
   );
+  const procurementProducts = useMemo(() => {
+    return (inventory || [])
+      .map((item) => {
+        const stock = Number(item.stock) || 0;
+        const reorder = Number(item.reorder) || 0;
+        return {
+          ...item,
+          stock,
+          reorder,
+          shortage: Math.max(0, reorder - stock),
+          suggestedOrder: Math.max(0, reorder * 2 - stock)
+        };
+      })
+      .sort((a, b) => b.shortage - a.shortage);
+  }, [inventory]);
 
   const metrics = {
     pending: queue.filter(item => item.status === 'pending').length,
@@ -383,6 +398,61 @@ export default function PharmacyPage({ tenant, onDispense }) {
              </aside>
 
              <main className="col-span-12 lg:col-span-8">
+                <article className="glass-panel p-0 overflow-hidden shadow-sm mb-8">
+                   <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+                      <div>
+                         <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Procurement Product List</h3>
+                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Reorder-level monitoring and suggested replenishment quantities</p>
+                      </div>
+                   </header>
+                   <div className="premium-table-container">
+                      <table className="premium-table">
+                         <thead>
+                            <tr>
+                               <th>Product</th>
+                               <th>Current Stock</th>
+                               <th>Reorder Level</th>
+                               <th>Suggested PO Qty</th>
+                               <th>Status</th>
+                            </tr>
+                         </thead>
+                         <tbody className="divide-y divide-slate-50">
+                            {procurementProducts.length === 0 ? (
+                              <tr>
+                                <td colSpan="5" className="text-center py-16 text-slate-400">
+                                  No inventory products available for procurement planning.
+                                </td>
+                              </tr>
+                            ) : procurementProducts.map((item) => {
+                              const needsReorder = item.stock <= item.reorder;
+                              return (
+                                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                                  <td>
+                                    <div className="text-sm font-black text-slate-900">{item.name}</div>
+                                    <div className="text-[10px] text-slate-400 font-bold uppercase">{item.code}</div>
+                                  </td>
+                                  <td className="text-sm font-black tabular-nums">{item.stock}</td>
+                                  <td className="text-sm font-black tabular-nums text-slate-500">{item.reorder}</td>
+                                  <td className="text-sm font-black tabular-nums text-[var(--clinical-primary)]">
+                                    {item.suggestedOrder}
+                                  </td>
+                                  <td>
+                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                      needsReorder
+                                        ? 'bg-rose-50 text-rose-600 border-rose-100'
+                                        : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                    }`}>
+                                      {needsReorder ? 'Reorder Needed' : 'Stock Healthy'}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                         </tbody>
+                      </table>
+                   </div>
+                </article>
+
                 <article className="glass-panel p-0 overflow-hidden shadow-sm">
                    <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                       <div>

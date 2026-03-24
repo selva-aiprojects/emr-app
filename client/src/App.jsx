@@ -1,28 +1,35 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { api } from './api.js';
 import { fallbackPermissions } from './config/modules.js';
 import AppLayout from './components/AppLayout.jsx';
 import LoginPage from './pages/LoginPage.jsx';
-import SuperadminPage from './pages/SuperadminPage.jsx';
-import DashboardPage from './pages/DashboardPage.jsx';
-import PatientsPage from './pages/PatientsPage.jsx';
-import AppointmentsPage from './pages/AppointmentsPage.jsx';
-import EmrPage from './pages/EmrPage.jsx';
-import BillingPage from './pages/BillingPage.jsx';
-import InsurancePage from './pages/InsurancePage.jsx';
-import InventoryPage from './pages/InventoryPage.jsx';
-import InpatientPage from './pages/InpatientPage.jsx';
-import PharmacyPage from './pages/PharmacyPage.jsx';
-import EmployeesPage from './pages/EmployeesPage.jsx';
-import AccountsPage from './pages/AccountsPage.jsx';
-import ReportsPage from './pages/ReportsPage.jsx';
-import AdminPage from './pages/AdminPage.jsx';
-import UsersPage from './pages/UsersPage.jsx';
-import LabPage from './pages/LabPage.jsx';
-import SupportPage from './pages/SupportPage.jsx';
 import Chatbot from './components/Chatbot.jsx';
+const SuperadminPage = lazy(() => import('./pages/SuperadminPage.jsx'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
+const PatientsPage = lazy(() => import('./pages/PatientsPage.jsx'));
+const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage.jsx'));
+const EmrPage = lazy(() => import('./pages/EmrPage.jsx'));
+const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
+const InsurancePage = lazy(() => import('./pages/InsurancePage.jsx'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage.jsx'));
+const InpatientPage = lazy(() => import('./pages/InpatientPage.jsx'));
+const PharmacyPage = lazy(() => import('./pages/PharmacyPage.jsx'));
+const EmployeesPage = lazy(() => import('./pages/EmployeesPage.jsx'));
+const AccountsPage = lazy(() => import('./pages/AccountsPage.jsx'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'));
+const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
+const UsersPage = lazy(() => import('./pages/UsersPage.jsx'));
+const LabPage = lazy(() => import('./pages/LabPage.jsx'));
+const SupportPage = lazy(() => import('./pages/SupportPage.jsx'));
+const CommunicationPage = lazy(() => import('./pages/CommunicationPage.jsx'));
+const DocumentVaultPage = lazy(() => import('./pages/DocumentVaultPage.jsx'));
 
 export default function App() {
+  const suspenseFallback = (
+    <div className="rounded-xl border border-slate-200 bg-white/95 px-4 py-3 text-sm font-medium text-slate-600 shadow-sm">
+      Loading module...
+    </div>
+  );
   const [tenants, setTenants] = useState([]);
   const [session, setSession] = useState(() => {
     const s = api.getStoredSession();
@@ -51,6 +58,8 @@ export default function App() {
   const [reportSummary, setReportSummary] = useState(null);
   const [insuranceProviders, setInsuranceProviders] = useState([]);
   const [claims, setClaims] = useState([]);
+  const [notices, setNotices] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [activePatientId, setActivePatientId] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -59,10 +68,42 @@ export default function App() {
 
   const tenant = useMemo(() => tenants.find((t) => t.id === session?.tenantId), [tenants, session]);
   const activeUser = session?.user || null;
+  const isDoctor = (activeUser?.role || '').toLowerCase() === 'doctor';
   const providers = useMemo(() => users.filter((x) => ['Doctor', 'Nurse', 'Admin'].includes(x.role)), [users]);
+  const scopedProviders = useMemo(() => {
+    if (!isDoctor) return providers;
+    const mine = providers.filter((p) => p.id === activeUser?.id);
+    return mine.length ? mine : (activeUser?.id ? [{ id: activeUser.id, name: activeUser.name || 'Me', role: 'Doctor' }] : []);
+  }, [isDoctor, providers, activeUser]);
+  const doctorAppointments = useMemo(() => {
+    if (!isDoctor) return appointments;
+    return appointments.filter((a) => (a.providerId || a.provider_id) === activeUser?.id);
+  }, [isDoctor, appointments, activeUser]);
+  const doctorPatientIds = useMemo(() => {
+    if (!isDoctor) return null;
+    const ids = new Set();
+    doctorAppointments.forEach((a) => ids.add(a.patientId || a.patient_id));
+    encounters
+      .filter((e) => (e.providerId || e.provider_id) === activeUser?.id)
+      .forEach((e) => ids.add(e.patientId || e.patient_id));
+    ids.delete(undefined);
+    ids.delete(null);
+    ids.delete('');
+    return ids;
+  }, [isDoctor, doctorAppointments, encounters, activeUser]);
+  const scopedPatients = useMemo(() => {
+    if (!isDoctor) return patients;
+    return patients.filter((p) => doctorPatientIds?.has(p.id));
+  }, [isDoctor, patients, doctorPatientIds]);
+  const scopedAppointments = useMemo(() => (isDoctor ? doctorAppointments : appointments), [isDoctor, doctorAppointments, appointments]);
+  const scopedEncounters = useMemo(() => {
+    if (!isDoctor) return encounters;
+    return encounters.filter((e) => doctorPatientIds?.has(e.patientId || e.patient_id));
+  }, [isDoctor, encounters, doctorPatientIds]);
+  const scopedWalkins = useMemo(() => (isDoctor ? [] : walkins), [isDoctor, walkins]);
   const activePatient = useMemo(
-    () => patients.find((p) => p.id === activePatientId) || patients[0] || null,
-    [patients, activePatientId]
+    () => scopedPatients.find((p) => p.id === activePatientId) || scopedPatients[0] || null,
+    [scopedPatients, activePatientId]
   );
 
   const allowedViews = useMemo(() => {
@@ -84,7 +125,7 @@ export default function App() {
       // Feature visibility matrix by subscription tier
       if (tier === 'Free') {
         // Free: Only Core EMR & Appointments
-        const freeModules = ['dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support'];
+        const freeModules = ['dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents'];
         if (!freeModules.includes(item)) return false;
       } else if (tier === 'Basic') {
         // Basic: + Pharmacy, Lab, Inventory
@@ -117,10 +158,14 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (isDoctor && view === 'dashboard' && allowedViews.includes('appointments')) {
+      setView('appointments');
+      return;
+    }
     if (!allowedViews.includes(view) && allowedViews.length) {
       setView(allowedViews[0]);
     }
-  }, [allowedViews, view]);
+  }, [allowedViews, view, isDoctor]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -182,6 +227,11 @@ export default function App() {
       }
     }
 
+    const [noticeFeed, documentFeed] = await Promise.all([
+      api.getNotices(tenantId, 'all').catch(() => []),
+      api.getDocuments(tenantId).catch(() => [])
+    ]);
+
     setPermissions(effectivePermissions);
     setUsers(tenantUsers || []);
     setPatients(bootstrap.patients || []);
@@ -194,6 +244,8 @@ export default function App() {
     setEmployeeLeaves(bootstrap.employeeLeaves || []);
     setInsuranceProviders(bootstrap.insuranceProviders || []);
     setClaims(bootstrap.claims || []);
+    setNotices(noticeFeed || []);
+    setDocuments(documentFeed || []);
     setReportSummary(reports);
     if (!activePatientId && bootstrap.patients?.length) {
       setActivePatientId(bootstrap.patients[0].id);
@@ -264,7 +316,7 @@ export default function App() {
         // Fetch tenant data FIRST
         await refreshTenantData(loginData.tenantId, loginData.user.id, loginData.user.role);
         // Only show dashboard AFTER data is loaded
-        setView('dashboard');
+        setView((loginData.user?.role || '').toLowerCase() === 'doctor' ? 'appointments' : 'dashboard');
       }
     } catch (err) {
       console.error('DIAGNOSTIC: Login process failed at step:', err);
@@ -314,44 +366,45 @@ export default function App() {
 
   // Calculate metrics safely
   const metrics = {
-    patients: (patients || []).length,
-    appointments: (appointments || []).length,
-    walkins: (walkins || []).filter((w) => w.status !== 'converted').length,
+    patients: (scopedPatients || []).length,
+    appointments: (scopedAppointments || []).length,
+    walkins: (scopedWalkins || []).filter((w) => w.status !== 'converted').length,
     employees: (employees || []).length,
     revenue: (invoices || []).reduce((sum, x) => sum + Number(x.paid || 0), 0)
   };
 
   return (
     <>
-      <AppLayout
-        tenant={tenant}
-        activeUser={activeUser}
-        allowedViews={allowedViews}
-        view={view}
-        setView={setView}
-        onLogout={logout}
-        error={error}
-      >
-        {view === 'superadmin' && (
-          <SuperadminPage
-            superOverview={superOverview}
-            tenants={tenants}
-            onCreateTenant={(data) => withRefresh(() => api.createTenant(data))}
-            onCreateUser={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
-              withRefresh(() => api.createUser({
-                tenantId: fd.get('tenantId'), name: fd.get('name'), email: fd.get('email'), role: fd.get('role')
-              }));
-            }}
-            tickets={tickets}
-            onResolveTicket={async (id) => {
-               await withRefresh(() => api.updateSupportStatus(id, 'resolved'));
-            }}
-            onRefresh={refreshSuperadmin}
-            infra={superOverview?.infra || {}}
-          />
-        )}
+      <Suspense fallback={suspenseFallback}>
+        <AppLayout
+          tenant={tenant}
+          activeUser={activeUser}
+          allowedViews={allowedViews}
+          view={view}
+          setView={setView}
+          onLogout={logout}
+          error={error}
+        >
+          {view === 'superadmin' && (
+            <SuperadminPage
+              superOverview={superOverview}
+              tenants={tenants}
+              onCreateTenant={(data) => withRefresh(() => api.createTenant(data))}
+              onCreateUser={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                withRefresh(() => api.createUser({
+                  tenantId: fd.get('tenantId'), name: fd.get('name'), email: fd.get('email'), role: fd.get('role')
+                }));
+              }}
+              tickets={tickets}
+              onResolveTicket={async (id) => {
+                 await withRefresh(() => api.updateSupportStatus(id, 'resolved'));
+              }}
+              onRefresh={refreshSuperadmin}
+              infra={superOverview?.infra || {}}
+            />
+          )}
 
         {view === 'dashboard' && <DashboardPage metrics={metrics} activeUser={activeUser} setView={setView} tenant={session?.tenantId ? { id: session.tenantId, ...tenant } : null} view={view} />}
 
@@ -359,7 +412,7 @@ export default function App() {
           <PatientsPage
             activeUser={activeUser}
             session={session}
-            patients={patients}
+            patients={scopedPatients}
             activePatient={activePatient}
             activePatientId={activePatientId}
             setActivePatientId={setActivePatientId}
@@ -398,10 +451,10 @@ export default function App() {
           <AppointmentsPage
             activeUser={activeUser}
             session={session}
-            patients={patients}
-            providers={providers}
-            walkins={walkins}
-            appointments={appointments}
+            patients={scopedPatients}
+            providers={scopedProviders}
+            walkins={scopedWalkins}
+            appointments={scopedAppointments}
             users={users}
             setView={setView}
             setActivePatientId={setActivePatientId}
@@ -451,12 +504,13 @@ export default function App() {
         )}
 
         {view === 'emr' && (
-          <EmrPage
-            tenant={tenant}
-            patients={patients}
-            providers={providers}
-            encounters={encounters}
-            onCreateEncounter={async (data) => {
+            <EmrPage
+              tenant={tenant}
+              activeUser={activeUser}
+              patients={scopedPatients}
+              providers={scopedProviders}
+              encounters={scopedEncounters}
+              onCreateEncounter={async (data) => {
               try {
                 // 1. Create main encounter record
                 const encounterRes = await api.addEncounter({
@@ -472,8 +526,8 @@ export default function App() {
                   hr: data.hr
                 });
 
-                // 2. If there are medications, save them to clinical records as a prescription
-                if (data.medications && data.medications.length > 0) {
+                // 2. Only doctors can create prescription records
+                if (isDoctor && data.medications && data.medications.length > 0) {
                   // A. Legacy clinical record logic
                   await api.addPatientClinical(data.patientId, {
                     tenantId: session.tenantId,
@@ -523,6 +577,7 @@ export default function App() {
         {view === 'pharmacy' && (
           <PharmacyPage
             tenant={tenant}
+            inventory={inventory}
             onDispense={() => refreshTenantData()}
           />
         )}
@@ -647,6 +702,31 @@ export default function App() {
 
         {view === 'support' && <SupportPage tenant={tenant} activeUser={activeUser} />}
 
+        {view === 'communication' && (
+          <CommunicationPage
+            activeUser={activeUser}
+            notices={notices}
+            onCreateNotice={(payload) => withRefresh(() => api.createNotice({
+              tenantId: session.tenantId,
+              ...payload
+            }))}
+            onSetNoticeStatus={(noticeId, status) => withRefresh(() => api.updateNoticeStatus(noticeId, status, session.tenantId))}
+          />
+        )}
+
+        {view === 'documents' && (
+          <DocumentVaultPage
+            activeUser={activeUser}
+            documents={documents}
+            patients={scopedPatients}
+            onCreateDocument={(payload) => withRefresh(() => api.createDocument({
+              tenantId: session.tenantId,
+              ...payload
+            }))}
+            onSetDocumentDeleted={(documentId, isDeleted) => withRefresh(() => api.setDocumentDeleted(documentId, session.tenantId, isDeleted))}
+          />
+        )}
+
         {view === 'accounts' && <AccountsPage tenant={tenant} />}
 
         {view === 'reports' && <ReportsPage reportSummary={reportSummary} tenant={tenant} slmInsights={slmInsights} superOverview={superOverview} />}
@@ -692,12 +772,13 @@ export default function App() {
             }}
           />
         )}
-      </AppLayout>
+        </AppLayout>
 
-      <Chatbot context={{
-        patients, appointments, walkins, encounters, invoices, inventory,
-        employees, employeeLeaves, insuranceProviders, claims, tenant, activeUser, setView
-      }} />
+        <Chatbot context={{
+          patients: scopedPatients, appointments: scopedAppointments, walkins: scopedWalkins, encounters: scopedEncounters, invoices, inventory,
+          employees, employeeLeaves, insuranceProviders, claims, notices, documents, tenant, activeUser, setView
+        }} />
+      </Suspense>
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import PatientSearch from '../components/PatientSearch.jsx';
 import AppointmentActions from '../components/AppointmentActions.jsx';
 import { patientName, userName } from '../utils/format.js';
@@ -22,6 +22,13 @@ export default function AppointmentsPage({
 }) {
   const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'walkins'
   const isPatient = activeUser.role === 'Patient';
+  const isDoctor = activeUser.role === 'Doctor';
+
+  useEffect(() => {
+    if (isDoctor && activeTab === 'walkins') {
+      setActiveTab('appointments');
+    }
+  }, [isDoctor, activeTab]);
 
   return (
     <div className="page-shell-premium animate-fade-in">
@@ -43,7 +50,7 @@ export default function AppointmentsPage({
           >
             <Calendar className="w-3.5 h-3.5 mr-2" /> Clinical Schedule
           </button>
-          {!isPatient && (
+          {!isPatient && !isDoctor && (
             <button 
               className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'walkins' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
               onClick={() => setActiveTab('walkins')}
@@ -209,7 +216,7 @@ export default function AppointmentsPage({
             </div>
           </section>
 
-          {!isPatient && (
+          {!isPatient && !isDoctor && (
             <section className="clinical-card !p-0 overflow-hidden border-l-4 border-l-amber-500">
               <header className="p-6 border-b border-slate-50 flex items-center justify-between">
                  <div>

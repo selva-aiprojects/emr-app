@@ -56,7 +56,9 @@ const navIcons = {
   accounts: FileText,
   reports: Activity,
   admin: Settings,
-  lab: FlaskConical
+  lab: FlaskConical,
+  communication: Bell,
+  documents: FileText
 };
 
 const moduleDescriptions = {
@@ -75,6 +77,8 @@ const moduleDescriptions = {
   reports: "Utilization, revenue, and performance insights",
   admin: "Facility settings, users, and access controls",
   lab: "Orders, samples, and result tracking",
+  communication: "Notices, announcements, and internal alerts",
+  documents: "Centralized document vault and metadata trail",
   superadmin: "Platform Hub",
   tenants: "Multi-tenant Governance",
   support: "Support Channels",

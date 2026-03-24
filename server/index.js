@@ -906,6 +906,9 @@ app.patch('/api/patients/:id/clinical', requireTenant, restrictPatientAccess, as
     if (!payload) {
       return res.status(400).json({ error: 'payload is required' });
     }
+    if (section === 'prescriptions' && req.user?.role !== 'Doctor') {
+      return res.status(403).json({ error: 'Only doctors can author prescriptions' });
+    }
 
     await repo.addClinicalRecord({
       tenantId: req.tenantId,
@@ -1286,7 +1289,7 @@ app.get('/api/invoices', requireTenant, requirePermission('billing'), async (req
 // PHARMACY & PRESCRIPTIONS
 // =====================================================
 
-app.get('/api/prescriptions', requireTenant, async (req, res) => {
+app.get('/api/prescriptions', requireTenant, requireRole('Nurse', 'Lab', 'Pharmacy'), async (req, res) => {
   try {
     const { status, patientId } = req.query;
     const prescriptions = await repo.getPrescriptions(req.tenantId, { status, patientId });
@@ -1308,7 +1311,7 @@ app.get('/api/prescriptions/:id', requireTenant, async (req, res) => {
   }
 });
 
-app.post('/api/prescriptions', requireTenant, requirePermission('emr'), async (req, res) => {
+app.post('/api/prescriptions', requireTenant, requireRole('Doctor'), async (req, res) => {
   try {
     const { encounter_id, drug_name, dosage, frequency, duration, instructions, is_followup, followup_date, followup_notes } = req.body;
 
@@ -1345,7 +1348,7 @@ app.post('/api/prescriptions', requireTenant, requirePermission('emr'), async (r
   }
 });
 
-app.get('/api/prescriptions', requireTenant, async (req, res) => {
+app.get('/api/prescriptions', requireTenant, requireRole('Nurse', 'Lab', 'Pharmacy'), async (req, res) => {
   try {
     const { status, patientId } = req.query;
     const prescriptions = await repo.getPrescriptions(req.tenantId, { status, patientId });
@@ -1843,6 +1846,252 @@ app.post('/api/lab/orders/:id/results', requireTenant, async (req, res) => {
   } catch (error) {
     console.error('Error recording lab results:', error);
     res.status(500).json({ error: 'Failed to record lab results' });
+  }
+});
+
+// =====================================================
+// COMMUNICATION (NOTICE BOARD)
+// =====================================================
+
+app.get('/api/notices', requireTenant, async (req, res) => {
+  try {
+    const { status = 'published' } = req.query;
+    const role = req.user.role;
+    const statusCondition = status === 'all' ? '' : 'AND n.status = $3';
+    const params = status === 'all'
+      ? [req.tenantId, role]
+      : [req.tenantId, role, status];
+
+    const result = await query(
+      `
+      SELECT
+        n.*,
+        u.name AS created_by_name
+      FROM emr.notices n
+      LEFT JOIN emr.users u ON u.id = n.created_by
+      WHERE n.tenant_id = $1
+        AND (jsonb_array_length(n.audience_roles) = 0 OR n.audience_roles ? $2)
+        ${statusCondition}
+      ORDER BY n.priority DESC, n.starts_at DESC, n.created_at DESC
+      `,
+      params
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching notices:', error);
+    res.status(500).json({ error: 'Failed to fetch notices' });
+  }
+});
+
+app.post('/api/notices', requireTenant, requireRole('Admin', 'Management', 'HR'), async (req, res) => {
+  try {
+    const {
+      title,
+      body,
+      audienceRoles = [],
+      audienceDepartments = [],
+      startsAt,
+      endsAt,
+      status = 'published',
+      priority = 'normal'
+    } = req.body;
+
+    if (!title || !body || !startsAt) {
+      return res.status(400).json({ error: 'title, body and startsAt are required' });
+    }
+
+    const created = await query(
+      `
+      INSERT INTO emr.notices (
+        tenant_id, title, body, audience_roles, audience_departments,
+        starts_at, ends_at, status, priority, created_by
+      )
+      VALUES ($1,$2,$3,$4::jsonb,$5::jsonb,$6,$7,$8,$9,$10)
+      RETURNING *
+      `,
+      [
+        req.tenantId,
+        title,
+        body,
+        JSON.stringify(audienceRoles),
+        JSON.stringify(audienceDepartments),
+        startsAt,
+        endsAt || null,
+        status,
+        priority,
+        req.user.id
+      ]
+    );
+
+    res.status(201).json(created.rows[0]);
+  } catch (error) {
+    console.error('Error creating notice:', error);
+    res.status(500).json({ error: 'Failed to create notice' });
+  }
+});
+
+app.patch('/api/notices/:id/status', requireTenant, requireRole('Admin', 'Management', 'HR'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    if (!['draft', 'published', 'archived'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status value' });
+    }
+
+    const updated = await query(
+      `UPDATE emr.notices
+       SET status = $1, updated_at = NOW()
+       WHERE id = $2 AND tenant_id = $3
+       RETURNING *`,
+      [status, id, req.tenantId]
+    );
+
+    if (!updated.rows.length) return res.status(404).json({ error: 'Notice not found' });
+    res.json(updated.rows[0]);
+  } catch (error) {
+    console.error('Error updating notice status:', error);
+    res.status(500).json({ error: 'Failed to update notice status' });
+  }
+});
+
+// =====================================================
+// DOCUMENT VAULT
+// =====================================================
+
+app.get('/api/documents', requireTenant, async (req, res) => {
+  try {
+    const { category, includeDeleted = 'false', patientId } = req.query;
+    const conditions = ['d.tenant_id = $1'];
+    const params = [req.tenantId];
+
+    if (category) {
+      params.push(category);
+      conditions.push(`d.category = $${params.length}`);
+    }
+    if (patientId) {
+      params.push(patientId);
+      conditions.push(`d.patient_id = $${params.length}`);
+    }
+    if (String(includeDeleted).toLowerCase() !== 'true') {
+      conditions.push('d.is_deleted = false');
+    }
+
+    const result = await query(
+      `
+      SELECT
+        d.*,
+        CASE
+          WHEN p.id IS NULL THEN NULL
+          ELSE CONCAT(p.first_name, ' ', p.last_name)
+        END AS patient_name
+      FROM emr.documents d
+      LEFT JOIN emr.patients p ON p.id = d.patient_id
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY d.created_at DESC
+      `,
+      params
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    res.status(500).json({ error: 'Failed to fetch documents' });
+  }
+});
+
+app.post('/api/documents', requireTenant, requireRole('Admin', 'Doctor', 'Nurse', 'Lab', 'Pharmacy', 'Front Office'), async (req, res) => {
+  try {
+    const {
+      patientId = null,
+      encounterId = null,
+      category = 'other',
+      title,
+      fileName,
+      mimeType = null,
+      storageKey = null,
+      sizeBytes = 0,
+      tags = []
+    } = req.body;
+
+    if (!title || !fileName) {
+      return res.status(400).json({ error: 'title and fileName are required' });
+    }
+
+    const inserted = await query(
+      `
+      INSERT INTO emr.documents (
+        tenant_id, patient_id, encounter_id, category, title, file_name,
+        mime_type, storage_key, size_bytes, tags, uploaded_by
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11)
+      RETURNING *
+      `,
+      [
+        req.tenantId,
+        patientId,
+        encounterId,
+        category,
+        title,
+        fileName,
+        mimeType,
+        storageKey || `manual://${fileName}`,
+        Number(sizeBytes || 0),
+        JSON.stringify(tags),
+        req.user.id
+      ]
+    );
+
+    await query(
+      `
+      INSERT INTO emr.document_audit_logs (tenant_id, document_id, action, actor_id, metadata)
+      VALUES ($1, $2, 'upload', $3, $4::jsonb)
+      `,
+      [req.tenantId, inserted.rows[0].id, req.user.id, JSON.stringify({ category })]
+    );
+
+    res.status(201).json(inserted.rows[0]);
+  } catch (error) {
+    console.error('Error creating document:', error);
+    res.status(500).json({ error: 'Failed to create document metadata' });
+  }
+});
+
+app.patch('/api/documents/:id/delete', requireTenant, requireRole('Admin', 'Doctor', 'Nurse', 'Lab', 'Pharmacy', 'Front Office'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isDeleted = true } = req.body;
+
+    const updated = await query(
+      `
+      UPDATE emr.documents
+      SET is_deleted = $1, updated_at = NOW()
+      WHERE id = $2 AND tenant_id = $3
+      RETURNING *
+      `,
+      [Boolean(isDeleted), id, req.tenantId]
+    );
+
+    if (!updated.rows.length) return res.status(404).json({ error: 'Document not found' });
+
+    await query(
+      `
+      INSERT INTO emr.document_audit_logs (tenant_id, document_id, action, actor_id, metadata)
+      VALUES ($1, $2, $3, $4, $5::jsonb)
+      `,
+      [
+        req.tenantId,
+        id,
+        isDeleted ? 'delete' : 'restore',
+        req.user.id,
+        JSON.stringify({ softDelete: true })
+      ]
+    );
+
+    res.json(updated.rows[0]);
+  } catch (error) {
+    console.error('Error updating document deletion state:', error);
+    res.status(500).json({ error: 'Failed to update document state' });
   }
 });
 

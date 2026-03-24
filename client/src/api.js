@@ -576,6 +576,52 @@ export async function updateSupportTicketStatus(id, status) {
 }
 
 // =====================================================
+// COMMUNICATION / NOTICE BOARD
+// =====================================================
+
+export async function getNotices(tenantId, status = 'published') {
+  const query = new URLSearchParams({ tenantId, status });
+  return await apiRequest(`/notices?${query.toString()}`);
+}
+
+export async function createNotice(data) {
+  return await apiRequest('/notices', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateNoticeStatus(id, status, tenantId) {
+  return await apiRequest(`/notices/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, tenantId }),
+  });
+}
+
+// =====================================================
+// DOCUMENT VAULT
+// =====================================================
+
+export async function getDocuments(tenantId, filters = {}) {
+  const params = new URLSearchParams({ tenantId, ...filters });
+  return await apiRequest(`/documents?${params.toString()}`);
+}
+
+export async function createDocument(data) {
+  return await apiRequest('/documents', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function setDocumentDeleted(id, tenantId, isDeleted) {
+  return await apiRequest(`/documents/${id}/delete`, {
+    method: 'PATCH',
+    body: JSON.stringify({ tenantId, isDeleted }),
+  });
+}
+
+// =====================================================
 // INSURANCE
 // =====================================================
 
@@ -679,6 +725,16 @@ const apiClient = {
   getClaims,
   createClaim,
 
+  // Communication
+  getNotices,
+  createNotice,
+  updateNoticeStatus,
+
+  // Document Vault
+  getDocuments,
+  createDocument,
+  setDocumentDeleted,
+
   // Realtime
   getRealtimeTick,
 };
@@ -720,6 +776,12 @@ apiClient.addEmployeeLeave = createEmployeeLeave;
 apiClient.getSupportTickets = getSupportTickets;
 apiClient.addSupportTicket = createSupportTicket;
 apiClient.updateSupportStatus = updateSupportTicketStatus;
+apiClient.getNotices = getNotices;
+apiClient.createNotice = createNotice;
+apiClient.updateNoticeStatus = updateNoticeStatus;
+apiClient.getDocuments = getDocuments;
+apiClient.createDocument = createDocument;
+apiClient.setDocumentDeleted = setDocumentDeleted;
 apiClient.getInvoices = getInvoices;
 apiClient.getBootstrap = getBootstrapData;
 

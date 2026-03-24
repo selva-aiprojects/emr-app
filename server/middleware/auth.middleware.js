@@ -158,13 +158,13 @@ export function requireTenant(req, res, next) {
  */
 const PERMISSIONS = {
   Superadmin: ['superadmin', 'tenants', 'users', 'inventory', 'billing', 'reports'], // REMOVED: 'dashboard', 'patients', 'appointments', 'emr'
-  Admin: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'billing', 'accounts', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'reports', 'admin', 'users'],
-  Doctor: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy', 'reports'],
-  Nurse: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy'],
-  Lab: ['dashboard', 'patients', 'reports'],
-  Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports'], // Can see patients but only for prescriptions
-  'Support Staff': ['dashboard', 'patients', 'appointments'],
-  'Front Office': ['dashboard', 'patients', 'appointments'],
+  Admin: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'billing', 'accounts', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'reports', 'admin', 'users', 'communication', 'documents'],
+  Doctor: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy', 'reports', 'communication', 'documents'],
+  Nurse: ['dashboard', 'patients', 'appointments', 'emr', 'inpatient', 'pharmacy', 'communication', 'documents'],
+  Lab: ['dashboard', 'patients', 'reports', 'communication', 'documents'],
+  Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports', 'communication', 'documents'], // Can see patients but only for prescriptions
+  'Support Staff': ['dashboard', 'patients', 'appointments', 'communication'],
+  'Front Office': ['dashboard', 'patients', 'appointments', 'communication', 'documents'],
   Billing: ['dashboard', 'billing', 'accounts', 'insurance', 'reports'],
   Accounts: ['dashboard', 'billing', 'accounts', 'insurance', 'reports'],
   Inventory: ['dashboard', 'inventory', 'reports'],
@@ -172,7 +172,7 @@ const PERMISSIONS = {
   // New Roles
   Insurance: ['dashboard', 'insurance', 'reports'],
   Management: ['dashboard', 'reports', 'users', 'billing', 'accounts', 'insurance', 'inventory'],
-  HR: ['dashboard', 'employees', 'reports', 'users'],
+  HR: ['dashboard', 'employees', 'reports', 'users', 'communication', 'documents'],
   Operations: ['dashboard', 'reports', 'inventory', 'users', 'billing'],
   Auditor: ['dashboard', 'reports'],
 };

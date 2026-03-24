@@ -1,0 +1,179 @@
+import { useMemo, useState } from 'react';
+import { Megaphone, AlertTriangle, Info, ShieldAlert } from 'lucide-react';
+import { EmptyState } from '../components/ui/index.jsx';
+
+const PRIORITY_STYLE = {
+  low: 'bg-slate-100 text-slate-600',
+  normal: 'bg-blue-100 text-blue-700',
+  high: 'bg-amber-100 text-amber-700',
+  critical: 'bg-rose-100 text-rose-700'
+};
+
+const PRIORITY_ICON = {
+  low: Info,
+  normal: Info,
+  high: AlertTriangle,
+  critical: ShieldAlert
+};
+
+const canManageNotices = (role) => ['Admin', 'Management', 'HR'].includes(role);
+
+export default function CommunicationPage({ activeUser, notices = [], onCreateNotice, onSetNoticeStatus }) {
+  const [showComposer, setShowComposer] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('published');
+
+  const filteredNotices = useMemo(() => {
+    if (statusFilter === 'all') return notices;
+    return notices.filter((item) => item.status === statusFilter);
+  }, [statusFilter, notices]);
+
+  return (
+    <section className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Communication Center</h1>
+          <p className="text-sm font-semibold text-slate-500 mt-1">Notices, operational alerts and audience-targeted internal communication.</p>
+        </div>
+        {canManageNotices(activeUser?.role) && (
+          <button
+            type="button"
+            onClick={() => setShowComposer((v) => !v)}
+            className="rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-bold hover:bg-slate-800 transition"
+          >
+            {showComposer ? 'Close Composer' : '+ New Notice'}
+          </button>
+        )}
+      </header>
+
+      <article className="premium-panel flex flex-wrap gap-2">
+        {['published', 'draft', 'archived', 'all'].map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setStatusFilter(tab)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition ${
+              statusFilter === tab
+                ? 'bg-slate-900 text-white'
+                : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </article>
+
+      {showComposer && canManageNotices(activeUser?.role) && (
+        <article className="premium-panel">
+          <form
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              onCreateNotice({
+                title: fd.get('title'),
+                body: fd.get('body'),
+                priority: fd.get('priority'),
+                startsAt: fd.get('startsAt'),
+                endsAt: fd.get('endsAt') || null,
+                status: fd.get('status'),
+                audienceRoles: (fd.get('audienceRoles') || '')
+                  .split(',')
+                  .map((x) => x.trim())
+                  .filter(Boolean)
+              });
+              e.target.reset();
+              setShowComposer(false);
+            }}
+          >
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Title</label>
+              <input name="title" required className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Priority</label>
+              <select name="priority" defaultValue="normal" className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                <option value="low">Low</option>
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Message</label>
+              <textarea name="body" rows="4" required className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Start DateTime</label>
+              <input name="startsAt" type="datetime-local" required className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">End DateTime</label>
+              <input name="endsAt" type="datetime-local" className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Audience Roles (comma separated)</label>
+              <input name="audienceRoles" placeholder="Doctor,Nurse,Lab,Pharmacy" className="w-full p-2 border border-slate-200 rounded-lg text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Publish State</label>
+              <select name="status" defaultValue="published" className="w-full p-2 border border-slate-200 rounded-lg text-sm">
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+            </div>
+            <div className="md:col-span-2 flex justify-end">
+              <button className="rounded-lg bg-indigo-600 text-white px-5 py-2 text-sm font-bold hover:bg-indigo-700 transition">
+                Save Notice
+              </button>
+            </div>
+          </form>
+        </article>
+      )}
+
+      <article className="premium-panel p-0 overflow-hidden">
+        {filteredNotices.length === 0 ? (
+          <EmptyState
+            title="No notices found"
+            subtitle="No communication item is available for the current filter and role context."
+            icon={Megaphone}
+          />
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {filteredNotices.map((notice) => {
+              const PriorityIcon = PRIORITY_ICON[notice.priority] || Info;
+              return (
+                <div key={notice.id} className="p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2">
+                      <PriorityIcon className="w-4 h-4 text-slate-500" />
+                      <h3 className="font-bold text-slate-900">{notice.title}</h3>
+                      <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold uppercase ${PRIORITY_STYLE[notice.priority] || PRIORITY_STYLE.normal}`}>
+                        {notice.priority}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase bg-slate-100 text-slate-600">
+                        {notice.status}
+                      </span>
+                    </div>
+                    {canManageNotices(activeUser?.role) && notice.status !== 'archived' && (
+                      <button
+                        type="button"
+                        className="text-xs font-bold text-rose-600 hover:text-rose-700"
+                        onClick={() => onSetNoticeStatus(notice.id, 'archived')}
+                      >
+                        Archive
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-sm text-slate-600 whitespace-pre-wrap">{notice.body}</p>
+                  <p className="text-xs text-slate-400 mt-2">
+                    {new Date(notice.starts_at || notice.startsAt || notice.created_at).toLocaleString('en-IN')} by {notice.created_by_name || 'System'}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </article>
+    </section>
+  );
+}
