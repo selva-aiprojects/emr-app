@@ -38,19 +38,27 @@
   --text-muted: #64748B;
   --text-soft: #94A3B8;
 
-  --border: #E2E8F0;
+  --border: rgba(0, 119, 182, 0.14);
   --surface: #FFFFFF;
-  --page-bg: #F8FAFC;
+  --page-bg: #EFF5FA;
+  /* Cool clinical blue-gray — matches sidebar atmosphere */
+
+  --card-bg: #FFFFFF;
+  --card-border: rgba(0, 119, 182, 0.12);
+  --card-hover-border: rgba(0, 119, 182, 0.35);
+  --card-hover-shadow: 0 8px 32px rgba(0, 119, 182, 0.10);
+
+  --focus-ring: rgba(0, 119, 182, 0.20);
+  --input-border: #D4E4F0;
+  --input-border-focus: var(--clinical-blue);
 
   --radius-xl: 32px;
   --radius-lg: 24px;
   --radius-md: 16px;
 
-  --shadow-premium: 0 25px 50px -12px rgba(11, 37, 69, 0.15);
+  --shadow-premium: 0 25px 50px -12px rgba(1, 22, 39, 0.12);
   --header-height: 96px;
   --sidebar-width: 320px;
-  --page-bg: #F0F4F8;
-  /* Subtle blue-gray tint for the page */
 }
 
 * {
@@ -198,14 +206,14 @@ textarea {
 }
 
 .btn-primary {
-  background: var(--primary);
+  background: var(--clinical-blue);
   color: white;
 }
 
 .btn-primary:hover {
-  background: #1E293B;
+  background: var(--medical-navy);
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 20px rgba(0, 119, 182, 0.2);
 }
 
 /* INPUTS */
@@ -213,7 +221,7 @@ textarea {
   width: 100%;
   padding: 14px 20px;
   border-radius: 14px;
-  border: 2px solid #F1F5F9;
+  border: 2px solid var(--input-border);
   background: #F8FAFC;
   transition: all 0.2s ease;
   font-weight: 500;
@@ -221,9 +229,9 @@ textarea {
 
 .input-field:focus {
   outline: none;
-  border-color: #10B981;
+  border-color: var(--clinical-blue);
   background: white;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 4px var(--focus-ring);
 }
 
 /* VITALS MONITOR STYLES (Duplicate for safety if critical-care.css is secondary) */

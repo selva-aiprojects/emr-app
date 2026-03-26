@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { moduleMeta } from "../config/modules.js";
 import { BRAND } from "../config/branding.js";
-import { useFeatureAccess } from "./FeatureGate.jsx";
+
 import {
   Activity,
   Bell,
@@ -60,9 +60,13 @@ const navIcons = {
   ambulance: Truck,
   service_catalog: BookOpen,
   ai_vision: Zap,
-  superadmin: ShieldCheck,
   donor: Droplet,
-  chat: MessageSquare
+  chat: MessageSquare,
+  employee_master: UserCircle,
+  attendance: Calendar,
+  payroll: Receipt,
+  accounts_receivable: FileText,
+  accounts_payable: FileText
 };
 
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
@@ -71,8 +75,8 @@ const SIDEBAR_GROUPS_DEFAULT = [
   { name: "Front Office Desk",    modules: ["patients", "appointments", "ambulance"] },
   { name: "Clinical Excellence",  modules: ["emr", "lab", "inpatient", "ai_vision", "donor"] },
   { name: "Pharmacy & Stores",    modules: ["pharmacy", "inventory"] },
-  { name: "Revenue Cycle",        modules: ["service_catalog", "billing", "insurance", "accounts"] },
-  { name: "HR & Admin Control",   modules: ["employees", "users", "admin"] },
+  { name: "Revenue Cycle",        modules: ["service_catalog", "billing", "accounts_receivable", "insurance", "accounts", "accounts_payable"] },
+  { name: "HR & Admin Control",   modules: ["employees", "employee_master", "attendance", "payroll", "users", "admin"] },
   { name: "Notice & Helpdesk",    modules: ["communication", "documents", "ticketing", "chat"] },
 ];
 
@@ -206,9 +210,8 @@ export default function AppLayout({
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const { getAccessibleModules } = useFeatureAccess(tenant?.id);
-  const accessibleModules = getAccessibleModules(allowedViews);
-
+  // Use allowedViews directly — already computed from permissions in App.jsx.
+  // Previously used useFeatureAccess which made an extra async API call, causing sidebar to render empty during load.
   const facilityName = tenant?.name || `${BRAND.name} Care Platform`;
   const isDoctor = (activeUser?.role || "").toLowerCase() === "doctor";
   const currentModule =
@@ -217,11 +220,11 @@ export default function AppLayout({
       : moduleMeta[view]?.title || "Clinical Workspace";
 
   const effectiveAccessibleModules = useMemo(() => {
-    if (isDoctor && !accessibleModules.includes("doctor_workspace")) {
-      return ["doctor_workspace", ...accessibleModules];
+    if (isDoctor && !allowedViews.includes("doctor_workspace")) {
+      return ["doctor_workspace", ...allowedViews];
     }
-    return accessibleModules;
-  }, [isDoctor, accessibleModules]);
+    return allowedViews;
+  }, [isDoctor, allowedViews]);
 
   const sidebarGroups = useMemo(
     () => getSidebarGroups(activeUser?.role),
@@ -343,7 +346,7 @@ export default function AppLayout({
   );
 
   return (
-    <div className="flex h-screen bg-[#f0f4f8] overflow-hidden">
+    <div className="flex h-screen bg-[#EFF5FA] overflow-hidden">
 
       {/* ── SIDEBAR (desktop static, mobile overlay) ── */}
       <aside
@@ -371,7 +374,7 @@ export default function AppLayout({
         </div>
 
         {/* Top header bar */}
-        <header className="flex-shrink-0 bg-white border-b border-slate-100 px-6 h-16 flex items-center justify-between">
+        <header className="flex-shrink-0 bg-white border-b border-[rgba(0,119,182,0.12)] px-6 h-16 flex items-center justify-between shadow-sm shadow-[rgba(0,119,182,0.04)]">
           <div className="flex items-center gap-4">
             <button 
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -392,7 +395,11 @@ export default function AppLayout({
                 <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[var(--clinical-secondary)] leading-none">
                   Institutional Console
                 </span>
-                <span className="w-0.5 h-0.5 rounded-full bg-slate-200" />
+                <span className="w-0.5 h-0.5 rounded-full bg-[var(--clinical-secondary)]/20" />
+                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-700 leading-none bg-[var(--clinical-secondary)]/8 px-1.5 py-0.5 rounded-md">
+                  {facilityName}
+                </span>
+                <span className="w-0.5 h-0.5 rounded-full bg-[var(--clinical-secondary)]/20" />
                 <span className="text-[8px] font-bold text-slate-400 leading-none uppercase tracking-widest">{today}</span>
               </div>
             </div>
@@ -411,7 +418,7 @@ export default function AppLayout({
             <ActionMenu 
               trigger={
                 <div className="flex items-center gap-2 hover:bg-slate-50 p-1.5 rounded-xl cursor-pointer transition-colors">
-                  <div className="w-8 h-8 rounded-[10px] bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px] border border-indigo-100 uppercase shadow-sm">
+                  <div className="w-8 h-8 rounded-[10px] bg-[var(--clinical-secondary)]/10 text-[var(--clinical-secondary)] flex items-center justify-center font-black text-[10px] border border-[var(--clinical-secondary)]/20 uppercase shadow-sm">
                     {(activeUser?.name || "A").charAt(0)}
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
@@ -427,7 +434,7 @@ export default function AppLayout({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 lg:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 lg:p-8 bg-[#EFF5FA]">
           {children}
         </main>
       </div>

@@ -25,12 +25,16 @@ import '../styles/critical-care.css';
 const CATEGORIES = ['Purchase', 'Salary', 'Maintenance', 'Utilities', 'Govt Fees', 'Certifications', 'Subscriptions', 'Equipment', 'Other'];
 const PAYMENT_METHODS = ['Bank Transfer', 'Cash', 'Cheque', 'Card'];
 
-export default function AccountsPage({ tenant }) {
+export default function AccountsPage({ tenant, initialTab = 'snapshot' }) {
   const [financials, setFinancials] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().slice(0, 7) + '-01');
-  const [activeTab, setActiveTab] = useState('snapshot'); // 'snapshot' | 'record' | 'ledger' | 'final'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'snapshot' | 'record' | 'ledger' | 'final'
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     async function load() {

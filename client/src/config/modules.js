@@ -23,7 +23,12 @@ export const moduleMeta = {
   service_catalog: { title: 'Service Engine', subtitle: 'Master pricing & catalog' },
   ai_vision: { title: 'AI Diagnostic Vision', subtitle: 'Autonomous image analysis' },
   donor: { title: 'Blood Bank Hub / Donor Registry', subtitle: 'Blood groups & vital inventory' },
-  chat: { title: 'Staff Collaborative Hub', subtitle: 'Real-time peer communication' }
+  chat: { title: 'Staff Collaborative Hub', subtitle: 'Real-time peer communication' },
+  employee_master: { title: 'Employee Master', subtitle: 'Personnel profiles and credentials' },
+  attendance: { title: 'Attendance Log', subtitle: 'Time and attendance tracking' },
+  payroll: { title: 'Payroll Ledger', subtitle: 'Salary and compensation management' },
+  accounts_receivable: { title: 'Accounts Receivable', subtitle: 'Inbound revenue and pending dues' },
+  accounts_payable: { title: 'Accounts Payable', subtitle: 'Institutional outflow and expenses' }
 };
 
 export const fallbackPermissions = {
@@ -35,10 +40,10 @@ export const fallbackPermissions = {
   Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports', 'communication', 'documents'],
   'Support Staff': ['dashboard', 'inventory', 'support', 'communication'],
   'Front Office': ['dashboard', 'appointments', 'patients', 'billing', 'inpatient', 'communication', 'documents', 'ambulance'],
-  Billing: ['dashboard', 'billing', 'accounts', 'insurance', 'reports', 'service_catalog'],
+  Billing: ['dashboard', 'billing', 'accounts_receivable', 'accounts', 'insurance', 'reports', 'service_catalog'],
   Insurance: ['dashboard', 'insurance', 'reports'],
-  HR: ['dashboard', 'employees', 'reports', 'communication', 'documents'],
-  Accounts: ['dashboard', 'billing', 'accounts', 'insurance', 'reports', 'service_catalog'],
+  HR: ['dashboard', 'employees', 'employee_master', 'attendance', 'payroll', 'reports', 'communication', 'documents'],
+  Accounts: ['dashboard', 'billing', 'accounts_receivable', 'accounts', 'accounts_payable', 'insurance', 'reports', 'service_catalog'],
   Management: ['dashboard', 'reports', 'employees', 'billing', 'accounts', 'insurance', 'inpatient', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision'],
   Inventory: ['dashboard', 'inventory', 'pharmacy', 'reports'],
   Auditor: ['dashboard', 'reports'],

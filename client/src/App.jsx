@@ -125,16 +125,21 @@ export default function App() {
       return [];
     }
 
+    // Superadmin bypasses all tenant/tier restrictions — they have no tenant
+    if (activeUser.role.toLowerCase() === 'superadmin') {
+      return ['superadmin', 'dashboard', 'admin', 'reports', 'support'];
+    }
+
     // Normalize role for permission mapping
     const roleKey = activeUser.role.charAt(0).toUpperCase() + activeUser.role.slice(1).toLowerCase();
-    const normalizedRole = roleKey === 'Front office' ? 'Front Office' : (roleKey === 'Support staff' ? 'Support Staff' : roleKey);
+    const normalizedRole = roleKey === 'Front office' ? 'Front Office' : (roleKey === 'Support staff' ? 'Support Staff' : (roleKey === 'Hr' ? 'HR' : roleKey));
 
     const roleViews = permissions[normalizedRole] || permissions[activeUser.role] || ['dashboard'];
     
     return roleViews.filter((item) => {
       if (item === 'dashboard') return true;
       
-      const tier = tenant?.subscription_tier || 'Free';
+      const tier = tenant?.subscription_tier || 'Enterprise';
       
       // Feature visibility matrix by subscription tier
       if (tier === 'Free') {
@@ -172,14 +177,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    // Don't redirect if superadmin — they always land on their own console
+    if (activeUser?.role?.toLowerCase() === 'superadmin') return;
     if (isDoctor && (view === 'dashboard' || !allowedViews.includes(view)) && allowedViews.includes('appointments')) {
       setView('doctor_workspace');
       return;
     }
-    if (!allowedViews.includes(view) && view !== 'doctor_workspace' && allowedViews.length) {
+    if (!allowedViews.includes(view) && view !== 'doctor_workspace' && view !== 'superadmin' && allowedViews.length) {
       setView(allowedViews[0]);
     }
-  }, [allowedViews, view, isDoctor]);
+  }, [allowedViews, view, isDoctor, activeUser]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -227,7 +234,17 @@ export default function App() {
       api.getUsers(tenantId)
     ]);
 
-    const effectivePermissions = bootstrap.permissions || fallbackPermissions;
+    const effectivePermissions = { ...fallbackPermissions };
+    if (bootstrap.permissions) {
+      Object.keys(bootstrap.permissions).forEach(role => {
+        const dbPerms = bootstrap.permissions[role] || [];
+        if (effectivePermissions[role]) {
+          effectivePermissions[role] = Array.from(new Set([...effectivePermissions[role], ...dbPerms]));
+        } else {
+          effectivePermissions[role] = dbPerms;
+        }
+      });
+    }
     const normalizedRole = normalizeRole(userRole);
     const roleViews = effectivePermissions[normalizedRole] || effectivePermissions[userRole] || [];
     const canReadReports = roleViews.includes('reports');
@@ -623,7 +640,7 @@ export default function App() {
           />
         )}
 
-        {view === 'billing' && (
+        {['billing', 'accounts_receivable'].includes(view) && (
           <BillingPage
             tenant={tenant}
             patients={patients}
@@ -662,7 +679,7 @@ export default function App() {
           />
         )}
 
-        {view === 'employees' && (
+        {['employees', 'employee_master', 'attendance', 'payroll'].includes(view) && (
           <EmployeesPage
             tenant={tenant}
             employees={employees}
@@ -768,7 +785,7 @@ export default function App() {
           />
         )}
 
-        {view === 'accounts' && <AccountsPage tenant={tenant} />}
+        {['accounts', 'accounts_payable'].includes(view) && <AccountsPage tenant={tenant} initialTab={view === 'accounts_payable' ? 'record' : 'snapshot'} />}
         {view === 'ambulance' && <AmbulancePage tenant={tenant} />}
         {view === 'service_catalog' && <ServiceCatalogPage tenant={tenant} />}
         {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} />}
@@ -829,3 +846,5 @@ export default function App() {
     </>
   );
 }
+
+

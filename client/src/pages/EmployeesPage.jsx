@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { api } from '../api';
 import '../styles/critical-care.css';
 import { 
@@ -15,11 +15,15 @@ import {
   Activity
 } from 'lucide-react';
 
-export default function EmployeesPage({ tenant }) {
+export default function EmployeesPage({ tenant, initialTab = 'roster' }) {
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('roster'); // 'roster' | 'attendance' | 'leaves' | 'payroll'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'roster' | 'attendance' | 'leaves' | 'payroll'
   const [showRegModal, setShowRegModal] = useState(false);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   useMemo(() => {
     async function load() {

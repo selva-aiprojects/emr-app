@@ -220,7 +220,7 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
           <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-emerald-500">
              <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Active Providers</p>
-                <h4 className="text-3xl font-black text-slate-900 mt-1">{providers.length}</h4>
+                <h4 className="stat-value tabular-nums mt-1">{providers.length}</h4>
                 <p className="text-[9px] font-black text-emerald-600 mt-2 uppercase tracking-widest">✓ Operational Registry</p>
              </div>
              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
@@ -231,7 +231,7 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
           <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-amber-500">
              <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Pending Claims</p>
-                <h4 className="text-3xl font-black text-slate-900 mt-1">{stats.pending}</h4>
+                <h4 className="stat-value tabular-nums mt-1">{stats.pending}</h4>
                 <p className="text-[9px] font-black text-amber-600 mt-2 uppercase tracking-widest">⚠ High-priority Queue</p>
              </div>
              <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
@@ -242,7 +242,7 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
           <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-blue-500">
              <div>
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Coverage Volume</p>
-                <h4 className="text-3xl font-black text-slate-900 mt-1">₹{(stats.total / 100000).toFixed(1)}L</h4>
+                <h4 className="stat-value tabular-nums mt-1">₹{(stats.total / 100000).toFixed(1)}L</h4>
                 <p className="text-[9px] font-black text-blue-600 mt-2 uppercase tracking-widest">↗ Total Liquidity</p>
              </div>
              <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center">
@@ -392,3 +392,4 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
     </div>
   );
 }
+

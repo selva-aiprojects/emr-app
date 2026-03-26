@@ -94,7 +94,8 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
               <span className="vital-label">{isSuper ? 'Entity Velocity' : 'Clinical Velocity'}</span>
               <Users className="w-4 h-4 text-emerald-500 opacity-50" />
            </div>
-           <span className="vital-value tabular-nums mt-1">{metrics.velocity}</span>
+           <span className="stat-value tabular-nums mt-2">{isSuper ? (superOverview?.activePatients || 0) : (reportSummary?.periodical?.dailyAppointments || 0)}</span>
+           <span className="stat-sub text-slate-400 mt-1">{isSuper ? 'Entities' : 'Patients/day'}</span>
            <p className="text-[10px] font-black text-emerald-600 mt-2 uppercase tracking-widest">+12.4% Trajectory</p>
         </div>
 
@@ -103,7 +104,8 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
               <span className="vital-label">{isSuper ? 'System Liquidity' : 'Financial Liquidity'}</span>
               <TrendingUp className="w-4 h-4 text-emerald-500 opacity-50" />
            </div>
-           <span className="vital-value tabular-nums mt-1 text-2xl">{metrics.liquidity}</span>
+           <span className="stat-value tabular-nums mt-2">{metrics.liquidity}</span>
+           <span className="stat-sub text-slate-400 mt-1">Revenue</span>
            <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-widest">Settlement Stable</p>
         </div>
 
@@ -112,7 +114,8 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
               <span className="vital-label">{isSuper ? 'User Engagement' : 'Resource Load'}</span>
               <Activity className="w-4 h-4 text-emerald-500 opacity-50" />
            </div>
-           <span className="vital-value tabular-nums mt-1">{metrics.load}</span>
+           <span className="stat-value tabular-nums mt-2">{isSuper ? (superOverview?.totalUsers || 0) : (reportSummary?.periodical?.openAppointments || 0)}</span>
+           <span className="stat-sub text-slate-400 mt-1">{isSuper ? 'Users' : 'Open'}</span>
            <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-widest">Nominal Capacity</p>
         </div>
 
@@ -121,7 +124,8 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
               <span className="vital-label">{isSuper ? 'Node Count' : 'Aging Receivables'}</span>
               <FileText className="w-4 h-4 text-amber-500 opacity-50" />
            </div>
-           <span className="vital-value tabular-nums mt-1">0{metrics.receivables}</span>
+           <span className="stat-value tabular-nums mt-2">{isSuper ? (superOverview?.activeTenants || 0) : (reportSummary?.periodical?.pendingInvoices || 0)}</span>
+           <span className="stat-sub text-slate-400 mt-1">{isSuper ? 'Tenants' : 'Invoices'}</span>
            <p className="text-[10px] font-black text-amber-600 mt-2 uppercase tracking-widest">Audit Recommended</p>
         </div>
       </section>

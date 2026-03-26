@@ -84,13 +84,13 @@ h1, h2, h3, h4, .font-display {
 }
 
 .page-header-premium h1 {
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   font-weight: 900;
   color: var(--clinical-primary);
-  letter-spacing: -0.04em;
+  letter-spacing: -0.02em;
   margin: 0;
   font-family: var(--font-display);
-  line-height: 1.1;
+  line-height: 1.2;
 }
 
 @keyframes slideIn {
@@ -102,7 +102,7 @@ h1, h2, h3, h4, .font-display {
 .clinical-card {
   background: var(--medical-surface);
   backdrop-filter: blur(var(--glass-blur));
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  border: 1px solid rgba(0, 119, 182, 0.12);
   border-radius: 24px;
   padding: 2rem;
   box-shadow: var(--shadow-clinical);
@@ -111,8 +111,8 @@ h1, h2, h3, h4, .font-display {
 
 .clinical-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-premium);
-  border-color: rgba(16, 185, 129, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 119, 182, 0.10);
+  border-color: rgba(0, 180, 216, 0.30);
 }
 
 /* VITALS MONITORING SYSTEM */
@@ -362,9 +362,9 @@ h1, h2, h3, h4, .font-display {
 .clinical-select:focus,
 .clinical-input:focus {
   outline: none;
-  border-color: #10B981;
+  border-color: var(--clinical-secondary);
   background: white;
-  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 0 4px rgba(0, 119, 182, 0.12);
 }
 
 @media (max-width: 640px) {
@@ -400,7 +400,7 @@ h1, h2, h3, h4, .font-display {
 }
 
 .page-header-premium h1 {
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   font-weight: 900;
   color: var(--clinical-primary);
   letter-spacing: -0.02em;
@@ -824,7 +824,8 @@ h1, h2, h3, h4, .font-display {
   max-height: 100vh;
   overflow-x: hidden;
   overflow-y: auto;
-  background: #f8fafc;
+  background: #EFF5FA;
+  /* Matches sidebar clinical blue-gray atmosphere */
   padding: 0.75rem;
 }
 
@@ -884,8 +885,8 @@ h1, h2, h3, h4, .font-display {
 
 .search-input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--clinical-secondary);
+  box-shadow: 0 0 0 3px rgba(0, 119, 182, 0.12);
 }
 
 .search-icon {
@@ -930,9 +931,15 @@ h1, h2, h3, h4, .font-display {
 .dashboard-card {
   background: white;
   border-radius: 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 6px rgba(0, 119, 182, 0.06);
+  border: 1px solid rgba(0, 119, 182, 0.12);
   overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dashboard-card:hover {
+  border-color: rgba(0, 119, 182, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 119, 182, 0.08);
 }
 
 .metric-card {
@@ -1048,7 +1055,7 @@ h1, h2, h3, h4, .font-display {
   padding: 1.5rem;
   overflow-y: auto;
   overflow-x: hidden;
-  background: var(--medical-bg);
+  background: #EFF5FA; /* Clinical blue-gray — unified with sidebar atmosphere */
   max-width: 100%;
   box-sizing: border-box;
 }

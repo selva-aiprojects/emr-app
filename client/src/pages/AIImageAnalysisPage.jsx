@@ -51,7 +51,7 @@ export default function AIImageAnalysisPage({ tenant }) {
     <div className="page-shell-premium animate-fade-in text-slate-900">
       <header className="page-header-premium mb-12 pb-8 border-b border-gray-100">
         <div className="flex-1">
-           <h1 className="flex items-center gap-4 text-3xl">
+           <h1 className="page-title-rich flex items-center gap-4">
               <Zap className="text-amber-500 fill-amber-500" size={28} />
               AI Diagnostic Vision
               <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black shadow-xl">Vision Shard v2.0</span>
