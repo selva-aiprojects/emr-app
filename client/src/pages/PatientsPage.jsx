@@ -111,24 +111,24 @@ export default function PatientsPage({
       {/* 1. CLINICAL HEADER */}
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="page-title-rich flex items-center gap-3">
               {isDoctor ? 'My Patients' : 'Patient Directory'}
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Registration Module</span>
+              <span className="text-meta-sm bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Registration Module</span>
            </h1>
            <p className="dim-label">View and manage all registered patients for {tenant?.name || 'Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
+           <p className="text-meta-sm text-slate-400 mt-2 flex items-center gap-2">
               <ShieldCheck className="w-3 h-3 text-emerald-500" /> Records verified • Directory Active
            </p>
         </div>
         <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">
           <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'registry' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'registry' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
             onClick={() => setActiveTab('registry')}
           >
             <ClipboardList className="w-3.5 h-3.5 mr-2" /> Patient List
           </button>
           <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'onboard' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'onboard' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
             onClick={() => setActiveTab('onboard')}
           >
             <UserPlus className="w-3.5 h-3.5 mr-2" /> New Registration
@@ -201,18 +201,18 @@ export default function PatientsPage({
                               </div>
                               <div>
                                  <div className="text-sm font-black text-slate-900 tracking-tight group-hover:translate-x-1 transition-transform">{p.firstName} {p.lastName}</div>
-                                 <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1 flex items-center gap-2">
+                                 <div className="text-meta-sm text-slate-400 mt-1 flex items-center gap-2">
                                     <ShieldCheck className="w-3 h-3 text-emerald-500" /> Active Profile
                                  </div>
                               </div>
                            </div>
                         </td>
-                        <td><div className="text-xs font-black text-slate-500 tabular-nums">{p.dob ? new Date(p.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div></td>
-                        <td><code className="text-[10px] font-black text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">MRN-{(p.id || 'X').slice(0, 10).toUpperCase()}</code></td>
+                        <td><div className="text-meta-info text-slate-500 tabular-nums">{p.dob ? new Date(p.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div></td>
+                        <td><code className="text-meta-sm text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">MRN-{(p.id || 'X').slice(0, 10).toUpperCase()}</code></td>
                         <td>
                            <div className="flex gap-2">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shadow-lg shadow-emerald-500/50"></span>
-                              <div className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Active Patient</div>
+                            <div className="text-meta-sm text-emerald-700">Active Patient</div>
                            </div>
                         </td>
                         <td className="text-right">

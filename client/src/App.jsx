@@ -28,6 +28,8 @@ const DocumentVaultPage = lazy(() => import('./pages/DocumentVaultPage.jsx'));
 const AmbulancePage = lazy(() => import('./pages/AmbulancePage.jsx'));
 const ServiceCatalogPage = lazy(() => import('./pages/ServiceCatalogPage.jsx'));
 const AIImageAnalysisPage = lazy(() => import('./pages/AIImageAnalysisPage.jsx'));
+const DonorPage = lazy(() => import('./pages/DonorPage.jsx'));
+const ChatPage = lazy(() => import('./pages/ChatPage.jsx'));
 
 export default function App() {
   const suspenseFallback = (
@@ -137,7 +139,7 @@ export default function App() {
       // Feature visibility matrix by subscription tier
       if (tier === 'Free') {
         // Free: Only Core EMR & Appointments
-        const freeModules = ['dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents'];
+        const freeModules = ['superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents'];
         if (!freeModules.includes(item)) return false;
       } else if (tier === 'Basic') {
         // Basic: + Pharmacy, Lab, Inventory
@@ -770,6 +772,8 @@ export default function App() {
         {view === 'ambulance' && <AmbulancePage tenant={tenant} />}
         {view === 'service_catalog' && <ServiceCatalogPage tenant={tenant} />}
         {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} />}
+        {view === 'donor' && <DonorPage tenant={tenant} />}
+        {view === 'chat' && <ChatPage activeUser={activeUser} />}
 
         {view === 'reports' && <ReportsPage reportSummary={reportSummary} tenant={tenant} slmInsights={slmInsights} superOverview={superOverview} />}
 

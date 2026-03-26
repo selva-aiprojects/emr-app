@@ -21,12 +21,14 @@ export const moduleMeta = {
   documents: { title: 'Records Library', subtitle: 'Digitized health records' },
   ambulance: { title: 'Emergency Fleet', subtitle: 'Live vehicle tracking' },
   service_catalog: { title: 'Service Engine', subtitle: 'Master pricing & catalog' },
-  ai_vision: { title: 'AI Diagnostic Vision', subtitle: 'Autonomous image analysis' }
+  ai_vision: { title: 'AI Diagnostic Vision', subtitle: 'Autonomous image analysis' },
+  donor: { title: 'Blood Bank Hub / Donor Registry', subtitle: 'Blood groups & vital inventory' },
+  chat: { title: 'Staff Collaborative Hub', subtitle: 'Real-time peer communication' }
 };
 
 export const fallbackPermissions = {
   Superadmin: ['superadmin', 'dashboard', 'admin', 'reports', 'support'],
-  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision'],
+  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat'],
   Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'reports', 'lab', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Lab: ['dashboard', 'patients', 'lab', 'reports', 'communication', 'documents'],

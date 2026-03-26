@@ -39,24 +39,24 @@ export default function AmbulancePage({ tenant }) {
     <div className="page-shell-premium animate-fade-in">
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="page-title-rich flex items-center gap-3">
               Emergency Fleet Control (Ambulance)
-              <span className="text-[10px] bg-rose-600 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black shadow-lg shadow-rose-500/20">Pre-Hospital Response</span>
+              <span className="text-meta-sm bg-rose-600 text-white px-3 py-1 rounded-full border border-white/10 shadow-lg shadow-rose-500/20">Pre-Hospital Response</span>
            </h1>
            <p className="dim-label italic">Real-time emergency dispatch, fleet monitoring, and pre-hospital clinical coordination for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
+           <p className="text-meta-sm text-slate-400 mt-2 flex items-center gap-2">
               <ShieldCheck className="w-3 h-3 text-emerald-500" /> GPS Shards Linked • Fleet Readiness: 98%
            </p>
         </div>
         <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">
           <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'live' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'live' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
             onClick={() => setActiveTab('live')}
           >
             Live Response Map
           </button>
           <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'fleet' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'fleet' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
             onClick={() => setActiveTab('fleet')}
           >
             Fleet Registry

@@ -27,7 +27,9 @@ import {
   Bed,
   Truck,
   BookOpen,
-  Zap
+  Zap,
+  Droplet,
+  MessageSquare
 } from "lucide-react";
 import { ActionMenu, NotificationSystem, SmartSearch } from "./UXEnhanced.jsx";
 import "../styles/critical-care.css";
@@ -57,18 +59,21 @@ const navIcons = {
   documents: FileText,
   ambulance: Truck,
   service_catalog: BookOpen,
-  ai_vision: Zap
+  ai_vision: Zap,
+  superadmin: ShieldCheck,
+  donor: Droplet,
+  chat: MessageSquare
 };
 
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
 const SIDEBAR_GROUPS_DEFAULT = [
   { name: "Hospital Monitoring",  modules: ["dashboard", "reports"] },
   { name: "Front Office Desk",    modules: ["patients", "appointments", "ambulance"] },
-  { name: "Clinical Excellence",  modules: ["emr", "lab", "inpatient", "ai_vision"] },
+  { name: "Clinical Excellence",  modules: ["emr", "lab", "inpatient", "ai_vision", "donor"] },
   { name: "Pharmacy & Stores",    modules: ["pharmacy", "inventory"] },
   { name: "Revenue Cycle",        modules: ["service_catalog", "billing", "insurance", "accounts"] },
   { name: "HR & Admin Control",   modules: ["employees", "users", "admin"] },
-  { name: "Notice & Helpdesk",    modules: ["communication", "documents", "ticketing"] },
+  { name: "Notice & Helpdesk",    modules: ["communication", "documents", "ticketing", "chat"] },
 ];
 
 const SIDEBAR_GROUPS_DOCTOR = [
@@ -79,9 +84,15 @@ const SIDEBAR_GROUPS_DOCTOR = [
 ];
 
 function getSidebarGroups(role) {
-  return (role || "").toLowerCase() === "doctor"
-    ? SIDEBAR_GROUPS_DOCTOR
-    : SIDEBAR_GROUPS_DEFAULT;
+  const r = (role || "").toLowerCase();
+  if (r === "doctor") return SIDEBAR_GROUPS_DOCTOR;
+  if (r === "superadmin") {
+    return [
+      { name: "Platform Control", modules: ["superadmin"] },
+      ...SIDEBAR_GROUPS_DEFAULT
+    ];
+  }
+  return SIDEBAR_GROUPS_DEFAULT;
 }
 
 function formatRole(role) {
@@ -105,7 +116,7 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
           className="
             w-full flex items-center justify-between
             px-3 py-2 rounded-lg
-            text-[9px] font-black uppercase tracking-[0.18em]
+            text-[11px] font-black uppercase tracking-[0.18em]
             text-white/30 hover:text-white/50
             hover:bg-white/[0.04]
             transition-all duration-150 select-none
@@ -160,11 +171,11 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
 
                 {!sidebarCollapsed && (
                   <div className="flex flex-col items-start leading-none min-w-0">
-                    <span className="text-[11px] font-semibold tracking-tight truncate">
+                    <span className="text-xs font-semibold tracking-tight truncate">
                       {moduleInfo?.title || moduleName}
                     </span>
                     {moduleInfo?.subtitle && (
-                      <span className="text-[8px] opacity-40 font-medium mt-0.5 truncate">
+                      <span className="text-[10px] opacity-40 font-medium mt-0.5 truncate">
                         {moduleInfo.subtitle}
                       </span>
                     )}
@@ -254,10 +265,10 @@ export default function AppLayout({
               <Activity size={16} />
             </div>
             <div className="min-w-0">
-              <h1 className="text-[11px] font-black tracking-tight text-white uppercase leading-none">
+              <h1 className="text-[13px] font-black tracking-tight text-white uppercase leading-none">
                 {BRAND.name}
               </h1>
-              <p className="text-[8px] font-semibold text-white/30 uppercase tracking-widest truncate mt-0.5">
+              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest truncate mt-0.5">
                 {facilityName}
               </p>
             </div>
@@ -310,10 +321,10 @@ export default function AppLayout({
           {!sidebarCollapsed && (
             <>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] font-bold text-white truncate leading-none">
+                <p className="text-xs font-bold text-white truncate leading-none">
                   {activeUser?.name || "Administrator"}
                 </p>
-                <p className="text-[8px] font-medium text-white/30 truncate leading-none uppercase tracking-widest mt-0.5">
+                <p className="text-[10px] font-medium text-white/30 truncate leading-none uppercase tracking-widest mt-0.5">
                   {formatRole(activeUser?.role)}
                 </p>
               </div>

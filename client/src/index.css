@@ -310,7 +310,7 @@ body .page-content h1,
 /* The descriptive label below the number */
 .stat-label {
   font-family: var(--font-sans);
-  font-size: 0.6875rem;      /* 11px */
+  font-size: 0.75rem;        /* 12px — matches module title richness */
   font-weight: 600;
   color: #64748b;            /* slate-500 */
   text-transform: uppercase;
@@ -321,7 +321,7 @@ body .page-content h1,
 /* The small trend/sub-text (e.g. "+12% vs last week") */
 .stat-sub {
   font-family: var(--font-sans);
-  font-size: 0.6875rem;      /* 11px */
+  font-size: 0.75rem;        /* 12px */
   font-weight: 600;
   line-height: 1;
 }
@@ -356,9 +356,45 @@ body .page-content h1,
 }
 
 /* Ensure no page-specific h1 desktop override undoes the 50% rule */
+/* ═══════════════════════════════════════════════════════════
+   UNIFIED TYPOGRAPHY SHARDS (Standardized Page Fonts)
+   Use these classes to ensure consistent font sizes across 
+   all operational modules (Patients, Ambulance, etc.)
+═══════════════════════════════════════════════════════════ */
+
+/* Module specific labeling (Caps) - Unified to 12px / 0.75rem */
+.text-caps-label {
+  font-size: 0.75rem !important; /* 12px */
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Metadata info (MRN, DOB, Shard IDs) - Unified to 12px / 0.75rem */
+.text-meta-info {
+  font-size: 0.75rem !important; /* 12px */
+  font-weight: 700 !important;
+}
+
+/* Secondary meta info - Unified to 10px / 0.625rem */
+.text-meta-sm {
+  font-size: 0.625rem !important; /* 10px */
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* Standard Header for Content Pages - 1.5rem (24px) for RICH visual impact */
+.page-title-rich {
+  font-size: 1.5rem !important;
+  letter-spacing: -0.01em !important;
+  font-weight: 900 !important;
+  color: var(--medical-navy) !important;
+}
+
 @media (min-width: 1024px) {
   .page-header-premium h1,
   body .page-shell-premium h1 {
-    font-size: 1.25rem !important;
+    font-size: 1.5rem !important;
   }
 }

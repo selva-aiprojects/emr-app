@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, Search, ChevronDown } from "lucide-react";
+import { Bell, Search, ChevronDown, UserCircle, Calendar, Activity, ChevronRight } from "lucide-react";
 
 export function ActionMenu({ trigger, actions = [], className = "" }) {
   const [open, setOpen] = useState(false);
@@ -201,7 +201,7 @@ export function SmartSearch({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-black text-slate-900 truncate tracking-tight">{item.label}</div>
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate mt-0.5">{item.sub}</div>
+                <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest truncate mt-0.5">{item.sub}</div>
               </div>
               <ChevronRight className="w-4 h-4 text-slate-200 group-hover:text-[var(--clinical-blue)] group-hover:translate-x-1 transition-all" />
             </button>
