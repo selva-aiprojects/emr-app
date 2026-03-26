@@ -11,7 +11,7 @@ import {
   TrendingUp,
   AlertCircle
 } from 'lucide-react';
-import { StatCard } from '../components/DashboardPage.jsx';
+import MetricCard from '../components/MetricCard.jsx';
 
 export default function DonorPage({ tenant }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,10 +62,10 @@ export default function DonorPage({ tenant }) {
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="Active Donors" value="1,248" trend="+42" icon={Users} color="blue" />
-        <StatCard title="Blood Units" value="284" trend="-12" icon={Droplet} color="red" />
-        <StatCard title="Emergency Requests" value="14" trend="100%" icon={AlertCircle} color="amber" />
-        <StatCard title="Success Rate" value="98.2%" trend="+0.5" icon={Activity} color="emerald" />
+        <MetricCard label="Active Donors" value="1,248" change="+42" icon={Users} accent="blue" />
+        <MetricCard label="Blood Units" value="284" change="-12" icon={Droplet} accent="red" />
+        <MetricCard label="Emergency Requests" value="14" change="100%" icon={AlertCircle} accent="amber" />
+        <MetricCard label="Success Rate" value="98.2%" change="+0.5" icon={Activity} accent="emerald" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
