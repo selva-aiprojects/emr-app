@@ -15,9 +15,10 @@ We have eliminated ad-hoc styling and replaced it with a unified CSS design syst
 *   **Navigation Stability:** Fixed the recursive redirect bug that was trapping administrators in non-functional views.
 
 ## 3. Specialized Clinical Hubs (New)
-We added two top-tier modules to the navigation:
+We added two top-tier modules and a global assistant to the navigation:
 *   🩸 **Blood Bank Hub:** Real-time inventory tracking for blood units with critical supply alerts.
 *   💬 **Staff Collaborative Hub:** Encrypted, channel-based real-time communication for clinical staff.
+*   🤖 **AI Chatwidget (EMR Assistant):** Floating, persistent AI assistant for patient lookup, revenue summaries, and system navigation.
 
 ## 4. Documentation & Handover
 *   **User Manual:** Created a professional [MEDFLOW_USER_MANUAL.md](../05-User-Guides/MEDFLOW_USER_MANUAL.md) for stakeholder validation.
