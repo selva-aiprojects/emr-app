@@ -309,7 +309,7 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
 app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
   try {
     const { id } = req.params;
-    const { displayName, primaryColor, accentColor, featureInventory, featureTelehealth, subscriptionTier, billingConfig } = req.body;
+    const { displayName, primaryColor, accentColor, logo_url, featureInventory, featureTelehealth, subscriptionTier, billingConfig } = req.body;
 
     const theme = (primaryColor || accentColor) ? {
       primary: primaryColor,
@@ -327,7 +327,8 @@ app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
       theme,
       features,
       subscriptionTier,
-      billingConfig
+      billingConfig,
+      logo_url
     });
 
     if (!tenant) {
@@ -1767,6 +1768,92 @@ app.post('/api/insurance/claims', requireTenant, requirePermission('insurance'),
   } catch (error) {
     console.error('Error creating claim:', error);
     res.status(500).json({ error: 'Failed to create claim' });
+  }
+});
+
+// =====================================================
+// ADMINISTRATIVE MASTERS
+// =====================================================
+
+app.get('/api/departments', requireTenant, async (req, res) => {
+  try {
+    const depts = await repo.getDepartments(req.tenantId);
+    res.json(depts);
+  } catch (error) {
+    console.error('Error fetching departments:', error);
+    res.status(500).json({ error: 'Failed to fetch departments' });
+  }
+});
+
+app.post('/api/departments', requireTenant, requirePermission('admin'), async (req, res) => {
+  try {
+    const dept = await repo.createDepartment({ ...req.body, tenantId: req.tenantId });
+    res.status(201).json(dept);
+  } catch (error) {
+    console.error('Error creating department:', error);
+    res.status(500).json({ error: 'Failed to create department' });
+  }
+});
+
+app.get('/api/wards', requireTenant, async (req, res) => {
+  try {
+    const wards = await repo.getWards(req.tenantId);
+    res.json(wards);
+  } catch (error) {
+    console.error('Error fetching wards:', error);
+    res.status(500).json({ error: 'Failed to fetch wards' });
+  }
+});
+
+app.post('/api/wards', requireTenant, requirePermission('admin'), async (req, res) => {
+  try {
+    const ward = await repo.createWard({ ...req.body, tenantId: req.tenantId });
+    res.status(201).json(ward);
+  } catch (error) {
+    console.error('Error creating ward:', error);
+    res.status(500).json({ error: 'Failed to create ward' });
+  }
+});
+
+app.get('/api/beds', requireTenant, async (req, res) => {
+  try {
+    const { wardId } = req.query;
+    if (!wardId) return res.status(400).json({ error: 'wardId is required' });
+    const beds = await repo.getBeds(wardId);
+    res.json(beds);
+  } catch (error) {
+    console.error('Error fetching beds:', error);
+    res.status(500).json({ error: 'Failed to fetch beds' });
+  }
+});
+
+app.post('/api/beds', requireTenant, requirePermission('admin'), async (req, res) => {
+  try {
+    const bed = await repo.createBed({ ...req.body, tenant_id: req.tenantId });
+    res.status(201).json(bed);
+  } catch (error) {
+    console.error('Error creating bed:', error);
+    res.status(500).json({ error: 'Failed to create bed' });
+  }
+});
+
+app.get('/api/services', requireTenant, async (req, res) => {
+  try {
+    const services = await repo.getServices(req.tenantId);
+    res.json(services);
+  } catch (error) {
+    console.error('Error fetching services:', error);
+    res.status(500).json({ error: 'Failed to fetch services' });
+  }
+});
+
+app.post('/api/services', requireTenant, requirePermission('admin'), async (req, res) => {
+  try {
+    const service = await repo.createService({ ...req.body, tenantId: req.tenantId });
+    res.status(201).json(service);
+  } catch (error) {
+    console.error('Error creating service:', error);
+    res.status(500).json({ error: 'Failed to create service' });
   }
 });
 

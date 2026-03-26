@@ -7,9 +7,11 @@ import TenantCreationForm from '../components/superadmin/TenantCreationForm.jsx'
 import IssuesTable from '../components/superadmin/IssuesTable.jsx';
 import TicketStatus from '../components/superadmin/TicketStatus.jsx';
 import InfraUsage from '../components/superadmin/InfraUsage.jsx';
+import FeatureManager from '../components/superadmin/FeatureManager.jsx';
 
 
-function SuperadminPage({ viewMode = 'superadmin', superOverview: propOverview, tenants = [], onCreateTenant, onCreateUser, issues = [], tickets = [], infra = {} }) {
+function SuperadminPage({ viewMode = 'superadmin', superOverview: propOverview, tenants = [], onCreateTenant, onCreateUser, issues = [], tickets = [], infra = {}, onRefresh }) {
+  const [selectedTenant, setSelectedTenant] = useState(null);
   const superOverview = propOverview || {};
 
   const metrics = {
@@ -26,7 +28,7 @@ function SuperadminPage({ viewMode = 'superadmin', superOverview: propOverview, 
       {viewMode === 'superadmin' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
           <div className="lg:col-span-2">
-            <TenantList tenants={tenants} onSelect={() => {}} />
+            <TenantList tenants={tenants} onSelect={setSelectedTenant} />
             <IssuesTable issues={issues} />
           </div>
           <div className="lg:col-span-1 space-y-8">
@@ -42,9 +44,17 @@ function SuperadminPage({ viewMode = 'superadmin', superOverview: propOverview, 
              <TenantCreationForm onCreate={onCreateTenant} />
           </div>
           <div className="lg:col-span-2">
-            <TenantList tenants={tenants} onSelect={() => {}} />
+            <TenantList tenants={tenants} onSelect={setSelectedTenant} />
           </div>
         </div>
+      )}
+
+      {selectedTenant && (
+        <FeatureManager 
+          tenant={selectedTenant} 
+          onClose={() => setSelectedTenant(null)} 
+          onRefresh={onRefresh}
+        />
       )}
 
       {viewMode === 'user_provisioning' && (

@@ -784,31 +784,31 @@ apiClient.createDocument = createDocument;
 apiClient.setDocumentDeleted = setDocumentDeleted;
 apiClient.getInvoices = getInvoices;
 apiClient.getBootstrap = getBootstrapData;
-
 // Lab module
 apiClient.getLabOrders = (tenantId, status) => apiRequest(`/lab/orders${status ? `?status=${status}` : ''}`);
 apiClient.createLabOrder = (data) => apiRequest('/lab/orders', { method: 'POST', body: JSON.stringify(data) });
 apiClient.updateLabOrderStatus = (id, status) => apiRequest(`/lab/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
 apiClient.recordLabResults = (id, data) => apiRequest(`/lab/orders/${id}/results`, { method: 'POST', body: JSON.stringify(data) });
 
-// Infrastructure (Wards & Beds)
-apiClient.getWards = (tenantId) => apiRequest(`/infrastructure/wards?tenantId=${tenantId}`);
-apiClient.createWard = (data) => apiRequest('/infrastructure/wards', { method: 'POST', body: JSON.stringify(data) });
-apiClient.getBeds = (wardId) => apiRequest(`/infrastructure/beds?wardId=${wardId}`);
-apiClient.createBed = (data) => apiRequest('/infrastructure/beds', { method: 'POST', body: JSON.stringify(data) });
-apiClient.updateBedStatus = (id, status) => apiRequest(`/infrastructure/beds/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+// Infrastructure & Administrative Masters
+apiClient.getDepartments = () => apiRequest('/departments');
+apiClient.createDepartment = (data) => apiRequest('/departments', { method: 'POST', body: JSON.stringify(data) });
 
-// Inpatient → Billing bridge
-apiClient.createDischargeInvoice = (encounterId, data) => apiRequest(`/inpatient/${encounterId}/discharge-invoice`, { method: 'POST', body: JSON.stringify(data) });
-apiClient.autoBillItem = (tenantId, data) => apiRequest('/billing/auto-bill', { method: 'POST', body: JSON.stringify({ tenantId, ...data }) });
-apiClient.simulatePaymentGateway = (amount, currency) => new Promise((resolve) => setTimeout(() => resolve({ success: true, transactionId: `TXN-${Math.random().toString(36).substr(2, 9).toUpperCase()}` }), 1500));
+apiClient.getWards = () => apiRequest('/wards');
+apiClient.createWard = (data) => apiRequest('/wards', { method: 'POST', body: JSON.stringify(data) });
+
+apiClient.getBeds = (wardId) => apiRequest(`/beds?wardId=${wardId}`);
+apiClient.createBed = (data) => apiRequest('/beds', { method: 'POST', body: JSON.stringify(data) });
+
+apiClient.getServices = () => apiRequest('/services');
+apiClient.createService = (data) => apiRequest('/services', { method: 'POST', body: JSON.stringify(data) });
 
 // Superadmin Feature Management
 apiClient.getAdminTenantFeatures = (tenantId) => apiRequest(`/admin/tenants/${tenantId}/features`);
 apiClient.updateTenantTier = (tenantId, tier) => apiRequest(`/admin/tenants/${tenantId}/tier`, { method: 'PATCH', body: JSON.stringify({ tier }) });
 apiClient.updateTenantFeatureOverride = (tenantId, featureFlag, enabled) => apiRequest(`/admin/tenants/${tenantId}/features`, { method: 'POST', body: JSON.stringify({ featureFlag, enabled }) });
 
-// Generic HTTP methods (for direct usage)
+// Generic HTTP methods
 apiClient.get = (url) => apiRequest(url);
 apiClient.post = (url, body) => apiRequest(url, { method: 'POST', body: JSON.stringify(body) });
 apiClient.patch = (url, body) => apiRequest(url, { method: 'PATCH', body: JSON.stringify(body) });

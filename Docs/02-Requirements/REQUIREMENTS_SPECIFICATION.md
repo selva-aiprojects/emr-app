@@ -101,11 +101,17 @@ The system encompasses the full patient journey from registration and appointmen
 
 ### 2.12 Subscription Tiers & Feature Gating
 - **REQ-FEATURE-01**: **Tier-Based Modules**. The system must automatically enable/disable modules based on the tenant's tier:
-  - **Free**: Core EMR + Customer Support (excluding Pharmacy/Lab).
-  - **Basic**: Core EMR + Customer Support + **Pharmacy & Lab**.
-  - **Professional**: Core EMR + Customer Support + Pharmacy/Lab + **Inpatient Management**.
-  - **Enterprise**: All modules including **HR/Payroll** and **Advanced Accounts**.
+  - **Free**: Core OPD, Registration, e-Prescriptions, and basic MIS Reports.
+  - **Basic**: Core OPD + **Pharmacy & Lab**, **Inventory**, and **Ambulance Logistics**.
+  - **Professional**: Core OPD + Pharmacy/Lab + **Inpatient Management**, **Billing/Insurance**, and **Service Engine**.
+  - **Enterprise**: All modules including **HR/Payroll**, **AI Diagnostic Vision**, and **Staff Collaborative Hub**.
 - **REQ-FEATURE-02**: **Downgrade Safeguard Protocol**. Any attempt to move a tenant to a lower subscription tier must trigger a formal confirmation warning and require a mandatory "Communication Note" from the Superadmin documenting the tenant's consent and awareness of possible data accessibility trade-offs.
+
+### 2.13 Clinical AI Intelligence
+- **REQ-AI-01**: **Generative Clinical Insights**. The system must use **Gemini-1.5-Flash** (Google Generative AI) to synthesize longitudinal patient data into concise clinical snapshots.
+- **REQ-AI-02**: **Treatment Decision Support**. Provide AI-driven treatment suggestions based on current diagnosis and historical metadata (Doctor role only).
+- **REQ-AI-03**: **Automated Reporting**. Assist in generating formal Inpatient Discharge Summaries using admission course notes and vitals telemetry.
+- **REQ-AI-04**: **Contextual Assistance**. Provide a staff-facing chatbot (Geminai) for navigational and operational queries within the tenant workspace.
 
 ### 2.12 End-to-End Validation Dataset
 - **REQ-DATA-01**: System must support seeded validation datasets for at least two tenants.

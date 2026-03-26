@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Briefcase, 
   Stethoscope, 
@@ -12,24 +12,51 @@ import {
   TrendingUp,
   Settings,
   Edit2,
-  Trash2
+  Trash2,
+  Loader2
 } from 'lucide-react';
+import { api } from '../api.js';
 import '../styles/critical-care.css';
 
-const DEFAULT_SERVICES = [
-  { id: 'SVC-101', name: 'General Physician Consultation', category: 'Clinical', price: 500, tax: 0, code: 'CONS-GP' },
-  { id: 'SVC-102', name: 'Specialist Consultation (Senior)', category: 'Clinical', price: 1200, tax: 0, code: 'CONS-SPEC' },
-  { id: 'SVC-201', name: 'Complete Blood Count (CBC)', category: 'Laboratory', price: 1500, tax: 18, code: 'LAB-CBC' },
-  { id: 'SVC-202', name: 'Lipid Profile Shard', category: 'Laboratory', price: 2200, tax: 18, code: 'LAB-LIP' },
-  { id: 'SVC-301', name: 'Emergency Triage & Stability', category: 'Emergency', price: 2000, tax: 5, code: 'ER-TRIAGE' },
-  { id: 'SVC-401', name: 'Standard General ward (per day)', category: 'IPD', price: 3500, tax: 12, code: 'IPD-GW' },
-  { id: 'SVC-402', name: 'ICU Unit Isolation (per day)', category: 'IPD', price: 12000, tax: 18, code: 'IPD-ICU' },
-];
-
 export default function ServiceCatalogPage({ tenant }) {
-  const [services, setServices] = useState(DEFAULT_SERVICES);
+  const [services, setServices] = useState([]);
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ name: '', code: '', category: 'Clinical', base_rate: 0, tax_percent: 0 });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    loadServices();
+  }, []);
+
+  async function loadServices() {
+    try {
+      setLoading(true);
+      const data = await api.getServices();
+      setServices(data);
+    } catch (err) {
+      console.error('Failed to fetch services:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    try {
+      setSubmitting(true);
+      const service = await api.createService(form);
+      setServices([...services, service]);
+      setShowAdd(false);
+      setForm({ name: '', code: '', category: 'Clinical', base_rate: 0, tax_percent: 0 });
+    } catch (err) {
+      console.error('Failed to create service:', err);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   const filtered = services.filter(s => {
     const matchQuery = s.name.toLowerCase().includes(query.toLowerCase()) || s.code.toLowerCase().includes(query.toLowerCase());
@@ -50,10 +77,71 @@ export default function ServiceCatalogPage({ tenant }) {
               <ShieldCheck className="w-3 h-3 text-emerald-500" /> Fiscal Policy: Active • Currency: INR (₹)
            </p>
         </div>
-        <button className="clinical-btn bg-slate-900 text-white px-8 rounded-2xl text-meta-sm shadow-2xl hover:bg-emerald-600 transition-all border-none">
-           <Plus className="w-4 h-4 mr-2" /> Add Service Shard
+        <button 
+          onClick={() => setShowAdd(!showAdd)}
+          className="clinical-btn bg-slate-900 text-white px-8 rounded-2xl text-meta-sm shadow-2xl hover:bg-emerald-600 transition-all border-none"
+        >
+           <Plus className="w-4 h-4 mr-2" /> {showAdd ? 'Cancel' : 'Add Service Shard'}
         </button>
       </header>
+
+      {showAdd && (
+        <section className="clinical-card p-10 mb-10 border-2 border-slate-100 bg-white shadow-2xl animate-slide-in">
+           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-5 gap-6 items-end">
+              <div>
+                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Service Shard Identity</label>
+                 <input 
+                   type="text" 
+                   className="input-field"
+                   placeholder="e.g. CBC Test"
+                   value={form.name}
+                   onChange={e => setForm({...form, name: e.target.value})}
+                   required
+                 />
+              </div>
+              <div>
+                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Institutional Code</label>
+                 <input 
+                   type="text" 
+                   className="input-field"
+                   placeholder="e.g. LAB-001"
+                   value={form.code}
+                   onChange={e => setForm({...form, code: e.target.value.toUpperCase()})}
+                   required
+                 />
+              </div>
+              <div>
+                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Category</label>
+                 <select 
+                   className="input-field"
+                   value={form.category}
+                   onChange={e => setForm({...form, category: e.target.value})}
+                 >
+                   {['Clinical', 'Laboratory', 'Emergency', 'IPD', 'Radiology', 'Pathology'].map(c => (
+                     <option key={c} value={c}>{c}</option>
+                   ))}
+                 </select>
+              </div>
+              <div>
+                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Base Rate (₹)</label>
+                 <input 
+                   type="number" 
+                   className="input-field"
+                   value={form.base_rate}
+                   onChange={e => setForm({...form, base_rate: e.target.value})}
+                   required
+                 />
+              </div>
+              <button 
+                type="submit" 
+                disabled={submitting}
+                className="clinical-btn bg-emerald-600 !text-white rounded-2xl h-[60px] shadow-lg hover:shadow-2xl transition-all"
+              >
+                 {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Persist Shard'}
+              </button>
+           </form>
+        </section>
+      )}
 
       <div className="flex flex-col md:flex-row gap-6 mb-10">
          <div className="flex-1 relative group">
@@ -67,15 +155,15 @@ export default function ServiceCatalogPage({ tenant }) {
             />
          </div>
          <nav className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit h-[60px]">
-           {['all', 'clinical', 'laboratory', 'emergency', 'ipd'].map(tab => (
-             <button 
-               key={tab}
-               className={`clinical-btn !min-h-[44px] px-6 rounded-xl text-meta-sm transition-all ${activeTab === tab ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-               onClick={() => setActiveTab(tab)}
-             >
-               {tab}
-             </button>
-           ))}
+            {['all', 'clinical', 'laboratory', 'emergency', 'ipd'].map(tab => (
+              <button 
+                key={tab}
+                className={`clinical-btn !min-h-[44px] px-6 rounded-xl text-meta-sm transition-all ${activeTab === tab ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+                onClick={() => setActiveTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
          </nav>
       </div>
 
@@ -83,45 +171,57 @@ export default function ServiceCatalogPage({ tenant }) {
          <main className="col-span-12 lg:col-span-8">
             <div className="clinical-card !p-0 overflow-hidden border-none shadow-premium bg-white">
                <div className="premium-table-container">
-                 <table className="premium-table">
-                    <thead>
-                       <tr>
-                          <th className="tracking-widest">Service Shard Identity</th>
-                          <th className="tracking-widest text-center">Department</th>
-                          <th className="tracking-widest">Base Rate (₹)</th>
-                          <th className="tracking-widest">Fiscal (Tax)</th>
-                          <th className="tracking-widest text-right">Action</th>
-                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                       {filtered.map(svc => (
-                         <tr key={svc.id} className="group hover:bg-slate-50 transition-all">
-                            <td>
-                               <div>
-                                  <div className="text-sm font-black text-slate-900 group-hover:translate-x-1 transition-transform">{svc.name}</div>
-                                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 tabular-nums">{svc.code}</div>
-                               </div>
-                            </td>
-                            <td className="text-center">
-                               <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
-                                 svc.category === 'Clinical' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                 svc.category === 'Laboratory' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                 svc.category === 'Emergency' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                 'bg-amber-50 text-amber-600 border-amber-100'
-                               }`}>{svc.category}</span>
-                            </td>
-                            <td><span className="text-sm font-black text-slate-900 tabular-nums">₹{svc.price.toLocaleString()}</span></td>
-                            <td><span className="text-[10px] font-black text-slate-400 tabular-nums">+{svc.tax}% GST</span></td>
-                            <td className="text-right">
-                               <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                  <button className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-slate-900 rounded-xl shadow-sm"><Edit2 size={12} /></button>
-                                  <button className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-rose-500 rounded-xl shadow-sm"><Trash2 size={12} /></button>
-                               </div>
-                            </td>
-                         </tr>
-                       ))}
-                    </tbody>
-                 </table>
+                 {loading ? (
+                   <div className="flex flex-col items-center justify-center py-40 gap-4 opacity-30">
+                      <Loader2 size={40} className="animate-spin text-slate-900" />
+                      <span className="text-xs font-black uppercase tracking-widest">Hydrating Revenue Registry...</span>
+                   </div>
+                 ) : filtered.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-40 gap-4 opacity-20">
+                       <Activity size={60} />
+                       <span className="text-xs font-black uppercase tracking-widest">No matching service shards found</span>
+                    </div>
+                 ) : (
+                  <table className="premium-table">
+                     <thead>
+                        <tr>
+                           <th className="tracking-widest">Service Shard Identity</th>
+                           <th className="tracking-widest text-center">Department</th>
+                           <th className="tracking-widest">Base Rate (₹)</th>
+                           <th className="tracking-widest">Fiscal (Tax)</th>
+                           <th className="tracking-widest text-right">Action</th>
+                        </tr>
+                     </thead>
+                     <tbody className="divide-y divide-slate-50">
+                        {filtered.map(svc => (
+                          <tr key={svc.id} className="group hover:bg-slate-50 transition-all">
+                             <td>
+                                <div>
+                                   <div className="text-sm font-black text-slate-900 group-hover:translate-x-1 transition-transform">{svc.name}</div>
+                                   <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 tabular-nums">{svc.code}</div>
+                                </div>
+                             </td>
+                             <td className="text-center">
+                                <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border ${
+                                  svc.category === 'Clinical' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
+                                  svc.category === 'Laboratory' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                  svc.category === 'Emergency' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                  'bg-amber-50 text-amber-600 border-amber-100'
+                                }`}>{svc.category}</span>
+                             </td>
+                             <td><span className="text-sm font-black text-slate-900 tabular-nums">₹{parseFloat(svc.base_rate).toLocaleString()}</span></td>
+                             <td><span className="text-[10px] font-black text-slate-400 tabular-nums">+{svc.tax_percent}% GST</span></td>
+                             <td className="text-right">
+                                <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                                   <button className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-slate-900 rounded-xl shadow-sm"><Edit2 size={12} /></button>
+                                   <button className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-rose-500 rounded-xl shadow-sm"><Trash2 size={12} /></button>
+                                </div>
+                             </td>
+                          </tr>
+                        ))}
+                     </tbody>
+                  </table>
+                 )}
                </div>
             </div>
          </main>
@@ -147,7 +247,7 @@ export default function ServiceCatalogPage({ tenant }) {
                   <div className="flex justify-between p-6 bg-white/5 rounded-2xl border border-white/10 items-end">
                      <div>
                         <div className="stat-label text-white/30">Avg. Consultation Fee</div>
-                        <div className="stat-value text-white tabular-nums">₹850</div>
+                        <div className="stat-value text-white tabular-nums">₹{services.length > 0 ? (services.reduce((acc, s) => acc + parseFloat(s.base_rate), 0) / services.length).toFixed(0) : 0}</div>
                      </div>
                      <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">+12% Quarterly Adjustment</span>
                   </div>

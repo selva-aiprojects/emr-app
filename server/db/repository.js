@@ -141,7 +141,7 @@ export async function createAuditLog({ tenantId, userId, userName, action, entit
 /**
  * Update tenant settings including subscription tier and billing config
  */
-export async function updateTenantSettings({ tenantId, displayName, theme, features, subscriptionTier, billingConfig }) {
+export async function updateTenantSettings({ tenantId, displayName, theme, features, subscriptionTier, billingConfig, logo_url: req_logo_url }) {
   const updates = [];
   const values = [];
   let paramIndex = 1;
@@ -170,6 +170,11 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
   if (billingConfig !== undefined) {
     updates.push(`billing_config = $${paramIndex++}`);
     values.push(JSON.stringify(billingConfig));
+  }
+
+  if (req_logo_url !== undefined) {
+    updates.push(`logo_url = $${paramIndex++}`);
+    values.push(req_logo_url);
   }
 
   if (updates.length === 0) {
@@ -223,7 +228,7 @@ export async function generateInvoiceNumber(tenantId) {
 // =====================================================
 
 export async function getTenants() {
-  const result = await query('SELECT id, name, code, subdomain, theme, features, billing_config, status, created_at, updated_at, subscription_tier FROM emr.tenants ORDER BY name');
+  const result = await query('SELECT id, name, code, subdomain, theme, features, billing_config, status, created_at, updated_at, subscription_tier, logo_url FROM emr.tenants ORDER BY name');
   return result.rows;
 }
 
@@ -1889,6 +1894,64 @@ export async function createBed({ tenant_id, ward_id, bed_number }) {
   return result.rows[0];
 }
 
+/**
+ * Department Repository Functions
+ */
+export async function getDepartments(tenantId) {
+  const sql = 'SELECT * FROM emr.departments WHERE tenant_id = $1 ORDER BY name';
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function createDepartment({ tenantId, name, code, hod_user_id }) {
+  const sql = `
+    INSERT INTO emr.departments (tenant_id, name, code, hod_user_id)
+    VALUES ($1, $2, $3, $4)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, name, code, hod_user_id || null]);
+  const dept = result.rows[0];
+
+  await createAuditLog({
+    tenantId,
+    action: 'department.create',
+    entityName: 'department',
+    entityId: dept.id,
+    details: { name, code }
+  });
+
+  return dept;
+}
+
+/**
+ * Service Catalog Repository Functions
+ */
+export async function getServices(tenantId) {
+  const sql = 'SELECT * FROM emr.services WHERE tenant_id = $1 ORDER BY category, name';
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function createService({ tenantId, name, code, category, base_rate, tax_percent }) {
+  const sql = `
+    INSERT INTO emr.services (tenant_id, name, code, category, base_rate, tax_percent)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, name, code, category, base_rate, tax_percent || 0]);
+  const service = result.rows[0];
+
+  await createAuditLog({
+    tenantId,
+    action: 'service.create',
+    entityName: 'service',
+    entityId: service.id,
+    details: { name, code, category, base_rate }
+  });
+
+  return service;
+}
+
 export default {
   // Tenants
   getTenants,
@@ -1970,6 +2033,10 @@ export default {
   createWard,
   getBeds,
   createBed,
+  getDepartments,
+  createDepartment,
+  getServices,
+  createService,
 
   // Bootstrap
   getBootstrapData,

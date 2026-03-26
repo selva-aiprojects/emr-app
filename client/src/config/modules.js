@@ -30,12 +30,15 @@ export const moduleMeta = {
   attendance: { title: 'Attendance Log', subtitle: 'Time and attendance tracking' },
   payroll: { title: 'Payroll Ledger', subtitle: 'Salary and compensation management' },
   accounts_receivable: { title: 'Accounts Receivable', subtitle: 'Inbound revenue and pending dues' },
-  accounts_payable: { title: 'Accounts Payable', subtitle: 'Institutional outflow and expenses' }
+  accounts_payable: { title: 'Accounts Payable', subtitle: 'Institutional outflow and expenses' },
+  departments: { title: 'Departments Master', subtitle: 'Clinical specialties' },
+  bed_management: { title: 'Bed Management', subtitle: 'Ward & bed tracker' },
+  hospital_settings: { title: 'Hospital Settings', subtitle: 'Branding & Unit config' }
 };
 
 export const fallbackPermissions = {
   Superadmin: ['superadmin', 'tenant_management', 'user_provisioning', 'dashboard', 'admin', 'reports', 'support'],
-  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat'],
+  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings'],
   Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'reports', 'lab', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Lab: ['dashboard', 'patients', 'lab', 'reports', 'communication', 'documents'],

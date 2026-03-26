@@ -30,6 +30,9 @@ const ServiceCatalogPage = lazy(() => import('./pages/ServiceCatalogPage.jsx'));
 const AIImageAnalysisPage = lazy(() => import('./pages/AIImageAnalysisPage.jsx'));
 const DonorPage = lazy(() => import('./pages/DonorPage.jsx'));
 const ChatPage = lazy(() => import('./pages/ChatPage.jsx'));
+const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage.jsx'));
+const BedManagementPage = lazy(() => import('./pages/BedManagementPage.jsx'));
+const HospitalSettingsPage = lazy(() => import('./pages/HospitalSettingsPage.jsx'));
 
 export default function App() {
   const suspenseFallback = (
@@ -143,17 +146,21 @@ export default function App() {
       
       // Feature visibility matrix by subscription tier
       if (tier === 'Free') {
-        const freeModules = ['superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents'];
-        if (!freeModules.includes(item)) return false;
+        const freeModules = ['superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'hospital_settings'];
+        return freeModules.includes(item);
       } else if (tier === 'Basic') {
-        const premiumModules = ['inpatient', 'billing', 'accounts', 'insurance', 'employees'];
-        if (premiumModules.includes(item)) return false;
+        const basicModules = ['superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'inventory', 'pharmacy', 'ambulance', 'lab', 'hospital_settings', 'departments'];
+        return basicModules.includes(item);
       } else if (tier === 'Professional') {
-        const enterpriseModules = ['employees'];
-        if (enterpriseModules.includes(item)) return false;
+        const proModules = [
+          'superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 
+          'inventory', 'pharmacy', 'ambulance', 'lab', 'inpatient', 'billing', 'accounts', 'accounts_receivable', 'accounts_payable', 
+          'insurance', 'service_catalog', 'hospital_settings', 'departments', 'bed_management'
+        ];
+        return proModules.includes(item);
       }
       
-      return true;
+      return true; // Enterprise has everything
     });
   }, [permissions, activeUser, tenant]);
 
@@ -801,6 +808,19 @@ export default function App() {
         {view === 'ambulance' && <AmbulancePage tenant={tenant} />}
         {view === 'service_catalog' && <ServiceCatalogPage tenant={tenant} />}
         {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} patients={patients} />}
+        
+        {view === 'hospital_settings' && (
+          <HospitalSettingsPage 
+            tenant={tenant} 
+            onUpdateTenant={(updated) => {
+              setTenants(prev => prev.map(t => t.id === updated.id ? updated : t));
+            }} 
+          />
+        )}
+        
+        {view === 'departments' && <DepartmentsPage tenant={tenant} />}
+        
+        {view === 'bed_management' && <BedManagementPage tenant={tenant} />}
 
         {view === 'donor' && <DonorPage tenant={tenant} />}
         {view === 'chat' && <ChatPage activeUser={activeUser} />}

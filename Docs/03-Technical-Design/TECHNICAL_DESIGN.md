@@ -105,6 +105,19 @@ The system isolates Platform-level and Tenant-level payments:
   - `billing_config` (JSONB) in `emr.tenants` stores provider, currency, and gateway keys per tenant.
   - `AdminPage.jsx`: Secured interface for Tenant Admins to provision their specific gateway nodes.
 
+## 11. Clinical AI Intelligence Engine
+The platform integrates **Google Gemini-1.5-Flash** for generative clinical intelligence:
+- **Architecture**: `server/services/ai.service.js` consumes the `@google/generative-ai` SDK.
+- **Data Flow**: Patient metadata (encounters, medications, history) is sanitized and used as context for prompt engineering.
+- **Capabilities**: Longitudinal patient summaries, diagnostic treatment suggestions, and automated discharge report formatting.
+- **Frontend Integration**: `client/src/components/Chatbot.jsx` provides a persistent, context-aware interface for staff.
+
+## 12. Institutional Master Governance
+New administrative layers for tenant-level control:
+- **Administrative Masters**: Managed via `DepartmentsPage.jsx` and `BedManagementPage.jsx`.
+- **Service Catalog**: Refactored to a database-driven `emr.services` registry for dynamic pricing.
+- **Branding Engine**: `emr.tenants` utilizes `logo_url` and theme attributes for institutional identity persistence across the login and workspace layers.
+
 ## 10. Documentation Boundaries
 - `TECHNICAL_DESIGN.md` (this file): canonical architecture and design decisions.
 - `TECHNICAL_HANDBOOK.md`: implementation and change workflows for developers.

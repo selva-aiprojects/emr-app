@@ -45,7 +45,28 @@ As a Front Office staff member or Admin, you handle registration, scheduling, an
 
 ---
 
-## 4. 🤖 AI Chat Assistant
+---
+
+## 5. 🛡️ Platform Governance & Subscriptions
+As a **Superadmin** or **Tenant Admin**, you manage institutional permissions and facility growth.
+
+### 5.1 Subscription Tier Shards
+The platform enforces strict functional isolation through subscription tiers. Features are categorized as follows:
+
+- **Free Tier**: Core OPD, Registration, e-Prescriptions, and basic MIS Reports.
+- **Basic Tier**: Adds **Inventory Control, Pharmacy Dispensing, Laboratory management, and Ambulance Logistics**.
+- **Professional Tier**: Adds **Inpatient (IPD) Admissions, Bed Tracking, Revenue Cycle (Billing & Insurance), and the Master Service Engine**.
+- **Enterprise Tier**: Unlocks **AI Diagnostic Vision, Blood Bank Hub (Donor Registry), HR/Payroll (Staff Management), and Peer Collaborative Chat**.
+
+### 5.2 Institutional Branding & Masters
+Tenant Admins (at Professional/Enterprise tiers) have access to the **Institutional Control** workspace:
+- **Hospital Settings**: Change branding colors (Primary & Accent) and upload the institutional logo.
+- **Departments Master**: Define clinical specialties and administrative shards with institutional coding.
+- **Bed & Ward Management**: Monitor real-time ward throughput and bed occupancy telemetry.
+
+---
+
+## 6. 🤖 AI Chat Assistant
 The system includes a context-aware virtual assistant to help with clinical logistics.
 
 - **How to Open**: Click the floating bubble in the bottom-right corner.
