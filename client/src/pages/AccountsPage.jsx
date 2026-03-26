@@ -16,7 +16,8 @@ import {
   FileText,
   Printer,
   ShieldCheck,
-  Building
+  Building,
+  Activity
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/index.jsx';
 import '../styles/critical-care.css';

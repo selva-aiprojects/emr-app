@@ -13,6 +13,8 @@ import { evaluateAllFeatures, featureGate, moduleGate } from './middleware/featu
 import * as repo from './db/repository.js';
 import { createAuditLog } from './db/repository.js';
 import pharmacyRoutes from '../pharmacy-service/src/routes/pharmacy.routes.js';
+import aiRoutes from './routes/ai.routes.js';
+
 
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
@@ -258,6 +260,8 @@ app.use('/api', evaluateAllFeatures);
 
 // Pharmacy microservice routes
 app.use('/api/pharmacy/v1', requireTenant, pharmacyRoutes);
+app.use('/api/ai/v1', requireTenant, aiRoutes);
+
 
 app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
   try {
@@ -722,21 +726,24 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
   try {
     const tenantId = req.tenantId;
 
-    // Get real-time metrics from database
-    const [totalPatients, totalAppointments, totalRevenue, criticalAlerts] = await Promise.all([
-      query('SELECT COUNT(*) as count FROM emr.patients WHERE tenant_id = $1', [tenantId]),
-      query('SELECT COUNT(*) as count FROM emr.appointments WHERE tenant_id = $1 AND DATE(scheduled_start) = CURRENT_DATE', [tenantId]),
-      query('SELECT COALESCE(SUM(amount), 0) as total FROM emr.invoices WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE', [tenantId]),
-      query('SELECT COUNT(*) as count FROM emr.service_requests WHERE tenant_id = $1 AND category = \'urgent\' AND status = \'pending\'', [tenantId])
-    ]);
+    const statsResult = await query(
+      `SELECT
+        (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = $1) as total_patients,
+        (SELECT COUNT(*) FROM emr.appointments WHERE tenant_id = $1) as total_appointments,
+        (SELECT SUM(total) FROM emr.invoices WHERE tenant_id = $1 AND status = 'paid') as total_revenue,
+        (SELECT COUNT(*) FROM emr.encounters WHERE tenant_id = $1 AND encounter_type = 'IPD' AND visit_date = CURRENT_DATE) as admitted_today,
+        (SELECT COUNT(*) FROM emr.encounters WHERE tenant_id = $1 AND encounter_type = 'IPD' AND status = 'closed' AND DATE(updated_at) = CURRENT_DATE) as discharged_today,
+        (SELECT COUNT(*) FROM emr.service_requests WHERE tenant_id = $1 AND category = 'urgent' AND status = 'pending') as critical_alerts
+      `,
+      [tenantId]
+    );
+    const stats = statsResult.rows[0];
 
     const [patientStats, appointmentStats, bedOccupancy] = await Promise.all([
       query(`
         SELECT 
           COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as new_patients,
-          COUNT(CASE WHEN created_at < CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as returning_patients,
-          COUNT(CASE WHEN status = 'discharged' AND DATE(discharge_date) = CURRENT_DATE THEN 1 END) as discharged_today,
-          COUNT(CASE WHEN status = 'admitted' AND DATE(admission_date) = CURRENT_DATE THEN 1 END) as admitted_today
+          COUNT(CASE WHEN created_at < CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as returning_patients
         FROM emr.patients 
         WHERE tenant_id = $1
       `, [tenantId]),
@@ -770,8 +777,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
 
     const departmentDistribution = departmentResult.rows.map(row => ({
       label: row.department || 'General',
-      value: row.count,
-      color: getDepartmentColor(row.department)
+      value: row.count
     }));
 
     // Get available doctors
@@ -789,42 +795,18 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
       status: doctor.status || 'Available'
     }));
 
-    // Get today's visits
-    const visitsResult = await query(`
-      SELECT 
-        COUNT(CASE WHEN visit_type = 'opd' THEN 1 END) as opd_visits,
-        COUNT(CASE WHEN visit_type = 'emergency' THEN 1 END) as emergency_visits,
-        COUNT(CASE WHEN visit_type = 'followup' THEN 1 END) as followup_visits
-      FROM emr.patient_visits 
-      WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE
-    `, [tenantId]);
-
-    const visits = visitsResult.rows[0] || { opd_visits: 0, emergency_visits: 0, followup_visits: 0 };
-
-    // Get appointment requests
-    const requestsResult = await query(`
-      SELECT 
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_approval,
-        COUNT(CASE WHEN status = 'confirmed' AND DATE(appointment_date) = CURRENT_DATE THEN 1 END) as today_schedule,
-        COUNT(CASE WHEN category = 'urgent' AND status = 'pending' THEN 1 END) as urgent_cases
-      FROM emr.appointments 
-      WHERE tenant_id = $1
-    `, [tenantId]);
-
-    const requests = requestsResult.rows[0] || { pending_approval: 0, today_schedule: 0, urgent_cases: 0 };
-
     res.json({
-      totalPatients: parseInt(totalPatients.rows[0].count),
-      totalAppointments: parseInt(totalAppointments.rows[0].count),
-      totalRevenue: parseFloat(totalRevenue.rows[0].total) || 0,
-      criticalAlerts: parseInt(criticalAlerts.rows[0].count),
+      totalPatients: parseInt(stats.total_patients || 0),
+      totalAppointments: parseInt(stats.total_appointments || 0),
+      totalRevenue: parseFloat(stats.total_revenue || 0),
+      criticalAlerts: parseInt(stats.critical_alerts || 0),
+      admittedToday: parseInt(stats.admitted_today || 0),
+      dischargedToday: parseInt(stats.discharged_today || 0),
       patientStats: patientStats.rows[0] || {},
       appointmentStats: appointmentStats.rows[0] || {},
       bedOccupancy: bedOccupancy.rows[0] || {},
       departmentDistribution,
       doctors,
-      visits,
-      requests,
       lastUpdated: new Date().toISOString()
     });
 

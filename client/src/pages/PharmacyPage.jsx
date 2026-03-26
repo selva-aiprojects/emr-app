@@ -126,45 +126,45 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-amber-500">
            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Dispense</p>
-              <h4 className="text-3xl font-black text-slate-900 mt-1">{metrics.pending}</h4>
-              <p className="text-[9px] font-black text-amber-600 mt-2 uppercase tracking-widest">Queue Active</p>
+              <p className="stat-label">Awaiting Dispense</p>
+              <p className="stat-value mt-2">{metrics.pending}</p>
+              <p className="stat-sub text-amber-600 mt-1">Queue Active</p>
            </div>
-           <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
-              <Clock className="w-6 h-6" />
+           <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center">
+              <Clock className="w-5 h-5" />
            </div>
         </div>
 
         <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-emerald-500">
            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ready for Pickup</p>
-              <h4 className="text-3xl font-black text-slate-900 mt-1">{metrics.ready}</h4>
-              <p className="text-[9px] font-black text-emerald-600 mt-2 uppercase tracking-widest">Verified orders</p>
+              <p className="stat-label">Ready for Pickup</p>
+              <p className="stat-value mt-2">{metrics.ready}</p>
+              <p className="stat-sub text-emerald-600 mt-1">Verified orders</p>
            </div>
-           <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
-              <CheckCircle className="w-6 h-6" />
+           <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5" />
            </div>
         </div>
 
         <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-blue-500">
            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dispensed Today</p>
-              <h4 className="text-3xl font-black text-slate-900 mt-1">{metrics.dispensed}</h4>
-              <p className="text-[9px] font-black text-blue-600 mt-2 uppercase tracking-widest">Fulfilled</p>
+              <p className="stat-label">Dispensed Today</p>
+              <p className="stat-value mt-2">{metrics.dispensed}</p>
+              <p className="stat-sub text-blue-600 mt-1">Fulfilled</p>
            </div>
-           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center">
-              <Package className="w-6 h-6" />
+           <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center">
+              <Package className="w-5 h-5" />
            </div>
         </div>
 
         <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-rose-500">
            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Critical Shortage</p>
-              <h4 className="text-3xl font-black text-slate-900 mt-1">12</h4>
-              <p className="text-[9px] font-black text-rose-600 mt-2 uppercase tracking-widest">Restock Needed</p>
+              <p className="stat-label">Critical Shortage</p>
+              <p className="stat-value mt-2">12</p>
+              <p className="stat-sub text-rose-600 mt-1">Restock Needed</p>
            </div>
-           <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center">
-              <AlertCircle className="w-6 h-6" />
+           <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center">
+              <AlertCircle className="w-5 h-5" />
            </div>
         </div>
       </div>

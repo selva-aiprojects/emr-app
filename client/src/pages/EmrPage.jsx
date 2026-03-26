@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import PatientSearch from '../components/PatientSearch.jsx';
 import { patientName } from '../utils/format.js';
 import { api } from '../api.js';
+import { getAIPatientSummary, getAITreatmentSuggestion } from '../ai-api.js';
 import Prescriber from '../components/pharmacy/Prescriber.jsx';
 import '../styles/critical-care.css';
 import { 
@@ -15,7 +16,10 @@ import {
   AlertCircle,
   Clock,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Sparkles,
+  Bot,
+  Loader2
 } from 'lucide-react';
 
 function printPrescription(enc, patient, medications, provider, tenant) {
@@ -120,7 +124,14 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
   const activeEncounters = useMemo(() => encounters.filter(e => e.status === 'open'), [encounters]);
   const pastEncounters = useMemo(() => encounters.filter(e => e.status === 'closed'), [encounters]);
 
-  const selectedPatient = useMemo(() => patients.find(p => p.id === selectedPatientId), [patients, selectedPatientId]);
+  const selectedPatient = useMemo(() => {
+    const p = patients.find(p => p.id === selectedPatientId);
+    if (p) {
+      // Clear AI summary when patient changes
+      setAiSummary(null);
+    }
+    return p;
+  }, [patients, selectedPatientId]);
   const patientHistory = useMemo(() => {
     if (!selectedPatientId) return [];
     return encounters.filter(e => e.patientId === selectedPatientId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -132,6 +143,29 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
   };
 
   const [lastSaved, setLastSaved] = useState(null);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+
+  const handleGenerateAISummary = async (explicitPatientId = null) => {
+    const targetId = explicitPatientId || selectedPatientId;
+    if (!targetId) return;
+    
+    setIsGeneratingAI(true);
+    setAiSummary(null);
+    try {
+      if (explicitPatientId && explicitPatientId !== selectedPatientId) {
+        setSelectedPatientId(explicitPatientId);
+      }
+      
+      const summary = await getAIPatientSummary(targetId);
+      setAiSummary(summary);
+    } catch (err) {
+      console.error('AI Summary Error:', err);
+      setAiSummary('Failed to generate clinical overview. Gemini Node failed to respond.');
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
 
   const handleEncounterSubmit = async (e) => {
     e.preventDefault();
@@ -320,6 +354,40 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                       <div className="p-4 bg-white/5 rounded-2xl border border-white/10 group-hover:border-[var(--primary)]/30 transition-colors">
                         <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Pathological History</label>
                         <div className="text-xs font-bold text-[var(--primary-soft)]">{selectedPatient.medicalHistory?.chronicConditions || 'CLEAR PROFILE'}</div>
+                      </div>
+
+                      <div className="space-y-4 pt-2">
+                        {!aiSummary ? (
+                          <button 
+                            type="button" 
+                            onClick={handleGenerateAISummary}
+                            disabled={isGeneratingAI}
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-xl border border-indigo-500/30 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                          >
+                            {isGeneratingAI ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Sparkles className="w-3.5 h-3.5" />
+                            )}
+                            {isGeneratingAI ? 'Processing Node...' : 'Generate AI Overview'}
+                          </button>
+                        ) : (
+                          <div className="p-4 bg-indigo-600/10 rounded-2xl border border-indigo-500/20 animate-fade-in">
+                            <div className="flex items-center gap-2 mb-3">
+                              <Bot className="w-4 h-4 text-indigo-400" />
+                              <span className="text-[9px] font-black uppercase text-indigo-300 tracking-[0.2em]">Clinical AI summary</span>
+                            </div>
+                            <div className="text-[11px] leading-relaxed text-indigo-100/80 whitespace-pre-wrap font-medium h-48 overflow-y-auto pr-2 custom-scrollbar">
+                              {aiSummary}
+                            </div>
+                            <button 
+                              onClick={() => setAiSummary(null)}
+                              className="mt-3 text-[8px] font-black uppercase text-indigo-400/60 hover:text-indigo-400 tracking-widest"
+                            >
+                              Reset AI Node
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -546,6 +614,16 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                               }}>
                                  <FileText className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600" />
                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-indigo-600">Summary Extract</span>
+                              </button>
+                              <button 
+                                className="p-2.5 rounded-xl bg-slate-50 text-indigo-400 hover:text-indigo-600 transition-all border border-slate-100 hover:border-indigo-100" 
+                                title="AI Clinical Overview" 
+                                onClick={() => {
+                                  handleGenerateAISummary(e.patient_id || e.patientId);
+                                  setActiveTab('new');
+                                }}
+                              >
+                                 <Sparkles className="w-4 h-4" />
                               </button>
                               <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:text-emerald-600 transition-all border border-slate-100 hover:border-emerald-100" title="Generate Rx" onClick={() => printPrescription(e, pat || { firstName: 'Patient' }, [], providers.find(p => p.id === (e.provider_id || e.providerId)), tenant)}>
                                  <Printer className="w-4 h-4" />

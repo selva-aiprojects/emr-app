@@ -31,13 +31,20 @@ Each tenant (hospital/clinic) has isolated data. The system supports:
 | **Patients** | Registration, medical history, clinical records, MRN generation |
 | **Appointments** | Scheduling, walk-in management, status tracking, rescheduling |
 | **EMR** | Encounter creation (OPD/IPD/emergency), diagnosis, notes |
-| **Billing** | Invoice generation, tax calculation, payment tracking |
-| **Inventory** | Stock management, reorder alerts, item categories |
-| **Employees** | HR records, leave management, shift tracking |
-| **Reports** | Revenue, patient, and appointment summaries |
+| **Inpatient** | Ward and bed management, discharge protocol, automated billing |
+| **Laboratory** | Test results, diagnostics, and integrated results entry |
+| **Pharmacy** | Medication dispensing, prescription validation, safety checks |
+| **Billing** | Invoice generation, tax calculation, payment tracking, automated settle |
+| **Insurance** | Claims registry, insurance hubs and provider management |
+| **Inventory** | Stock management, reorder alerts, batch tracking (FEFO) |
+| **Employees** | HR records, leave management, shift tracking and payroll |
+| **Reports** | Revenue, patient, and appointment trends |
 | **Admin** | Tenant settings, user management, feature toggles |
-| **Superadmin** | Platform-wide control, tenant creation, system overview |
-| **Chatbot** | Tenant-scoped AI assistant (patient lookup, stats, navigation) |
+| **Communication** | Internal notice board and employee alerts |
+| **Document Vault** | Patient-linked clinical and administrative storage |
+| **Support** | Facility assistance, ticketing and resolution |
+| **Superadmin** | Platform-wide control, tenant provisioning, system audit |
+| **Chatbot** | Tenant-scoped assistant (patient lookup, stats, navigation) |
 
 ## Quick Start (Local)
 

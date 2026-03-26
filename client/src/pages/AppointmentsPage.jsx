@@ -35,10 +35,16 @@ export default function AppointmentsPage({
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
            <h1 className="flex items-center gap-3">
-              Scheduling & Resource Node
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Clinical Flow</span>
+              {isDoctor ? 'My Appointment Schedule' : 'Scheduling & Resource Node'}
+              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">
+                {isDoctor ? 'Doctor View' : 'Clinical Flow'}
+              </span>
            </h1>
-           <p className="dim-label">Organizational co-ordination and longitudinal event scheduling for {session?.tenantName || 'Authorized Facility'}.</p>
+           <p className="dim-label">
+             {isDoctor
+               ? 'Your scheduled consultations and patient encounters.'
+               : `Organizational co-ordination and longitudinal event scheduling for ${session?.tenantName || 'Authorized Facility'}.`}
+           </p>
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
               <ShieldCheck className="w-3 h-3 text-blue-500" /> Operational Readiness • Clinical Flow active
            </p>
@@ -48,7 +54,7 @@ export default function AppointmentsPage({
             className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'appointments' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
             onClick={() => setActiveTab('appointments')}
           >
-            <Calendar className="w-3.5 h-3.5 mr-2" /> Clinical Schedule
+            <Calendar className="w-3.5 h-3.5 mr-2" /> {isDoctor ? 'Book Slot' : 'Clinical Schedule'}
           </button>
           {!isPatient && !isDoctor && (
             <button 

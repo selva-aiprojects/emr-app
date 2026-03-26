@@ -1,52 +1,45 @@
 import { useMemo, useRef, useState } from "react";
 import { moduleMeta } from "../config/modules.js";
 import { BRAND } from "../config/branding.js";
-import { helpContent } from "../config/helpContent.js";
-import { ModuleGate, useFeatureAccess } from "./FeatureGate.jsx";
+import { useFeatureAccess } from "./FeatureGate.jsx";
 import {
   Activity,
   Bell,
   Calendar,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
-  Clock3,
   FileText,
   FlaskConical,
   Grid2X2,
-  HelpCircle,
   HeartPulse,
-  History,
   LayoutDashboard,
   LogOut,
   Menu,
-  MoreHorizontal,
   Package,
   Pill,
   Receipt,
-  Search,
   Settings,
-  Settings2,
   ShieldCheck,
   Stethoscope,
-  User,
   UserCircle,
   Users,
-  X,
-  Bed
+  Bed,
 } from "lucide-react";
-import { ActionMenu, NotificationSystem, SmartSearch, StatusIndicator } from "./UXEnhanced.jsx";
+import { ActionMenu, NotificationSystem, SmartSearch } from "./UXEnhanced.jsx";
 import "../styles/critical-care.css";
 
-
+/* ─── NAV ICONS ──────────────────────────────────────────────────── */
 const navIcons = {
   superadmin: ShieldCheck,
   dashboard: LayoutDashboard,
+  doctor_workspace: HeartPulse,
   users: UserCircle,
   tenants: Grid2X2,
   ticketing: Bell,
   patients: Users,
   appointments: Calendar,
-  emr: History,
+  emr: Stethoscope,
   inpatient: Bed,
   pharmacy: Pill,
   billing: Receipt,
@@ -58,401 +51,343 @@ const navIcons = {
   admin: Settings,
   lab: FlaskConical,
   communication: Bell,
-  documents: FileText
+  documents: FileText,
 };
 
-const moduleDescriptions = {
-  dashboard: "Operational overview and care activity",
-  users: "Clinical workspace",
-  patients: "Registration, search, demographics, and patient context",
-  appointments: "Scheduling, walk-ins, and provider calendars",
-  emr: "Clinical documentation, history, and treatment notes",
-  inpatient: "Bed management and admitted patient flow",
-  pharmacy: "Medication orders, dispensing, and stock visibility",
-  billing: "Invoices, collections, and payment reconciliation",
-  insurance: "Payers, claims, and coverage workflows",
-  inventory: "Clinical supplies, reorder levels, and availability",
-  employees: "Staff records, shifts, leave, and attendance",
-  accounts: "Financial documentation and ledger review",
-  reports: "Utilization, revenue, and performance insights",
-  admin: "Facility settings, users, and access controls",
-  lab: "Orders, samples, and result tracking",
-  communication: "Notices, announcements, and internal alerts",
-  documents: "Centralized document vault and metadata trail",
-  superadmin: "Platform Hub",
-  tenants: "Multi-tenant Governance",
-  support: "Support Channels",
-  ticketing: "Issue Resolution"
-};
+/* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
+const SIDEBAR_GROUPS_DEFAULT = [
+  { name: "Overview",           modules: ["dashboard", "reports"] },
+  { name: "Patient Management", modules: ["patients", "appointments"] },
+  { name: "Clinical Hub",       modules: ["emr", "lab", "inpatient"] },
+  { name: "Pharmacy & Medicine",modules: ["pharmacy", "inventory"] },
+  { name: "Financial Desk",     modules: ["billing", "insurance", "accounts"] },
+  { name: "Administration",     modules: ["employees", "users", "admin"] },
+  { name: "Communication",      modules: ["communication", "documents", "ticketing"] },
+];
+
+const SIDEBAR_GROUPS_DOCTOR = [
+  { name: "My Workspace", modules: ["doctor_workspace", "appointments"] },
+  { name: "Clinical Hub", modules: ["patients", "emr", "lab", "inpatient"] },
+  { name: "Pharmacy",     modules: ["pharmacy"] },
+  { name: "Communication",modules: ["communication", "documents"] },
+];
+
+function getSidebarGroups(role) {
+  return (role || "").toLowerCase() === "doctor"
+    ? SIDEBAR_GROUPS_DOCTOR
+    : SIDEBAR_GROUPS_DEFAULT;
+}
 
 function formatRole(role) {
   if (!role) return "Clinical User";
   return role.replace(/_/g, " ");
 }
 
-export default function AppLayout({ tenant, activeUser, allowedViews, view, setView, onLogout, children, error }) {
+/* ─── COLLAPSIBLE GROUP COMPONENT ────────────────────────────────── */
+function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebarCollapsed }) {
+  // By default all groups start open
+  const [open, setOpen] = useState(true);
+
+  if (visibleModules.length === 0) return null;
+
+  return (
+    <div className="mb-1">
+      {/* Group header — always shown; clicking toggles expand/collapse */}
+      {!sidebarCollapsed && (
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="
+            w-full flex items-center justify-between
+            px-3 py-2 rounded-lg
+            text-[9px] font-black uppercase tracking-[0.18em]
+            text-white/30 hover:text-white/50
+            hover:bg-white/[0.04]
+            transition-all duration-150 select-none
+            group
+          "
+        >
+          <span>{group.name}</span>
+          <ChevronDown
+            size={10}
+            className={`transition-transform duration-200 ${open ? "rotate-0" : "-rotate-90"}`}
+          />
+        </button>
+      )}
+
+      {/* Items — hidden when group is collapsed OR sidebar is icon-only */}
+      <div
+        className={`
+          overflow-hidden transition-all duration-200 ease-in-out
+          ${sidebarCollapsed ? "block" : open ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}
+        `}
+        style={!sidebarCollapsed ? {} : undefined}
+      >
+        <div className={`space-y-0.5 ${!sidebarCollapsed && open ? "pt-1 pb-2" : ""}`}>
+          {visibleModules.map((moduleName) => {
+            const Icon = navIcons[moduleName] || LayoutDashboard;
+            const moduleInfo = moduleMeta[moduleName];
+            const isActive = view === moduleName;
+
+            return (
+              <button
+                key={moduleName}
+                onClick={() => { setView(moduleName); setMobileOpen(false); }}
+                title={sidebarCollapsed ? moduleInfo?.title || moduleName : ""}
+                className={`
+                  w-full flex items-center gap-3 rounded-xl transition-all duration-150 group relative
+                  ${sidebarCollapsed ? "px-2 py-3 justify-center" : "px-3 py-2.5"}
+                  ${isActive
+                    ? "bg-[var(--clinical-secondary)] text-white shadow-lg shadow-[var(--clinical-secondary)]/20"
+                    : "text-white/50 hover:bg-white/[0.06] hover:text-white"
+                  }
+                `}
+              >
+                {/* Active indicator stripe */}
+                {isActive && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-white rounded-r-full" />
+                )}
+
+                <Icon
+                  size={16}
+                  className={`flex-shrink-0 ${isActive ? "opacity-100" : "opacity-50 group-hover:opacity-90"} transition-opacity`}
+                />
+
+                {!sidebarCollapsed && (
+                  <div className="flex flex-col items-start leading-none min-w-0">
+                    <span className="text-[11px] font-semibold tracking-tight truncate">
+                      {moduleInfo?.title || moduleName}
+                    </span>
+                    {moduleInfo?.subtitle && (
+                      <span className="text-[8px] opacity-40 font-medium mt-0.5 truncate">
+                        {moduleInfo.subtitle}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {isActive && !sidebarCollapsed && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white/50 flex-shrink-0" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Separator between groups (only when expanded) */}
+      {!sidebarCollapsed && open && (
+        <div className="mx-3 border-b border-white/[0.05] mt-1" />
+      )}
+    </div>
+  );
+}
+
+/* ─── MAIN LAYOUT ────────────────────────────────────────────────── */
+export default function AppLayout({
+  tenant, activeUser, allowedViews, view, setView, onLogout, children, error,
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeDialog, setActiveDialog] = useState(null);
-  const [showMoreModules, setShowMoreModules] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const { getAccessibleModules } = useFeatureAccess(tenant?.id);
   const accessibleModules = getAccessibleModules(allowedViews);
-  const searchInputRef = useRef(null);
 
   const facilityName = tenant?.name || `${BRAND.name} Care Platform`;
-  const currentModule = moduleMeta[view]?.title || "Clinical Workspace";
+  const isDoctor = (activeUser?.role || "").toLowerCase() === "doctor";
+  const currentModule =
+    view === "doctor_workspace"
+      ? "My Schedule"
+      : moduleMeta[view]?.title || "Clinical Workspace";
+
+  const effectiveAccessibleModules = useMemo(() => {
+    if (isDoctor && !accessibleModules.includes("doctor_workspace")) {
+      return ["doctor_workspace", ...accessibleModules];
+    }
+    return accessibleModules;
+  }, [isDoctor, accessibleModules]);
+
+  const sidebarGroups = useMemo(
+    () => getSidebarGroups(activeUser?.role),
+    [activeUser?.role]
+  );
+
   const today = useMemo(
     () =>
       new Date().toLocaleDateString("en-IN", {
         weekday: "short",
         day: "2-digit",
         month: "short",
-        year: "numeric"
+        year: "numeric",
       }),
     []
   );
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="premium-card max-w-lg w-full p-8">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-[var(--danger-soft)] text-[var(--danger)] flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-[var(--danger)]">Application Notice</p>
-                <h2 className="text-2xl font-extrabold text-[var(--text-strong)]">Unable to load the workspace shell</h2>
-              </div>
-              <p className="text-sm text-[var(--text-muted)]">{error}</p>
-              <button onClick={() => window.location.reload()} className="btn btn-primary">
-                Refresh workspace
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const handleSearchResult = (result) => {
     const targetViewByType = {
       patient: "patients",
       appointment: "appointments",
-      medication: allowedViews.includes("pharmacy") ? "pharmacy" : "emr"
+      medication: allowedViews.includes("pharmacy") ? "pharmacy" : "emr",
     };
-
     const targetView = targetViewByType[result?.type];
-    if (targetView && allowedViews.includes(targetView)) {
-      setView(targetView);
-    }
+    if (targetView && allowedViews.includes(targetView)) setView(targetView);
   };
 
-  const focusGlobalSearch = () => {
-    searchInputRef.current?.focus();
-  };
+  /* ── Sidebar content ── */
+  const SidebarContent = (
+    <div className="flex flex-col h-full">
 
-  const openSettings = () => {
-    const target = allowedViews.includes("admin")
-      ? "admin"
-      : allowedViews.includes("employees")
-        ? "employees"
-        : allowedViews.includes("dashboard")
-          ? "dashboard"
-          : allowedViews[0];
-
-    if (target) {
-      setView(target);
-    }
-  };
-
-  const roleHelp = helpContent[activeUser?.role] || helpContent.default;
-
-  const handleLogout = () => {
-    onLogout();
-  };
-
-  const navContent = (
-    <>
-      {/* Sidebar Header / Brand */}
-      <div className={`sidebar-header ${isCollapsed ? 'is-collapsed' : ''}`}>
-        <div className="brand">
-          <div className="brand-mark" aria-hidden="true">
-            <img src="/medflow-icon.svg" alt="" className="brand-icon" />
-          </div>
-          {!isCollapsed && (
-            <div className="brand-text">
-              <h1 className="brand-name">{BRAND.name}</h1>
-              <div className="brand-subtitle">{facilityName}</div>
+      {/* ── HEADER ── */}
+      <div className={`flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? "justify-center p-4" : "justify-between px-5 py-4"}`}>
+        {!sidebarCollapsed && (
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-[var(--clinical-secondary)] flex items-center justify-center text-white shadow-lg flex-shrink-0">
+              <Activity size={16} />
             </div>
-          )}
-        </div>
+            <div className="min-w-0">
+              <h1 className="text-[11px] font-black tracking-tight text-white uppercase leading-none">
+                {BRAND.name}
+              </h1>
+              <p className="text-[8px] font-semibold text-white/30 uppercase tracking-widest truncate mt-0.5">
+                {facilityName}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {sidebarCollapsed && (
+          <div className="w-8 h-8 rounded-lg bg-[var(--clinical-secondary)] flex items-center justify-center text-white">
+            <Activity size={16} />
+          </div>
+        )}
 
         <button
-          type="button"
-          className="sidebar-collapse"
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={() => setSidebarCollapsed((c) => !c)}
+          className="flex-shrink-0 p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/10 text-white/30 hover:text-white transition-all"
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          <ChevronRight className={`sidebar-collapse-icon ${isCollapsed ? '' : 'rotated'}`} size={16} />
+          {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </div>
 
-      {/* Tenant Context Chip (kept minimal; brand already shows facility) */}
-      <div className={`tenant-chip ${isCollapsed ? 'is-collapsed' : ''}`}>
-        {!isCollapsed ? (
-          <span className="tenant-chip-text">{currentModule}</span>
-        ) : (
-          <span className="tenant-chip-dot" aria-hidden="true" />
-        )}
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1">
-        {/* Main Navigation Group */}
-        <div className="nav-group">
-          <div className="menu-divider">
-            <span>{!isCollapsed && "Main"}</span>
-          </div>
-          {accessibleModules.slice(0, 5).map((moduleName) => {
-            const Icon = navIcons[moduleName] || LayoutDashboard;
-            const moduleInfo = moduleMeta[moduleName];
-            return (
-              <button
-                key={moduleName}
-                onClick={() => {
-                  setView(moduleName);
-                  setMobileOpen(false);
-                }}
-                className={`menu-item ${view === moduleName ? 'active' : ''}`}
-                title={isCollapsed ? moduleInfo?.title || moduleName : ''}
-              >
-                <Icon size={19} />
-                {!isCollapsed && (
-                  <span className="nav-label">{moduleInfo?.title || moduleName}</span>
-                )}
-                {view === moduleName && !isCollapsed && (
-                  <div
-                    className="active-dot"
-                    style={{
-                      marginLeft: 'auto',
-                      width: '5px',
-                      height: '5px',
-                      borderRadius: '50%',
-                      background: 'var(--clinical-blue)',
-                      boxShadow: '0 0 8px var(--clinical-blue)'
-                    }}
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* More Navigation Group */}
-        {accessibleModules.length > 5 && (
-          <div className="nav-group">
-            <div className="menu-divider">
-              <span>{!isCollapsed && "More"}</span>
-            </div>
-            {accessibleModules.slice(5).map((moduleName) => {
-              const Icon = navIcons[moduleName] || LayoutDashboard;
-              const moduleInfo = moduleMeta[moduleName];
-              return (
-                <button
-                  key={moduleName}
-                  onClick={() => {
-                    setView(moduleName);
-                    setMobileOpen(false);
-                  }}
-                  className={`menu-item ${view === moduleName ? 'active' : ''}`}
-                  title={isCollapsed ? moduleInfo?.title || moduleName : ''}
-                >
-                  <Icon size={19} />
-                  {!isCollapsed && (
-                    <span className="nav-label">{moduleInfo?.title || moduleName}</span>
-                  )}
-                  {view === moduleName && !isCollapsed && (
-                    <div
-                      className="active-dot"
-                      style={{
-                        marginLeft: 'auto',
-                        width: '5px',
-                        height: '5px',
-                        borderRadius: '50%',
-                      background: 'var(--clinical-blue)',
-                      boxShadow: '0 0 8px var(--clinical-blue)'
-                      }}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
+      {/* ── NAVIGATION ── */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-0.5"
+        style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.1) transparent" }}
+      >
+        {sidebarGroups.map((group) => {
+          const visibleModules = group.modules.filter((m) =>
+            effectiveAccessibleModules.includes(m)
+          );
+          return (
+            <NavGroup
+              key={group.name}
+              group={group}
+              visibleModules={visibleModules}
+              view={view}
+              setView={setView}
+              setMobileOpen={setMobileOpen}
+              sidebarCollapsed={sidebarCollapsed}
+            />
+          );
+        })}
       </nav>
 
-      {/* User Profile Section */}
-      <div style={{
-        padding: '24px 16px',
-        background: 'rgba(0,0,0,0.2)',
-        borderTop: '1px solid rgba(255,255,255,0.05)',
-        position: 'relative',
-        zIndex: 2
-      }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: isCollapsed ? 'center' : 'space-between',
-          gap: '12px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div className="avatar" style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '12px',
-               background: 'linear-gradient(135deg, var(--medical-navy), var(--clinical-blue))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 700,
-              fontSize: '0.9rem',
-              color: '#fff',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-            }}>
-              {(activeUser?.name || 'U').charAt(0).toUpperCase()}
-            </div>
-
-            {!isCollapsed && (
-              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff' }}>{activeUser?.name || 'User'}</span>
-                <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{formatRole(activeUser?.role)}</span>
-              </div>
-            )}
+      {/* ── USER PROFILE FOOTER ── */}
+      <div className={`border-t border-white/[0.06] p-3 ${sidebarCollapsed ? "flex justify-center" : ""}`}>
+        <div className={`flex items-center gap-3 p-2.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.07] transition-all ${sidebarCollapsed ? "justify-center w-10" : ""}`}>
+          <div className="w-7 h-7 rounded-lg bg-[var(--clinical-secondary)]/20 border border-[var(--clinical-secondary)]/20 flex items-center justify-center text-[var(--clinical-secondary)] font-bold text-xs flex-shrink-0">
+            {(activeUser?.name || "A").charAt(0).toUpperCase()}
           </div>
-
-          {!isCollapsed && (
-            <button
-              onClick={onLogout}
-              style={{
-                background: 'rgba(239, 68, 68, 0.1)',
-                color: '#ef4444',
-                border: 'none',
-                padding: '8px',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title="Sign Out"
-            >
-              <LogOut size={16} />
-            </button>
-          )}
-        </div>
-
-        {isCollapsed && (
-          <button
-            onClick={onLogout}
-            style={{
-              width: '100%',
-              marginTop: '16px',
-              background: 'transparent',
-              color: 'rgba(255,255,255,0.4)',
-              border: 'none',
-              padding: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              justifyContent: 'center'
-            }}
-          >
-            <LogOut size={18} />
-          </button>
-        )}
-      </div>
-    </>
-  );
-
-  return (
-    <div className="app-root">
-      {/* Dark Sidebar */}
-      <aside className={`premium-sidebar ${isCollapsed ? 'collapsed' : ''} ${mobileOpen ? 'open' : ''}`}>
-        {navContent}
-      </aside>
-
-      {/* Main Content Area */}
-      <main className="main-content">
-        {/* Top Header Bar */}
-        <header className="top-header">
-          <div>
-            <h1 className="header-title">{currentModule}</h1>
-            <div className="flex items-center gap-2 mt-1 text-xs text-[var(--text-muted)]">
-              <span className="hidden sm:inline">{facilityName}</span>
-              <span className="hidden sm:inline">•</span>
-              <span>{today}</span>
-              {activeUser?.role && (
-                <>
-                  <span>•</span>
-                  <StatusIndicator label={formatRole(activeUser.role)} tone="default" />
-                </>
-              )}
-            </div>
-          </div>
-          <div className="header-actions">
-            <SmartSearch
-              placeholder="Search patients, visits, medications"
-              onSearch={handleSearchResult}
-              inputRef={searchInputRef}
-            />
-            <NotificationSystem />
-          </div>
-        </header>
-
-        {/* Page Content */}
-        <div className="page-content">
-          {error ? (
-            <div className="flex items-start gap-4 p-6">
-              <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-red-600">Application Notice</p>
-                  <h2 className="text-2xl font-extrabold text-gray-900">Unable to load workspace shell</h2>
-                </div>
-                <p className="text-sm text-gray-600">{error}</p>
-                <button onClick={() => window.location.reload()} className="btn btn-primary">
-                  Refresh workspace
-                </button>
-              </div>
-            </div>
-          ) : (
+          {!sidebarCollapsed && (
             <>
-              {/* Mobile Menu Toggle */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-white truncate leading-none">
+                  {activeUser?.name || "Administrator"}
+                </p>
+                <p className="text-[8px] font-medium text-white/30 truncate leading-none uppercase tracking-widest mt-0.5">
+                  {formatRole(activeUser?.role)}
+                </p>
+              </div>
               <button
-                className="lg:hidden fixed top-3 left-4 z-[110] p-2.5 bg-white rounded-xl shadow-xl border border-gray-100 transition-all hover:bg-gray-50 active:scale-95"
-                onClick={() => setMobileOpen(!mobileOpen)}
+                onClick={onLogout}
+                title="Sign out"
+                className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-all flex-shrink-0"
               >
-                {mobileOpen ? <X className="w-5 h-5 text-gray-700" /> : <Menu className="w-5 h-5 text-gray-700" />}
+                <LogOut size={13} />
               </button>
-
-              {/* Sidebar Backdrop */}
-              {mobileOpen && (
-                <div 
-                  className="fixed inset-0 z-[90] bg-slate-900/60 backdrop-blur-[2px] lg:hidden animate-fade-in"
-                  onClick={() => setMobileOpen(false)}
-                />
-              )}
-
-              {/* Page Content */}
-              {children}
             </>
           )}
         </div>
-      </main>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen bg-[#f0f4f8] overflow-hidden">
+
+      {/* ── SIDEBAR (desktop static, mobile overlay) ── */}
+      <aside
+        className={`
+          fixed lg:static inset-y-0 left-0 z-[100]
+          bg-[#0d1117] flex-shrink-0
+          transition-all duration-300 ease-in-out h-full
+          ${sidebarCollapsed ? "w-[60px]" : "w-[260px]"}
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+        `}
+      >
+        {SidebarContent}
+      </aside>
+
+      {/* ── MAIN AREA ── */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+        {/* Mobile top bar */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-100">
+          <button onClick={() => setMobileOpen(true)} className="p-2 text-slate-500 rounded-lg hover:bg-slate-100">
+            <Menu size={20} />
+          </button>
+          <span className="text-xs font-black uppercase tracking-widest text-slate-800">{BRAND.name}</span>
+          <div className="w-9" />
+        </div>
+
+        {/* Top header bar */}
+        <header className="flex-shrink-0 bg-white border-b border-slate-100 px-6 h-16 flex items-center justify-between">
+          <div className="flex flex-col justify-center">
+            <h2 className="text-base font-black tracking-tight text-slate-900 leading-none">
+              {currentModule}
+            </h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[var(--clinical-secondary)] leading-none">
+                {facilityName}
+              </span>
+              <span className="w-0.5 h-0.5 rounded-full bg-slate-300" />
+              <span className="text-[9px] font-medium text-slate-400 leading-none">{today}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden md:block w-64">
+              <SmartSearch
+                onSearch={handleSearchResult}
+                placeholder="Search patients, records..."
+              />
+            </div>
+            <NotificationSystem />
+            <ActionMenu activeUser={activeUser} />
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden relative p-4 lg:p-8">
+          {children}
+        </main>
+      </div>
+
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] lg:hidden"
+        />
+      )}
     </div>
   );
 }

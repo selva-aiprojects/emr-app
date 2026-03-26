@@ -276,17 +276,21 @@ The database now supports:
 | **Patient Management** | ✅ Complete | FHIR Patient, US Core fields |
 | **Scheduling** | ✅ Complete | FHIR Appointment, HL7 SIU ready |
 | **Clinical Documentation** | ✅ Complete | Conditions, Procedures, Observations |
-| **e-Prescribing** | 🟡 Partial | Database ready, UI pending |
-| **Pharmacy Dispensing** | 🟡 Partial | Database ready, service pending |
-| **Nurse MAR** | 🟡 Partial | Tables created, UI pending |
-| **Laboratory Orders** | 🟡 Partial | ServiceRequest table, service pending |
-| **Laboratory Results** | 🟡 Partial | DiagnosticReport table, UI pending |
-| **Billing** | ✅ Complete | FHIR Account/Claim ready |
-| **Insurance Claims** | 🟡 Partial | Tables ready, X12 pending |
+| **e-Prescribing** | ✅ Complete | Pharmacy microservice integrated |
+| **Pharmacy Dispensing** | ✅ Complete | FEFO inventory, Safety checks |
+| **Nurse MAR** | ✅ Complete | Full administration lifecycle |
+| **Laboratory Orders** | ✅ Complete | ServiceRequest integrated |
+| **Laboratory Results** | ✅ Complete | DiagnosticReport integrated |
+| **Billing** | ✅ Complete | FHIR Account/ChargeItem ready |
+| **Insurance Claims** | ✅ Complete | Claim registry + Insurance Hub |
 | **Inventory** | ✅ Complete | Batch tracking, FEFO |
 | **Vendor Management** | ✅ Complete | Procurement workflow |
-| **FHIR API** | 🟡 Partial | Patient complete, others pending |
+| **FHIR API** | ✅ Complete | Patient, Lab, EMR resources ready |
 | **HL7 Interface** | 🟡 Partial | Framework ready, parsers pending |
+| **Inpatient Care** | ✅ Complete | Ward/Bed/Discharge Hub |
+| **Communication** | ✅ Complete | Notice Board |
+| **Document Vault** | ✅ Complete | Patient-linked storage |
+| **Support Hub** | ✅ Complete | Ticketing system |
 | **Reporting** | ⏳ Not Started | Analytics dashboard pending |
 
 Legend: ✅ Complete | 🟡 Partial | ⏳ Not Started
@@ -449,39 +453,22 @@ Timeline: 6-9 months for full certification
 
 ## 🏁 Success Criteria
 
-### Phase 1 Success(Week 5)
-- ✅ All FHIR resources accessible via API
-- ✅ Can create/read/update Patient, Encounter, Condition, Observation
-- ✅ Clinical staff can document problems and vitals
-- ✅ Data exports as FHIR resources
+### Phase 1 Success
+- ✅ All FHIR resources (Patient, Encounter, Condition, Observer) accessible via API.
 
-### Phase 2 Success (Week 7)
-- ✅ Lab orders created as ServiceRequest
-- ✅ Lab results stored as DiagnosticReport + Observations
-- ✅ LOINC codes used for all lab tests
-- ✅ Printable lab reports generated
+### Phase 2 Success
+- ✅ Lab orders (ServiceRequest) and results (DiagnosticReport) integrated.
+- ✅ LOINC codes used for all lab tests.
 
-### Phase 3 Success (Week 12)
-- ✅ Doctors can e-prescribe with safety checks
-- ✅ Pharmacists can dispense and manage inventory
-- ✅ Nurses can administer medications (MAR)
-- ✅ Automatic charge capture for billing
-
-### Phase 4 Success (Week 15)
-- ✅ End-to-end patient journey tested
-- ✅ Interoperability validated with external systems
-- ✅ Ready for pilot deployment
-- ✅ ONC certification application submitted
+### Phase 3 Success (CURRENT)
+- ✅ Doctors can e-prescribe with safety checks.
+- ✅ Pharmacists can dispense and manage inventory.
+- ✅ Inpatient Hub: Ward/Bed management and discharge protocol.
+- ✅ Billing: Automated charge capture and payment settlement.
 
 ---
 
-## 🌟 Vision Statement
-
-**MedFlow EMR** will be the premier choice for US healthcare facilities seeking a modern, interoperable, and clinically safe electronic medical record system. With full HL7/FHIR compliance, comprehensive clinical workflows, and a focus on patient safety, MedFlow empowers healthcare teams to deliver exceptional care while seamlessly exchanging data across the healthcare ecosystem.
-
----
-
-**Document Version**: 1.0.0  
-**Created**: March 10,2026  
-**Status**: Foundation Complete, Implementation In Progress  
-**Next Review**: March 17, 2026
+**Document Version**: 2.0.0  
+**Last Updated**: March 25, 2026  
+**Status**: Wave 3 Feature Complete (Clinical & Institutional)  
+**Next Milestone**: Enterprise Deployment & Final Demo 🚀

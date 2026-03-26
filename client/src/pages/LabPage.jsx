@@ -64,12 +64,12 @@ export default function LabPage({ tenant, activeUser }) {
            {/* No-click critical counts */}
            <div className="flex bg-white shadow-sm rounded-2xl border border-slate-200 overflow-hidden">
               <div className="px-5 py-3 border-r border-slate-100 bg-slate-50/50">
-                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Awaiting Samples</span>
-                 <span className="text-sm font-black text-slate-900 tabular-nums">{stats.pending} Shards</span>
+                 <span className="stat-label block mb-1">Awaiting Samples</span>
+                 <span className="stat-value-sm tabular-nums">{stats.pending}</span>
               </div>
               <div className="px-5 py-3 bg-white">
-                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Critical Findings</span>
-                 <span className="text-sm font-black text-rose-600 tabular-nums">{stats.critical} Nodes</span>
+                 <span className="stat-label block mb-1">Critical Findings</span>
+                 <span className="stat-value-sm text-rose-600 tabular-nums">{stats.critical}</span>
               </div>
            </div>
         </div>
@@ -214,10 +214,10 @@ export default function LabPage({ tenant, activeUser }) {
               <p className="text-[11px] font-medium text-rose-800/70 leading-relaxed mb-6">
                  Adverse pathological findings are automatically prioritized in the clinical stream. Ensure second-tier verification for all critical outcomes before finalizing the diagnostic node.
               </p>
-              <div className="p-4 bg-white border border-rose-100 rounded-2xl">
-                 <div className="text-[9px] font-black text-rose-400 uppercase tracking-widest mb-1">Active Critical Nodes</div>
-                 <div className="text-xl font-black text-rose-700 tabular-nums">0{stats.critical} Unresolved</div>
-              </div>
+               <div className="p-4 bg-white border border-rose-100 rounded-2xl">
+                  <div className="stat-label mb-2">Active Critical Nodes</div>
+                  <div className="stat-value text-rose-700 tabular-nums">{stats.critical} Unresolved</div>
+               </div>
            </article>
         </aside>
       </div>

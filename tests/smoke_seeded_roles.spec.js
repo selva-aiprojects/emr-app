@@ -2,19 +2,21 @@ import { test, expect } from '@playwright/test';
 
 const PASSWORD = 'Test@123';
 
-// Use the same tenants that exist in smoke_tests.spec.js
+// Use New Age Hospital (NAH) which has a full staff roster
 const TENANTS = [
-  { code: 'city_general', label: 'City General Hospital' },
+  { code: 'nah', label: 'New Age Hospital' },
 ];
 
 const ROLES = [
-  { key: 'admin', email: 'lisa.white@citygen.local', displayName: 'Lisa White' },
-  { key: 'nurse', email: 'sarah.jones@citygen.local', displayName: 'Sarah Jones' },
-  { key: 'lab', email: 'michael.brown@citygen.local', displayName: 'Michael Brown' },
-  { key: 'billing', email: 'robert.billing@citygen.local', displayName: 'Robert' },
+  { key: 'admin', email: 'admin@nah.com', password: 'Admin@123', displayName: /Admin/i },
+  { key: 'doctor', email: 'sarah@nah.com', password: 'Admin@123', displayName: /Sarah/i },
+  { key: 'nurse', email: 'joy@nah.com', password: 'Admin@123', displayName: /Joy/i },
+  { key: 'lab', email: 'leo@nah.com', password: 'Admin@123', displayName: /Leo/i },
+  { key: 'pharmacy', email: 'peter@nah.com', password: 'Admin@123', displayName: /Peter/i },
+  { key: 'billing', email: 'alex@nah.com', password: 'Admin@123', displayName: /Alex/i },
 ];
 
-async function login(page, tenantLabel, email) {
+async function login(page, tenantLabel, email, password) {
   await page.goto('/');
   
   // Wait for tenant select to load
@@ -22,15 +24,15 @@ async function login(page, tenantLabel, email) {
   
   // Login
   await page.locator('select[name="tenantId"]').selectOption({ label: tenantLabel });
-  await page.getByPlaceholder('name@hospital.org').fill(email);
-  await page.getByPlaceholder('Enter your secure password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign In' }).click();
+  await page.locator('input[type="email"]').fill(email);
+  await page.locator('input[type="password"]').fill(password);
+  await page.getByRole('button', { name: /Continue to Workflow/i }).click();
 }
 
 for (const tenant of TENANTS) {
   for (const role of ROLES) {
     test(`Smoke: ${role.key} login works on ${tenant.code}`, async ({ page }) => {
-      await login(page, tenant.label, role.email);
+      await login(page, tenant.label, role.email, role.password);
 
       await expect(page.getByRole('button', { name: /Sign Out/i })).toBeVisible({ timeout: 20000 });
       await expect(page.getByText(role.displayName).first()).toBeVisible({ timeout: 20000 });

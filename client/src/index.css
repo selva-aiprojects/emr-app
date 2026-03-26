@@ -7,19 +7,23 @@
   --font-display: 'Inter', system-ui, sans-serif;
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  
+
   /* STRONG HEALTHCARE PALETTE - ULTRA-PREMIUM */
-  --medical-navy: #011627;       /* Deepest Midnight Navy */
+  --medical-navy: #011627;
+  /* Deepest Midnight Navy */
   --medical-navy-light: #0B2545;
-  --clinical-blue: #0077B6;      /* Rich medical cyan-blue */
-  --health-teal: #00B4D8;        /* Vibrating healthcare teal */
-  --medical-accent: #EE6C4D;     /* Warm contrast accent */
-  
+  --clinical-blue: #0077B6;
+  /* Rich medical cyan-blue */
+  --health-teal: #00B4D8;
+  /* Vibrating healthcare teal */
+  --medical-accent: #EE6C4D;
+  /* Warm contrast accent */
+
   --primary: var(--medical-navy);
   --primary-soft: #E0F2FE;
   --accent: var(--clinical-blue);
   --accent-soft: #CAF0F8;
-  
+
   --success: #10B981;
   --success-soft: #ECFDF5;
   --warning: #F59E0B;
@@ -28,31 +32,36 @@
   --danger-soft: #FEF2F2;
   --info: #3B82F6;
   --info-soft: #EFF6FF;
-  
+
   --text-main: #1E293B;
   --text-strong: #0F172A;
   --text-muted: #64748B;
   --text-soft: #94A3B8;
-  
+
   --border: #E2E8F0;
   --surface: #FFFFFF;
-  --page-bg: #F8FAFC; 
+  --page-bg: #F8FAFC;
 
   --radius-xl: 32px;
   --radius-lg: 24px;
   --radius-md: 16px;
-  
+
   --shadow-premium: 0 25px 50px -12px rgba(11, 37, 69, 0.15);
   --header-height: 96px;
   --sidebar-width: 320px;
-  --page-bg: #F0F4F8; /* Subtle blue-gray tint for the page */
+  --page-bg: #F0F4F8;
+  /* Subtle blue-gray tint for the page */
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 html {
   font-family: var(--font-sans);
   overflow-x: hidden;
 }
+
 body {
   margin: 0;
   font-family: var(--font-sans);
@@ -129,7 +138,8 @@ textarea {
 
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #00B4D8; /* Medical Teal on hover */
+  color: #00B4D8;
+  /* Medical Teal on hover */
   transform: translateX(6px);
 }
 
@@ -195,7 +205,7 @@ textarea {
 .btn-primary:hover {
   background: #1E293B;
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* INPUTS */
@@ -228,7 +238,7 @@ textarea {
   padding: 24px;
   border-radius: 24px;
   border: 1px solid #F1F5F9;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
 }
 
 .vital-value {
@@ -239,8 +249,15 @@ textarea {
 }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .animate-fade-in {
@@ -249,4 +266,99 @@ textarea {
 
 .animate-slide-up {
   animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Page content specific heading adjustments (Reducing size to 50% of the 2.5rem base) */
+body .page-shell-premium h1,
+body .page-content h1,
+.page-header-premium h1 {
+  font-size: 1.25rem !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* Removed double padding for page-shell-premium since AppLayout <main> handles it. */
+
+/* ═══════════════════════════════════════════════════════════
+   UNIFIED STAT / METRIC CARD DESIGN TOKENS
+   These are the single source of truth for ALL metric cards
+   across Dashboard, Billing, Pharmacy, Lab, Inpatient, etc.
+   Do NOT override these with ad-hoc inline classes.
+═══════════════════════════════════════════════════════════ */
+
+/* The big number */
+.stat-value {
+  font-family: var(--font-sans);
+  font-size: 1.875rem;       /* 30px — same on every page */
+  font-weight: 800;
+  color: #0f172a;            /* slate-900 */
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Smaller inline value (used in sidebars / narrow rows) */
+.stat-value-sm {
+  font-family: var(--font-sans);
+  font-size: 1.25rem;        /* 20px */
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The descriptive label below the number */
+.stat-label {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;      /* 11px */
+  font-weight: 600;
+  color: #64748b;            /* slate-500 */
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  line-height: 1;
+}
+
+/* The small trend/sub-text (e.g. "+12% vs last week") */
+.stat-sub {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;      /* 11px */
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* ── Override legacy critical-care.css metric classes to match ── */
+.metric-value {
+  font-family: var(--font-sans) !important;
+  font-size: 1.875rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  line-height: 1 !important;
+  letter-spacing: -0.02em !important;
+  font-variant-numeric: tabular-nums !important;
+  margin-bottom: 0 !important;
+}
+
+.metric-label {
+  font-family: var(--font-sans) !important;
+  font-size: 0.6875rem !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.07em !important;
+  line-height: 1 !important;
+  margin-bottom: 0 !important;
+}
+
+.metric-card {
+  padding: 1.25rem 1rem !important;
+  gap: 0.5rem !important;
+  min-height: max-content !important;
+}
+
+/* Ensure no page-specific h1 desktop override undoes the 50% rule */
+@media (min-width: 1024px) {
+  .page-header-premium h1,
+  body .page-shell-premium h1 {
+    font-size: 1.25rem !important;
+  }
 }

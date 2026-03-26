@@ -135,23 +135,23 @@ h1, h2, h3, h4, .font-display {
 }
 
 .vital-label {
-  font-size: 0.75rem;
-  font-weight: 800;
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;     /* 11px — matches .stat-label */
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--clinical-secondary);
+  letter-spacing: 0.07em;
+  color: #64748b;           /* slate-500 — matches .stat-label */
   margin-bottom: 0.5rem;
   display: block;
-  font-family: var(--font-sans);
 }
 
 .vital-value {
-  font-family: var(--font-mono);
-  font-size: 2.5rem;
-  font-weight: 900;
-  color: var(--clinical-primary);
+  font-family: var(--font-sans);  /* Use Inter, not mono — consistent */
+  font-size: 1.875rem;             /* 30px — matches .stat-value */
+  font-weight: 800;
+  color: #0f172a;                  /* slate-900 — matches .stat-value */
   line-height: 1;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1073,7 +1073,7 @@ h1, h2, h3, h4, .font-display {
   }
   
   .page-header-premium h1 {
-    font-size: 2.75rem; /* Slightly larger on desktop for command authority */
+    font-size: 1.25rem; /* Kept consistent with the 50% reduction rule everywhere */
   }
 }
 

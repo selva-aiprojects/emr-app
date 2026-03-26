@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import Chatbot from './components/Chatbot.jsx';
 const SuperadminPage = lazy(() => import('./pages/SuperadminPage.jsx'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
+const DoctorWorkspacePage = lazy(() => import('./pages/DoctorWorkspacePage.jsx'));
 const PatientsPage = lazy(() => import('./pages/PatientsPage.jsx'));
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage.jsx'));
 const EmrPage = lazy(() => import('./pages/EmrPage.jsx'));
@@ -26,8 +27,15 @@ const DocumentVaultPage = lazy(() => import('./pages/DocumentVaultPage.jsx'));
 
 export default function App() {
   const suspenseFallback = (
-    <div className="rounded-xl border border-slate-200 bg-white/95 px-4 py-3 text-sm font-medium text-slate-600 shadow-sm">
-      Loading module...
+    <div className="p-8 animate-pulse space-y-4">
+      <div className="h-8 w-64 bg-slate-100 rounded-xl" />
+      <div className="h-4 w-96 bg-slate-50 rounded-lg" />
+      <div className="grid grid-cols-4 gap-4 mt-6">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-28 bg-slate-100 rounded-xl" />
+        ))}
+      </div>
+      <div className="h-64 bg-slate-50 rounded-xl mt-4" />
     </div>
   );
   const [tenants, setTenants] = useState([]);
@@ -158,11 +166,11 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (isDoctor && view === 'dashboard' && allowedViews.includes('appointments')) {
-      setView('appointments');
+    if (isDoctor && (view === 'dashboard' || !allowedViews.includes(view)) && allowedViews.includes('appointments')) {
+      setView('doctor_workspace');
       return;
     }
-    if (!allowedViews.includes(view) && allowedViews.length) {
+    if (!allowedViews.includes(view) && view !== 'doctor_workspace' && allowedViews.length) {
       setView(allowedViews[0]);
     }
   }, [allowedViews, view, isDoctor]);
@@ -316,7 +324,7 @@ export default function App() {
         // Fetch tenant data FIRST
         await refreshTenantData(loginData.tenantId, loginData.user.id, loginData.user.role);
         // Only show dashboard AFTER data is loaded
-        setView((loginData.user?.role || '').toLowerCase() === 'doctor' ? 'appointments' : 'dashboard');
+        setView((loginData.user?.role || '').toLowerCase() === 'doctor' ? 'doctor_workspace' : 'dashboard');
       }
     } catch (err) {
       console.error('DIAGNOSTIC: Login process failed at step:', err);
@@ -375,16 +383,16 @@ export default function App() {
 
   return (
     <>
-      <Suspense fallback={suspenseFallback}>
-        <AppLayout
-          tenant={tenant}
-          activeUser={activeUser}
-          allowedViews={allowedViews}
-          view={view}
-          setView={setView}
-          onLogout={logout}
-          error={error}
-        >
+      <AppLayout
+        tenant={tenant}
+        activeUser={activeUser}
+        allowedViews={allowedViews}
+        view={view}
+        setView={setView}
+        onLogout={logout}
+        error={error}
+      >
+        <Suspense fallback={suspenseFallback}>
           {view === 'superadmin' && (
             <SuperadminPage
               superOverview={superOverview}
@@ -403,6 +411,19 @@ export default function App() {
               }}
               onRefresh={refreshSuperadmin}
               infra={superOverview?.infra || {}}
+            />
+          )}
+
+          {view === 'doctor_workspace' && (
+            <DoctorWorkspacePage
+              activeUser={activeUser}
+              appointments={scopedAppointments}
+              patients={scopedPatients}
+              encounters={scopedEncounters}
+              users={users}
+              setView={setView}
+              setActivePatientId={setActivePatientId}
+              onSetAppointmentStatus={(appointmentId, status) => withRefresh(() => api.setAppointmentStatus(appointmentId, { tenantId: session.tenantId, userId: activeUser.id, status }))}
             />
           )}
 
@@ -772,13 +793,13 @@ export default function App() {
             }}
           />
         )}
-        </AppLayout>
+        </Suspense>
+      </AppLayout>
 
-        <Chatbot context={{
-          patients: scopedPatients, appointments: scopedAppointments, walkins: scopedWalkins, encounters: scopedEncounters, invoices, inventory,
-          employees, employeeLeaves, insuranceProviders, claims, notices, documents, tenant, activeUser, setView
-        }} />
-      </Suspense>
+      <Chatbot context={{
+        patients: scopedPatients, appointments: scopedAppointments, walkins: scopedWalkins, encounters: scopedEncounters, invoices, inventory,
+        employees, employeeLeaves, insuranceProviders, claims, notices, documents, tenant, activeUser, setView
+      }} />
     </>
   );
 }

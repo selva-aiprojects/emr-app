@@ -394,22 +394,22 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
               <Users className="w-6 h-6 text-purple-600" />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-purple-600">{realtimeMetrics.patientStats?.new_patients || 0}</p>
-              <p className="text-xs text-gray-600 mt-2">New Patients</p>
+              <p className="stat-value text-purple-600">{realtimeMetrics.patientStats?.new_patients || 0}</p>
+              <p className="stat-label mt-2">New Patients</p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-blue-600">{realtimeMetrics.patientStats?.returning_patients || 0}</p>
-              <p className="text-xs text-gray-600 mt-2">Returning</p>
+              <p className="stat-value text-blue-600">{realtimeMetrics.patientStats?.returning_patients || 0}</p>
+              <p className="stat-label mt-2">Returning</p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-green-600">{realtimeMetrics.patientStats?.discharged_today || 0}</p>
-              <p className="text-xs text-gray-600 mt-2">Discharged</p>
+              <p className="stat-value text-emerald-600">{realtimeMetrics.patientStats?.discharged_today || 0}</p>
+              <p className="stat-label mt-2">Discharged</p>
             </div>
             <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <p className="text-2xl font-bold text-orange-600">{realtimeMetrics.patientStats?.admitted_today || 0}</p>
-              <p className="text-xs text-gray-600 mt-2">Admitted</p>
+              <p className="stat-value text-orange-600">{realtimeMetrics.patientStats?.admitted_today || 0}</p>
+              <p className="stat-label mt-2">Admitted</p>
             </div>
           </div>
         </div>
