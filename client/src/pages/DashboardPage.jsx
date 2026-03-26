@@ -4,7 +4,9 @@ import {
   RevenueTrendChart,
   DepartmentDistributionChart,
   AppointmentStatusChart,
-  BedOccupancyChart
+  BedOccupancyChart,
+  StaffDistributionChart,
+  PatientJourneyChart
 } from '../components/EChartsComponents.jsx';
 import { currency } from '../utils/format.js';
 import { api } from '../api.js';
@@ -102,7 +104,10 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
     visits: {},
     requests: {},
     topDiagnoses: [],
-    topServices: []
+    topServices: [],
+    staffStats: [],
+    patientJourney: [],
+    masterStats: {}
   });
 
   // Get current view title
@@ -168,7 +173,10 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           { name: 'Radiology', value: 15000 },
           { name: 'Surgery', value: 85000 },
           { name: 'Room Charges', value: 54000 }
-        ]
+        ],
+        staffStats: data.staffStats || [],
+        patientJourney: data.patientJourney || [],
+        masterStats: data.masterStats || {}
       });
 
       // Set report data for charts
@@ -182,7 +190,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           { label: 'Sat', value1: Math.floor((data.patientStats?.new_patients || 0) * 1.2), value2: Math.floor((data.patientStats?.returning_patients || 0) * 0.9) },
           { label: 'Sun', value1: Math.floor((data.patientStats?.new_patients || 0) * 1.1), value2: Math.floor((data.patientStats?.returning_patients || 0) * 0.8) }
         ],
-        financialData: [
+        financialData: data.revenueTrend && data.revenueTrend.length > 0 ? data.revenueTrend : [
           { label: 'Jan', value: Math.floor((data.totalRevenue || 0) * 0.15) },
           { label: 'Feb', value: Math.floor((data.totalRevenue || 0) * 0.17) },
           { label: 'Mar', value: Math.floor((data.totalRevenue || 0) * 0.16) },
@@ -482,6 +490,70 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
               <TopServicesChart data={realtimeMetrics.topServices} />
            </div>
         </div>
+      </div>
+
+      {/* NEW: STAFF & JOURNEY METRICS */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* Staff Distribution */}
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[400px]">
+           <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Staffing Distribution</h3>
+              <Users className="w-4 h-4 text-indigo-500" />
+           </div>
+           <div className="h-[330px]">
+              <StaffDistributionChart data={realtimeMetrics.staffStats} />
+           </div>
+        </div>
+
+        {/* Patient Journey Lifecycle */}
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[400px]">
+           <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Clinical Workflow Funnel</h3>
+              <Activity className="w-4 h-4 text-emerald-500" />
+           </div>
+           <div className="h-[330px]">
+              <PatientJourneyChart data={realtimeMetrics.patientJourney} />
+           </div>
+        </div>
+      </div>
+
+      {/* NEW: MASTER TABLE HEALTH STATUS */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+         <div className="dashboard-card bg-slate-50 border border-slate-200 p-4 text-center">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Departments</p>
+            <p className="text-xl font-black text-slate-800">{realtimeMetrics.masterStats?.departments || 0}</p>
+            <div className="w-full bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+               <div className="bg-indigo-500 h-full" style={{ width: `${Math.min((realtimeMetrics.masterStats?.departments || 0) * 10, 100)}%` }}></div>
+            </div>
+         </div>
+         <div className="dashboard-card bg-slate-50 border border-slate-200 p-4 text-center">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Ward Config</p>
+            <p className="text-xl font-black text-slate-800">{realtimeMetrics.masterStats?.wards || 0}</p>
+            <div className="w-full bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+               <div className="bg-emerald-500 h-full" style={{ width: `${Math.min((realtimeMetrics.masterStats?.wards || 0) * 20, 100)}%` }}></div>
+            </div>
+         </div>
+         <div className="dashboard-card bg-slate-50 border border-slate-200 p-4 text-center">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Bed Registry</p>
+            <p className="text-xl font-black text-slate-800">{realtimeMetrics.masterStats?.beds || 0}</p>
+            <div className="w-full bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+               <div className="bg-rose-500 h-full" style={{ width: `${Math.min((realtimeMetrics.masterStats?.beds || 0) * 5, 100)}%` }}></div>
+            </div>
+         </div>
+         <div className="dashboard-card bg-slate-50 border border-slate-200 p-4 text-center">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Service Catalog</p>
+            <p className="text-xl font-black text-slate-800">{realtimeMetrics.masterStats?.services || 0}</p>
+            <div className="w-full bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+               <div className="bg-amber-500 h-full" style={{ width: `${Math.min((realtimeMetrics.masterStats?.services || 0) * 2, 100)}%` }}></div>
+            </div>
+         </div>
+         <div className="dashboard-card bg-slate-50 border border-slate-200 p-4 text-center">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Active Staff</p>
+            <p className="text-xl font-black text-slate-800">{realtimeMetrics.masterStats?.total_staff || 0}</p>
+            <div className="w-full bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
+               <div className="bg-blue-500 h-full" style={{ width: `${Math.min((realtimeMetrics.masterStats?.total_staff || 0) * 2, 100)}%` }}></div>
+            </div>
+         </div>
       </div>
 
       {/* Bottom Section - Additional Clean Cards */}

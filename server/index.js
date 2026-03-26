@@ -732,9 +732,9 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
         (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = $1) as total_patients,
         (SELECT COUNT(*) FROM emr.appointments WHERE tenant_id = $1) as total_appointments,
         (SELECT SUM(total) FROM emr.invoices WHERE tenant_id = $1 AND status = 'paid') as total_revenue,
-        (SELECT COUNT(*) FROM emr.encounters WHERE tenant_id = $1 AND encounter_type = 'IPD' AND visit_date = CURRENT_DATE) as admitted_today,
+        (SELECT COUNT(*) FROM emr.encounters WHERE tenant_id = $1 AND encounter_type = 'IPD' AND DATE(visit_date) = CURRENT_DATE) as admitted_today,
         (SELECT COUNT(*) FROM emr.encounters WHERE tenant_id = $1 AND encounter_type = 'IPD' AND status = 'closed' AND DATE(updated_at) = CURRENT_DATE) as discharged_today,
-        (SELECT COUNT(*) FROM emr.service_requests WHERE tenant_id = $1 AND category = 'urgent' AND status = 'pending') as critical_alerts
+        (SELECT COUNT(*) FROM emr.encounters WHERE tenant_id = $1 AND encounter_type = 'Emergency' AND status = 'open') as critical_alerts
       `,
       [tenantId]
     );
@@ -768,12 +768,12 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
       `, [tenantId])
     ]);
 
-    // Get department distribution
+    // Get department distribution (grouped by user role as proxy for department)
     const departmentResult = await query(`
-      SELECT department, COUNT(*) as count 
+      SELECT role as department, COUNT(*) as count 
       FROM emr.users 
-      WHERE tenant_id = $1 AND role = 'Doctor'
-      GROUP BY department
+      WHERE tenant_id = $1 AND role IN ('Doctor', 'Nurse', 'Lab', 'Pharmacist')
+      GROUP BY role
     `, [tenantId]);
 
     const departmentDistribution = departmentResult.rows.map(row => ({
@@ -783,16 +783,16 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
 
     // Get available doctors
     const doctorsResult = await query(`
-      SELECT id, name, department, status 
+      SELECT id, name, role, is_active 
       FROM emr.users 
       WHERE tenant_id = $1 AND role = 'Doctor'
-      ORDER BY department
+      ORDER BY name
     `, [tenantId]);
     const doctors = doctorsResult.rows.map(doctor => ({
       id: doctor.id,
       name: doctor.name,
-      specialization: doctor.department,
-      status: doctor.status || 'Available'
+      specialization: doctor.role,
+      status: doctor.is_active ? 'Available' : 'Inactive'
     }));
 
     // Get top diagnoses
@@ -805,14 +805,52 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
       LIMIT 10
     `, [tenantId]);
 
-    // Get top revenue services
+    // Get top revenue services (using invoices table as source of truth)
     const topServicesResult = await query(`
-      SELECT description as name, SUM(amount) as value
-      FROM emr.invoice_items
-      WHERE tenant_id = $1
+      SELECT description as name, SUM(total) as value
+      FROM emr.invoices
+      WHERE tenant_id = $1 AND description IS NOT NULL AND description != ''
       GROUP BY description
       ORDER BY value DESC
       LIMIT 10
+    `, [tenantId]);
+
+    // NEW: Staff distribution by designation
+    const staffStatsResult = await query(`
+      SELECT designation, COUNT(*) as count 
+      FROM emr.employees 
+      WHERE tenant_id = $1 AND designation IS NOT NULL
+      GROUP BY designation
+      ORDER BY count DESC
+    `, [tenantId]);
+
+    // NEW: Master Table Integrity Counts
+    const masterCountsResult = await query(`
+      SELECT
+        (SELECT COUNT(*) FROM emr.departments WHERE tenant_id = $1) as departments,
+        (SELECT COUNT(*) FROM emr.wards WHERE tenant_id = $1) as wards,
+        (SELECT COUNT(*) FROM emr.beds WHERE tenant_id = $1) as beds,
+        (SELECT COUNT(*) FROM emr.services WHERE tenant_id = $1) as services,
+        (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1) as total_staff
+      `, [tenantId]);
+
+    // NEW: Patient Journey (Encounter states)
+    const journeyResult = await query(`
+      SELECT status, COUNT(*) as count 
+      FROM emr.encounters 
+      WHERE tenant_id = $1
+      GROUP BY status
+    `, [tenantId]);
+
+    // NEW: 6-month revenue trend
+    const revenueTrendResult = await query(`
+      SELECT 
+        TO_CHAR(created_at, 'Mon') as label,
+        SUM(total) as value
+      FROM emr.invoices
+      WHERE tenant_id = $1 AND created_at > CURRENT_DATE - INTERVAL '6 months'
+      GROUP BY label, DATE_TRUNC('month', created_at)
+      ORDER BY DATE_TRUNC('month', created_at)
     `, [tenantId]);
 
     res.json({
@@ -829,6 +867,10 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
       doctors,
       topDiagnoses: topDiagnosesResult.rows,
       topServices: topServicesResult.rows,
+      staffStats: staffStatsResult.rows,
+      masterStats: masterCountsResult.rows[0] || {},
+      patientJourney: journeyResult.rows,
+      revenueTrend: revenueTrendResult.rows,
       lastUpdated: new Date().toISOString()
     });
 
@@ -1857,6 +1899,58 @@ app.post('/api/services', requireTenant, requirePermission('admin'), async (req,
   }
 });
 
+// AMBULANCE FLEET MASTERS
+app.get('/api/ambulances', requireTenant, async (req, res) => {
+  try {
+    const ambulances = await repo.getAmbulances(req.tenantId);
+    res.json(ambulances);
+  } catch (error) {
+    console.error('Error fetching ambulances:', error);
+    res.status(500).json({ error: 'Failed to fetch ambulances fleet' });
+  }
+});
+
+app.post('/api/ambulances', requireTenant, requirePermission('admin'), async (req, res) => {
+  try {
+    const ambulance = await repo.createAmbulance({ ...req.body, tenantId: req.tenantId, userId: req.user.id });
+    res.status(201).json(ambulance);
+  } catch (error) {
+    console.error('Error creating ambulance:', error);
+    res.status(500).json({ error: 'Failed to register ambulance in fleet' });
+  }
+});
+
+// BLOOD BANK INVENTORY MASTERS
+app.get('/api/blood-bank/units', requireTenant, async (req, res) => {
+  try {
+    const units = await repo.getBloodUnits(req.tenantId);
+    res.json(units);
+  } catch (error) {
+    console.error('Error fetching blood units:', error);
+    res.status(500).json({ error: 'Failed to fetch blood bank inventory' });
+  }
+});
+
+app.post('/api/blood-bank/units', requireTenant, requirePermission('inventory'), async (req, res) => {
+  try {
+    const unit = await repo.createBloodUnit({ ...req.body, tenantId: req.tenantId, userId: req.user.id });
+    res.status(201).json(unit);
+  } catch (error) {
+    console.error('Error adding blood unit:', error);
+    res.status(500).json({ error: 'Failed to record blood unit' });
+  }
+});
+
+app.get('/api/blood-bank/requests', requireTenant, async (req, res) => {
+  try {
+    const requests = await repo.getBloodRequests(req.tenantId);
+    res.json(requests);
+  } catch (error) {
+    console.error('Error fetching blood requests:', error);
+    res.status(500).json({ error: 'Failed to fetch blood requests' });
+  }
+});
+
 // =====================================================
 // LABORATORY MODULE
 // =====================================================
@@ -2279,52 +2373,6 @@ app.patch('/api/support/tickets/:id/status', requireTenant, async (req, res) => 
   } catch (error) {
     console.error('Error updating support ticket status:', error);
     res.status(500).json({ error: 'Failed to update support ticket status' });
-  }
-});
-
-// =====================================================
-// INFRASTRUCTURE (Wards & Beds)
-// =====================================================
-
-app.get('/api/infrastructure/wards', requireTenant, async (req, res) => {
-  try {
-    const wards = await repo.getWards(req.tenantId);
-    res.json(wards);
-  } catch (error) {
-    console.error('Error fetching wards:', error);
-    res.status(500).json({ error: 'Failed to fetch wards' });
-  }
-});
-
-app.post('/api/infrastructure/wards', requireTenant, async (req, res) => {
-  try {
-    const ward = await repo.createWard({ ...req.body, tenantId: req.tenantId });
-    res.status(201).json(ward);
-  } catch (error) {
-    console.error('Error creating ward:', error);
-    res.status(500).json({ error: 'Failed to create ward' });
-  }
-});
-
-app.get('/api/infrastructure/beds', requireTenant, async (req, res) => {
-  try {
-    const { wardId } = req.query;
-    if (!wardId) return res.status(400).json({ error: 'wardId is required' });
-    const beds = await repo.getBeds(wardId);
-    res.json(beds);
-  } catch (error) {
-    console.error('Error fetching beds:', error);
-    res.status(500).json({ error: 'Failed to fetch beds' });
-  }
-});
-
-app.post('/api/infrastructure/beds', requireTenant, async (req, res) => {
-  try {
-    const bed = await repo.createBed({ ...req.body, tenant_id: req.tenantId });
-    res.status(201).json(bed);
-  } catch (error) {
-    console.error('Error creating bed:', error);
-    res.status(500).json({ error: 'Failed to create bed' });
   }
 });
 

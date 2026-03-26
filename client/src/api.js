@@ -259,6 +259,8 @@ export async function getPatients(tenantId, filters = {}) {
   if (filters.date) queryParams.date = filters.date;
   if (filters.type) queryParams.type = filters.type;
   if (filters.status) queryParams.status = filters.status;
+  if (filters.limit) queryParams.limit = filters.limit;
+  if (filters.offset) queryParams.offset = filters.offset;
 
   const queryString = new URLSearchParams(queryParams).toString();
   return await apiRequest(`/patients?${queryString}`);
@@ -620,7 +622,6 @@ export async function setDocumentDeleted(id, tenantId, isDeleted) {
     body: JSON.stringify({ tenantId, isDeleted }),
   });
 }
-
 // =====================================================
 // INSURANCE
 // =====================================================
@@ -643,6 +644,47 @@ export async function getClaims(tenantId, filters = {}) {
 
 export async function createClaim(data) {
   return await apiRequest('/insurance/claims', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// =====================================================
+// AMBULANCE
+// =====================================================
+
+export async function getAmbulances(tenantId) {
+  return await apiRequest(`/ambulances?tenantId=${tenantId}`);
+}
+
+export async function createAmbulance(data) {
+  return await apiRequest('/ambulances', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// =====================================================
+// BLOOD BANK
+// =====================================================
+
+export async function getBloodUnits(tenantId) {
+  return await apiRequest(`/blood-bank/units?tenantId=${tenantId}`);
+}
+
+export async function createBloodUnit(data) {
+  return await apiRequest('/blood-bank/units', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getBloodRequests(tenantId) {
+  return await apiRequest(`/blood-bank/requests?tenantId=${tenantId}`);
+}
+
+export async function createBloodRequest(data) {
+  return await apiRequest('/blood-bank/requests', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -677,6 +719,7 @@ const apiClient = {
   getSuperadminOverview,
 
   // Patients
+  getPatients,
   createPatient,
   addClinicalRecord,
   getPatientPrintData,
@@ -717,13 +760,22 @@ const apiClient = {
   addExpense,
   getAttendance,
   getExpenses,
-  getFinancials,
 
   // Insurance
   getInsuranceProviders,
   createInsuranceProvider,
   getClaims,
   createClaim,
+
+  // Ambulance
+  getAmbulances,
+  createAmbulance,
+
+  // Blood Bank
+  getBloodUnits,
+  createBloodUnit,
+  getBloodRequests,
+  createBloodRequest,
 
   // Communication
   getNotices,
@@ -784,6 +836,15 @@ apiClient.createDocument = createDocument;
 apiClient.setDocumentDeleted = setDocumentDeleted;
 apiClient.getInvoices = getInvoices;
 apiClient.getBootstrap = getBootstrapData;
+
+// Ambulance & Blood Bank Hub
+apiClient.getAmbulances = getAmbulances;
+apiClient.createAmbulance = createAmbulance;
+apiClient.getBloodUnits = getBloodUnits;
+apiClient.createBloodUnit = createBloodUnit;
+apiClient.getBloodRequests = getBloodRequests;
+apiClient.createBloodRequest = createBloodRequest;
+
 // Lab module
 apiClient.getLabOrders = (tenantId, status) => apiRequest(`/lab/orders${status ? `?status=${status}` : ''}`);
 apiClient.createLabOrder = (data) => apiRequest('/lab/orders', { method: 'POST', body: JSON.stringify(data) });

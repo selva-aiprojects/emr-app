@@ -33,6 +33,7 @@ const ChatPage = lazy(() => import('./pages/ChatPage.jsx'));
 const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage.jsx'));
 const BedManagementPage = lazy(() => import('./pages/BedManagementPage.jsx'));
 const HospitalSettingsPage = lazy(() => import('./pages/HospitalSettingsPage.jsx'));
+const AdminMastersPage = lazy(() => import('./pages/AdminMastersPage.jsx'));
 
 export default function App() {
   const suspenseFallback = (
@@ -808,6 +809,13 @@ export default function App() {
         {view === 'ambulance' && <AmbulancePage tenant={tenant} />}
         {view === 'service_catalog' && <ServiceCatalogPage tenant={tenant} />}
         {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} patients={patients} />}
+        
+        {view === 'admin_masters' && (
+          <AdminMastersPage 
+            tenant={tenant} 
+            onViewChange={(newView) => setView(newView)} 
+          />
+        )}
         
         {view === 'hospital_settings' && (
           <HospitalSettingsPage 

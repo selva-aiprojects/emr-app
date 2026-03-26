@@ -33,12 +33,13 @@ export const moduleMeta = {
   accounts_payable: { title: 'Accounts Payable', subtitle: 'Institutional outflow and expenses' },
   departments: { title: 'Departments Master', subtitle: 'Clinical specialties' },
   bed_management: { title: 'Bed Management', subtitle: 'Ward & bed tracker' },
-  hospital_settings: { title: 'Hospital Settings', subtitle: 'Branding & Unit config' }
+  hospital_settings: { title: 'Hospital Settings', subtitle: 'Branding & Unit config' },
+  admin_masters: { title: 'Administrative Masters', subtitle: 'Centralized Master Hub' }
 };
 
 export const fallbackPermissions = {
   Superadmin: ['superadmin', 'tenant_management', 'user_provisioning', 'dashboard', 'admin', 'reports', 'support'],
-  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings'],
+  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings', 'admin_masters'],
   Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'reports', 'lab', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Lab: ['dashboard', 'patients', 'lab', 'reports', 'communication', 'documents'],

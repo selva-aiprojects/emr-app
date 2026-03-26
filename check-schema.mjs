@@ -13,7 +13,7 @@ async function run() {
   const res = await client.query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'emr'");
   console.log(res.rows.map(r => r.table_name).join(', '));
 
-  for (const table of ['patients', 'beds', 'encounters', 'appointments']) {
+  for (const table of ['patients', 'beds', 'encounters', 'appointments', 'expenses', 'invoices', 'employees']) {
     try {
         const columns = await client.query(`SELECT column_name FROM information_schema.columns WHERE table_schema = 'emr' AND table_name = '${table}'`);
         console.log(`\n--- Columns for ${table} ---`);

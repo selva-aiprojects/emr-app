@@ -266,7 +266,10 @@ export const RevenueTrendChart = ({ data = [] }) => {
 
 // Apache ECharts - Department Distribution Chart (Pie Chart)
 export const DepartmentDistributionChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data : [
+  const chartData = data.length > 0 ? data.map(d => ({
+    name: d.label || d.name,
+    value: d.value
+  })) : [
     { value: 28, name: 'Cardiology' },
     { value: 22, name: 'Orthopedics' },
     { value: 18, name: 'Neurology' },
@@ -335,7 +338,10 @@ export const DepartmentDistributionChart = ({ data = [] }) => {
 
 // Apache ECharts - Appointment Status Chart (Horizontal Bar)
 export const AppointmentStatusChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data : [
+  const chartData = data.length > 0 ? data.map(d => ({
+    name: d.label || d.name,
+    value: d.value
+  })) : [
     { name: 'Scheduled', value: 45 },
     { name: 'Completed', value: 32 },
     { name: 'Cancelled', value: 8 },
@@ -423,7 +429,10 @@ export const AppointmentStatusChart = ({ data = [] }) => {
 
 // Apache ECharts - Bed Occupancy Chart (Pie/Doughnut)
 export const BedOccupancyChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data : [
+  const chartData = data.length > 0 ? data.map(d => ({
+    name: d.label || d.name,
+    value: d.value
+  })) : [
     { value: 65, name: 'Occupied' },
     { value: 35, name: 'Available' }
   ];
@@ -523,18 +532,133 @@ export const TopServicesChart = ({ data = [] }) => {
   ];
 
   const option = {
-    color: ['#0f766e', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899'],
+    color: ['#0f766e', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b'],
     backgroundColor: 'transparent',
-    tooltip: { trigger: 'item', formatter: '{b}: ${c} ({d}%)' },
+    tooltip: { 
+      trigger: 'item', 
+      formatter: '{b}: ${c} ({d}%)',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      borderColor: '#e2e8f0',
+      borderWidth: 1,
+      textStyle: { color: '#1e293b', fontSize: 11 }
+    },
+    legend: {
+      orient: 'vertical',
+      right: '5%',
+      top: 'middle',
+      type: 'scroll',
+      itemWidth: 10,
+      itemHeight: 10,
+      textStyle: {
+        fontSize: 10,
+        fontWeight: 600,
+        color: '#64748b'
+      }
+    },
     series: [{
+      name: 'Revenue Mix',
       data: chartData,
       type: 'pie',
-      radius: ['50%', '80%'],
-      center: ['50%', '50%'],
-      avoidLabelOverlap: false,
-      itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+      radius: ['45%', '75%'],
+      center: ['35%', '50%'],
+      avoidLabelOverlap: true,
+      itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
+      label: { 
+        show: true,
+        formatter: '{b}: {d}%',
+        fontSize: 10,
+        fontWeight: 600,
+        color: '#64748b'
+      },
+      emphasis: { 
+        label: { 
+          show: true, 
+          fontSize: 12, 
+          fontWeight: 'bold',
+          formatter: '{b}\n${c}' 
+        } 
+      }
+    }]
+  };
+  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+};
+
+// Apache ECharts - Staff Distribution Chart (Treemap)
+export const StaffDistributionChart = ({ data = [] }) => {
+  const chartData = data.length > 0 ? data.map(d => ({
+    name: d.designation,
+    value: parseInt(d.count)
+  })) : [
+    { name: 'Doctors', value: 12 },
+    { name: 'Nurses', value: 24 },
+    { name: 'Lab Technicians', value: 8 },
+    { name: 'Administrators', value: 5 },
+    { name: 'Pharmacists', value: 6 }
+  ];
+
+  const option = {
+    color: ['#0f766e', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#3b82f6', '#f59e0b', '#10b981'],
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
+    legend: {
+      orient: 'vertical',
+      left: 'left',
+      bottom: '10%',
+      textStyle: { fontSize: 10 },
+      type: 'scroll'
+    },
+    series: [{
+      name: 'Staffing',
+      type: 'pie',
+      radius: ['40%', '70%'],
+      center: ['60%', '50%'],
+      avoidLabelOverlap: true,
+      data: chartData,
+      itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
       label: { show: false },
-      emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } }
+      emphasis: { label: { show: true, fontSize: 12, fontWeight: 'bold' } }
+    }]
+  };
+  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+};
+
+// Apache ECharts - Patient Journey Chart (Funnel)
+export const PatientJourneyChart = ({ data = [] }) => {
+  const chartData = data.length > 0 ? data.map(d => ({
+    name: d.status.charAt(0).toUpperCase() + d.status.slice(1),
+    value: parseInt(d.count)
+  })) : [
+    { value: 100, name: 'Registered' },
+    { value: 80, name: 'Triaged' },
+    { value: 60, name: 'Consultation' },
+    { value: 40, name: 'Pharmacy/Lab' },
+    { value: 30, name: 'Settled' }
+  ];
+
+  const option = {
+    color: ['#10b981'],
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { top: 20, left: 100, right: 40, bottom: 20, containLabel: false },
+    xAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { type: 'dashed' } } },
+    yAxis: {
+      type: 'category',
+      data: chartData.map(d => d.name),
+      axisLabel: { fontWeight: 600, fontSize: 11 }
+    },
+    series: [{
+      name: 'Patients',
+      data: chartData.map(d => d.value),
+      type: 'bar',
+      barWidth: '60%',
+      itemStyle: { 
+        color: (params) => {
+          const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'];
+          return colors[params.dataIndex % colors.length];
+        },
+        borderRadius: [0, 6, 6, 0] 
+      },
+      label: { show: true, position: 'right', fontWeight: 700 }
     }]
   };
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
@@ -547,5 +671,7 @@ export default {
   AppointmentStatusChart,
   BedOccupancyChart,
   TopDiagnosesChart,
-  TopServicesChart
+  TopServicesChart,
+  StaffDistributionChart,
+  PatientJourneyChart
 };

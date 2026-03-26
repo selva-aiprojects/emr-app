@@ -228,7 +228,12 @@ export async function generateInvoiceNumber(tenantId) {
 // =====================================================
 
 export async function getTenants() {
-  const result = await query('SELECT id, name, code, subdomain, theme, features, billing_config, status, created_at, updated_at, subscription_tier, logo_url FROM emr.tenants ORDER BY name');
+  const result = await query(`
+    SELECT t.id, t.name, t.code, t.subdomain, t.theme, t.features, t.billing_config, t.status, t.created_at, t.updated_at, t.subscription_tier, t.logo_url,
+           (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = t.id) as patient_count
+    FROM emr.tenants t 
+    ORDER BY t.name
+  `);
   return result.rows;
 }
 
@@ -2048,6 +2053,16 @@ export default {
   getSupportTickets,
   createSupportTicket,
   updateSupportTicketStatus,
+
+  // Ambulance
+  getAmbulances,
+  createAmbulance,
+
+  // Blood Bank
+  getBloodUnits,
+  createBloodUnit,
+  getBloodRequests,
+  createBloodRequest,
 };
 
 /**
@@ -2128,3 +2143,86 @@ export async function updateSupportTicketStatus({ id, tenantId, userId, status }
 
   return result.rows[0];
 }
+
+/**
+ * Ambulance Repository Functions
+ */
+export async function getAmbulances(tenantId) {
+  const sql = 'SELECT * FROM emr.ambulances WHERE tenant_id = $1 ORDER BY vehicle_number';
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function createAmbulance({ tenantId, userId, vehicle_number, model, status, current_driver, contact_number }) {
+  const sql = `
+    INSERT INTO emr.ambulances (tenant_id, vehicle_number, model, status, current_driver, contact_number)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, vehicle_number, model, status || 'Available', current_driver, contact_number]);
+  const ambulance = result.rows[0];
+
+  await createAuditLog({
+    tenantId,
+    userId,
+    action: 'ambulance.create',
+    entityName: 'ambulance',
+    entityId: ambulance.id,
+    details: { vehicle_number }
+  });
+
+  return ambulance;
+}
+
+/**
+ * Blood Bank Repository Functions
+ */
+export async function getBloodUnits(tenantId) {
+  const sql = 'SELECT * FROM emr.blood_units WHERE tenant_id = $1 ORDER BY expires_at';
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function createBloodUnit({ tenantId, userId, blood_group, component, volume_ml, expires_at, storage_location }) {
+  const sql = `
+    INSERT INTO emr.blood_units (tenant_id, created_by, blood_group, component, volume_ml, expires_at, storage_location, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, 'Available')
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, userId, blood_group, component, volume_ml, expires_at, storage_location]);
+  const unit = result.rows[0];
+
+  await createAuditLog({
+    tenantId,
+    userId,
+    action: 'blood_bank.unit.create',
+    entityName: 'blood_unit',
+    entityId: unit.id,
+    details: { blood_group, component }
+  });
+
+  return unit;
+}
+
+export async function getBloodRequests(tenantId) {
+  const sql = `
+    SELECT br.*, p.first_name || ' ' || p.last_name as patient_name
+    FROM emr.blood_requests br
+    JOIN emr.patients p ON br.patient_id = p.id
+    WHERE br.tenant_id = $1
+    ORDER BY br.created_at DESC
+  `;
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function createBloodRequest({ tenantId, patientId, encounterId, requested_group, component, units_requested, priority, requested_by }) {
+  const sql = `
+    INSERT INTO emr.blood_requests (tenant_id, patient_id, encounter_id, requested_group, component, units_requested, priority, requested_by)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, patientId, encounterId, requested_group, component, units_requested, priority || 'Normal', requested_by]);
+  return result.rows[0];
+}
+

@@ -16,6 +16,7 @@ export default function TenantList({ tenants, onSelect }) {
               <th>Name</th>
               <th>Domain</th>
               <th>Tier</th>
+              <th>Patients</th>
               <th>Status</th>
               <th>Created</th>
               <th>Actions</th>
@@ -35,8 +36,14 @@ export default function TenantList({ tenants, onSelect }) {
                    }`}>
                      {tenant.subscription_tier || 'Basic'}
                    </span>
-                </td>
-                <td>
+                 </td>
+                 <td>
+                    <div className="flex flex-col">
+                       <span className="text-[12px] font-black text-slate-900">{tenant.patient_count || 0}</span>
+                       <span className="text-[9px] font-medium text-slate-400 -mt-0.5 tracking-tight">Active Nodes</span>
+                    </div>
+                 </td>
+                 <td>
                   <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter border ${tenant.status === 'active' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-slate-50 text-slate-500 border-slate-200'}`}>
                     {tenant.status}
                   </span>

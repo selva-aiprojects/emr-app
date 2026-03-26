@@ -30,7 +30,8 @@ import {
   Zap,
   Droplet,
   MessageSquare,
-  Building2
+  Building2,
+  Database
 } from "lucide-react";
 import { ActionMenu, NotificationSystem, SmartSearch } from "./UXEnhanced.jsx";
 import "../styles/critical-care.css";
@@ -70,7 +71,8 @@ const navIcons = {
   accounts_payable: FileText,
   departments: Building2,
   bed_management: Bed,
-  hospital_settings: Settings
+  hospital_settings: Settings,
+  admin_masters: Database
 };
 
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
@@ -80,7 +82,7 @@ const SIDEBAR_GROUPS_DEFAULT = [
   { name: "Clinical Excellence",  modules: ["emr", "lab", "inpatient", "ai_vision", "donor"] },
   { name: "Pharmacy & Stores",    modules: ["pharmacy", "inventory"] },
   { name: "Revenue Cycle",        modules: ["service_catalog", "billing", "accounts_receivable", "insurance", "accounts", "accounts_payable"] },
-  { name: "Institutional Control", modules: ["hospital_settings", "departments", "bed_management"] },
+  { name: "Institutional Control", modules: ["admin_masters", "hospital_settings", "departments", "bed_management"] },
   { name: "Support Zone", modules: ["employees", "employee_master", "attendance", "payroll", "users", "admin"] },
   { name: "Notice & Helpdesk",    modules: ["communication", "documents", "support", "chat"] },
 ];

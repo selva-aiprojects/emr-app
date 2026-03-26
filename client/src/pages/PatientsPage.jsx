@@ -162,6 +162,7 @@ export default function PatientsPage({
                     <tr>
                       <th className="tracking-widest">Patient Name</th>
                       <th className="tracking-widest">Date of Birth</th>
+                      {activeUser?.role === 'Superadmin' && <th className="tracking-widest">Facility</th>}
                       <th className="tracking-widest">MRN</th>
                       <th className="tracking-widest">Status</th>
                       <th className="tracking-widest text-right">Actions</th>
@@ -176,7 +177,7 @@ export default function PatientsPage({
                        ))
                     ) : filtered.length === 0 ? (
                        <tr>
-                         <td colSpan="5">
+                         <td colSpan={activeUser?.role === 'Superadmin' ? "6" : "5"}>
                            <EmptyState 
                              title="No patients found in directory" 
                              subtitle="No patients matched your current search criteria."
@@ -208,7 +209,10 @@ export default function PatientsPage({
                            </div>
                         </td>
                         <td><div className="text-meta-info text-slate-500 tabular-nums">{p.dob ? new Date(p.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div></td>
-                        <td><code className="text-meta-sm text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">MRN-{(p.id || 'X').slice(0, 10).toUpperCase()}</code></td>
+                        {activeUser?.role === 'Superadmin' && (
+                           <td><span className="text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100">{p.tenant_name || 'System'}</span></td>
+                        )}
+                        <td><code className="text-meta-sm text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">{p.mrn || `MRN-${(p.id || 'X').slice(0, 8).toUpperCase()}`}</code></td>
                         <td>
                            <div className="flex gap-2">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shadow-lg shadow-emerald-500/50"></span>

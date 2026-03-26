@@ -1,0 +1,46 @@
+import { query } from '../db/connection.js';
+
+const sql = `
+  CREATE TABLE IF NOT EXISTS emr.ambulances (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    vehicle_number VARCHAR(20) NOT NULL,
+    model VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'Available',
+    lat NUMERIC,
+    lng NUMERIC,
+    current_driver VARCHAR(100),
+    contact_number VARCHAR(20),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  );
+
+  ALTER TABLE emr.ambulances ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE emr.ambulances FORCE ROW LEVEL SECURITY;
+  
+  DROP POLICY IF EXISTS tenant_isolation_policy ON emr.ambulances;
+  CREATE POLICY tenant_isolation_policy ON emr.ambulances
+  USING (
+    tenant_id::varchar = current_setting('app.current_tenant', true)
+    OR current_setting('app.bypass_rls', true) = 'true'
+  );
+
+  -- Seed some default data for New Age Hospital (f998a8f5-95b9-4fd7-a583-63cf574d65ed)
+  INSERT INTO emr.ambulances (tenant_id, vehicle_number, model, status, current_driver, contact_number)
+  VALUES ('f998a8f5-95b9-4fd7-a583-63cf574d65ed', 'MH-01-AM-101', 'Force Traveller (Cardiac Care)', 'Available', 'Ramesh Kumar', '+91 98765 43210')
+  ON CONFLICT DO NOTHING;
+`;
+
+async function run() {
+  try {
+    console.log('🚀 Creating Ambulance Table...');
+    await query(sql);
+    console.log('✅ Ambulance table created successfully.');
+    process.exit(0);
+  } catch (err) {
+    console.error('❌ Error creating table:', err);
+    process.exit(1);
+  }
+}
+
+run();

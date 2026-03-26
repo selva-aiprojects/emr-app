@@ -30,6 +30,9 @@ export async function query(text, params) {
   const start = Date.now();
   const client = await pool.connect();
   const tenantId = tenantContext ? tenantContext.getStore() : null;
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[DB_QUERY]', { text, params, tenantId });
+  }
 
   try {
     if (tenantId === 'SUPERADMIN_BYPASS') {
@@ -38,13 +41,13 @@ export async function query(text, params) {
       await client.query(`SELECT set_config('app.current_tenant', $1, false)`, [tenantId]);
     }
     const res = await client.query(text, params);
-    const duration = Date.now() - start;
+    const duration = Date.now() - (start || Date.now());
     if (process.env.NODE_ENV === 'development') {
       console.log('Executed query', { text, duration, rows: res.rowCount });
     }
     return res;
   } catch (error) {
-    console.error('Database query error:', error);
+    console.error('[CRITICAL_DB_ERROR]', { text, params, error: error.message });
     throw error;
   } finally {
     if (tenantId === 'SUPERADMIN_BYPASS') {
