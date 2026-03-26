@@ -406,3 +406,226 @@ body .page-content h1,
     font-size: 1.5rem !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   AI CHATWIDGET (EMR ASSISTANT)
+   Floating assistant for navigation and system queries.
+   Standardized to "Surgical Calm" aesthetic.
+═══════════════════════════════════════════════════════════ */
+
+/* Floating Action Button */
+.chat-fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 64px;
+  height: 64px;
+  background: var(--clinical-blue);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 10px 40px rgba(0, 119, 182, 0.4);
+  z-index: 1000;
+  transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.chat-fab:hover {
+  transform: scale(1.1) rotate(5deg);
+  background: var(--medical-navy);
+  box-shadow: 0 15px 50px rgba(0, 119, 182, 0.6);
+}
+
+.chat-fab-hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.5);
+}
+
+/* Main Chat Panel */
+.chat-panel {
+  position: fixed;
+  bottom: 110px;
+  right: 32px;
+  width: 380px;
+  height: 580px;
+  background: white;
+  border-radius: 28px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  z-index: 1001;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  animation: chat-slide-in 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+@keyframes chat-slide-in {
+  from { opacity: 0; transform: translateY(40px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Panel Header */
+.chat-header {
+  padding: 20px 24px;
+  background: var(--medical-navy);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-avatar {
+  width: 36px;
+  height: 36px;
+  background: var(--clinical-blue);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-header h4 {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.chat-header span {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.chat-close {
+  background: transparent;
+  border: none;
+  color: white;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.chat-close:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Message Area */
+.chat-messages {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  background: #F8FAFC;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chat-msg {
+  max-width: 85%;
+  display: flex;
+}
+
+.chat-msg-user {
+  align-self: flex-end;
+}
+
+.chat-msg-bot {
+  align-self: flex-start;
+}
+
+.chat-bubble {
+  padding: 12px 18px;
+  border-radius: 18px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.chat-msg-user .chat-bubble {
+  background: var(--clinical-blue);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-msg-bot .chat-bubble {
+  background: white;
+  color: var(--text-strong);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.chat-bubble p {
+  margin: 0 0 8px 0;
+}
+
+.chat-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+/* Input Area */
+.chat-input-area {
+  padding: 16px;
+  background: white;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 14px;
+  border: 2px solid var(--input-border);
+  background: #F8FAFC;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--clinical-blue);
+  background: white;
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.chat-send {
+  width: 44px;
+  height: 44px;
+  background: var(--clinical-blue);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chat-send:hover:not(:disabled) {
+  background: var(--medical-navy);
+  transform: translateY(-2px);
+}
+
+.chat-send:disabled {
+  background: #E2E8F0;
+  cursor: not-allowed;
+}
