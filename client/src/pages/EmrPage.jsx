@@ -116,10 +116,15 @@ function printPrescription(enc, patient, medications, provider, tenant) {
 export default function EmrPage({ tenant, activeUser, patients, providers, encounters, onCreateEncounter, onDischarge }) {
   const [activeTab, setActiveTab] = useState('active');
   const [selectedPatientId, setSelectedPatientId] = useState('');
-  const canPrescribe = (activeUser?.role || '').toLowerCase() === 'doctor';
-
   const [prescriptionItems, setPrescriptionItems] = useState([]);
   const [safetyData, setSafetyData] = useState({ safetyCheck: null, overrideSafety: false });
+  const [aiSummary, setAiSummary] = useState(null);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [lastSaved, setLastSaved] = useState(null);
+  const itemsPerPage = 10;
+
+  const canPrescribe = (activeUser?.role || '').toLowerCase() === 'doctor';
 
   const activeEncounters = useMemo(() => encounters.filter(e => e.status === 'open'), [encounters]);
   const pastEncounters = useMemo(() => encounters.filter(e => e.status === 'closed'), [encounters]);
@@ -127,24 +132,27 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
   const selectedPatient = useMemo(() => {
     const p = patients.find(p => p.id === selectedPatientId);
     if (p) {
-      // Clear AI summary when patient changes
       setAiSummary(null);
     }
     return p;
   }, [patients, selectedPatientId]);
+
   const patientHistory = useMemo(() => {
     if (!selectedPatientId) return [];
     return encounters.filter(e => e.patientId === selectedPatientId).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [encounters, selectedPatientId]);
 
+  const paginatedPastEncounters = useMemo(() => {
+    const start = (historyPage - 1) * itemsPerPage;
+    return pastEncounters.slice(start, start + itemsPerPage);
+  }, [pastEncounters, historyPage]);
+
+  const totalHistoryPages = Math.ceil(pastEncounters.length / itemsPerPage);
+
   const handleDrugsChange = (items, checkData) => {
     setPrescriptionItems(items);
     setSafetyData(checkData);
   };
-
-  const [lastSaved, setLastSaved] = useState(null);
-  const [aiSummary, setAiSummary] = useState(null);
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   const handleGenerateAISummary = async (explicitPatientId = null) => {
     const targetId = explicitPatientId || selectedPatientId;
@@ -519,12 +527,12 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {(activeTab === 'active' ? activeEncounters : pastEncounters).length === 0 ? (
+                    {(activeTab === 'active' ? activeEncounters : paginatedPastEncounters).length === 0 ? (
                       <tr><td colSpan="5" className="text-center py-32">
                          <FileText className="w-12 h-12 text-slate-100 mx-auto mb-4" />
                          <p className="text-xs font-black text-slate-300 uppercase tracking-[0.2em]">No clinical event logs detected in the patient history.</p>
                       </td></tr>
-                    ) : (activeTab === 'active' ? activeEncounters : pastEncounters).map((e, idx) => {
+                    ) : (activeTab === 'active' ? activeEncounters : paginatedPastEncounters).map((e, idx) => {
                       const pat = patients.find(p => p.id === (e.patient_id || e.patientId));
                       return (
                         <tr key={e.id} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 30}ms` }}>
@@ -600,6 +608,36 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                                       </div>
                                     </div>
 
+                                    <div style="margin-bottom: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+                                      <div>
+                                        <div class="label">Medication History</div>
+                                        ${(e.medications && e.medications.length > 0) ? `
+                                          <table style="width:100%; border-collapse: collapse; margin-top: 10px;">
+                                            ${e.medications.map(m => `
+                                              <tr>
+                                                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; font-weight: 700;">${m.name}</td>
+                                                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #64748b; text-align: right;">${m.dosage}</td>
+                                              </tr>
+                                            `).join('')}
+                                          </table>
+                                        ` : '<div class="value" style="color: #94a3b8; font-style: italic;">No medications prescribed.</div>'}
+                                      </div>
+                                      <div>
+                                        <div class="label">Clinical Investigations</div>
+                                        ${(pat?.testReports && pat.testReports.length > 0) ? `
+                                          <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">
+                                            ${pat.testReports.slice(0, 3).map(r => `
+                                              <div style="padding: 12px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                                <div style="font-size: 11px; font-weight: 900; color: #3b82f6; text-transform: uppercase;">Laboratory Report</div>
+                                                <div style="font-size: 13px; font-weight: 700; margin-top: 4px;">${r.title || 'Diagnostic Panel'}</div>
+                                                <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Result: ${r.result || 'Normal'}</div>
+                                              </div>
+                                            `).join('')}
+                                          </div>
+                                        ` : '<div class="value" style="color: #94a3b8; font-style: italic;">No active lab results found.</div>'}
+                                      </div>
+                                    </div>
+
                                     <div style="margin-bottom: 50px;">
                                       <div class="label">Physician Notes</div>
                                       <div class="value" style="font-weight: 500; line-height: 1.8; color: #475569; background: #fdfdfd; padding: 25px; border-radius: 20px; border: 1px solid #f1f5f9;">${e.notes || 'No institutional narrative available for this visit.'}</div>
@@ -635,6 +673,33 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                     })}
                   </tbody>
                 </table>
+
+                {activeTab === 'history' && totalHistoryPages > 1 && (
+                  <div className="flex items-center justify-between px-8 py-6 border-t border-slate-50 bg-slate-50/30">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Showing {(historyPage - 1) * itemsPerPage + 1} - {Math.min(historyPage * itemsPerPage, pastEncounters.length)} of {pastEncounters.length} sequential events
+                    </div>
+                    <div className="flex gap-2">
+                       <button 
+                         disabled={historyPage === 1}
+                         onClick={() => setHistoryPage(p => p - 1)}
+                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-30 hover:bg-slate-50 transition-all"
+                       >
+                         Previous
+                       </button>
+                       <div className="flex items-center px-4 text-[11px] font-black text-slate-600">
+                         {historyPage} / {totalHistoryPages}
+                       </div>
+                       <button 
+                         disabled={historyPage === totalHistoryPages}
+                         onClick={() => setHistoryPage(p => p + 1)}
+                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-30 hover:bg-slate-50 transition-all"
+                       >
+                         Next
+                       </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </article>
           </main>
