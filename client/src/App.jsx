@@ -25,6 +25,9 @@ const LabPage = lazy(() => import('./pages/LabPage.jsx'));
 const SupportPage = lazy(() => import('./pages/SupportPage.jsx'));
 const CommunicationPage = lazy(() => import('./pages/CommunicationPage.jsx'));
 const DocumentVaultPage = lazy(() => import('./pages/DocumentVaultPage.jsx'));
+const AmbulancePage = lazy(() => import('./pages/AmbulancePage.jsx'));
+const ServiceCatalogPage = lazy(() => import('./pages/ServiceCatalogPage.jsx'));
+const AIImageAnalysisPage = lazy(() => import('./pages/AIImageAnalysisPage.jsx'));
 
 export default function App() {
   const suspenseFallback = (
@@ -392,6 +395,8 @@ export default function App() {
         setView={setView}
         onLogout={logout}
         error={error}
+        patients={scopedPatients}
+        appointments={scopedAppointments}
       >
         <ErrorBoundary>
           <Suspense fallback={suspenseFallback}>
@@ -762,6 +767,9 @@ export default function App() {
         )}
 
         {view === 'accounts' && <AccountsPage tenant={tenant} />}
+        {view === 'ambulance' && <AmbulancePage tenant={tenant} />}
+        {view === 'service_catalog' && <ServiceCatalogPage tenant={tenant} />}
+        {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} />}
 
         {view === 'reports' && <ReportsPage reportSummary={reportSummary} tenant={tenant} slmInsights={slmInsights} superOverview={superOverview} />}
 

@@ -25,6 +25,9 @@ import {
   UserCircle,
   Users,
   Bed,
+  Truck,
+  BookOpen,
+  Zap
 } from "lucide-react";
 import { ActionMenu, NotificationSystem, SmartSearch } from "./UXEnhanced.jsx";
 import "../styles/critical-care.css";
@@ -52,21 +55,24 @@ const navIcons = {
   lab: FlaskConical,
   communication: Bell,
   documents: FileText,
+  ambulance: Truck,
+  service_catalog: BookOpen,
+  ai_vision: Zap
 };
 
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
 const SIDEBAR_GROUPS_DEFAULT = [
   { name: "Hospital Monitoring",  modules: ["dashboard", "reports"] },
-  { name: "Front Office Desk",    modules: ["patients", "appointments"] },
-  { name: "Clinical Excellence",  modules: ["emr", "lab", "inpatient"] },
+  { name: "Front Office Desk",    modules: ["patients", "appointments", "ambulance"] },
+  { name: "Clinical Excellence",  modules: ["emr", "lab", "inpatient", "ai_vision"] },
   { name: "Pharmacy & Stores",    modules: ["pharmacy", "inventory"] },
-  { name: "Revenue Cycle",        modules: ["billing", "insurance", "accounts"] },
+  { name: "Revenue Cycle",        modules: ["service_catalog", "billing", "insurance", "accounts"] },
   { name: "HR & Admin Control",   modules: ["employees", "users", "admin"] },
   { name: "Notice & Helpdesk",    modules: ["communication", "documents", "ticketing"] },
 ];
 
 const SIDEBAR_GROUPS_DOCTOR = [
-  { name: "My Workspace", modules: ["doctor_workspace", "appointments"] },
+  { name: "My Workspace", modules: ["doctor_workspace", "appointments", "ambulance", "ai_vision"] },
   { name: "Clinical Hub", modules: ["patients", "emr", "lab", "inpatient"] },
   { name: "Pharmacy",     modules: ["pharmacy"] },
   { name: "Communication",modules: ["communication", "documents"] },
@@ -185,6 +191,7 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
 /* ─── MAIN LAYOUT ────────────────────────────────────────────────── */
 export default function AppLayout({
   tenant, activeUser, allowedViews, view, setView, onLogout, children, error,
+  patients = [], appointments = []
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -222,6 +229,10 @@ export default function AppLayout({
   );
 
   const handleSearchResult = (result) => {
+    if (result?.type === 'nav') {
+      if (allowedViews.includes(result.target)) setView(result.target);
+      return;
+    }
     const targetViewByType = {
       patient: "patients",
       appointment: "appointments",
@@ -233,7 +244,7 @@ export default function AppLayout({
 
   /* ── Sidebar content ── */
   const SidebarContent = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-gradient-to-b from-[var(--medical-navy)] to-[var(--medical-navy-light)] border-r border-white/[0.05] shadow-2xl">
 
       {/* ── HEADER ── */}
       <div className={`flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? "justify-center p-4" : "justify-between px-5 py-4"}`}>
@@ -327,7 +338,7 @@ export default function AppLayout({
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-[100]
-          bg-[#0d1117] flex-shrink-0
+          bg-[var(--medical-navy)] flex-shrink-0
           transition-all duration-300 ease-in-out h-full
           ${sidebarCollapsed ? "w-[60px]" : "w-[260px]"}
           ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
@@ -350,16 +361,29 @@ export default function AppLayout({
 
         {/* Top header bar */}
         <header className="flex-shrink-0 bg-white border-b border-slate-100 px-6 h-16 flex items-center justify-between">
-          <div className="flex flex-col justify-center">
-            <h2 className="text-base font-black tracking-tight text-slate-900 leading-none">
-              {currentModule}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[var(--clinical-secondary)] leading-none">
-                {facilityName}
-              </span>
-              <span className="w-0.5 h-0.5 rounded-full bg-slate-300" />
-              <span className="text-[9px] font-medium text-slate-400 leading-none">{today}</span>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all hidden lg:flex"
+            >
+              <Menu size={18} />
+            </button>
+            <div className="flex flex-col justify-center">
+              <h2 className="text-sm font-black tracking-tight text-slate-900 leading-none flex items-center gap-3">
+                {currentModule}
+                {sidebarCollapsed && (
+                  <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full border border-slate-201 uppercase tracking-tighter font-black animate-fade-in shadow-sm">
+                    {facilityName}
+                  </span>
+                )}
+              </h2>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[var(--clinical-secondary)] leading-none">
+                  Institutional Console
+                </span>
+                <span className="w-0.5 h-0.5 rounded-full bg-slate-200" />
+                <span className="text-[8px] font-bold text-slate-400 leading-none uppercase tracking-widest">{today}</span>
+              </div>
             </div>
           </div>
 
@@ -368,6 +392,8 @@ export default function AppLayout({
               <SmartSearch
                 onSearch={handleSearchResult}
                 placeholder="Search patients, records..."
+                patients={patients}
+                appointments={appointments}
               />
             </div>
             <NotificationSystem />

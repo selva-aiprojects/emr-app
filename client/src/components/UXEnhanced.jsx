@@ -107,24 +107,66 @@ export function NotificationSystem() {
 }
 
 export function SmartSearch({
-  placeholder = "Search",
+  placeholder = "Search patients, records...",
   onSearch,
   inputRef,
-  className = ""
+  className = "",
+  patients = [],
+  appointments = []
 }) {
   const [query, setQuery] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
 
-  const suggestions = useMemo(() => {
-    if (!query.trim()) return [];
-    return [
-      { id: "patient", type: "patient", label: `Open patient search for "${query}"` },
-      { id: "appointment", type: "appointment", label: `Review appointments for "${query}"` },
-      { id: "medication", type: "medication", label: `Find medications related to "${query}"` }
-    ];
-  }, [query]);
+  const searchResults = useMemo(() => {
+    if (!query.trim() || query.length < 2) return [];
+    
+    const q = query.toLowerCase();
+    const results = [];
+
+    // 1. Search Patients
+    const matchedPatients = patients.filter(p => 
+      `${p.firstName} ${p.lastName}`.toLowerCase().includes(q) || 
+      (p.mrn && p.mrn.toLowerCase().includes(q)) ||
+      (p.id && p.id.toLowerCase().includes(q))
+    ).slice(0, 3);
+
+    matchedPatients.forEach(p => {
+      results.push({
+        id: `pat-${p.id}`,
+        type: 'patient',
+        label: `${p.firstName} ${p.lastName}`,
+        sub: `MRN: ${p.mrn || p.id.slice(0, 8)}`,
+        data: p
+      });
+    });
+
+    // 2. Search Appointments
+    const matchedAppts = appointments.filter(a => 
+      (a.patientName && a.patientName.toLowerCase().includes(q)) ||
+      (a.reason && a.reason.toLowerCase().includes(q))
+    ).slice(0, 2);
+
+    matchedAppts.forEach(a => {
+      results.push({
+        id: `apt-${a.id}`,
+        type: 'appointment',
+        label: `Appointment: ${a.patientName}`,
+        sub: `${new Date(a.visit_date || a.start).toLocaleDateString()} - ${a.reason}`,
+        data: a
+      });
+    });
+
+    // 3. Command/Navigation suggestions
+    if (results.length === 0) {
+      results.push({ id: 'cmd-reg', type: 'nav', label: 'New Registration', sub: 'Go to Onboarding Module', target: 'patients' });
+      results.push({ id: 'cmd-emr', type: 'nav', label: 'Clinical Assessment', sub: 'Open EMR Workspace', target: 'emr' });
+    }
+
+    return results;
+  }, [query, patients, appointments]);
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} onFocus={() => setIsFocused(true)} onBlur={() => setTimeout(() => setIsFocused(false), 200)}>
       <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[var(--text-soft)]" />
       <input
         ref={inputRef}
@@ -132,16 +174,17 @@ export function SmartSearch({
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter" && suggestions[0]) {
-            onSearch?.(suggestions[0]);
+          if (event.key === "Enter" && searchResults[0]) {
+            onSearch?.(searchResults[0]);
+            setQuery("");
           }
         }}
         placeholder={placeholder}
-        className="h-11 w-full rounded-2xl border border-[var(--border)] bg-white pl-12 pr-4 text-sm text-[var(--text-main)] shadow-sm outline-none transition focus:border-[var(--primary)]/40 focus:ring-4 focus:ring-[var(--primary)]/10"
+        className="h-11 w-full rounded-2xl border border-[var(--border)] bg-gray-50/50 pl-12 pr-4 text-sm text-[var(--text-main)] outline-none transition-all focus:bg-white focus:border-[var(--clinical-blue)]/30 focus:ring-4 focus:ring-[var(--clinical-blue)]/5"
       />
-      {suggestions.length > 0 && (
-        <div className="absolute right-0 top-full z-[140] mt-2 w-full rounded-2xl border border-[var(--border)] bg-white p-2 shadow-xl">
-          {suggestions.map((item) => (
+      {isFocused && searchResults.length > 0 && (
+        <div className="absolute right-0 top-full z-[200] mt-2 w-full rounded-2xl border border-[var(--border)] bg-white p-2 shadow-2xl animate-fade-in">
+          {searchResults.map((item) => (
             <button
               key={item.id}
               type="button"
@@ -149,10 +192,18 @@ export function SmartSearch({
                 setQuery("");
                 onSearch?.(item);
               }}
-              className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-[var(--text-main)] hover:bg-[var(--surface-muted)]"
+              className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all hover:bg-[var(--primary-soft)]"
             >
-              <span className="truncate">{item.label}</span>
-              <ChevronDown className="w-4 h-4 rotate-[-90deg] text-[var(--text-soft)]" />
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-[var(--clinical-blue)] transition-all">
+                {item.type === 'patient' && <UserCircle size={14} />}
+                {item.type === 'appointment' && <Calendar size={14} />}
+                {item.type === 'nav' && <Activity size={14} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-black text-slate-900 truncate tracking-tight">{item.label}</div>
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate mt-0.5">{item.sub}</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-200 group-hover:text-[var(--clinical-blue)] group-hover:translate-x-1 transition-all" />
             </button>
           ))}
         </div>
