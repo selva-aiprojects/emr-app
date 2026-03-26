@@ -966,6 +966,20 @@ app.get('/api/patients/search', requireTenant, async (req, res) => {
   }
 });
 
+app.get('/api/patients/:id', requireTenant, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const patient = await repo.getPatientById(id, req.tenantId, req.user.role);
+    if (!patient) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    res.json(patient);
+  } catch (error) {
+    console.error('Error fetching patient:', error);
+    res.status(500).json({ error: 'Failed to fetch patient' });
+  }
+});
+
 app.get('/api/patients/:id/print/:docType', requireTenant, restrictPatientAccess, async (req, res) => {
   try {
     const { id, docType } = req.params;

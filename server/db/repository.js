@@ -533,9 +533,11 @@ export async function searchPatients(tenantId, { text, date, type, status, limit
 export async function getPatientById(id, tenantId, userRole = null) {
   const sql = `
     SELECT p.*,
-           json_agg(DISTINCT cr.*) FILTER (WHERE cr.id IS NOT NULL) as clinical_records
+           json_agg(DISTINCT cr.*) FILTER (WHERE cr.id IS NOT NULL) as clinical_records,
+           json_agg(DISTINCT d.*) FILTER (WHERE d.id IS NOT NULL AND d.is_deleted = false) as documents
     FROM emr.patients p
     LEFT JOIN emr.clinical_records cr ON p.id = cr.patient_id
+    LEFT JOIN emr.documents d ON p.id = d.patient_id
     WHERE p.id = $1 AND p.tenant_id = $2
     GROUP BY p.id
   `;
@@ -546,6 +548,7 @@ export async function getPatientById(id, tenantId, userRole = null) {
 
   const patient = result.rows[0];
   const records = patient.clinical_records || [];
+  const docs = patient.documents || [];
 
   const patientObj = {
     ...patient,
@@ -557,6 +560,7 @@ export async function getPatientById(id, tenantId, userRole = null) {
     medicalHistory: {
       ...patient.medical_history,
       clinicalRecords: records,
+      documents: docs,
       caseHistory: records.filter(r => r.section === 'caseHistory').map(r => r.payload || r.content),
       medications: records.filter(r => r.section === 'medications').map(r => r.payload || r.content),
       prescriptions: records.filter(r => r.section === 'prescriptions').map(r => r.payload || r.content),
@@ -566,6 +570,16 @@ export async function getPatientById(id, tenantId, userRole = null) {
   };
 
   return maskPatientData(patientObj, userRole);
+}
+
+export async function getPatientDocuments(patientId, tenantId) {
+  const sql = `
+    SELECT * FROM emr.documents 
+    WHERE patient_id = $1 AND tenant_id = $2 AND is_deleted = false
+    ORDER BY created_at DESC
+  `;
+  const result = await query(sql, [patientId, tenantId]);
+  return result.rows;
 }
 
 export async function createPatient({ tenantId, userId, firstName, lastName, dob, gender, phone, email, address, bloodGroup, emergencyContact, insurance, medicalHistory }) {

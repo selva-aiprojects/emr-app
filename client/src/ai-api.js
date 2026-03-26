@@ -35,3 +35,9 @@ export async function getAITreatmentSuggestion(data) {
     body: JSON.stringify(data),
   });
 }
+export async function getAIDischargeSummary(encounterId) {
+  return await aiRequest('/discharge-summary', {
+    method: 'POST',
+    body: JSON.stringify({ encounterId }),
+  });
+}

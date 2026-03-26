@@ -17,10 +17,6 @@ export default function SupportPage({ tenant, activeUser }) {
     const [submitting, setSubmitting] = useState(false);
     const [filter, setFilter] = useState('open');
 
-    // Since there's no backend for support tickets yet, we'll store in localStorage
-    // and note that a dedicated `support_tickets` table should be added.
-    const storageKey = `support_tickets_${tenant?.id || 'default'}`;
-
     useEffect(() => {
         loadTickets();
     }, [filter, tenant]);
@@ -71,7 +67,6 @@ export default function SupportPage({ tenant, activeUser }) {
         }
     };
 
-    const all = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
     return (
         <section>

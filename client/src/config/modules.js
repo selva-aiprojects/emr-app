@@ -1,5 +1,7 @@
 export const moduleMeta = {
-  superadmin: { title: 'Superadmin', subtitle: 'Platform-wide control center' },
+  superadmin: { title: 'Platform Control', subtitle: 'Global Metrics' },
+  tenant_management: { title: 'Tenant Onboarding', subtitle: 'Provisioning' },
+  user_provisioning: { title: 'Identity Provisioning', subtitle: 'User Access' },
   dashboard: { title: 'Hospital Dashboard', subtitle: 'Operational overview' },
   doctor_workspace: { title: 'Doctor Desk', subtitle: 'Today\'s appointments & patients' },
   patients: { title: 'OP&IP Registration', subtitle: 'Demographics and clinical folders' },
@@ -12,7 +14,7 @@ export const moduleMeta = {
   inventory: { title: 'Central Stores / Inventory', subtitle: 'Stock levels & drug batches' },
   employees: { title: 'HR / Personnel', subtitle: 'Staff shift, salary and leave' },
   reports: { title: 'MIS & Analytics', subtitle: 'Management Information System' },
-  admin: { title: 'Facility Settings', subtitle: 'Unit and system configuration' },
+  admin: { title: 'Support Zone', subtitle: 'Unit and system configuration' },
   accounts: { title: 'Daybook & Accounts', subtitle: 'Petty cash and ledger' },
   lab: { title: 'Laboratory / Diagnostics', subtitle: 'Test results and reporting' },
   support: { title: 'Unit Maintenance', subtitle: 'Facility assistance' },
@@ -32,8 +34,8 @@ export const moduleMeta = {
 };
 
 export const fallbackPermissions = {
-  Superadmin: ['superadmin', 'dashboard', 'admin', 'reports', 'support'],
-  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat'],
+  Superadmin: ['superadmin', 'tenant_management', 'user_provisioning', 'dashboard', 'admin', 'reports', 'support'],
+  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat'],
   Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'reports', 'lab', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Lab: ['dashboard', 'patients', 'lab', 'reports', 'communication', 'documents'],

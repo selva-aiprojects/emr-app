@@ -1,47 +1,6 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { BRAND } from '../config/branding.js';
-import {
-  Activity,
-  AlertCircle,
-  ArrowRight,
-  BadgeCheck,
-  Building2,
-  FileCheck2,
-  HeartPulse,
-  Lock,
-  Mail,
-  ShieldCheck,
-  Users,
-  TrendingUp,
-  Zap
-} from 'lucide-react';
-
-const features = [
-  {
-    icon: HeartPulse,
-    title: 'Advanced Clinical Care',
-    description: 'Real-time patient monitoring with AI-powered diagnostics and seamless EMR integration.',
-    stats: '99.9% Uptime'
-  },
-  {
-    icon: Users,
-    title: 'Multi-Tenant Architecture',
-    description: 'Secure, isolated environments for each healthcare facility with enterprise-grade security.',
-    stats: '500+ Facilities'
-  },
-  {
-    icon: TrendingUp,
-    title: 'Analytics & Insights',
-    description: 'Comprehensive reporting dashboard with predictive analytics and operational intelligence.',
-    stats: 'Real-time Data'
-  },
-  {
-    icon: Zap,
-    title: 'Lightning Fast Performance',
-    description: 'Optimized workflows and instant access to critical patient information when you need it most.',
-    stats: '< 1s Response'
-  }
-];
+import { AlertCircle, ArrowRight, Activity, Zap, Database, ChevronRight, Mail, Lock } from 'lucide-react';
 
 export default function LoginPage({ onLogin, tenants }) {
   const [credentials, setCredentials] = useState({
@@ -52,27 +11,22 @@ export default function LoginPage({ onLogin, tenants }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDemoCredentials, setShowDemoCredentials] = useState(false);
-  const [currentFeatureIndex, setCurrentFeatureIndex] = useState(0);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentFeatureIndex((prevIndex) => (prevIndex + 1) % features.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
+  // Derive tenantOptions safely
   const tenantOptions = useMemo(() => tenants || [], [tenants]);
 
   const demoCredentials = {
     superadmin: {
-      label: 'Platform Services',
+      label: 'Platform Governance',
       email: 'superadmin@emr.local',
-      password: 'Admin@123'
+      password: 'Admin@123',
+      color: 'indigo'
     },
     nah: {
-      label: 'New Age Hospital (NAH)',
-      email: 'admin@nah.com',
-      password: 'Test@123'
+      label: 'New Age Hospital',
+      email: 'admin@nah.local',
+      password: 'Admin@123',
+      color: 'emerald'
     }
   };
 
@@ -82,7 +36,7 @@ export default function LoginPage({ onLogin, tenants }) {
     setError('');
 
     if (!credentials.tenantId) {
-      setError('Select a facility or platform organization before signing in.');
+      setError('Organizational node selection is required for authentication.');
       setIsLoading(false);
       return;
     }
@@ -92,175 +46,167 @@ export default function LoginPage({ onLogin, tenants }) {
       const data = await api.login(credentials.tenantId, credentials.email, credentials.password);
       onLogin(data);
     } catch (err) {
-      setError(err.message || 'Authentication failed. Review the credentials and try again.');
+      setError(err.message || 'Identity verification failed. Protocol breach or invalid credentials.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleTenantChange = (tenantId) => {
-    setCredentials((prev) => ({ ...prev, tenantId, email: '', password: '' }));
-    setShowDemoCredentials(false);
-  };
-
-  const useDemoCredentials = (key) => {
-    const demo = demoCredentials[key || credentials.tenantId];
-    if (!demo) return;
+  const setDemoCreds = (key, demo) => {
+    // Dynamically find the correct tenantId from options (so we don't hardcode 'nah' if the DB generates a UUID or code)
+    const matchedTenant = tenantOptions.find(t =>
+      t.name.toLowerCase().includes('new age') ||
+      t.code?.toLowerCase() === 'nah' ||
+      t.id?.toLowerCase() === 'nah'
+    );
 
     setCredentials({
-      tenantId: key || credentials.tenantId,
+      tenantId: key === 'superadmin' ? 'superadmin' : (matchedTenant ? (matchedTenant.code || matchedTenant.id) : key),
       email: demo.email,
       password: demo.password
     });
   };
 
   return (
-    <div className="login-centered-portal">
-      <div className="login-pro-card">
-        {/* Branding Area */}
-        <div className="logo-area">
-          <div className="w-20 h-20 bg-[var(--primary-soft)] rounded-[24px] flex items-center justify-center mb-4 shadow-sm">
-            <img src="/medflow_logo_8k.svg" alt={BRAND.name} className="w-12 h-12" />
+    <div className="login-compact-portal">
+      <div className="login-compact-card">
+        {/* Static Visual Side */}
+        <div className="login-compact-visual hidden md:flex">
+          <div className="mb-8 p-6 bg-white/10 rounded-[2rem] backdrop-blur-md shadow-2xl border border-white/20">
+            <img src="/medflow_logo_8k.svg" alt={BRAND.name} className="h-10 w-auto brightness-0 invert" />
           </div>
-          <h1 className="text-xl font-black uppercase tracking-[0.25em] text-[var(--medical-navy)] mb-1">
-            {BRAND.name}
-          </h1>
-          <div className="clinical-chip !bg-[var(--accent-soft)] !text-[var(--clinical-blue)] !border-[var(--clinical-blue)]/10 font-bold">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Clinical Command Center
-          </div>
-        </div>
-
-        {/* Login Form Header */}
-        <div className="mb-8 text-center">
-          <h2 className="text-2xl font-black tracking-tight text-[var(--text-strong)] mb-2">
-            Workspace Authentication
-          </h2>
-          <p className="text-sm font-medium text-[var(--text-muted)]">
-            Institutional access for authorized clinical personnel
+          <p className="text-sm font-medium text-sky-100 max-w-[280px] leading-relaxed mt-4">
+            Clinical Institutional Excellence & Professional Healthcare Management
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="clinical-grid">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-soft)] ml-1">Organization</label>
-            <div className="relative">
-              <select
-                name="tenantId"
-                className="clinical-select px-4 py-4 pr-12 text-sm font-bold bg-slate-50 border-slate-100 appearance-none focus:bg-white transition-all"
-                value={credentials.tenantId}
-                onChange={(e) => handleTenantChange(e.target.value)}
-              >
-                <option value="">Select facility node...</option>
-                <option value="superadmin">Platform Governance</option>
-                {tenantOptions.map((tenant) => (
-                  <option key={tenant.id} value={tenant.code || tenant.id}>
-                    {tenant.name}
-                  </option>
-                ))}
-              </select>
-              <Building2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-soft)] pointer-events-none" />
+        {/* Form Side */}
+        <div className="login-form-side">
+          <div className="mb-10">
+            <div className="md:hidden flex justify-center mb-8">
+              <img src="/medflow_logo_8k.svg" alt={BRAND.name} className="h-10 w-auto" />
             </div>
+
+            <h2 className="text-3xl font-black text-slate-800 tracking-tight mb-2">Workspace Entry</h2>
+            <p className="text-sm font-medium text-slate-500">Sign in to your clinical institutional node.</p>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-soft)] ml-1">Identity (Email)</label>
-            <div className="relative">
-              <input
-                type="email"
-                className="clinical-input pl-12 pr-4 py-4 text-sm font-bold bg-slate-50 border-slate-100 focus:bg-white transition-all"
-                placeholder="registered.staff@facility.org"
-                value={credentials.email}
-                onChange={(e) => setCredentials((prev) => ({ ...prev, email: e.target.value }))}
-                required
-              />
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-soft)]" />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="block text-xs font-black uppercase tracking-widest text-[var(--text-soft)] ml-1">Secure Key</label>
-            <div className="relative">
-              <input
-                type="password"
-                className="clinical-input pl-12 pr-4 py-4 text-sm font-bold bg-slate-50 border-slate-100 focus:bg-white transition-all"
-                placeholder="••••••••••••"
-                value={credentials.password}
-                onChange={(e) => setCredentials((prev) => ({ ...prev, password: e.target.value }))}
-                required
-              />
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-soft)]" />
-            </div>
-          </div>
-
-          {error && (
-            <div className="rounded-[18px] border border-[var(--danger)]/20 bg-[var(--danger-soft)] px-4 py-3 animate-fade-in">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-[var(--danger)] mt-0.5" />
-                <p className="text-sm font-bold text-[var(--danger)]">{error}</p>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Access Point / Organization</label>
+              <div className="relative group">
+                <select
+                  name="tenantId"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 pl-12 font-bold text-slate-800 hover:border-slate-200 focus:bg-white focus:border-sky-500 outline-none transition-all appearance-none cursor-pointer"
+                  value={credentials.tenantId}
+                  onChange={(e) => setCredentials(prev => ({ ...prev, tenantId: e.target.value }))}
+                >
+                  <option value="">Select organizational node...</option>
+                  <option value="superadmin">Platform Governance Center</option>
+                  {tenantOptions.map((tenant) => (
+                    <option key={tenant.id} value={tenant.code || tenant.id}>
+                      {tenant.name}
+                    </option>
+                  ))}
+                </select>
+                <Database className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-sky-500 transition-colors pointer-events-none" />
+                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 rotate-90 pointer-events-none" />
               </div>
             </div>
-          )}
 
-          <button 
-            type="submit" 
-            disabled={isLoading} 
-            className="btn btn-primary w-full !h-16 !rounded-[20px] flex items-center justify-center gap-3 shadow-xl shadow-[var(--primary)]/15 hover:shadow-2xl hover:shadow-[var(--primary)]/25 active:scale-[0.98] transition-all"
-          >
-            {isLoading ? (
-              <>
-                <span className="w-5 h-5 rounded-full border-2 border-white/70 border-t-transparent animate-spin" />
-                Validating Node...
-              </>
-            ) : (
-              <>
-                Continue to Workflow
-                <ArrowRight className="w-5 h-5" />
-              </>
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Identity Identifier</label>
+              <div className="relative group">
+                <input
+                  type="email"
+                  placeholder="professional@medflow.org"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 pl-12 font-bold text-slate-800 hover:border-slate-200 focus:bg-white focus:border-sky-500 outline-none transition-all"
+                  value={credentials.email}
+                  onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
+                  required
+                />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-sky-500 transition-colors pointer-events-none" />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center ml-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Secure Protocol Key</label>
+              </div>
+              <div className="relative group">
+                <input
+                  type="password"
+                  placeholder="••••••••••••"
+                  className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 pl-12 font-bold text-slate-800 hover:border-slate-200 focus:bg-white focus:border-sky-500 outline-none transition-all"
+                  value={credentials.password}
+                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+                  required
+                />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-sky-500 transition-colors pointer-events-none" />
+              </div>
+            </div>
+
+            {error && (
+              <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex gap-3 animate-fade-in">
+                <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
+                <p className="text-xs font-bold text-rose-600 leading-relaxed">{error}</p>
+              </div>
             )}
-          </button>
-        </form>
 
-        {/* Demo Access */}
-        <div className="mt-8 pt-8 border-t border-slate-50">
-          <button
-            type="button"
-            onClick={() => setShowDemoCredentials((prev) => !prev)}
-            className="w-full flex items-center justify-between gap-4 text-left group"
-          >
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--text-soft)] mb-1">Developer Sandbox</p>
-              <p className="text-xs font-bold text-[var(--text-main)] group-hover:text-[var(--clinical-blue)] transition-colors">Launch with development credentials</p>
-            </div>
-            <div className={`p-2 rounded-lg bg-slate-50 text-[var(--text-soft)] transition-all ${showDemoCredentials ? 'rotate-90 bg-[var(--accent-soft)] text-[var(--clinical-blue)]' : ''}`}>
-              <ArrowRight className="w-4 h-4" />
-            </div>
-          </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-sky-600 text-white rounded-2xl py-5 font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-sky-600/25 hover:bg-sky-700 hover:shadow-2xl hover:shadow-sky-600/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+            >
+              {isLoading ? (
+                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  Authorize Entry
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          </form>
 
-          {showDemoCredentials && (
-            <div className="mt-4 grid gap-2 animate-fade-in">
-              {Object.entries(demoCredentials).map(([key, demo]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => useDemoCredentials(key)}
-                  className="flex items-center justify-between gap-3 rounded-[18px] border border-slate-100 bg-slate-50/50 px-4 py-3 text-left transition-all hover:bg-white hover:border-[var(--accent)]/30 hover:shadow-md group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center shrink-0 group-hover:bg-[var(--primary)] group-hover:text-white transition-colors">
-                      <Building2 className="w-4 h-4" />
+          {/* Developer Sandbox */}
+          <div className="mt-10 pt-8 border-t border-slate-100">
+            <button
+              onClick={() => setShowDemoCredentials(!showDemoCredentials)}
+              className="w-full flex items-center justify-between group"
+            >
+              <div className="text-left">
+                <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Diagnostic Bypass</div>
+                <div className="text-xs font-bold text-slate-600 group-hover:text-slate-900 transition-colors">Developer Cloud Sandbox</div>
+              </div>
+              <div className={`w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center transition-all ${showDemoCredentials ? 'rotate-90 bg-sky-50 text-sky-600' : 'text-slate-300'}`}>
+                <ChevronRight className="w-4 h-4" />
+              </div>
+            </button>
+
+            {showDemoCredentials && (
+              <div className="mt-6 space-y-3 animate-slide-up-fade">
+                {Object.entries(demoCredentials).map(([key, demo]) => (
+                  <button
+                    key={key}
+                    onClick={() => setDemoCreds(key, demo)}
+                    className="w-full p-4 bg-slate-50 hover:bg-white border border-transparent hover:border-slate-200 rounded-2xl flex items-center justify-between transition-all group/item shadow-sm hover:shadow-md"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center group-hover/item:bg-${demo.color}-600 group-hover/item:text-white transition-colors border border-slate-100`}>
+                        <Activity className="w-4 h-4" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-[10px] font-black uppercase text-slate-900 tracking-tight">{demo.label}</div>
+                        <div className="text-[9px] font-medium text-slate-400">{demo.email}</div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <div className="text-[11px] font-black text-[var(--text-main)] uppercase tracking-tight truncate">{demo.label}</div>
-                      <div className="text-[10px] font-medium text-[var(--text-muted)] truncate">{demo.email}</div>
-                    </div>
-                  </div>
-                  <Zap className="w-4 h-4 text-amber-400 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0" />
-                </button>
-              ))}
-            </div>
-          )}
+                    <Zap className="w-3.5 h-3.5 text-amber-500 opacity-0 group-hover/item:opacity-100 transition-all shadow-sm" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

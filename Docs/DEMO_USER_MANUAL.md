@@ -15,8 +15,8 @@ It includes:
 - App URL: `http://localhost:5174`
 - API URL: `http://localhost:4000/api`
 - Tenant codes used in demo:
-  - `EHS` (Enterprise Hospital Systems)
-  - `city_general` (City General Hospital)
+  - `NAH` (New Age Hospital)
+  - `superadmin` (Platform Governance)
 
 ---
 
@@ -30,52 +30,22 @@ It includes:
 
 ## 4) Credentials
 
-### 4.1 Common Passwords
-- Tenant role users: `Test@123`
-- Superadmin: `Admin@123`
+- All Users (Admin, Doctor, etc.): `Admin@123`
 
 ### 4.2 Superadmin
 | Tenant Context | Email | Password |
 |---|---|---|
 | `superadmin` | `superadmin@emr.local` | `Admin@123` |
 
-### 4.3 Seeded Tenant Users (EHS)
-| Role | Email |
-|---|---|
-| Admin | `admin.ehs@emr.local` |
-| Doctor | `doctor.ehs@emr.local` |
-| Nurse | `nurse.ehs@emr.local` |
-| Lab | `lab.ehs@emr.local` |
-| Pharmacy | `pharmacy.ehs@emr.local` |
-| Front Office | `frontoffice.ehs@emr.local` |
-| Billing | `billing.ehs@emr.local` |
-| Accounts | `accounts.ehs@emr.local` |
-| Insurance | `insurance.ehs@emr.local` |
-| Inventory | `inventory.ehs@emr.local` |
-| HR | `hr.ehs@emr.local` |
-| Operations | `operations.ehs@emr.local` |
-| Support Staff | `support.ehs@emr.local` |
-| Management | `management.ehs@emr.local` |
-| Auditor | `auditor.ehs@emr.local` |
-
-### 4.4 Seeded Tenant Users (City General)
-| Role | Email |
-|---|---|
-| Admin | `admin.city_general@emr.local` |
-| Doctor | `doctor.city_general@emr.local` |
-| Nurse | `nurse.city_general@emr.local` |
-| Lab | `lab.city_general@emr.local` |
-| Pharmacy | `pharmacy.city_general@emr.local` |
-| Front Office | `frontoffice.city_general@emr.local` |
-| Billing | `billing.city_general@emr.local` |
-| Accounts | `accounts.city_general@emr.local` |
-| Insurance | `insurance.city_general@emr.local` |
-| Inventory | `inventory.city_general@emr.local` |
-| HR | `hr.city_general@emr.local` |
-| Operations | `operations.city_general@emr.local` |
-| Support Staff | `support.city_general@emr.local` |
-| Management | `management.city_general@emr.local` |
-| Auditor | `auditor.city_general@emr.local` |
+### 4.3 New Age Hospital (NAH) - Primary Demo Tenant
+| Role | Email | Password |
+|---|---|---|
+| **Tenant Admin** | `admin@nah.local` | `Admin@123` |
+| **Doctor / CMO** | `cmo@nah.local` | `Admin@123` |
+| **Nurse** | `headnurse@nah.local` | `Admin@123` |
+| **Pharmacist** | `pharmacy@nah.local` | `Admin@123` |
+| **Lab Tech** | `lab@nah.local` | `Admin@123` |
+| **Accounts** | `billing@nah.local` | `Admin@123` |
 
 ---
 

@@ -127,7 +127,7 @@ export default function App() {
 
     // Superadmin bypasses all tenant/tier restrictions — they have no tenant
     if (activeUser.role.toLowerCase() === 'superadmin') {
-      return ['superadmin', 'dashboard', 'admin', 'reports', 'support'];
+      return ['superadmin', 'tenant_management', 'user_provisioning', 'dashboard', 'admin', 'reports', 'support'];
     }
 
     // Normalize role for permission mapping
@@ -143,15 +143,12 @@ export default function App() {
       
       // Feature visibility matrix by subscription tier
       if (tier === 'Free') {
-        // Free: Only Core EMR & Appointments
         const freeModules = ['superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents'];
         if (!freeModules.includes(item)) return false;
       } else if (tier === 'Basic') {
-        // Basic: + Pharmacy, Lab, Inventory
         const premiumModules = ['inpatient', 'billing', 'accounts', 'insurance', 'employees'];
         if (premiumModules.includes(item)) return false;
       } else if (tier === 'Professional') {
-        // Professional: + Inpatient, Financials
         const enterpriseModules = ['employees'];
         if (enterpriseModules.includes(item)) return false;
       }
@@ -419,8 +416,9 @@ export default function App() {
       >
         <ErrorBoundary>
           <Suspense fallback={suspenseFallback}>
-            {view === 'superadmin' && (
+            {['superadmin', 'tenant_management', 'user_provisioning'].includes(view) && (
             <SuperadminPage
+              viewMode={view}
               superOverview={superOverview}
               tenants={tenants}
               onCreateTenant={(data) => withRefresh(() => api.createTenant(data))}
@@ -525,6 +523,17 @@ export default function App() {
                 start: fd.get('start'), end: fd.get('end'), reason: fd.get('reason')
               }));
             }}
+            onCreatePatient={async (data) => {
+              const res = await api.addPatient({
+                tenantId: session.tenantId, userId: activeUser.id,
+                ...data
+              });
+              if (res && res.id) {
+                await refreshTenantData();
+                return res;
+              }
+              throw new Error("Patient creation failed");
+            }}
             onCreateWalkin={(e) => {
               e.preventDefault();
               const fd = new FormData(e.target);
@@ -613,7 +622,6 @@ export default function App() {
                     console.error('Failed to create pharmacy prescription:', rxErr);
                   }
                 }
-
                 refreshTenantData();
               } catch (err) {
                 console.error('Encounter error:', err);
@@ -621,6 +629,10 @@ export default function App() {
               }
             }}
             onDischarge={() => refreshTenantData()}
+            onCreateDocument={(payload) => withRefresh(() => api.createDocument({
+              tenantId: session.tenantId,
+              ...payload
+            }))}
           />
         )}
 
@@ -788,7 +800,8 @@ export default function App() {
         {['accounts', 'accounts_payable'].includes(view) && <AccountsPage tenant={tenant} initialTab={view === 'accounts_payable' ? 'record' : 'snapshot'} />}
         {view === 'ambulance' && <AmbulancePage tenant={tenant} />}
         {view === 'service_catalog' && <ServiceCatalogPage tenant={tenant} />}
-        {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} />}
+        {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} patients={patients} />}
+
         {view === 'donor' && <DonorPage tenant={tenant} />}
         {view === 'chat' && <ChatPage activeUser={activeUser} />}
 

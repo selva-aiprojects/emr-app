@@ -1,5 +1,5 @@
 import express from 'express';
-import { generatePatientSummary, suggestTreatmentPlan } from '../services/ai.service.js';
+import { generatePatientSummary, suggestTreatmentPlan, generateDischargeSummary } from '../services/ai.service.js';
 import * as repo from '../db/repository.js';
 import { requireTenant, requireRole } from '../middleware/auth.middleware.js';
 
@@ -41,6 +41,30 @@ router.post('/suggest-treatment', requireTenant, requireRole('Doctor'), async (r
   } catch (error) {
     console.error('AI treatment error:', error);
     res.status(500).json({ error: 'Failed to suggest treatment' });
+  }
+});
+
+// Generate a formal discharge summary for an inpatient
+router.post('/discharge-summary', requireTenant, async (req, res) => {
+  try {
+    const { encounterId } = req.body;
+    if (!encounterId) return res.status(400).json({ error: 'encounterId is required' });
+
+    const summary = await generateDischargeSummary(req.tenantId, encounterId);
+    
+    await repo.createAuditLog({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'ai.generate_discharge_summary',
+      entityName: 'encounter',
+      entityId: encounterId,
+    });
+
+    res.json({ summary });
+  } catch (error) {
+    console.error('AI discharge summary error:', error);
+    res.status(500).json({ error: 'Failed to generate discharge summary' });
   }
 });
 

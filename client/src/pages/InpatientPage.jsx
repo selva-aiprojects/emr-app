@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { api } from '../api';
+import { getAIDischargeSummary } from '../ai-api.js';
 import '../styles/critical-care.css';
 import { 
   Bed as BedIcon, 
@@ -16,7 +17,10 @@ import {
   UserPlus,
   Search,
   Users,
-  ShieldAlert
+  ShieldAlert,
+  Sparkles,
+  Bot,
+  Loader2
 } from 'lucide-react';
 import PatientSearch from '../components/PatientSearch.jsx';
 
@@ -26,6 +30,10 @@ export default function InpatientPage({ tenant, providers, onDischarge }) {
   const [beds, setBeds] = useState({});
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('ledger'); // 'ledger' | 'occupancy'
+  const [showSummary, setShowSummary] = useState(null);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [dischargeDiagnosis, setDischargeDiagnosis] = useState('');
+  const [dischargeMeds, setDischargeMeds] = useState('');
 
   // Load active admissions and wards
   useEffect(() => {
@@ -58,10 +66,10 @@ export default function InpatientPage({ tenant, providers, onDischarge }) {
     load();
   }, [tenant?.id]);
 
-  const [showSummary, setShowSummary] = useState(null);
-
   const handleDischarge = async (encounter) => {
     // Stage 1: Generate Discharge Summary
+    setDischargeDiagnosis('');
+    setDischargeMeds('');
     setShowSummary(encounter);
   };
 
@@ -465,13 +473,45 @@ export default function InpatientPage({ tenant, providers, onDischarge }) {
                     <div className="space-y-6">
                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Clinical Documentation</h4>
                        <div className="space-y-4">
-                          <label className="block">
-                             <span className="text-[9px] font-black text-slate-400 uppercase ml-1">Final Diagnosis Shard</span>
-                             <textarea defaultValue={showSummary.diagnosis} className="input-field min-h-[100px] mt-2 bg-slate-50 border-none font-bold text-slate-800" />
+                           <label className="block">
+                             <div className="flex justify-between items-center mb-2">
+                               <span className="text-[9px] font-black text-slate-400 uppercase ml-1">Final Diagnosis Shard</span>
+                               <button 
+                                 type="button"
+                                 onClick={async () => {
+                                   try {
+                                     setIsGeneratingAI(true);
+                                     const { summary } = await getAIDischargeSummary(showSummary.id);
+                                     const parts = summary.split('2. Hospital Course');
+                                     setDischargeDiagnosis(parts[0].replace('1. Final Diagnosis', '').trim());
+                                     setDischargeMeds(summary); // Put full report in meds as a draft
+                                   } catch (err) {
+                                     alert('AI Generation failed');
+                                   } finally {
+                                     setIsGeneratingAI(false);
+                                   }
+                                 }}
+                                 disabled={isGeneratingAI}
+                                 className="text-[9px] font-black text-indigo-600 uppercase flex items-center gap-1 hover:text-indigo-700 disabled:opacity-50"
+                               >
+                                 {isGeneratingAI ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                                 {isGeneratingAI ? 'Synthesizing...' : 'Auto-Generate AI Summary'}
+                               </button>
+                             </div>
+                             <textarea 
+                               value={dischargeDiagnosis || showSummary.diagnosis} 
+                               onChange={(e) => setDischargeDiagnosis(e.target.value)}
+                               className="input-field min-h-[100px] bg-slate-50 border-none font-bold text-slate-800" 
+                             />
                           </label>
-                          <label className="block">
-                             <span className="text-[9px] font-black text-slate-400 uppercase ml-1">Post-Discharge Stabilizers (Meds)</span>
-                             <textarea placeholder="List medications for recovery node..." className="input-field min-h-[100px] mt-2 bg-slate-50 border-none font-bold text-slate-800" />
+                           <label className="block">
+                             <span className="text-[9px] font-black text-slate-400 uppercase ml-1">Post-Discharge Stabilizers & Narrative</span>
+                             <textarea 
+                               value={dischargeMeds} 
+                               onChange={(e) => setDischargeMeds(e.target.value)}
+                               placeholder="List medications or AI report content here..." 
+                               className="input-field min-h-[150px] mt-2 bg-slate-50 border-none font-bold text-slate-800" 
+                             />
                           </label>
                        </div>
                     </div>

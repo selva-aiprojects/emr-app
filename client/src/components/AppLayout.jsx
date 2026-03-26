@@ -41,7 +41,7 @@ const navIcons = {
   doctor_workspace: HeartPulse,
   users: UserCircle,
   tenants: Grid2X2,
-  ticketing: Bell,
+  support: Bell,
   patients: Users,
   appointments: Calendar,
   emr: Stethoscope,
@@ -76,8 +76,8 @@ const SIDEBAR_GROUPS_DEFAULT = [
   { name: "Clinical Excellence",  modules: ["emr", "lab", "inpatient", "ai_vision", "donor"] },
   { name: "Pharmacy & Stores",    modules: ["pharmacy", "inventory"] },
   { name: "Revenue Cycle",        modules: ["service_catalog", "billing", "accounts_receivable", "insurance", "accounts", "accounts_payable"] },
-  { name: "HR & Admin Control",   modules: ["employees", "employee_master", "attendance", "payroll", "users", "admin"] },
-  { name: "Notice & Helpdesk",    modules: ["communication", "documents", "ticketing", "chat"] },
+  { name: "Support Zone", modules: ["employees", "employee_master", "attendance", "payroll", "users", "admin"] },
+  { name: "Notice & Helpdesk",    modules: ["communication", "documents", "support", "chat"] },
 ];
 
 const SIDEBAR_GROUPS_DOCTOR = [
@@ -92,7 +92,9 @@ function getSidebarGroups(role) {
   if (r === "doctor") return SIDEBAR_GROUPS_DOCTOR;
   if (r === "superadmin") {
     return [
-      { name: "Platform Control", modules: ["superadmin"] },
+      { name: "Global Governance", modules: ["superadmin"] },
+      { name: "Tenant Management", modules: ["tenant_management"] },
+      { name: "User Provisioning", modules: ["user_provisioning"] },
       ...SIDEBAR_GROUPS_DEFAULT
     ];
   }

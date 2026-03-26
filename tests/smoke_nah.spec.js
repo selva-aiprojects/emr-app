@@ -31,11 +31,11 @@ for (const user of NAH_USERS) {
     await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
 
     // Fill email and password
-    await page.getByPlaceholder('name@hospital.org').fill(user.email);
-    await page.getByPlaceholder('Enter your secure password').fill(PASSWORD);
+    await page.getByPlaceholder('professional@medflow.org').fill(user.email);
+    await page.getByPlaceholder('••••••••••••').fill(PASSWORD);
 
     // Click login button
-    await page.getByRole('button', { name: /Sign In|Continue/i }).click();
+    await page.getByRole('button', { name: /Authorize Entry/i }).click();
 
     // Wait for page navigation away from login
     await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
@@ -78,9 +78,9 @@ test('NAH: Admin can access dashboard after login', async ({ page }) => {
   await page.locator('select[name="tenantId"]').waitFor({ state: 'visible', timeout: 10000 });
   await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
 
-  await page.getByPlaceholder('name@hospital.org').fill('admin@nah.local');
-  await page.getByPlaceholder('Enter your secure password').fill(PASSWORD);
-  await page.getByRole('button', { name: /Sign In|Continue/i }).click();
+  await page.getByPlaceholder('professional@medflow.org').fill('admin@nah.local');
+  await page.getByPlaceholder('••••••••••••').fill(PASSWORD);
+  await page.getByRole('button', { name: /Authorize Entry/i }).click();
 
   // Wait for page navigation
   await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
@@ -103,9 +103,9 @@ test('NAH: Invalid credentials are rejected', async ({ page }) => {
   await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
 
   // Try invalid credentials
-  await page.getByPlaceholder('name@hospital.org').fill('admin@nah.local');
-  await page.getByPlaceholder('Enter your secure password').fill('WrongPassword123');
-  await page.getByRole('button', { name: /Sign In|Continue/i }).click();
+  await page.getByPlaceholder('professional@medflow.org').fill('admin@nah.local');
+  await page.getByPlaceholder('••••••••••••').fill('WrongPassword123');
+  await page.getByRole('button', { name: /Authorize Entry/i }).click();
 
   // Should show error or stay on login page
   await page.waitForTimeout(2000);

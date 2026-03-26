@@ -19,7 +19,10 @@ import {
   ShieldCheck,
   Sparkles,
   Bot,
-  Loader2
+  Loader2,
+  Archive,
+  Trash2,
+  ExternalLink
 } from 'lucide-react';
 
 function printPrescription(enc, patient, medications, provider, tenant) {
@@ -113,11 +116,12 @@ function printPrescription(enc, patient, medications, provider, tenant) {
   w.document.close();
 }
 
-export default function EmrPage({ tenant, activeUser, patients, providers, encounters, onCreateEncounter, onDischarge }) {
+export default function EmrPage({ tenant, activeUser, patients, providers, encounters, onCreateEncounter, onDischarge, onCreateDocument }) {
   const [activeTab, setActiveTab] = useState('active');
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [prescriptionItems, setPrescriptionItems] = useState([]);
   const [safetyData, setSafetyData] = useState({ safetyCheck: null, overrideSafety: false });
+  const [showDocForm, setShowDocForm] = useState(false);
   const [aiSummary, setAiSummary] = useState(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
@@ -395,6 +399,66 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                               Reset AI Session
                             </button>
                           </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4 mt-6 pt-6 border-t border-white/5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Historical Records</label>
+                        <button 
+                          type="button"
+                          onClick={() => setShowDocForm(!showDocForm)}
+                          className="text-[9px] font-black uppercase text-[var(--primary-soft)] hover:text-white transition-colors"
+                        >
+                          {showDocForm ? 'Close' : 'Add Record'}
+                        </button>
+                      </div>
+
+                      {showDocForm && (
+                        <div className="p-4 bg-white/5 rounded-2xl border border-white/10 animate-fade-in">
+                          <form onSubmit={(e) => {
+                            e.preventDefault();
+                            const fd = new FormData(e.target);
+                            onCreateDocument({
+                              patientId: selectedPatient.id,
+                              category: fd.get('category'),
+                              title: fd.get('title'),
+                              fileName: fd.get('fileName'),
+                              storageKey: `manual://${fd.get('fileName')}`,
+                              tags: ['historical', 'emr-upload']
+                            });
+                            setShowDocForm(false);
+                          }} className="space-y-3">
+                            <input name="title" placeholder="Document Title (e.g. Past MRI)" required className="w-full bg-slate-800 text-white text-[11px] p-2 rounded-lg border border-white/10" />
+                            <select name="category" className="w-full bg-slate-800 text-white text-[11px] p-2 rounded-lg border border-white/10">
+                              <option value="lab_report">Lab Report</option>
+                              <option value="imaging">Imaging/Scan</option>
+                              <option value="discharge_summary">Discharge Summary</option>
+                              <option value="other">Other</option>
+                            </select>
+                            <input name="fileName" placeholder="Filename.pdf" required className="w-full bg-slate-800 text-white text-[11px] p-2 rounded-lg border border-white/10" />
+                            <button type="submit" className="w-full py-2 bg-[var(--primary)] text-white text-[9px] font-black uppercase rounded-lg">Save Metadata</button>
+                          </form>
+                        </div>
+                      )}
+
+                      <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                        {(selectedPatient.medicalHistory?.documents || []).length === 0 ? (
+                          <div className="text-[10px] text-white/30 italic py-2">No historical records attached.</div>
+                        ) : (
+                          selectedPatient.medicalHistory.documents.map(doc => (
+                            <div key={doc.id} className="p-3 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between group/doc">
+                              <div className="flex items-center gap-3">
+                                <FileText className="w-3.5 h-3.5 text-white/40" />
+                                <div>
+                                  <div className="text-[11px] font-bold text-white/80 line-clamp-1">{doc.title}</div>
+                                  <div className="text-[9px] text-white/30 uppercase font-black">{doc.category}</div>
+                                </div>
+                              </div>
+                              <ExternalLink className="w-3 h-3 text-white/20 group-hover/doc:text-white/60 cursor-pointer" />
+                            </div>
+                          ))
                         )}
                       </div>
                     </div>

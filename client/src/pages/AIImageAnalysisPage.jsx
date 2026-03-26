@@ -10,14 +10,16 @@ import {
   ChevronRight,
   Eye,
   Microscope,
-  Award
+  Award,
+  User
 } from 'lucide-react';
 import '../styles/critical-care.css';
 
-export default function AIImageAnalysisPage({ tenant }) {
+export default function AIImageAnalysisPage({ tenant, patients = [] }) {
   const [analyzing, setAnalyzing] = useState(false);
   const [file, setFile] = useState(null);
   const [result, setResult] = useState(null);
+  const [selectedPatientId, setSelectedPatientId] = useState('');
   const fileInputRef = useRef(null);
 
   const handleUpload = () => {
@@ -70,6 +72,26 @@ export default function AIImageAnalysisPage({ tenant }) {
            </div>
         </div>
       </header>
+
+      {/* Patient Selection Row */}
+      <div className="mb-8 flex items-center gap-4 bg-white p-4 rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-100 animate-fade-in relative z-10">
+         <div className="w-12 h-12 rounded-[1rem] bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm">
+            <User size={20} />
+         </div>
+         <div className="flex-1 max-w-md">
+            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 block mb-1.5 ml-1">Target Patient Identity</label>
+            <select 
+               className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 outline-none focus:bg-white focus:border-indigo-500 hover:border-slate-200 transition-all cursor-pointer appearance-none"
+               value={selectedPatientId}
+               onChange={(e) => setSelectedPatientId(e.target.value)}
+            >
+               <option value="">-- Assign Medical Subject --</option>
+               {patients.map(p => (
+                 <option key={p.id} value={p.id}>{p.firstName} {p.lastName} (MRN: {p.id.substring(0,8).toUpperCase()})</option>
+               ))}
+            </select>
+         </div>
+      </div>
 
       <div className="grid grid-cols-12 gap-10">
          {/* Analysis Terminal */}

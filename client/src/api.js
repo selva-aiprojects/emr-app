@@ -818,3 +818,7 @@ apiClient.del = (url) => apiRequest(url, { method: 'DELETE' });
 // Export as both default and named export for compatibility
 export default apiClient;
 export { apiClient as api };
+
+// Append: Patient fetch by ID
+apiClient.getPatient = (id, tenantId) => apiRequest(`/patients/${id}${tenantId ? `?tenantId=${tenantId}` : ''}`);
+

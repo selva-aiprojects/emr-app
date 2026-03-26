@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api.js';
 
-export default function PatientSearch({ tenantId, onSelect, initialPatientId }) {
+export default function PatientSearch({ tenantId, onSelect, onRegister, initialPatientId }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState('');
     const [typeFilter, setTypeFilter] = useState('');
@@ -24,6 +24,21 @@ export default function PatientSearch({ tenantId, onSelect, initialPatientId }) 
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [wrapperRef]);
+
+    // Sync initialPatientId
+    useEffect(() => {
+        if (initialPatientId && (!selectedPatient || selectedPatient.id !== initialPatientId)) {
+            const p = patients.find(x => x.id === initialPatientId);
+            if (p) {
+                setSelectedPatient(p);
+            } else {
+                // If not in current search results, fetch it
+                api.getPatient(initialPatientId, tenantId).then(res => {
+                    if (res) setSelectedPatient(res);
+                }).catch(err => console.error("Failed to sync patient:", err));
+            }
+        }
+    }, [initialPatientId, patients, selectedPatient, tenantId]);
 
     const handleSearch = async (term = searchTerm, date = dateFilter, type = typeFilter, status = statusFilter) => {
         if (!term && !date && !type && !status) {
@@ -118,8 +133,19 @@ export default function PatientSearch({ tenantId, onSelect, initialPatientId }) 
                     {loading && <div className="p-4 text-center text-sm text-slate-500">🔍 Scouring clinical records...</div>}
 
                     {!loading && patients.length === 0 && searchTerm && (
-                        <div className="p-4 text-center text-sm text-slate-500">
-                            No match found for "<strong>{searchTerm}</strong>"
+                        <div className="p-6 text-center">
+                            <p className="text-sm text-slate-500 mb-4">
+                                No match found for "<strong>{searchTerm}</strong>"
+                            </p>
+                            {onRegister && (
+                                <button
+                                    type="button"
+                                    onClick={() => onRegister(searchTerm)}
+                                    className="clinical-btn bg-slate-900 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all border-none"
+                                >
+                                    Register New Patient
+                                </button>
+                            )}
                         </div>
                     )}
 

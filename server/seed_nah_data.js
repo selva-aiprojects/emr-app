@@ -6,29 +6,18 @@
 import { query } from './db/connection.js';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function runSQLFile(filePath) {
   try {
     console.log(`Running SQL file: ${filePath}`);
     const sql = fs.readFileSync(filePath, 'utf8');
     
-    // Split SQL content by semicolons and execute each statement
-    const statements = sql
-      .split(';')
-      .map(stmt => stmt.trim())
-      .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
-    
-    for (const statement of statements) {
-      if (statement.trim()) {
-        try {
-          await query(statement);
-          console.log(`✅ Executed: ${statement.substring(0, 50)}...`);
-        } catch (error) {
-          // Log error but continue (some statements might already exist)
-          console.log(`⚠️  Error (might be expected): ${error.message}`);
-        }
-      }
-    }
+    // Execute the entire SQL file as one block to preserve transactions (BEGIN/COMMIT)
+    await query(sql);
     
     console.log(`✅ Completed: ${filePath}`);
   } catch (error) {
@@ -81,7 +70,7 @@ async function seedNAHData() {
 }
 
 // Run the seeding if this file is executed directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && (process.argv[1].endsWith('seed_nah_data.js'))) {
   seedNAHData();
 }
 

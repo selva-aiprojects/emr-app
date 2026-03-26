@@ -17,10 +17,14 @@ import {
 
 export default function AppointmentsPage({
   activeUser, session, patients, providers, walkins, appointments, users,
-  setView, setActivePatientId, onCreateAppointment, onCreateWalkin,
+  setView, setActivePatientId, onCreateAppointment, onCreatePatient, onCreateWalkin,
   onSelfAppointment, onConvertWalkin, onSetAppointmentStatus, onReschedule
 }) {
   const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'walkins'
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [regFirstName, setRegFirstName] = useState('');
+  const [regLastName, setRegLastName] = useState('');
   const isPatient = activeUser.role === 'Patient';
   const isDoctor = activeUser.role === 'Doctor';
 
@@ -88,7 +92,18 @@ export default function AppointmentsPage({
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Step 1 / Patient Selection</label>
                         <div className="p-1 bg-slate-50 border border-slate-100 rounded-2xl">
-                           <PatientSearch tenantId={session?.tenantId} />
+                           <PatientSearch 
+                             tenantId={session?.tenantId} 
+                             onSelect={(p) => setSelectedPatientId(p.id)}
+                             onRegister={(name) => {
+                               const parts = name.split(' ');
+                               setRegFirstName(parts[0] || '');
+                               setRegLastName(parts.slice(1).join(' ') || '');
+                               setIsRegistering(true);
+                             }}
+                             initialPatientId={selectedPatientId}
+                           />
+                           <input type="hidden" name="patientId" value={selectedPatientId} />
                         </div>
                       </div>
                     )}
@@ -122,6 +137,80 @@ export default function AppointmentsPage({
                 <div className="pt-10 border-t border-slate-50">
                   <button type="submit" className="clinical-btn bg-slate-900 text-white w-full py-6 text-xs shadow-2xl hover:bg-slate-800 transition-all rounded-2xl font-black tracking-[0.2em]">
                     {isPatient ? 'TEST BOOK' : 'BOOK APPOINTMENT'}
+                  </button>
+                </div>
+              </form>
+            </article>
+          ) : isRegistering ? (
+            <article className="clinical-card !p-10 animate-slide-up">
+              <header className="mb-8 flex justify-between items-start">
+                 <div>
+                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest">New Patient Registration</h3>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">OPD Provisioning Module</p>
+                 </div>
+                 <button onClick={() => setIsRegistering(false)} className="text-slate-400 hover:text-slate-600">
+                    <Plus className="w-5 h-5 rotate-45" />
+                 </button>
+              </header>
+
+              <form className="space-y-8" onSubmit={async (e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                try {
+                  const newP = await onCreatePatient({
+                    firstName: fd.get('firstName'),
+                    lastName: fd.get('lastName'),
+                    dob: fd.get('dob'),
+                    gender: fd.get('gender'),
+                    phone: fd.get('phone'),
+                    email: fd.get('email')
+                  });
+                  if (newP && newP.id) {
+                    setSelectedPatientId(newP.id);
+                    setIsRegistering(false);
+                  }
+                } catch (err) {
+                  alert(err.message);
+                }
+              }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">First Name</label>
+                       <input name="firstName" defaultValue={regFirstName} className="input-field py-4 bg-slate-50 border-none rounded-2xl" required />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Name</label>
+                       <input name="lastName" defaultValue={regLastName} className="input-field py-4 bg-slate-50 border-none rounded-2xl" required />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Date of Birth</label>
+                       <input name="dob" type="date" className="input-field py-4 bg-slate-50 border-none rounded-2xl" required />
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mobile Number</label>
+                       <input name="phone" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="+91" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gender</label>
+                       <select name="gender" className="input-field py-4 bg-slate-50 border-none rounded-2xl font-bold">
+                          <option>Male</option>
+                          <option>Female</option>
+                          <option>Other</option>
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</label>
+                       <input name="email" type="email" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="optional..." />
+                    </div>
+                  </div>
+                </div>
+                <div className="pt-8 border-t border-slate-50 flex justify-end gap-4">
+                  <button type="button" onClick={() => setIsRegistering(false)} className="px-8 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">Cancel</button>
+                  <button type="submit" className="clinical-btn bg-emerald-600 text-white px-10 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-emerald-700 transition-all border-none">
+                    Register & Continue
                   </button>
                 </div>
               </form>
