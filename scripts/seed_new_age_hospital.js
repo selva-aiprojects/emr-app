@@ -35,17 +35,42 @@ async function seedNewAgeHospital() {
       const existingTenantId = existingTenant.rows[0].id;
       console.log('   Found existing NAH tenant, cleaning tenant-scoped data...');
 
+      // 0a. Clean up tables WITHOUT tenant_id column first (using subqueries)
+      const subqueryTables = [
+        { table: 'emr.prescription_items', parent: 'emr.prescriptions', parentId: 'id', fk: 'prescription_id' },
+        { table: 'emr.prescription_items', parent: 'emr.drug_master', parentId: 'drug_id', fk: 'drug_id' },
+        { table: 'emr.drug_batches', parent: 'emr.drug_master', parentId: 'drug_id', fk: 'drug_id' },
+        { table: 'emr.purchase_order_items', parent: 'emr.purchase_orders', parentId: 'order_id', fk: 'order_id' },
+        { table: 'emr.purchase_order_items', parent: 'emr.drug_master', parentId: 'drug_id', fk: 'drug_id' },
+        { table: 'emr.drug_interactions', parent: 'emr.drug_master', parentId: 'drug_id', fk: 'drug_a' },
+        { table: 'emr.drug_interactions', parent: 'emr.drug_master', parentId: 'drug_id', fk: 'drug_b' },
+        { table: 'emr.sessions', parent: 'emr.users', parentId: 'id', fk: 'user_id' }
+      ];
+
+      for (const t of subqueryTables) {
+        await client.query(
+          `DELETE FROM ${t.table} WHERE ${t.fk} IN (SELECT ${t.parentId} FROM ${t.parent} WHERE tenant_id = $1)`,
+          [existingTenantId]
+        );
+      }
+
+      // 0b. Clean up tables WITH tenant_id column - Order matters!
       const tenantTablesInOrder = [
         'emr.audit_logs',
-        'emr.prescription_items',
+        'emr.drug_allergies',
+        'emr.medication_administrations',
+        'emr.medication_schedules',
+        'emr.patient_medication_allocations',
+        'emr.pharmacy_alerts',
+        'emr.pharmacy_inventory',
+        'emr.ward_stock',
+        'emr.drug_master',
         'emr.prescriptions',
         'emr.claims',
         'emr.invoice_items',
         'emr.invoices',
-        'emr.drug_batches',
-        'emr.pharmacy_inventory',
-        'emr.purchase_order_items',
         'emr.purchase_orders',
+        'emr.vendors',
         'emr.attendance',
         'emr.employee_leaves',
         'emr.encounters',
@@ -56,9 +81,6 @@ async function seedNewAgeHospital() {
         'emr.beds',
         'emr.wards',
         'emr.insurance_providers',
-        'emr.vendors',
-        'emr.drug_master',
-        'emr.sessions',
         'emr.users'
       ];
 

@@ -69,9 +69,9 @@ export default function LoginPage({ onLogin, tenants }) {
       email: 'superadmin@emr.local',
       password: 'Admin@123'
     },
-    ehs: {
-      label: 'Enterprise Hospital Systems',
-      email: 'admin@ehs.local',
+    nah: {
+      label: 'New Age Hospital (NAH)',
+      email: 'admin@nah.com',
       password: 'Test@123'
     }
   };

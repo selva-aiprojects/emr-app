@@ -787,13 +787,32 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
       WHERE tenant_id = $1 AND role = 'Doctor'
       ORDER BY department
     `, [tenantId]);
-
     const doctors = doctorsResult.rows.map(doctor => ({
       id: doctor.id,
       name: doctor.name,
       specialization: doctor.department,
       status: doctor.status || 'Available'
     }));
+
+    // Get top diagnoses
+    const topDiagnosesResult = await query(`
+      SELECT diagnosis as name, COUNT(*) as value 
+      FROM emr.encounters 
+      WHERE tenant_id = $1 AND diagnosis IS NOT NULL AND diagnosis != ''
+      GROUP BY diagnosis 
+      ORDER BY value DESC 
+      LIMIT 10
+    `, [tenantId]);
+
+    // Get top revenue services
+    const topServicesResult = await query(`
+      SELECT description as name, SUM(amount) as value
+      FROM emr.invoice_items
+      WHERE tenant_id = $1
+      GROUP BY description
+      ORDER BY value DESC
+      LIMIT 10
+    `, [tenantId]);
 
     res.json({
       totalPatients: parseInt(stats.total_patients || 0),
@@ -807,6 +826,8 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
       bedOccupancy: bedOccupancy.rows[0] || {},
       departmentDistribution,
       doctors,
+      topDiagnoses: topDiagnosesResult.rows,
+      topServices: topServicesResult.rows,
       lastUpdated: new Date().toISOString()
     });
 
@@ -905,6 +926,30 @@ app.patch('/api/patients/:id/clinical', requireTenant, restrictPatientAccess, as
   } catch (error) {
     console.error('Error adding clinical record:', error);
     res.status(500).json({ error: 'Failed to add clinical record' });
+  }
+});
+
+app.get('/api/patients', requireTenant, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+    const patients = await repo.getPatients(req.tenantId, req.user.role, limit, offset);
+    res.json(patients);
+  } catch (error) {
+    console.error('Error fetching paginated patients:', error);
+    res.status(500).json({ error: 'Failed to fetch patients' });
+  }
+});
+
+app.get('/api/appointments', requireTenant, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
+    const appointments = await repo.getAppointments(req.tenantId, limit, offset);
+    res.json(appointments);
+  } catch (error) {
+    console.error('Error fetching paginated appointments:', error);
+    res.status(500).json({ error: 'Failed to fetch appointments' });
   }
 });
 

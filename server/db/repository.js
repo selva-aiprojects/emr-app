@@ -252,7 +252,35 @@ export async function createTenant({ name, code, subdomain, theme, features }) {
     JSON.stringify(features || { inventory: true, telehealth: false }),
   ]);
 
-  return result.rows[0];
+  const tenant = result.rows[0];
+
+  // Phase 2: Enterprise Abstractions - Auto-clone Master Data & Structures
+  try {
+    // 1. Setup Pharmacy Location structure (Centralized Main Store)
+    await query(`
+      INSERT INTO emr.locations (tenant_id, name, type, is_active)
+      VALUES ($1, 'Central Hospital Store', 'Main Store', true)
+    `, [tenant.id]);
+
+    // 2. Setup baseline dynamic roles
+    const rolesSql = `
+      INSERT INTO emr.roles (tenant_id, name, description, is_system) VALUES 
+      ($1, 'Doctor', 'Standard Physician Access', true),
+      ($1, 'Nurse', 'Standard Nurse Access', true),
+      ($1, 'Pharmacy', 'Standard Central Store Pharmacist', true),
+      ($1, 'Billing', 'Revenue Cycle Management', true)
+      RETURNING id, name
+    `;
+    const rolesResult = await query(rolesSql, [tenant.id]);
+
+    // 3. Clone Global Master Data (e.g. Master ICD-10s, Essential Drugs)
+    // In production, this would `INSERT INTO emr.drug_master SELECT * FROM emr.global_drug_master`
+    
+  } catch (err) {
+    console.error(`Error provisioning master data for tenant ${tenant.id}:`, err.message);
+  }
+
+  return tenant;
 }
 
 // =====================================================
@@ -387,20 +415,29 @@ function maskPatientData(patient, role) {
   return p;
 }
 
-// Updated signature to accept userRole
-export async function getPatients(tenantId, userRole = null) {
+// Updated signature to accept limit and offset for pagination
+export async function getPatients(tenantId, userRole = null, limit = 50, offset = 0) {
+  // Use a subquery to limit patients BEFORE joining massive clinical record blobs
   const sql = `
-    SELECT p.*, 
-           json_agg(DISTINCT cr.*) FILTER (WHERE cr.id IS NOT NULL) as clinical_records
-    FROM emr.patients p
-    LEFT JOIN emr.clinical_records cr ON p.id = cr.patient_id
-    WHERE p.tenant_id = $1
-    GROUP BY p.id
-    ORDER BY p.created_at DESC
-    LIMIT 100
+    SELECT 
+      p.*,
+      COALESCE(
+        (
+          SELECT json_agg(cr.*) 
+          FROM emr.clinical_records cr 
+          WHERE cr.patient_id = p.id
+        ), 
+        '[]'::json
+      ) as clinical_records
+    FROM (
+      SELECT * FROM emr.patients
+      WHERE tenant_id = $1
+      ORDER BY created_at DESC
+      LIMIT $2 OFFSET $3
+    ) p
   `;
 
-  const result = await query(sql, [tenantId]);
+  const result = await query(sql, [tenantId, limit, offset]);
 
   return result.rows.map(patient => {
     const records = patient.clinical_records || [];
@@ -708,10 +745,10 @@ export async function convertWalkinToPatient({ walkinId, tenantId, userId, dob, 
 // APPOINTMENTS
 // =====================================================
 
-export async function getAppointments(tenantId) {
+export async function getAppointments(tenantId, limit = 100, offset = 0) {
   const result = await query(
-    'SELECT * FROM emr.appointments WHERE tenant_id = $1 ORDER BY scheduled_start DESC',
-    [tenantId]
+    'SELECT * FROM emr.appointments WHERE tenant_id = $1 ORDER BY scheduled_start DESC LIMIT $2 OFFSET $3',
+    [tenantId, limit, offset]
   );
   return result.rows.map(row => ({
     ...row,

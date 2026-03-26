@@ -34,18 +34,19 @@ export default function PatientsPage({
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('registry'); // 'registry' | 'onboard'
+  const [page, setPage] = useState(0);
   const isDoctor = (activeUser?.role || '').toLowerCase() === 'doctor';
 
   const tenantId = tenant?.id || session?.tenantId || null;
 
   const effectivePatients = useMemo(() => {
-    return Array.isArray(patientsProp) ? patientsProp : patients;
-  }, [patientsProp, patients]);
+    return (Array.isArray(patientsProp) && page === 0 && patients.length === 0) ? patientsProp : patients;
+  }, [patientsProp, patients, page]);
 
   useEffect(() => {
     async function load() {
-      // If the shell already provides patient data, don't refetch here.
-      if (Array.isArray(patientsProp)) {
+      // Use bootstrap data only on initial load (page 0) if explicit fetch hasn't happened.
+      if (Array.isArray(patientsProp) && page === 0 && patients.length === 0) {
         setLoading(false);
         return;
       }
@@ -53,7 +54,7 @@ export default function PatientsPage({
       if (!tenantId) return;
       setLoading(true);
       try {
-        const data = await api.getPatients(tenantId);
+        const data = await api.getPatients(tenantId, { limit: 50, offset: page * 50 });
         setPatients(data || []);
       } catch (err) {
         console.error('Failed to load patient registry:', err);
@@ -62,7 +63,7 @@ export default function PatientsPage({
       }
     }
     load();
-  }, [tenantId, patientsProp]);
+  }, [tenantId, patientsProp, page]);
 
   async function handleOnboard(e) {
     if (onCreatePatient) {
@@ -111,12 +112,12 @@ export default function PatientsPage({
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
            <h1 className="flex items-center gap-3">
-              {isDoctor ? 'My Patients Registry' : 'Master Clinical Registry'}
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Identity Node</span>
+              {isDoctor ? 'My Patients' : 'Patient Directory'}
+              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Registration Module</span>
            </h1>
-           <p className="dim-label">Centralized identity governance and longitudinal record management for {tenant?.name || 'Facility'}.</p>
+           <p className="dim-label">View and manage all registered patients for {tenant?.name || 'Facility'}.</p>
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Identity Logic Active • Centralized Registry Operational
+              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Records verified • Directory Active
            </p>
         </div>
         <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">
@@ -124,7 +125,7 @@ export default function PatientsPage({
             className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'registry' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
             onClick={() => setActiveTab('registry')}
           >
-            <ClipboardList className="w-3.5 h-3.5 mr-2" /> Registry Status
+            <ClipboardList className="w-3.5 h-3.5 mr-2" /> Patient List
           </button>
           <button 
             className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'onboard' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
@@ -143,7 +144,7 @@ export default function PatientsPage({
                 <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[var(--clinical-blue)] transition-colors" />
                 <input 
                   type="text" 
-                  placeholder="Query identity by name, MRN, or diagnostic shard..." 
+                  placeholder="Search by patient name, MRN, or phone..." 
                   className="input-field pl-16 py-6 bg-white border-2 border-slate-50 rounded-3xl shadow-sm focus:shadow-xl focus:border-[var(--clinical-blue)]/20 transition-all font-medium text-slate-800 placeholder:text-slate-300 w-full"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
@@ -159,11 +160,11 @@ export default function PatientsPage({
                <table className="premium-table">
                   <thead>
                     <tr>
-                      <th className="tracking-widest">Patient Identity</th>
-                      <th className="tracking-widest">Temporal Node (DOB)</th>
-                      <th className="tracking-widest">Registry ID</th>
-                      <th className="tracking-widest">Clinical Stream</th>
-                      <th className="tracking-widest text-right">Governance</th>
+                      <th className="tracking-widest">Patient Name</th>
+                      <th className="tracking-widest">Date of Birth</th>
+                      <th className="tracking-widest">MRN</th>
+                      <th className="tracking-widest">Status</th>
+                      <th className="tracking-widest text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -177,8 +178,8 @@ export default function PatientsPage({
                        <tr>
                          <td colSpan="5">
                            <EmptyState 
-                             title="No identity shards found in clinical registry" 
-                             subtitle="The master identification hub returned no matching clinical shards for your current search criteria."
+                             title="No patients found in directory" 
+                             subtitle="No patients matched your current search criteria."
                              icon={UserX}
                            />
                          </td>
@@ -211,7 +212,7 @@ export default function PatientsPage({
                         <td>
                            <div className="flex gap-2">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shadow-lg shadow-emerald-500/50"></span>
-                              <div className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Monitoring Nominal</div>
+                              <div className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Active Patient</div>
                            </div>
                         </td>
                         <td className="text-right">
@@ -225,6 +226,22 @@ export default function PatientsPage({
                   </tbody>
                </table>
              </div>
+             {/* Pagination Controls */}
+             <div className="flex justify-between items-center py-6 px-8 bg-slate-50 border-t border-slate-100">
+               <button 
+                 onClick={() => setPage(p => Math.max(0, p - 1))} 
+                 disabled={page === 0} 
+                 className="px-6 py-2.5 bg-white text-slate-600 font-bold uppercase tracking-wider text-[10px] rounded-xl border border-slate-200 shadow-sm disabled:opacity-30 hover:bg-slate-50 transition-all">
+                 &larr; Prev Page
+               </button>
+               <span className="text-[10px] font-black uppercase text-[var(--clinical-blue)] tracking-[0.2em] bg-blue-50 px-4 py-2 rounded-lg">Registry Page {page + 1}</span>
+               <button 
+                 onClick={() => setPage(p => p + 1)} 
+                 disabled={filtered.length < 50} 
+                 className="px-6 py-2.5 bg-white text-slate-600 font-bold uppercase tracking-wider text-[10px] rounded-xl border border-slate-200 shadow-sm disabled:opacity-30 hover:bg-slate-50 transition-all">
+                 Next Page &rarr;
+               </button>
+             </div>
           </div>
         </section>
       )}
@@ -235,8 +252,8 @@ export default function PatientsPage({
            <article className="col-span-12 lg:col-span-8 clinical-card p-12 animate-slide-up">
               <header className="mb-12 flex justify-between items-end">
                  <div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Registry Onboarding Protocol</h3>
-                    <p className="dim-label uppercase tracking-widest text-[10px] mt-2 font-black">Identity Provisioning Protocol • Central Node</p>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">New Patient Registration</h3>
+                    <p className="dim-label uppercase tracking-widest text-[10px] mt-2 font-black">Enter Primary Patient Details</p>
                  </div>
                  <div className="w-14 h-14 bg-[var(--medical-navy)] text-white rounded-2xl flex items-center justify-center shadow-2xl">
                     <UserPlus className="w-7 h-7" />
@@ -246,30 +263,30 @@ export default function PatientsPage({
               <form className="space-y-12" onSubmit={handleOnboard}>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-6">
-                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--clinical-accent)]">Clinical Identity</h4>
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--clinical-accent)]">Patient Demographics</h4>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Forename</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">First Name</label>
                           <input name="firstName" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" required />
                        </div>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Surname</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Name</label>
                           <input name="lastName" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" required />
                        </div>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Temporal Node (DOB)</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Date of Birth</label>
                           <input name="dob" type="date" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-xs px-6" required />
                        </div>
                     </div>
 
                     <div className="space-y-6">
-                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Contact & Demographics</h4>
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Contact Information</h4>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Phone Protocol</label>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mobile Number</label>
                           <input name="phone" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" placeholder="+91 00000 00000" />
                        </div>
                        <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gender Shard</label>
+                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gender</label>
                              <select name="gender" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6">
                                 <option>Male</option>
                                 <option>Female</option>
@@ -277,7 +294,7 @@ export default function PatientsPage({
                              </select>
                           </div>
                           <div className="space-y-2">
-                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Identity Guard (Email)</label>
+                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</label>
                              <input name="email" type="email" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" placeholder="patient@node.com" />
                           </div>
                        </div>
@@ -291,22 +308,22 @@ export default function PatientsPage({
                                  required 
                               />
                               <label htmlFor="consent-check" className="text-[11px] font-medium text-emerald-800 leading-relaxed cursor-pointer group-hover:text-emerald-900 transition-colors">
-                                 I acknowledge that patient consent for treatment and data processing has been obtained in accordance with institutional clinical governance protocols. 
-                                 <span className="block mt-2 text-[9px] font-black uppercase tracking-widest text-emerald-600/60">Automated consent shard will be logged.</span>
+                                 I acknowledge that patient consent for treatment and data processing has been obtained in accordance with standard hospital policies. 
+                                 <span className="block mt-2 text-[9px] font-black uppercase tracking-widest text-emerald-600/60">Digital consent will be recorded.</span>
                               </label>
                            </div>
                            <div className="flex items-center gap-3 px-6 py-4 bg-slate-50 rounded-2xl border border-slate-100">
                              <ShieldCheck className="w-4 h-4 text-slate-400" />
-                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Identity Protection: AES-256 Sharded Storage Active</span>
+                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data Protection: Secure Encrypted Storage Active</span>
                            </div>
                         </div>
                     </div>
                  </div>
 
                  <div className="pt-10 border-t border-slate-50 flex justify-end gap-6 items-center">
-                    <button type="button" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:text-rose-500 transition-colors" onClick={() => setActiveTab('registry')}>Abort Procedure</button>
+                    <button type="button" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:text-rose-500 transition-colors" onClick={() => setActiveTab('registry')}>Cancel Registration</button>
                     <button type="submit" className="clinical-btn bg-[var(--medical-navy)] text-white px-12 py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:opacity-90 transition-all border-none">
-                       COMMIT TO CLINICAL REGISTRY
+                       REGISTER PATIENT
                     </button>
                  </div>
               </form>
@@ -316,8 +333,8 @@ export default function PatientsPage({
               <div className="clinical-card !bg-[var(--medical-navy)] text-white relative overflow-hidden group h-full border-none shadow-2xl">
                  <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full -mr-24 -mt-24 blur-3xl group-hover:scale-110 transition-transform"></div>
                  <header className="relative z-10 mb-10">
-                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-[var(--clinical-accent)]">Registry Integrity</h3>
-                    <p className="text-[10px] text-white/40 font-black uppercase mt-2">Global Service Status</p>
+                    <h3 className="text-sm font-black uppercase tracking-[0.2em] text-[var(--clinical-accent)]">System Security</h3>
+                    <p className="text-[10px] text-white/40 font-black uppercase mt-2">Active Services</p>
                  </header>
                  
                  <div className="space-y-8 relative z-10">
@@ -326,8 +343,8 @@ export default function PatientsPage({
                           <Activity className="w-5 h-5 text-emerald-400" />
                        </div>
                        <div>
-                          <p className="text-[10px] text-white/40 font-black uppercase tracking-tighter mb-1">Biometric Identification</p>
-                          <div className="text-[11px] font-black uppercase tracking-widest text-white/90">Shard Sync: Nominal</div>
+                          <p className="text-[10px] text-white/40 font-black uppercase tracking-tighter mb-1">Identity Verification</p>
+                          <div className="text-[11px] font-black uppercase tracking-widest text-white/90">System Active</div>
                        </div>
                     </div>
                     <div className="flex items-center gap-5 group/item">

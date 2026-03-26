@@ -20,10 +20,69 @@ import {
   ShieldCheck,
   DollarSign,
   HeartPulse,
-  TrendingUp
+  TrendingUp,
+  Stethoscope,
+  ChevronRight
 } from 'lucide-react';
+import { 
+  TopDiagnosesChart, 
+  TopServicesChart 
+} from '../components/EChartsComponents.jsx';
 
-export default function DashboardPage({ metrics, activeUser, setView, tenant, view }) {
+/* ─── LIVE PATIENT QUEUE COMPONENT ────────────────────────────────── */
+function LiveQueue({ appointments = [], patients = [], setView, setActivePatientId }) {
+  const queue = appointments
+    .filter(a => ['checked_in', 'triaged'].includes(a.status))
+    .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at));
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-[var(--accent-soft)] overflow-hidden">
+       <header className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
+             <Activity className="w-3.5 h-3.5 text-indigo-500" /> Live Patient Queue
+          </h3>
+          <span className="text-[9px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold">{queue.length} Pulse</span>
+       </header>
+       <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-50">
+          {queue.length === 0 ? (
+            <div className="p-10 text-center">
+               <Activity className="w-8 h-8 text-slate-100 mx-auto mb-2" />
+               <p className="text-slate-300 text-[10px] font-black uppercase tracking-widest">No active consultations</p>
+            </div>
+          ) : (
+            queue.map((a, idx) => {
+              const patientId = a.patientId || a.patient_id;
+              const p = patients.find(p => p.id === patientId);
+              return (
+                <div key={a.id} className="p-3 flex items-center gap-3 hover:bg-slate-50/50 transition-colors group">
+                   <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px]">
+                      {idx + 1}
+                   </div>
+                   <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-slate-900 truncate leading-none mb-1">{p?.firstName} {p?.lastName}</p>
+                      <p className="text-[9px] text-slate-400 font-medium uppercase tracking-tight">{a.reason || 'General Visit'}</p>
+                   </div>
+                   <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter ${a.status === 'triaged' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                         {a.status}
+                      </span>
+                      <button 
+                         onClick={() => { setActivePatientId?.(patientId); setView('emr'); }}
+                         className="p-1.5 rounded-lg bg-slate-900 text-white opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                         <ChevronRight className="w-3 h-3" />
+                      </button>
+                   </div>
+                </div>
+              );
+            })
+          )}
+       </div>
+    </div>
+  );
+}
+
+export default function DashboardPage({ metrics, activeUser, setView, tenant, view, appointments = [], patients = [], setActivePatientId }) {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
@@ -38,7 +97,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
     departmentDistribution: [],
     doctors: [],
     visits: {},
-    requests: {}
+    requests: {},
+    topDiagnoses: [],
+    topServices: []
   });
 
   // Get current view title
@@ -89,7 +150,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         departmentDistribution: data.departmentDistribution || [],
         doctors: data.doctors || [],
         visits: data.visits || {},
-        requests: data.requests || {}
+        requests: data.requests || {},
+        topDiagnoses: data.topDiagnoses || [],
+        topServices: data.topServices || []
       });
 
       // Set report data for charts
@@ -183,12 +246,12 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       <header className="page-header-premium mb-10 pb-6 border-b border-[var(--accent-soft)]">
         <div>
            <h1 className="flex items-center gap-3">
-              Institutional Dashboard
-              <span className="text-[10px] bg-[var(--clinical-primary)] text-white px-3 py-1 rounded-full border border-[var(--clinical-secondary)]/20 uppercase tracking-tighter font-black">Clinical Node</span>
+              Hospital Dashboard
+              <span className="text-[10px] bg-[var(--clinical-primary)] text-white px-3 py-1 rounded-full border border-[var(--clinical-secondary)]/20 uppercase tracking-tighter font-black">Admin View</span>
            </h1>
-           <p className="dim-label">Monitor institutional health, revenue trends, and operational capacity for {tenant?.name || 'Authorized Facility'}.</p>
+           <p className="dim-label">Monitor hospital health, revenue trends, and operational capacity for {tenant?.name || 'Authorized Facility'}.</p>
            <p className="text-[10px] font-black text-[var(--clinical-secondary)] uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> {today} • Platform Operational
+              <ShieldCheck className="w-3 h-3 text-emerald-500" /> {today} • System Online
            </p>
         </div>
         <div className="flex items-center gap-4">
@@ -205,7 +268,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
             className="px-6 py-2.5 bg-white border border-[var(--accent-soft)] rounded-2xl hover:bg-[var(--accent-soft)]/40 transition-all text-xs font-black uppercase tracking-widest text-[var(--clinical-secondary)] shadow-sm flex items-center"
           >
             <FileText className="w-4 h-4 mr-2" />
-            Export Shard
+            Export Report
           </button>
         </div>
       </header>
@@ -275,8 +338,10 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       {/* Quick Actions - Clean White Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         {quickActions.map((action, index) => (
-          <div key={index} className="bg-white rounded-xl shadow-sm border border-[var(--accent-soft)] p-6 text-center">
-            <div className="bg-[var(--accent-soft)] rounded-lg p-3 w-12 h-12 mx-auto mb-4 flex items-center justify-center">
+          <div key={index} 
+               onClick={() => setView?.(action.view)}
+               className="bg-white rounded-xl shadow-sm border border-[var(--accent-soft)] p-6 text-center cursor-pointer hover:shadow-md transition-all group">
+            <div className="bg-[var(--accent-soft)] group-hover:bg-[var(--primary-soft)] rounded-lg p-3 w-12 h-12 mx-auto mb-4 flex items-center justify-center transition-colors">
               <action.icon className="w-6 h-6 text-[var(--clinical-blue)]" />
             </div>
             <p className="text-sm font-medium text-[var(--clinical-primary)]">{action.label}</p>
@@ -342,49 +407,40 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         </div>
       </div>
 
+      {/* NEW: TOP METRICS ROW */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* Top Diagnoses */}
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px]">
+           <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Top 10 Diagnoses</h3>
+              <FileText className="w-4 h-4 text-purple-500" />
+           </div>
+           <div className="h-[280px]">
+              <TopDiagnosesChart data={realtimeMetrics.topDiagnoses} />
+           </div>
+        </div>
+
+        {/* Top Services (Revenue Mix) */}
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px]">
+           <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Revenue Mix by Service</h3>
+              <DollarSign className="w-4 h-4 text-emerald-500" />
+           </div>
+           <div className="h-[280px]">
+              <TopServicesChart data={realtimeMetrics.topServices} />
+           </div>
+        </div>
+      </div>
+
       {/* Bottom Section - Additional Clean Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        {/* Appointment Requests */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Appointment Requests</h3>
-            <div className="bg-orange-100 rounded-lg p-3">
-              <Calendar className="w-6 h-6 text-orange-600" />
-            </div>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Pending Approval</p>
-                  <p className="text-xs text-gray-600">Waiting for confirmation</p>
-                </div>
-              </div>
-              <span className="text-sm text-orange-600 font-medium">12</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Today's Schedule</p>
-                  <p className="text-xs text-gray-600">Confirmed appointments</p>
-                </div>
-              </div>
-              <span className="text-sm text-green-600 font-medium">24</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Urgent Cases</p>
-                  <p className="text-xs text-gray-600">Immediate attention needed</p>
-                </div>
-              </div>
-              <span className="text-sm text-red-600 font-medium">3</span>
-            </div>
-          </div>
-        </div>
+        {/* Live Queue (Replacing Appointment Requests for Admin) */}
+        <LiveQueue 
+           appointments={appointments} 
+           patients={patients} 
+           setView={setView} 
+           setActivePatientId={setActivePatientId} 
+        />
 
         {/* Patient Statistics */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

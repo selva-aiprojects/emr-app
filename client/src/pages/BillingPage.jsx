@@ -370,7 +370,7 @@ export default function BillingPage({
               <table className="premium-table">
                 <thead>
                   <tr>
-                    <th className="tracking-widest">Temporal Node</th>
+                    <th className="tracking-widest">Date & Time</th>
                     <th className="tracking-widest">Statement ID</th>
                     <th className="tracking-widest">Subject Account</th>
                     <th className="tracking-widest">Gross Aggregate</th>

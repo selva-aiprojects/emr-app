@@ -355,7 +355,7 @@ export default function AccountsPage({ tenant }) {
               <table className="premium-table">
                 <thead>
                   <tr>
-                    <th className="tracking-widest">Temporal Node</th>
+                    <th className="tracking-widest">Date & Time</th>
                     <th className="tracking-widest">Classification</th>
                     <th className="tracking-widest">Transaction Context</th>
                     <th style={{ textAlign: 'right' }} className="tracking-widest">Credit Shard</th>

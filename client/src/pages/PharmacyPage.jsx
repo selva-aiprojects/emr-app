@@ -56,7 +56,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
       await api.autoBillItem(tenant.id, {
         patientId: item.patient_id,
         description: `Medication Dispensed: ${item.generic_name} (${item.quantity_prescribed} Units)`,
-        amount: item.amount || 250, // Simulated financial shard
+        amount: item.amount || 250, // Simulated financial cost
         type: 'pharmacy'
       });
       
@@ -107,7 +107,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
         <div>
            <h1 className="flex items-center gap-3">
               Pharmacy Dispatch & Logistics
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Clinical Node</span>
+              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Pharmacy Network</span>
            </h1>
            <p className="dim-label">Institutional medication dispensing, prescription fulfillment, and inventory monitoring for {tenant?.name || 'Authorized Facility'}.</p>
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
@@ -209,19 +209,19 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                     <th>Medication Entity</th>
                     <th>Patient Account</th>
                     <th>Dosage / Unit</th>
-                    <th>Protocol</th>
+                    <th>Instructions</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {loading ? (
-                    <tr><td colSpan="5" className="text-center py-20 text-slate-400 animate-pulse">Synchronizing with clinical ledger...</td></tr>
+                    <tr><td colSpan="5" className="text-center py-20 text-slate-400 animate-pulse">Loading pharmacy orders...</td></tr>
                   ) : filteredQueue.length === 0 ? (
                     <tr>
                       <td colSpan="5">
                         <EmptyState 
                           title="No prescriptions detected in fulfillment pool" 
-                          subtitle="The pharmacy dispatch node is currently idle. No authorized clinical orders are awaiting dispensation."
+                          subtitle="No pharmacy orders are waiting for dispensing."
                           icon={Pill}
                         />
                       </td>
@@ -285,7 +285,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                 </div>
                 <div className="vital-node vital-node--safe shadow-sm">
                    <div className="flex justify-between items-start">
-                      <span className="vital-label">Expiring Shards (90d)</span>
+                      <span className="vital-label">Expiring Medicines (90d)</span>
                       <Clock className="w-4 h-4 text-emerald-500 opacity-50" />
                    </div>
                    <span className="vital-value tabular-nums mt-1">24</span>
@@ -296,11 +296,11 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
              <article className="glass-panel p-0 overflow-hidden shadow-sm">
                 <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                    <div>
-                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Clinical Stock Registry</h3>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Real-time medication unit ledger</p>
+                      <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Pharmacy Inventory</h3>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Real-time medicine stock levels</p>
                    </div>
                    <button className="clinical-btn bg-white border border-slate-200 text-slate-700 px-6 !min-h-[44px] rounded-xl text-[10px] font-black uppercase tracking-widest">
-                      Export Inventory Shard
+                      Export Inventory Report
                    </button>
                 </header>
                 <div className="premium-table-container">
@@ -309,7 +309,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                          <tr>
                             <th>Medication Entity</th>
                             <th>Current Stock</th>
-                            <th>Reorder Shard</th>
+                            <th>Reorder Level</th>
                             <th>Status</th>
                             <th style={{ textAlign: 'right' }}>Action</th>
                          </tr>
@@ -456,7 +456,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                 <article className="glass-panel p-0 overflow-hidden shadow-sm">
                    <header className="px-8 py-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
                       <div>
-                         <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">PO Ledger Shards</h3>
+                         <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Purchase Orders</h3>
                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Pending and committed procurement streams</p>
                       </div>
                       <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-300">
@@ -468,7 +468,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                          <thead>
                             <tr>
                                <th>PO Ref / Date</th>
-                               <th>Vendor Node</th>
+                               <th>Vendor Name</th>
                                <th>Quantum (Val)</th>
                                <th>Status</th>
                             </tr>

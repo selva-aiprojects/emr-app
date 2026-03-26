@@ -480,10 +480,72 @@ export const BedOccupancyChart = ({ data = [] }) => {
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
 };
 
+// Apache ECharts - Top Diagnoses Chart (Horizontal Bar)
+export const TopDiagnosesChart = ({ data = [] }) => {
+  const chartData = data.length > 0 ? data : [
+    { name: 'Hypertension', value: 124 },
+    { name: 'Diabetes Type 2', value: 98 },
+    { name: 'Acute Bronchitis', value: 87 },
+    { name: 'Osteoarthritis', value: 65 },
+    { name: 'UTI', value: 54 }
+  ];
+
+  const option = {
+    color: ['#8b5cf6'],
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { top: 10, left: 100, right: 30, bottom: 10, containLabel: false },
+    xAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { type: 'dashed' } } },
+    yAxis: {
+      type: 'category',
+      data: chartData.map(d => d.name),
+      axisLabel: { fontWeight: 600, fontSize: 11 }
+    },
+    series: [{
+      data: chartData.map(d => d.value),
+      type: 'bar',
+      barWidth: '60%',
+      itemStyle: { borderRadius: [0, 6, 6, 0] },
+      label: { show: true, position: 'right', fontWeight: 700 }
+    }]
+  };
+  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+};
+
+// Apache ECharts - Top Revenue Services Chart (Pie/Doughnut)
+export const TopServicesChart = ({ data = [] }) => {
+  const chartData = data.length > 0 ? data : [
+    { value: 45000, name: 'OPD Consultation' },
+    { value: 32000, name: 'Laboratory' },
+    { value: 28000, name: 'Pharmacy' },
+    { value: 22000, name: 'Radiology' },
+    { value: 18000, name: 'Surgeries' }
+  ];
+
+  const option = {
+    color: ['#0f766e', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899'],
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'item', formatter: '{b}: ${c} ({d}%)' },
+    series: [{
+      data: chartData,
+      type: 'pie',
+      radius: ['50%', '80%'],
+      center: ['50%', '50%'],
+      avoidLabelOverlap: false,
+      itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 13, fontWeight: 'bold' } }
+    }]
+  };
+  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+};
+
 export default {
   PatientOverviewChart,
   RevenueTrendChart,
   DepartmentDistributionChart,
   AppointmentStatusChart,
-  BedOccupancyChart
+  BedOccupancyChart,
+  TopDiagnosesChart,
+  TopServicesChart
 };

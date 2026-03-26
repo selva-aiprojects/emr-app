@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { api } from './api.js';
 import { fallbackPermissions } from './config/modules.js';
 import AppLayout from './components/AppLayout.jsx';
+import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import Chatbot from './components/Chatbot.jsx';
 const SuperadminPage = lazy(() => import('./pages/SuperadminPage.jsx'));
@@ -392,8 +393,9 @@ export default function App() {
         onLogout={logout}
         error={error}
       >
-        <Suspense fallback={suspenseFallback}>
-          {view === 'superadmin' && (
+        <ErrorBoundary>
+          <Suspense fallback={suspenseFallback}>
+            {view === 'superadmin' && (
             <SuperadminPage
               superOverview={superOverview}
               tenants={tenants}
@@ -427,7 +429,18 @@ export default function App() {
             />
           )}
 
-        {view === 'dashboard' && <DashboardPage metrics={metrics} activeUser={activeUser} setView={setView} tenant={session?.tenantId ? { id: session.tenantId, ...tenant } : null} view={view} />}
+          {view === 'dashboard' && (
+            <DashboardPage 
+              metrics={metrics} 
+              activeUser={activeUser} 
+              setView={setView} 
+              tenant={session?.tenantId ? { id: session.tenantId, ...tenant } : null} 
+              view={view}
+              appointments={appointments}
+              patients={patients}
+              setActivePatientId={setActivePatientId}
+            />
+          )}
 
         {view === 'patients' && (
           <PatientsPage
@@ -794,6 +807,7 @@ export default function App() {
           />
         )}
         </Suspense>
+        </ErrorBoundary>
       </AppLayout>
 
       <Chatbot context={{

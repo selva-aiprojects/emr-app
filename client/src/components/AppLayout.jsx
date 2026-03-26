@@ -56,13 +56,13 @@ const navIcons = {
 
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
 const SIDEBAR_GROUPS_DEFAULT = [
-  { name: "Overview",           modules: ["dashboard", "reports"] },
-  { name: "Patient Management", modules: ["patients", "appointments"] },
-  { name: "Clinical Hub",       modules: ["emr", "lab", "inpatient"] },
-  { name: "Pharmacy & Medicine",modules: ["pharmacy", "inventory"] },
-  { name: "Financial Desk",     modules: ["billing", "insurance", "accounts"] },
-  { name: "Administration",     modules: ["employees", "users", "admin"] },
-  { name: "Communication",      modules: ["communication", "documents", "ticketing"] },
+  { name: "Hospital Monitoring",  modules: ["dashboard", "reports"] },
+  { name: "Front Office Desk",    modules: ["patients", "appointments"] },
+  { name: "Clinical Excellence",  modules: ["emr", "lab", "inpatient"] },
+  { name: "Pharmacy & Stores",    modules: ["pharmacy", "inventory"] },
+  { name: "Revenue Cycle",        modules: ["billing", "insurance", "accounts"] },
+  { name: "HR & Admin Control",   modules: ["employees", "users", "admin"] },
+  { name: "Notice & Helpdesk",    modules: ["communication", "documents", "ticketing"] },
 ];
 
 const SIDEBAR_GROUPS_DOCTOR = [
@@ -371,7 +371,21 @@ export default function AppLayout({
               />
             </div>
             <NotificationSystem />
-            <ActionMenu activeUser={activeUser} />
+            <ActionMenu 
+              trigger={
+                <div className="flex items-center gap-2 hover:bg-slate-50 p-1.5 rounded-xl cursor-pointer transition-colors">
+                  <div className="w-8 h-8 rounded-[10px] bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px] border border-indigo-100 uppercase shadow-sm">
+                    {(activeUser?.name || "A").charAt(0)}
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+              }
+              actions={[
+                { label: 'My Clinical Profile', onClick: () => setView('doctor_workspace') },
+                { label: 'System Preferences', onClick: () => setView('admin') },
+                { label: 'Sign Out Session', onClick: onLogout }
+              ]} 
+            />
           </div>
         </header>
 

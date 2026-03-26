@@ -53,9 +53,9 @@ export default function LabPage({ tenant, activeUser }) {
         <div>
            <h1 className="flex items-center gap-3">
               Laboratory & Diagnostic Hub
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Clinical Node</span>
+              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Laboratory Network</span>
            </h1>
-           <p className="dim-label">Institutional pathology streams, diagnostic result ledgers, and automated findings for {tenant?.name || 'Authorized Facility'}.</p>
+           <p className="dim-label">Manage lab test orders, view test results, and generate diagnostic reports for {tenant?.name || 'Authorized Facility'}.</p>
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
               <ShieldAlert className="w-3 h-3 text-indigo-500" /> Lab Integrity Verified • Diagnostic feeds operational
            </p>
@@ -110,7 +110,7 @@ export default function LabPage({ tenant, activeUser }) {
            <article className="clinical-card !p-0 overflow-hidden">
              <div className="p-6 border-b border-slate-50 flex items-center justify-between">
                 <div>
-                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Diagnostic Stream</h3>
+                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Lab Orders Queue</h3>
                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase">Real-time pathology ledger</p>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300">
@@ -122,11 +122,11 @@ export default function LabPage({ tenant, activeUser }) {
                <table className="premium-table">
                  <thead>
                     <tr>
-                       <th className="tracking-widest">Patient Identity</th>
+                       <th className="tracking-widest">Patient Name</th>
                        <th className="tracking-widest">Diagnostic Test</th>
                        <th className="tracking-widest">Target Dept</th>
                        <th className="tracking-widest">Status / Outcome</th>
-                       <th style={{ textAlign: 'right' }} className="tracking-widest">Governance</th>
+                       <th style={{ textAlign: 'right' }} className="tracking-widest">Actions</th>
                     </tr>
                  </thead>
                  <tbody className="divide-y divide-slate-50">
@@ -136,8 +136,8 @@ export default function LabPage({ tenant, activeUser }) {
                       <tr>
                         <td colSpan="5">
                           <EmptyState 
-                            title="No pathological shards identified" 
-                            subtitle="The diagnostic intelligence node has found no active identity shards in the current pathological residency."
+                            title="No laboratory tests found" 
+                            subtitle="No test orders match your current criteria."
                             icon={FlaskConical}
                           />
                         </td>
@@ -209,13 +209,13 @@ export default function LabPage({ tenant, activeUser }) {
                  <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
                     <ShieldAlert className="w-5 h-5" />
                  </div>
-                 <h3 className="text-sm font-black text-rose-900 uppercase tracking-widest">Urgency Governance</h3>
+                 <h3 className="text-sm font-black text-rose-900 uppercase tracking-widest">Critical Priority Guidelines</h3>
               </div>
               <p className="text-[11px] font-medium text-rose-800/70 leading-relaxed mb-6">
-                 Adverse pathological findings are automatically prioritized in the clinical stream. Ensure second-tier verification for all critical outcomes before finalizing the diagnostic node.
+                 Abnormal lab findings are automatically prioritized. Ensure secondary checking for all critical values before finalizing the lab report.
               </p>
                <div className="p-4 bg-white border border-rose-100 rounded-2xl">
-                  <div className="stat-label mb-2">Active Critical Nodes</div>
+                  <div className="stat-label mb-2">Active Critical Tests</div>
                   <div className="stat-value text-rose-700 tabular-nums">{stats.critical} Unresolved</div>
                </div>
            </article>

@@ -1,5 +1,6 @@
 import { verifyToken } from '../services/auth.service.js';
 import { query } from '../db/connection.js';
+import { tenantContext } from '../lib/tenantContext.js';
 
 /**
  * Middleware to authenticate requests using JWT
@@ -107,7 +108,13 @@ export function requireRole(...roles) {
       });
     }
 
-    next();
+    if (req.user.role === 'Superadmin') {
+      tenantContext.run('SUPERADMIN_BYPASS', () => {
+        next();
+      });
+    } else {
+      next();
+    }
   };
 }
 
@@ -150,7 +157,11 @@ export function requireTenant(req, res, next) {
   }
 
   req.tenantId = tenantId;
-  next();
+  
+  // Wrap next() in AsyncLocalStorage context for RLS support
+  tenantContext.run(tenantId, () => {
+    next();
+  });
 }
 
 /**
@@ -182,7 +193,7 @@ const PERMISSIONS = {
  * @param {string} permission - Required permission
  */
 export function requirePermission(permission) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
         error: 'Not authenticated',
@@ -190,7 +201,27 @@ export function requirePermission(permission) {
       });
     }
 
-    const userPermissions = PERMISSIONS[req.user.role] || [];
+    let userPermissions = PERMISSIONS[req.user.role] || []; // Fallback defaults
+
+    try {
+      // Check database for dynamic Role permissions if tenant context is available
+      if (req.user.tenantId && req.user.role !== 'Superadmin') {
+         const roleResult = await query(
+           `SELECT rp.permission 
+            FROM emr.role_permissions rp
+            JOIN emr.roles r ON rp.role_id = r.id
+            WHERE r.name = $1 AND (r.tenant_id = $2 OR r.is_system = true)`, 
+           [req.user.role, req.user.tenantId]
+         );
+         
+         // If dynamic roles are defined in DB for this tenant/role, they override static defaults
+         if (roleResult.rows.length > 0) {
+            userPermissions = roleResult.rows.map(r => r.permission);
+         }
+      }
+    } catch(err) {
+      console.error('Error fetching dynamic permissions, falling back to static:', err.message);
+    }
 
     if (!userPermissions.includes(permission)) {
       return res.status(403).json({

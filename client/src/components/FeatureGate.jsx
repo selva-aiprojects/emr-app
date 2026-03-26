@@ -88,7 +88,7 @@ export function FeatureLink({
 
   if (loading) {
     return (
-      <a href={href} onClick={onClick} className={`${className} loading-feature-link`}>
+      <a href={href || "#"} onClick={(e) => { if (!href || href === "#") e.preventDefault(); onClick?.(e); }} className={`${className} loading-feature-link`}>
         {children}
       </a>
     );
@@ -109,7 +109,7 @@ export function FeatureLink({
   }
 
   return (
-    <a href={href} onClick={onClick} className={className}>
+    <a href={href || "#"} onClick={(e) => { if (!href || href === "#") e.preventDefault(); onClick?.(e); }} className={className}>
       {children}
     </a>
   );

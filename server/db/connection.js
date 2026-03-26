@@ -1,6 +1,7 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 import dotenv from 'dotenv';
+import { tenantContext } from '../lib/tenantContext.js';
 
 dotenv.config();
 
@@ -28,7 +29,14 @@ pool.on('error', (err) => {
 export async function query(text, params) {
   const start = Date.now();
   const client = await pool.connect();
+  const tenantId = tenantContext ? tenantContext.getStore() : null;
+
   try {
+    if (tenantId === 'SUPERADMIN_BYPASS') {
+      await client.query(`SELECT set_config('app.bypass_rls', 'true', false)`);
+    } else if (tenantId) {
+      await client.query(`SELECT set_config('app.current_tenant', $1, false)`, [tenantId]);
+    }
     const res = await client.query(text, params);
     const duration = Date.now() - start;
     if (process.env.NODE_ENV === 'development') {
@@ -39,6 +47,12 @@ export async function query(text, params) {
     console.error('Database query error:', error);
     throw error;
   } finally {
+    if (tenantId === 'SUPERADMIN_BYPASS') {
+      await client.query(`SELECT set_config('app.bypass_rls', '', false)`);
+    } else if (tenantId) {
+      // Clear the session variable before returning to pool
+      await client.query(`SELECT set_config('app.current_tenant', '', false)`);
+    }
     client.release(); // Always release the connection back to the pool
   }
 }

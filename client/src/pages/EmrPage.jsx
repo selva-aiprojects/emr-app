@@ -55,7 +55,7 @@ function printPrescription(enc, patient, medications, provider, tenant) {
       <div class="header">
         <div class="clinic-info">
           <h1>${tenant?.name || 'EMR Medical Center'}</h1>
-          <p>Institutional Clinical Registry • Licensed Node</p>
+          <p>Hospital Clinical Registry • Active Directory</p>
           <p>Global ID: ${(tenant?.id || 'SYS').slice(0, 8).toUpperCase()}</p>
         </div>
         <div style="text-align: right">
@@ -76,7 +76,7 @@ function printPrescription(enc, patient, medications, provider, tenant) {
       <table>
         <thead>
           <tr>
-            <th>Medication Node</th>
+            <th>Medication Name</th>
             <th>Dosage Regime</th>
             <th>Cycle</th>
           </tr>
@@ -161,7 +161,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
       setAiSummary(summary);
     } catch (err) {
       console.error('AI Summary Error:', err);
-      setAiSummary('Failed to generate clinical overview. Gemini Node failed to respond.');
+      setAiSummary('Failed to generate clinical overview. AI Assistant failed to respond.');
     } finally {
       setIsGeneratingAI(false);
     }
@@ -212,7 +212,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
         <div>
            <h1 className="flex items-center gap-3">
               EMR Clinical Workspace
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Clinical Node</span>
+              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Consultation Desk</span>
            </h1>
            <p className="dim-label">Longitudinal health recording, clinical assessments, and electronic prescription authorizing for {tenant?.name || 'Authorized Facility'}.</p>
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
@@ -317,7 +317,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
              <Plus className="w-4 h-4" /> New Assessment
           </button>
           <button className="premium-tab-item !text-rose-600 bg-rose-50/50 hover:bg-rose-100/50 border-rose-100" onClick={() => { setActiveTab('new'); setTimeout(() => { const sel = document.querySelector('select[name="type"]'); if(sel) { sel.value = "Emergency"; sel.scrollIntoView(); } }, 100); }}>
-             <AlertCircle className="w-4 h-4" /> Emergency Shard
+             <AlertCircle className="w-4 h-4" /> Emergency Visit
           </button>
         </div>
       </div>
@@ -369,7 +369,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                             ) : (
                               <Sparkles className="w-3.5 h-3.5" />
                             )}
-                            {isGeneratingAI ? 'Processing Node...' : 'Generate AI Overview'}
+                            {isGeneratingAI ? 'Processing...' : 'Generate AI Overview'}
                           </button>
                         ) : (
                           <div className="p-4 bg-indigo-600/10 rounded-2xl border border-indigo-500/20 animate-fade-in">
@@ -384,7 +384,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                               onClick={() => setAiSummary(null)}
                               className="mt-3 text-[8px] font-black uppercase text-indigo-400/60 hover:text-indigo-400 tracking-widest"
                             >
-                              Reset AI Node
+                              Reset AI Session
                             </button>
                           </div>
                         )}
@@ -413,7 +413,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
               <form className="clinical-card space-y-8 animate-fade-in" onSubmit={handleEncounterSubmit}>
                 <header className="flex justify-between items-start border-b border-slate-50 pb-8">
                   <div>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Clinical Assessment Node</h3>
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight uppercase">Clinical Assessment</h3>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Authorized intervention • Institutional Persistence</p>
                   </div>
                   <div className="flex gap-4">
@@ -436,7 +436,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Encounter Shard</label>
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Visit Type</label>
                     <select name="type" className="input-field h-[60px] bg-slate-50 border-none font-bold text-slate-800 rounded-xl">
                       <option>Out-patient</option>
                       <option>In-patient</option>
@@ -459,7 +459,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                 {canPrescribe ? (
                 <div className="space-y-6">
                   <div className="flex items-center justify-between">
-                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Therapeutic Prescribing Node</h4>
+                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Medical Prescription</h4>
                      <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100 uppercase tracking-tighter">✓ Safety Engine Active</span>
                   </div>
                   <div className="p-2 bg-slate-50 rounded-2xl border border-slate-100">
@@ -511,10 +511,10 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                 <table className="premium-table">
                   <thead>
                     <tr>
-                      <th className="tracking-[0.2em]">Temporal Node</th>
-                      <th className="tracking-[0.2em]">Subject Identity</th>
+                      <th className="tracking-[0.2em]">Date & Time</th>
+                      <th className="tracking-[0.2em]">Patient Details</th>
                       <th className="tracking-[0.2em]">Clinical Department</th>
-                      <th className="tracking-[0.2em]">Diagnosis & Narrative Shard</th>
+                      <th className="tracking-[0.2em]">Diagnosis & Notes</th>
                       <th style={{ textAlign: 'right' }} className="tracking-[0.2em]">Case Extract</th>
                     </tr>
                   </thead>
@@ -522,7 +522,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                     {(activeTab === 'active' ? activeEncounters : pastEncounters).length === 0 ? (
                       <tr><td colSpan="5" className="text-center py-32">
                          <FileText className="w-12 h-12 text-slate-100 mx-auto mb-4" />
-                         <p className="text-xs font-black text-slate-300 uppercase tracking-[0.2em]">No clinical event logs detected in the persistence node.</p>
+                         <p className="text-xs font-black text-slate-300 uppercase tracking-[0.2em]">No clinical event logs detected in the patient history.</p>
                       </td></tr>
                     ) : (activeTab === 'active' ? activeEncounters : pastEncounters).map((e, idx) => {
                       const pat = patients.find(p => p.id === (e.patient_id || e.patientId));
@@ -539,7 +539,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                                   <div className="font-black text-slate-900 cursor-pointer hover:text-emerald-600 transition-colors" onClick={() => { setSelectedPatientId(e.patient_id || e.patientId); setActiveTab('new'); }}>
                                     {pat ? `${pat.firstName} ${pat.lastName}` : (e.patientName || 'Unknown Identity')}
                                   </div>
-                                  <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">MRN-${pat?.mrn || 'NEW_NODE'}</div>
+                                  <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5">MRN-{pat?.mrn || 'NEW_PATIENT'}</div>
                                </div>
                             </div>
                           </td>
@@ -572,7 +572,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                                       <div>
                                         <div class="label">Institutional Clinical Record</div>
                                         <h1 style="margin:0; font-size: 32px; font-weight: 900; letter-spacing: -0.04em;">${pat?.firstName} ${pat?.lastName}</h1>
-                                        <div class="value" style="color:#64748b;">MRN-${pat?.mrn} • ${e.type} Node</div>
+                                        <div class="value" style="color:#64748b;">MRN-${pat?.mrn} • ${e.type} Visit</div>
                                       </div>
                                       <div style="text-align:right">
                                         <div class="label">Authorization Date</div>
@@ -586,7 +586,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                                         <div class="value" style="font-size: 20px; line-height: 1.4;">${e.diagnosis}</div>
                                       </div>
                                       <div>
-                                        <div class="label">Clinical Vitals Node</div>
+                                        <div class="label">Clinical Vitals</div>
                                         <div style="display:flex; gap: 20px;">
                                           <div style="padding:15px; background:#f1f5f9; border-radius:16px; flex:1;">
                                             <div class="label" style="font-size:8px;">BP mmHg</div>
@@ -601,8 +601,8 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                                     </div>
 
                                     <div style="margin-bottom: 50px;">
-                                      <div class="label">Physician Narrative Shard</div>
-                                      <div class="value" style="font-weight: 500; line-height: 1.8; color: #475569; background: #fdfdfd; padding: 25px; border-radius: 20px; border: 1px solid #f1f5f9;">${e.notes || 'No institutional narrative available for this shard.'}</div>
+                                      <div class="label">Physician Notes</div>
+                                      <div class="value" style="font-weight: 500; line-height: 1.8; color: #475569; background: #fdfdfd; padding: 25px; border-radius: 20px; border: 1px solid #f1f5f9;">${e.notes || 'No institutional narrative available for this visit.'}</div>
                                     </div>
 
                                     <div style="text-align:center; padding-top: 40px; border-top: 1px dashed #e2e8f0; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;">

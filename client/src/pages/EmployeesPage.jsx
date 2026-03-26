@@ -109,7 +109,7 @@ export default function EmployeesPage({ tenant }) {
             <table className="premium-table">
               <thead>
                 <tr>
-                  <th className="tracking-widest">Identity Node</th>
+                  <th className="tracking-widest">Employee Name</th>
                   <th className="tracking-widest">Institutional Role</th>
                   <th className="tracking-widest">Deployment Status</th>
                   <th className="tracking-widest">Activity Pulse</th>

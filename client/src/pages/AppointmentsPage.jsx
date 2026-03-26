@@ -35,18 +35,18 @@ export default function AppointmentsPage({
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
            <h1 className="flex items-center gap-3">
-              {isDoctor ? 'My Appointment Schedule' : 'Scheduling & Resource Node'}
+              {isDoctor ? 'My Appointment Schedule' : 'Appointments & Scheduling'}
               <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">
-                {isDoctor ? 'Doctor View' : 'Clinical Flow'}
+                {isDoctor ? 'Doctor View' : 'Reception Desk'}
               </span>
            </h1>
            <p className="dim-label">
              {isDoctor
                ? 'Your scheduled consultations and patient encounters.'
-               : `Organizational co-ordination and longitudinal event scheduling for ${session?.tenantName || 'Authorized Facility'}.`}
+               : `Manage hospital appointments and walk-in patient flow for ${session?.tenantName || 'Authorized Facility'}.`}
            </p>
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-blue-500" /> Operational Readiness • Clinical Flow active
+              <ShieldCheck className="w-3 h-3 text-blue-500" /> System Online • Reception Active
            </p>
         </div>
         <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">
@@ -54,7 +54,7 @@ export default function AppointmentsPage({
             className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'appointments' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
             onClick={() => setActiveTab('appointments')}
           >
-            <Calendar className="w-3.5 h-3.5 mr-2" /> {isDoctor ? 'Book Slot' : 'Clinical Schedule'}
+            <Calendar className="w-3.5 h-3.5 mr-2" /> {isDoctor ? 'Book Slot' : 'Appointments'}
           </button>
           {!isPatient && !isDoctor && (
             <button 
@@ -86,16 +86,16 @@ export default function AppointmentsPage({
                   <div className="space-y-8">
                     {!isPatient && (
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Step 01 / Identity Verification</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Step 1 / Patient Selection</label>
                         <div className="p-1 bg-slate-50 border border-slate-100 rounded-2xl">
                            <PatientSearch tenantId={session?.tenantId} />
                         </div>
                       </div>
                     )}
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Step 02 / Clinical Specialist</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Step 2 / Select Doctor</label>
                       <select name="providerId" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800" required>
-                        <option value="">Select Authorized Practitioner...</option>
+                        <option value="">Select Doctor...</option>
                         {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                     </div>
@@ -104,24 +104,24 @@ export default function AppointmentsPage({
                   <div className="space-y-8">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Commencement</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Start Time</label>
                         <input name="start" type="datetime-local" className="input-field py-4 bg-slate-50 border-none rounded-2xl font-black tabular-nums" required />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Conclusion</label>
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">End Time</label>
                         <input name="end" type="datetime-local" className="input-field py-4 bg-slate-50 border-none rounded-2xl font-black tabular-nums" required />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Encounter Objective</label>
-                      <input name="reason" className="input-field py-5 bg-slate-50 border-none rounded-2xl" placeholder="Immediate clinical requirement narrative..." required />
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Reason for Visit</label>
+                      <input name="reason" className="input-field py-5 bg-slate-50 border-none rounded-2xl" placeholder="Reason for consultation..." required />
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-10 border-t border-slate-50">
                   <button type="submit" className="clinical-btn bg-slate-900 text-white w-full py-6 text-xs shadow-2xl hover:bg-slate-800 transition-all rounded-2xl font-black tracking-[0.2em]">
-                    {isPatient ? 'SUBMIT SLOT RESERVATION' : 'AUTHORIZE ENCOUNTER ENTRY'}
+                    {isPatient ? 'TEST BOOK' : 'BOOK APPOINTMENT'}
                   </button>
                 </div>
               </form>
@@ -129,30 +129,30 @@ export default function AppointmentsPage({
           ) : (
             <article className="clinical-card">
               <header className="mb-10 text-center lg:text-left">
-                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest text-lg">Direct Reception Entry</h3>
-                 <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Unscheduled Queue Shard Placement</p>
+                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest text-lg">Walk-in Registration</h3>
+                 <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Add Patient to Waiting list</p>
               </header>
 
               <form className="space-y-10" onSubmit={onCreateWalkin}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <div className="space-y-8">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Legal Identity</label>
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Patient Name</label>
                       <input name="name" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="Full Patient Name" required />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Secure Contact</label>
-                      <input name="phone" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="Emergency Mobile Node" required />
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Mobile Number</label>
+                      <input name="phone" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="Phone Number" required />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Clinical Reasoning</label>
-                    <textarea name="reason" className="input-field h-[148px] py-5 bg-slate-50 border-none rounded-2xl resize-none font-medium" placeholder="Immediate requirement narrative..." required />
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Reason for Visit</label>
+                    <textarea name="reason" className="input-field h-[148px] py-5 bg-slate-50 border-none rounded-2xl resize-none font-medium" placeholder="Symptoms or reason..." required />
                   </div>
                 </div>
                 <div className="pt-10 border-t border-slate-50">
                   <button type="submit" className="clinical-btn bg-emerald-600 text-white px-12 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all border-none">
-                     Initialize Queue Status Node
+                     Add to Queue
                   </button>
                 </div>
               </form>
@@ -177,7 +177,7 @@ export default function AppointmentsPage({
               {appointments.length === 0 ? (
                 <div className="p-16 text-center">
                    <Clock className="w-10 h-10 text-slate-100 mx-auto mb-4" />
-                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Registry cleared.</p>
+                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">No appointments scheduled.</p>
                 </div>
               ) : (
                 appointments.sort((a, b) => new Date(a.start) - new Date(b.start)).map((a, idx) => (
@@ -226,8 +226,8 @@ export default function AppointmentsPage({
             <section className="clinical-card !p-0 overflow-hidden border-l-4 border-l-amber-500">
               <header className="p-6 border-b border-slate-50 flex items-center justify-between">
                  <div>
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Reception Shard</h3>
-                    <p className="text-sm font-black text-slate-900 mt-1 tabular-nums">{walkins.length} Active in Queue</p>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Walk-in Queue</h3>
+                    <p className="text-sm font-black text-slate-900 mt-1 tabular-nums">{walkins.length} Waiting Patients</p>
                  </div>
                  <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
                     <UserPlus className="w-4 h-4" />
@@ -237,7 +237,7 @@ export default function AppointmentsPage({
                 {walkins.length === 0 ? (
                   <div className="p-12 text-center">
                      <Users className="w-8 h-8 text-slate-100 mx-auto mb-4 opacity-30" />
-                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Queue cleared.</p>
+                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">No patients waiting.</p>
                   </div>
                 ) : (
                   walkins.map((w, idx) => (
