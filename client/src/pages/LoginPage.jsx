@@ -72,19 +72,28 @@ export default function LoginPage({ onLogin, tenants }) {
       <div className="login-compact-card">
         {/* Static Visual Side */}
         <div className="login-compact-visual hidden md:flex">
-          <div className="mb-8 p-6 bg-white/10 rounded-[2rem] backdrop-blur-md shadow-2xl border border-white/20">
-            <img src="/medflow_logo_8k.svg" alt={BRAND.name} className="h-10 w-auto brightness-0 invert" />
+          {/* Logo at the top as requested */}
+          <div className="absolute top-12 left-12">
+            <img src="/medflow-icon.svg" alt={BRAND.name} className="h-20 w-20 drop-shadow-2xl" />
           </div>
-          <p className="text-sm font-medium text-sky-100 max-w-[280px] leading-relaxed mt-4">
-            Clinical Institutional Excellence & Professional Healthcare Management
-          </p>
+
+          <div className="flex flex-col items-center justify-center text-center px-12">
+            <div className="mb-6 p-5 bg-white/5 rounded-[2.5rem] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/10">
+               <div className="text-5xl font-[1000] tracking-tighter text-white/95 italic drop-shadow-lg">MedFlow</div>
+            </div>
+            <div className="h-1 w-12 bg-sky-500/50 rounded-full mb-6"></div>
+            <p className="text-[11px] font-black text-sky-200/60 max-w-[300px] leading-relaxed uppercase tracking-[0.3em]">
+              Precision Clinical Management & Institutional Excellence
+            </p>
+          </div>
         </div>
 
         {/* Form Side */}
         <div className="login-form-side">
           <div className="mb-10">
-            <div className="md:hidden flex justify-center mb-8">
-              <img src="/medflow_logo_8k.svg" alt={BRAND.name} className="h-10 w-auto" />
+            <div className="md:hidden flex flex-col items-center mb-8">
+              <img src="/medflow-icon.svg" alt={BRAND.name} className="h-16 w-16 mb-2" />
+               <span className="text-xl font-black text-slate-800 italic">MedFlow</span>
             </div>
 
             <h2 className="text-3xl font-black text-slate-800 tracking-tight mb-2">Workspace Entry</h2>

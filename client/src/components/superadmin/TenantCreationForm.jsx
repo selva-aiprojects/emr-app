@@ -12,6 +12,7 @@ const INITIAL = {
   name: '',
   code: '',
   subdomain: '',
+  contactEmail: '',
   subscriptionTier: 'Professional',
   primaryColor: '#0f5a6e',
   accentColor: '#f57f17',
@@ -52,6 +53,7 @@ export default function TenantCreationForm({ onCreate }) {
         name:             form.name.trim(),
         code:             form.code.trim().toUpperCase(),
         subdomain:        form.subdomain.trim().toLowerCase(),
+        contactEmail:     form.contactEmail.trim().toLowerCase(),
         subscriptionTier: form.subscriptionTier,
         primaryColor:     form.primaryColor,
         accentColor:      form.accentColor,
@@ -97,6 +99,30 @@ export default function TenantCreationForm({ onCreate }) {
             required
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white text-slate-800 placeholder-slate-400"
           />
+        </div>
+
+        {/* Contact Email */}
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
+           <label className="block text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2 leading-none">
+             Primary Admin Contact Unit
+           </label>
+           <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                 <Building2 className="w-4 h-4" />
+              </div>
+              <input
+                type="email"
+                name="contactEmail"
+                value={form.contactEmail}
+                onChange={handleChange}
+                placeholder="Institutional Admin Email"
+                required
+                className="flex-1 bg-transparent text-sm font-bold text-slate-800 focus:outline-none placeholder:text-slate-300"
+              />
+           </div>
+           <p className="text-[9px] font-bold text-slate-400 mt-2 italic uppercase tracking-widest">
+             * Credentials and node access keys strictly dispatched here.
+           </p>
         </div>
 
         {/* Code + Subdomain row */}
@@ -228,7 +254,7 @@ export default function TenantCreationForm({ onCreate }) {
         {/* Submit */}
         <button
           type="submit"
-          disabled={loading || !form.name || !form.code || !form.subdomain}
+          disabled={loading || !form.name || !form.code || !form.subdomain || !form.contactEmail}
           className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 text-white text-sm font-black uppercase tracking-widest hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
         >
           {loading ? (

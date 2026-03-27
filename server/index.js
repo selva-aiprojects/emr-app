@@ -14,6 +14,7 @@ import * as repo from './db/repository.js';
 import { createAuditLog } from './db/repository.js';
 import pharmacyRoutes from '../pharmacy-service/src/routes/pharmacy.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import { sendTenantWelcomeEmail } from './services/mail.service.js';
 
 
 const app = express();
@@ -265,10 +266,10 @@ app.use('/api/ai/v1', requireTenant, aiRoutes);
 
 app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
   try {
-    const { name, code, subdomain, primaryColor, accentColor, subscriptionTier } = req.body;
+    const { name, code, subdomain, contactEmail, primaryColor, accentColor, subscriptionTier } = req.body;
 
-    if (!name || !code || !subdomain) {
-      return res.status(400).json({ error: 'name, code, and subdomain are required' });
+    if (!name || !code || !subdomain || !contactEmail) {
+      return res.status(400).json({ error: 'name, code, subdomain, and contactEmail are required' });
     }
 
     const theme = {
@@ -276,14 +277,34 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
       accent: accentColor || '#f57f17',
     };
 
-    // Create the tenant record
-    const tenant = await repo.createTenant({ name, code, subdomain, theme });
+    // 1. Create the tenant record
+    const tenant = await repo.createTenant({ name, code, subdomain, contactEmail, theme });
 
-    // Apply subscription tier if provided (defaults to Basic in DB if not set)
+    // 2. Apply subscription tier if provided (defaults to Basic in DB if not set)
     if (subscriptionTier && ['Free', 'Basic', 'Professional', 'Enterprise'].includes(subscriptionTier)) {
       await repo.setTenantTier(tenant.id, subscriptionTier);
       tenant.subscription_tier = subscriptionTier;
     }
+
+    // 3. Create Default Administrator User for the new tenant
+    const defaultPassword = `${code.toLowerCase()}@${Math.floor(1000 + Math.random() * 9000)}`;
+    const passwordHash = await hashPassword(defaultPassword);
+    
+    const adminUser = await repo.createUser({
+      tenantId: tenant.id,
+      email: contactEmail,
+      passwordHash,
+      name: `${name} Administrator`,
+      role: 'Admin',
+    });
+
+    // 4. Dispatch Activation Email
+    const mailResult = await sendTenantWelcomeEmail(
+      contactEmail,
+      name,
+      subdomain,
+      { email: contactEmail, password: defaultPassword }
+    );
 
     await repo.createAuditLog({
       tenantId: tenant.id,
@@ -292,15 +313,23 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
       action: 'tenant.create',
       entityName: 'tenant',
       entityId: tenant.id,
-      details: { code, subscriptionTier: subscriptionTier || 'Basic' },
+      details: { 
+        code, 
+        subscriptionTier: subscriptionTier || 'Basic',
+        adminProvisioned: !!adminUser,
+        emailStatus: mailResult.success ? 'sent' : 'failed'
+      },
     });
 
-    res.status(201).json(tenant);
+    res.status(201).json({
+      ...tenant,
+      adminProvisioned: true,
+      emailSent: mailResult.success
+    });
   } catch (error) {
     console.error('Error creating tenant:', error);
-    // Postgres unique constraint violation
     if (error.constraint || error.code === '23505') {
-      return res.status(409).json({ error: 'Tenant code or subdomain already exists. Please choose a different one.' });
+      return res.status(409).json({ error: 'Tenant code or subdomain already exists.' });
     }
     res.status(500).json({ error: 'Failed to create tenant: ' + error.message });
   }

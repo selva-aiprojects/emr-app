@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserCircle } from 'lucide-react';
+import { UserCircle, Zap } from 'lucide-react';
 import { api } from '../api.js';
 import DashboardMetrics from '../components/superadmin/DashboardMetrics.jsx';
 import TenantList from '../components/superadmin/TenantList.jsx';
@@ -30,6 +30,32 @@ function SuperadminPage({ viewMode = 'superadmin', superOverview: propOverview, 
           <div className="lg:col-span-2">
             <TenantList tenants={tenants} onSelect={setSelectedTenant} />
             <IssuesTable issues={issues} />
+
+            {/* NEW: Global Campaign Governance */}
+            <section className="clinical-card mt-8 p-6 bg-slate-900 text-white overflow-hidden relative group">
+               <div className="flex items-center justify-between relative z-10">
+                  <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 rounded-[1.5rem] bg-amber-500/20 text-amber-500 flex items-center justify-center border border-amber-500/20">
+                        <Zap className="w-6 h-6 animate-pulse" />
+                     </div>
+                     <div>
+                        <h3 className="text-sm font-[1000] uppercase tracking-[0.2em] italic">Campaign Governance</h3>
+                        <p className="text-[10px] font-bold text-white/50 uppercase tracking-widest mt-0.5">Manage institutional pricing offers & announcements</p>
+                     </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                     <div className="text-right mr-4">
+                        <div className="text-[9px] font-black uppercase text-white/40 tracking-widest">Active Campaign</div>
+                        <div className="text-xs font-black text-amber-500">PRO-SCALING-26</div>
+                     </div>
+                     <button className="px-5 py-2.5 rounded-xl bg-amber-500 text-slate-900 text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all shadow-xl shadow-amber-500/20 active:scale-95">
+                        New Campaign
+                     </button>
+                  </div>
+               </div>
+               {/* Pattern overlay */}
+               <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 blur-[100px] pointer-events-none group-hover:bg-amber-500/10 transition-all"></div>
+            </section>
           </div>
           <div className="lg:col-span-1 space-y-8">
             <InfraUsage {...infra} />

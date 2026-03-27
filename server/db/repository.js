@@ -229,7 +229,7 @@ export async function generateInvoiceNumber(tenantId) {
 
 export async function getTenants() {
   const result = await query(`
-    SELECT t.id, t.name, t.code, t.subdomain, t.theme, t.features, t.billing_config, t.status, t.created_at, t.updated_at, t.subscription_tier, t.logo_url,
+    SELECT t.id, t.name, t.code, t.subdomain, t.theme, t.features, t.billing_config, t.status, t.created_at, t.updated_at, t.subscription_tier, t.logo_url, t.contact_email,
            (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = t.id) as patient_count
     FROM emr.tenants t 
     ORDER BY t.name
@@ -247,10 +247,10 @@ export async function getTenantByCode(code) {
   return result.rows[0];
 }
 
-export async function createTenant({ name, code, subdomain, theme, features }) {
+export async function createTenant({ name, code, subdomain, contactEmail, theme, features }) {
   const sql = `
-    INSERT INTO emr.tenants (name, code, subdomain, theme, features, status)
-    VALUES ($1, $2, $3, $4, $5, 'active')
+    INSERT INTO emr.tenants (name, code, subdomain, contact_email, theme, features, status)
+    VALUES ($1, $2, $3, $4, $5, $6, 'active')
     RETURNING *
   `;
 
@@ -258,6 +258,7 @@ export async function createTenant({ name, code, subdomain, theme, features }) {
     name,
     code,
     subdomain,
+    contactEmail || null,
     JSON.stringify(theme || { primary: '#0f5a6e', accent: '#f57f17' }),
     JSON.stringify(features || { inventory: true, telehealth: false }),
   ]);

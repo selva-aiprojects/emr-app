@@ -214,21 +214,40 @@ Requested → Scheduled → Checked In → In Progress → Completed
 | Executive Narrative Cards | — | — | — | ✅ |
 | Provider Performance | — | — | — | ✅ |
 | Superadmin Cross-Tenant Metrics | — | — | — | ✅ |
+| AI Clinical Insights (Gemini) | — | — | — | ✅ |
+| Predictive Analytics (Trend) | — | — | — | ✅ |
 
 ---
 
-### 2.9 🎧 Platform Administration & Support
+### 2.9 🚑 Specialized Logistics & Collaboration
+
+| Feature | ⚪ Free | 🟢 Basic | 🔵 Professional | 🟣 Enterprise |
+|---|:---:|:---:|:---:|:---:|
+| Ambulance Queue Management | — | ✅ | ✅ | ✅ |
+| Fleet Availability Tracking | — | ✅ | ✅ | ✅ |
+| Emergency Dispatch Signal | — | ✅ | ✅ | ✅ |
+| Staff Collaborative Hub | — | — | — | ✅ |
+| Real-time Departmental Chat | — | — | — | ✅ |
+| Task Assignment & Tracking | — | — | — | ✅ |
+| Knowledge Sharing (Protocols) | — | — | — | ✅ |
+| Geminai Staff Assistant (Chatbot)| — | — | — | ✅ |
+
+---
+
+### 2.10 🎧 Platform Administration & Support
 
 | Feature | ⚪ Free | 🟢 Basic | 🔵 Professional | 🟣 Enterprise |
 |---|:---:|:---:|:---:|:---:|
 | Tenant Admin: User Management | ✅ | ✅ | ✅ | ✅ |
 | Tenant Admin: Settings | ✅ | ✅ | ✅ | ✅ |
-| Custom Branding | ✅ | ✅ | ✅ | ✅ |
+| Custom Branding & Logos | ✅ | ✅ | ✅ | ✅ |
 | Help Desk Module | — | ✅ | ✅ | ✅ |
 | Support Ticket Tracking | — | ✅ | ✅ | ✅ |
 | Superadmin Ticket Resolution | — | ✅ | ✅ | ✅ |
 | Superadmin: Provisioning | ✅ | ✅ | ✅ | ✅ |
 | Superadmin: Tier Management | ✅ | ✅ | ✅ | ✅ |
+| Institutional Offer Announcements | — | — | — | ✅ |
+| Campaign Governance | — | — | — | ✅ |
 | Superadmin: Flag Override | — | — | — | ✅ |
 | API Access (Read-Write) | — | — | — | ✅ |
 | Custom Workflows | — | — | — | ✅ |
@@ -352,7 +371,9 @@ AFTER THE VISIT — WHAT HAPPENS NEXT?
 | **Repeat Prescription Renewal** | Doctor issues new Rx on follow-up visit; previous prescription referenced for continuity | Same + renewal request flagged on patient timeline | Same + patient portal delivery; renewal audit trail |
 | **Reports** | Doctor/Admin can view daily appointments & open cases | Same + monthly revenue/appointment trends | Same + executive analytics, provider performance payout summary |
 | **Support** | — | Patient/staff can raise support tickets; tracked to resolution | Same + Superadmin governance visibility of all open tickets |
-| **Audit / Compliance** | Core audit log (login, billing, claims, discharge) | Same | Same + Auditor role with governance-level report visibility |
+| **Audit / Compliance** | Core audit log (login, billing, claims, discharge) | Same | Same | Same + Auditor role with governance-level report visibility |
+| **Emergency Logistics** | — | Ambulance availability visible; fleet dispatched | Same | Same + predictive fleet readiness |
+| **Collaboration** | — | — | — | Real-time chat & task sync active across clinical teams |
 
 ---
 

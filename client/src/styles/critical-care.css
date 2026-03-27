@@ -291,7 +291,7 @@ h1, h2, h3, h4, .font-display {
 
 .login-compact-visual {
   flex: 1;
-  background: linear-gradient(135deg, #152d4a 0%, #2878a8 100%);
+  background: radial-gradient(circle at top left, #0b2545 0%, #011627 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -300,6 +300,7 @@ h1, h2, h3, h4, .font-display {
   color: white;
   text-align: center;
   position: relative;
+  overflow: hidden;
 }
 
 .login-compact-visual::after {

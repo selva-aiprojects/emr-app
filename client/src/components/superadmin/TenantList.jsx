@@ -50,8 +50,11 @@ export default function TenantList({ tenants, onSelect }) {
                 </td>
                 <td><div className="text-[10px] text-slate-500">{tenant.created}</div></td>
                 <td>
-                  <button className="text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-800" onClick={() => onSelect(tenant)}>
-                    Manage
+                  <button 
+                    className="p-2 px-3 rounded-lg bg-indigo-50 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm" 
+                    onClick={() => onSelect(tenant)}
+                  >
+                    Manage Features
                   </button>
                 </td>
               </tr>

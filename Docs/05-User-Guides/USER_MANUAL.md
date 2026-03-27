@@ -63,15 +63,54 @@ Tenant Admins (at Professional/Enterprise tiers) have access to the **Institutio
 - **Hospital Settings**: Change branding colors (Primary & Accent) and upload the institutional logo.
 - **Departments Master**: Define clinical specialties and administrative shards with institutional coding.
 - **Bed & Ward Management**: Monitor real-time ward throughput and bed occupancy telemetry.
+- **Service Engine**: Configure consultation, lab, and bed-stay rates for the hospital.
 
 ---
 
-## 6. 🤖 AI Chat Assistant
-The system includes a context-aware virtual assistant to help with clinical logistics.
+## 6. 👥 HR & Accounts (Enterprise Only)
+As an HR or Accounts Manager, you handle the institutional backend operations.
 
-- **How to Open**: Click the floating bubble in the bottom-right corner.
-- **Supported Queries**:
-    - **Navigation**: "Go to pharmacy", "Show me patients".
-    - **Status Checks**: "Is John Doe checked in?", "Who is current doctor?".
-    - **Inventory**: "Do we have 500mg Paracetamol?".
-    - **Stats**: "How many patients today?".
+### 6.1 HR Mastery
+- **Employee Lifecycle**: Manage the **Employee Master** (Identity, Join Date, Salary).
+- **Workforce Attendance**: Log daily check-ins and review leave applications in the **Attendance Hub**.
+- **Payroll Pulse**: Review salary-linked attendance data to generate monthly payroll summaries.
+
+### 6.2 Revenue & Accounts
+- **Revenue Tracker**: Monitor real-time collection stats (Cash/Card/Insurance) on the **Accounts Dashboard**.
+- **Expense Logging**: Capture facility costs (Utility, Rent, Consumables) to maintain the **General Ledger**.
+- **Claims Registry**: Manage insurance provider relationships and track claim settlement lifecycles.
+
+---
+
+## 7. 🚑 Emergency & Collaboration
+Specialized modules for high-velocity hospital environments.
+
+### 7.1 Ambulance Logistics (EMS)
+- Monitor the **Ambulance Fleet** in real-time.
+- Track dispatcher logs and vehicle availability (Available/On-Mission).
+
+### 7.2 Staff Collaborative Hub
+- Use the **Peer Chat** for real-time departmental coordination.
+- Share clinical protocols and task assignments within the clinical team.
+
+---
+
+## 8. 🤖 Clinical AI & Analytics
+Interactive tools for data-driven care and navigation.
+
+- **AI Chatbot助理**: Click the floating bubble for instant navigation, patient lookups, and operational stats.
+- **Clinical AI Vision**: (Enterprise) Generate automated treatment suggestions and longitudinal snapshots using **Gemini-1.5-Flash**.
+- **Predictive Dashboards**: (Management) View revenue trends and provider performance analytics for strategic decision-making.
+
+---
+
+## 9. 🛡️ Platform Governance (Superadmin Only)
+Managing the platform ecosystem and scaling institutional growth.
+
+### 9.1 Tenant Provisioning
+- **One-Click Scaling**: Create new healthcare workspaces with dedicated subdomains.
+- **Credential Dispatch**: The system automatically provisions a default administrator and securely emails the activation token to the institutional contact.
+
+### 9.2 Growth & Offers
+- **Offer Announcements**: Broadcast institutional upgrades and promotional tiers directly to tenant dashboards.
+- **Feature Overrides**: Granularly enable or disable specific modules for any tenant in the **Feature Management** portal.

@@ -27,8 +27,11 @@ import {
   ChevronRight,
   Droplet,
   FlaskConical,
-  Truck
+  Truck,
+  Zap,
+  Gift
 } from 'lucide-react';
+import OfferAnnouncement from '../components/OfferAnnouncement.jsx';
 import { 
   TopDiagnosesChart, 
   TopServicesChart 
@@ -311,6 +314,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           ))}
         </div>
       </div>
+
+      {/* ── MISSING FLOW: Offer Announcement for Tenant Scaling ── */}
+      <OfferAnnouncement />
 
       {/* Key Metrics Row - centered elevated cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">

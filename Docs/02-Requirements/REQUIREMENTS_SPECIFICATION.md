@@ -62,6 +62,7 @@ The system encompasses the full patient journey from registration and appointmen
 - **REQ-INV-01**: **Stock Intelligence**. Monitor inventory units with visual meters indicating stock vs. reorder points.
 - **REQ-INV-02**: **Logistics Registry**. Track resource categories (Pharmaceuticals, Consumables, etc.) and automate low-stock flagging.
 - **REQ-INV-03**: **Restock Workflow**. Permit controlled stock increments and auditability.
+- **REQ-LOG-01**: **Ambulance Service**. Enable real-time tracking of ambulance fleet status (Available/On Mission/Maintenance) and emergency dispatch logs.
 
 ### 2.6 Billing & Finance
 - **REQ-BIL-01**: **Invoicing**. Generate distinct invoices for Consultations, Pharmacy, and Lab services.
@@ -96,8 +97,9 @@ The system encompasses the full patient journey from registration and appointmen
 - **REQ-ADM-01**: **Tenant Settings**. Admin can modify tenant display settings and feature toggles.
 - **REQ-ADM-02**: **Tenant User Creation**. Admin can create users under tenant scope.
 - **REQ-SUP-01**: **Platform Oversight**. Superadmin can view global metrics and tenant summaries.
-- **REQ-SUP-02**: **Tenant Provisioning**. Superadmin can create tenant entries and bootstrap access.
+- **REQ-SUP-02**: **Tenant Provisioning**. Superadmin can create tenant entries, provision default admin credentials, and trigger automated welcome emails via Resend SMTP.
 - **REQ-SUP-03**: **Feature Governance**. Superadmin can manage subscription tiers (Basic, Professional, Enterprise) and granular feature flag overrides for any tenant through a centralized governance interface.
+- **REQ-SUP-04**: **Institutional Growth Tools**. Superadmin can create and broadcast "Offer Announcements" (e.g., Professional Tier discounts) to targeted tenant dashboards.
 
 ### 2.12 Subscription Tiers & Feature Gating
 - **REQ-FEATURE-01**: **Tier-Based Modules**. The system must automatically enable/disable modules based on the tenant's tier:
@@ -105,6 +107,7 @@ The system encompasses the full patient journey from registration and appointmen
   - **Basic**: Core OPD + **Pharmacy & Lab**, **Inventory**, and **Ambulance Logistics**.
   - **Professional**: Core OPD + Pharmacy/Lab + **Inpatient Management**, **Billing/Insurance**, and **Service Engine**.
   - **Enterprise**: All modules including **HR/Payroll**, **AI Diagnostic Vision**, and **Staff Collaborative Hub**.
+- **REQ-COLLAB-01**: **Staff Collaboration**. Enterprise-tier tenants gain access to the **Staff Hub** for real-time departmental messaging, shared tasks, and clinical protocol sharing.
 - **REQ-FEATURE-02**: **Downgrade Safeguard Protocol**. Any attempt to move a tenant to a lower subscription tier must trigger a formal confirmation warning and require a mandatory "Communication Note" from the Superadmin documenting the tenant's consent and awareness of possible data accessibility trade-offs.
 
 ### 2.13 Clinical AI Intelligence
