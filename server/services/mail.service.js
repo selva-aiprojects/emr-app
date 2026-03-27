@@ -20,7 +20,7 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: 'MedFlow Platform <onboarding@resend.dev>',
+        from: process.env.RESEND_FROM_EMAIL || 'MedFlow Platform <onboarding@resend.dev>',
         to: [email],
         subject: `Welcome to MedFlow: ${tenantName} Workspace Initialized`,
         html: `
