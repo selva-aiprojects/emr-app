@@ -290,9 +290,11 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
     const defaultPassword = `${code.toLowerCase()}@${Math.floor(1000 + Math.random() * 9000)}`;
     const passwordHash = await hashPassword(defaultPassword);
     
+    const adminLoginEmail = `admin@${subdomain}.com`;
+
     const adminUser = await repo.createUser({
       tenantId: tenant.id,
-      email: contactEmail,
+      email: adminLoginEmail,
       passwordHash,
       name: `${name} Administrator`,
       role: 'Admin',
@@ -303,7 +305,7 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
       contactEmail,
       name,
       subdomain,
-      { email: contactEmail, password: defaultPassword }
+      { email: adminLoginEmail, password: defaultPassword }
     );
 
     await repo.createAuditLog({
