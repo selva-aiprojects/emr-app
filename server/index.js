@@ -337,6 +337,29 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
   }
 });
 
+app.put('/api/tenants/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    // In production, add requireSuperadmin middleware here
+    if (!status || !['active', 'suspended'].includes(status)) {
+      return res.status(400).json({ error: 'Valid status is required' });
+    }
+
+    const tenant = await repo.updateTenantStatus(id, status);
+    
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    res.json(tenant);
+  } catch (error) {
+    console.error('Error updating tenant status:', error);
+    res.status(500).json({ error: 'Failed to update tenant status' });
+  }
+});
+
 app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
   try {
     const { id } = req.params;

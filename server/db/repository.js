@@ -242,6 +242,14 @@ export async function getTenantById(id) {
   return result.rows[0];
 }
 
+export async function updateTenantStatus(id, status) {
+  const result = await query(
+    'UPDATE emr.tenants SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+    [status, id]
+  );
+  return result.rows[0];
+}
+
 export async function getTenantByCode(code) {
   const result = await query('SELECT * FROM emr.tenants WHERE code = $1', [code]);
   return result.rows[0];

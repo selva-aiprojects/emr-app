@@ -867,6 +867,7 @@ apiClient.createService = (data) => apiRequest('/services', { method: 'POST', bo
 // Superadmin Feature Management
 apiClient.getAdminTenantFeatures = (tenantId) => apiRequest(`/admin/tenants/${tenantId}/features`);
 apiClient.updateTenantTier = (tenantId, tier) => apiRequest(`/admin/tenants/${tenantId}/tier`, { method: 'PATCH', body: JSON.stringify({ tier }) });
+apiClient.updateTenantStatus = (tenantId, status) => apiRequest(`/tenants/${tenantId}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
 apiClient.updateTenantFeatureOverride = (tenantId, featureFlag, enabled) => apiRequest(`/admin/tenants/${tenantId}/features`, { method: 'POST', body: JSON.stringify({ featureFlag, enabled }) });
 
 // Generic HTTP methods

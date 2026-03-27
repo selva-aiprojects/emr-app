@@ -7,6 +7,7 @@ export default function FeatureManager({ tenant, onClose, onRefresh }) {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
   const [commNote, setCommNote] = useState('');
+  const [tenantStatus, setTenantStatus] = useState(tenant.status || 'active');
 
   const Tiers = [
     { name: 'Free', price: '₹0', icon: Gift, color: 'text-emerald-500' },
@@ -85,6 +86,24 @@ export default function FeatureManager({ tenant, onClose, onRefresh }) {
     }
   }
 
+  async function toggleTenantStatus() {
+    const newStatus = tenantStatus === 'active' ? 'suspended' : 'active';
+    const confirmMsg = newStatus === 'suspended'
+      ? `⚠️ WARNING: Suspending this tenant will immediately block ALL users from logging in.\n\nHave you already sent the final warning email to the tenant administrator?`
+      : `Re-activate tenant "${tenant.name}"? They will regain full access immediately.`;
+    if (!window.confirm(confirmMsg)) return;
+    try {
+      setUpdating('status');
+      await api.updateTenantStatus(tenant.id, newStatus);
+      setTenantStatus(newStatus);
+      if (onRefresh) onRefresh();
+    } catch (e) {
+      alert('Failed to update tenant status. Please try again.');
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   if (loading) return (
     <div className="fixed inset-0 z-[200] bg-slate-950/20 backdrop-blur-sm flex items-center justify-center">
        <div className="bg-white p-6 rounded-2xl shadow-xl flex items-center gap-4">
@@ -99,14 +118,28 @@ export default function FeatureManager({ tenant, onClose, onRefresh }) {
       <div className="bg-white rounded-[32px] w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-up border border-slate-200 mb-20">
         <header className="px-8 py-6 bg-slate-900 text-white flex justify-between items-center sticky top-0 z-10">
           <div>
-            <h3 className="text-lg font-black uppercase tracking-tight">Feature Governance</h3>
+            <div className="flex items-center gap-3">
+               <h3 className="text-lg font-black uppercase tracking-tight">Feature Governance</h3>
+               <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border tracking-widest ${tenantStatus === 'active' ? 'bg-emerald-900/50 text-emerald-400 border-emerald-500/30' : 'bg-rose-900/50 text-rose-400 border-rose-500/30'}`}>
+                  {tenantStatus}
+               </span>
+            </div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
               {tenant.name} • {tenant.id.slice(0, 8).toUpperCase()}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+               onClick={toggleTenantStatus}
+               disabled={updating === 'status'}
+               className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border ${tenantStatus === 'active' ? 'bg-rose-500/10 text-rose-400 border-rose-500/20 hover:bg-rose-500 hover:text-white' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`}
+            >
+               {tenantStatus === 'active' ? 'Suspend Tenant' : 'Activate Tenant'}
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </header>
 
         <div className="p-8">

@@ -2,6 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { api } from '../api.js';
 import { patientName } from '../utils/format.js';
 import '../styles/critical-care.css';
+import SaveToast from '../components/ui/SaveToast.jsx';
 import { 
   Users, 
   Search, 
@@ -33,8 +34,9 @@ export default function PatientsPage({
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('registry'); // 'registry' | 'onboard'
+  const [activeTab, setActiveTab] = useState('registry');
   const [page, setPage] = useState(0);
+  const [toast, setToast] = useState(null);
   const isDoctor = (activeUser?.role || '').toLowerCase() === 'doctor';
 
   const tenantId = tenant?.id || session?.tenantId || null;
@@ -88,8 +90,9 @@ export default function PatientsPage({
       setPatients(data || []);
       setActiveTab('registry');
       e.target.reset();
+      setToast({ message: 'Patient registered successfully!', type: 'success' });
     } catch (err) {
-      alert('Admission Protocol Error: ' + err.message);
+      setToast({ message: 'Registration failed: ' + err.message, type: 'error' });
     }
   }
 
@@ -394,6 +397,14 @@ export default function PatientsPage({
             {effectivePatients.length} ACTIVE SHARDS IN REGISTRY
          </div>
       </footer>
+      {/* Save Toast */}
+      {toast && (
+        <SaveToast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }

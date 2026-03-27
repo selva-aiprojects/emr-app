@@ -208,8 +208,17 @@ export default function App() {
 
   useEffect(() => {
     if (!tenant) return;
-    // Tenant theme colors are available as tenant.theme.primary / accent
-    // but we use the design-system palette instead
+    const theme = tenant.theme || {};
+    const primary = theme.primary || '#011627';
+    const accent = theme.accent || '#0077B6';
+    document.documentElement.style.setProperty('--clinical-primary', primary);
+    document.documentElement.style.setProperty('--clinical-secondary', accent);
+    document.documentElement.style.setProperty('--medical-navy', primary);
+    return () => {
+      document.documentElement.style.removeProperty('--clinical-primary');
+      document.documentElement.style.removeProperty('--clinical-secondary');
+      document.documentElement.style.removeProperty('--medical-navy');
+    };
   }, [tenant]);
 
   async function loadTenants() {
