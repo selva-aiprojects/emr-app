@@ -901,6 +901,7 @@ export default function App() {
                 displayName: fd.get('displayName'),
                 primaryColor: fd.get('primaryColor'),
                 accentColor: fd.get('accentColor'),
+                logo_url: fd.get('logo_url'),
                 featureInventory: fd.get('featureInventory') === 'on',
                 featureTelehealth: fd.get('featureTelehealth') === 'on',
                 billingConfig: {

@@ -62,6 +62,7 @@ export default function EmployeesPage({ tenant, initialTab = 'roster', employees
   const isDoctorRole = roleSelection === 'Doctor';
 
   return (
+    <>
     <div className="page-shell-premium animate-fade-in">
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
@@ -416,6 +417,7 @@ export default function EmployeesPage({ tenant, initialTab = 'roster', employees
         </div>
       )}
     </div>
-      {toast && <SaveToast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    {toast && <SaveToast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </>
   );
 }

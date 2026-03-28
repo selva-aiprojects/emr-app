@@ -273,9 +273,15 @@ export default function AppLayout({
       <div className={`flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? "justify-center p-4" : "justify-between px-5 py-4"}`}>
         {!sidebarCollapsed && (
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-[var(--clinical-secondary)] flex items-center justify-center text-white shadow-lg flex-shrink-0">
-              <Activity size={16} />
-            </div>
+            {tenant?.logo_url ? (
+              <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shadow-lg flex-shrink-0">
+                <img src={tenant.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-[var(--clinical-secondary)] flex items-center justify-center text-white shadow-lg flex-shrink-0">
+                <Activity size={16} />
+              </div>
+            )}
             <div className="min-w-0">
               <h1 className="text-[13px] font-black tracking-tight text-white uppercase leading-none">
                 {BRAND.name}
@@ -288,9 +294,15 @@ export default function AppLayout({
         )}
 
         {sidebarCollapsed && (
-          <div className="w-8 h-8 rounded-lg bg-[var(--clinical-secondary)] flex items-center justify-center text-white">
-            <Activity size={16} />
-          </div>
+          tenant?.logo_url ? (
+            <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shadow-lg">
+              <img src={tenant.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+            </div>
+          ) : (
+            <div className="w-8 h-8 rounded-lg bg-[var(--clinical-secondary)] flex items-center justify-center text-white">
+              <Activity size={16} />
+            </div>
+          )
         )}
 
         <button

@@ -243,17 +243,63 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
   }
 
   function handleExportReport() {
+    const todayStr = new Date().toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+    });
+
     const csvData = [
-      ['Metric', 'Value'],
-      ['Total Patients', realtimeMetrics.totalPatients],
-      ['Appointments Today', realtimeMetrics.totalAppointments],
-      ['Revenue', currency(realtimeMetrics.totalRevenue)],
-      ['Critical Alerts', realtimeMetrics.criticalAlerts],
-      ['', ''],
-      ['Department', 'Occupancy'],
-      ...realtimeMetrics.departmentDistribution.map(d => [d.name, d.value])
+      ['MEDFLOW EMR CARE - CLINICAL EXECUTIVE REPORT'],
+      [`Generated on: ${todayStr}`],
+      ['Facility:', tenant?.name || 'Authorized Facility'],
+      [''],
+      ['--- CORE OPERATIONAL SUMMARY ---'],
+      ['Metric', 'Value', 'Status'],
+      ['Total Patients Registered', realtimeMetrics.totalPatients, 'N/A'],
+      ['Appointments (Today)', realtimeMetrics.totalAppointments, 'Action Required'],
+      ['Gross Revenue Generated', currency(realtimeMetrics.totalRevenue), 'N/A'],
+      ['Critical System Alerts', realtimeMetrics.criticalAlerts, realtimeMetrics.criticalAlerts > 0 ? 'FAIL' : 'PASS'],
+      [''],
+      ['--- PATIENT LIFECYCLE (TODAY) ---'],
+      ['Metric', 'Count'],
+      ['New Admissions', realtimeMetrics.patientStats?.new_patients || 0],
+      ['Returning Patients', realtimeMetrics.patientStats?.returning_patients || 0],
+      ['Inpatient Admissions', realtimeMetrics.patientStats?.admitted_today || 0],
+      ['Successful Discharges', realtimeMetrics.patientStats?.discharged_today || 0],
+      [''],
+      ['--- APPOINTMENT FLOW STATUS ---'],
+      ['Status', 'Count'],
+      ['Scheduled', realtimeMetrics.appointmentStats?.scheduled_today || 0],
+      ['Completed', realtimeMetrics.appointmentStats?.completed_today || 0],
+      ['Cancelled', realtimeMetrics.appointmentStats?.cancelled_today || 0],
+      ['No-Show', realtimeMetrics.appointmentStats?.no_show_today || 1],
+      [''],
+      ['--- INFRASTRUCTURE & CAPACITY ---'],
+      ['Asset Type', 'Total Records'],
+      ['Departments Configured', realtimeMetrics.masterStats?.departments || 0],
+      ['Total Wards', realtimeMetrics.masterStats?.wards || 0],
+      ['Total Bed Inventory', realtimeMetrics.masterStats?.beds || 0],
+      ['Service Catalog Items', realtimeMetrics.masterStats?.services || 0],
+      ['Active Workforce (Sync)', realtimeMetrics.masterStats?.total_staff || 0],
+      [''],
+      ['--- DEPARTMENTAL OCCUPANCY BREAKDOWN ---'],
+      ['Department Name', 'Total Patients / Value'],
+      ...realtimeMetrics.departmentDistribution.map(d => [d.name, d.value]),
+      [''],
+      ['--- REVENUE MIX BY SERVICE ---'],
+      ['Service Stream', 'Revenue Contribution'],
+      ...realtimeMetrics.topServices.map(s => [s.name, currency(s.value)]),
+      [''],
+      ['--- CLINICAL DIAGNOSTICS (TOP 5) ---'],
+      ['Diagnosis Name', 'Encounter Frequency'],
+      ...realtimeMetrics.topDiagnoses.slice(0, 5).map(d => [d.name, d.value]),
+      [''],
+      ['--- END OF REPORT ---']
     ];
-    exportToCSV(csvData, `ShiftReport_${new Date().toLocaleDateString().replace(/\//g, '-')}.csv`);
+    
+    const filename = `ClinicalExecutiveReport_${new Date().toISOString().split('T')[0]}.csv`;
+    exportToCSV(csvData, filename);
   }
 
   const quickActions = [

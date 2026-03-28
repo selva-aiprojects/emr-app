@@ -398,6 +398,47 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
 });
 
 /**
+ * Superadmin endpoint to reset a tenant user's password
+ */
+app.post('/api/admin/tenants/:id/reset-password', authenticate, requireRole('Superadmin'), async (req, res) => {
+  try {
+    const { id: tenantId } = req.params;
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword) {
+      return res.status(400).json({ error: 'email and newPassword are required' });
+    }
+
+    const existingUser = await repo.getUserByEmail(email, tenantId);
+    if (!existingUser) {
+      return res.status(404).json({ error: 'No user found with this email for the selected tenant' });
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+
+    await query(
+      'UPDATE emr.users SET password_hash = $1 WHERE email = $2 AND tenant_id = $3',
+      [passwordHash, email.toLowerCase(), tenantId]
+    );
+
+    await repo.createAuditLog({
+      tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'user.password_reset',
+      entityName: 'user',
+      entityId: existingUser.id,
+      details: { email, resetBy: req.user.email },
+    });
+
+    res.json({ success: true, message: `Password reset successfully for ${existingUser.name}` });
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).json({ error: 'Failed to reset password: ' + error.message });
+  }
+});
+
+/**
  * Superadmin endpoint to manually provision a tenant admin
  */
 app.post('/api/admin/tenants/:id/provision-admin', authenticate, requireRole('Superadmin'), async (req, res) => {

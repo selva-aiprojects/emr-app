@@ -192,6 +192,13 @@ export async function provisionTenantAdmin(tenantId, data) {
   });
 }
 
+export async function resetTenantUserPassword(tenantId, email, newPassword) {
+  return await apiRequest(`/admin/tenants/${tenantId}/reset-password`, {
+    method: 'POST',
+    body: JSON.stringify({ email, newPassword }),
+  });
+}
+
 // =====================================================
 // USERS
 // =====================================================

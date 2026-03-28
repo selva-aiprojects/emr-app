@@ -54,6 +54,18 @@ export default function AdminPage({ tenant, patients, onSaveSettings, onCreateUs
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Hospital Logo URL</label>
+                <div className="flex gap-4 items-center">
+                  <input name="logo_url" defaultValue={tenant?.logo_url} placeholder="https://example.com/logo.png" className="input-field flex-1 py-5 bg-slate-50 border-none rounded-2xl font-black text-slate-800" />
+                  {tenant?.logo_url && (
+                    <div className="w-14 h-14 rounded-xl bg-white p-1 border border-slate-100 flex items-center justify-center shadow-sm">
+                      <img src={tenant.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="pt-8 border-t border-slate-50">
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6">Service Module Provisioning</p>
                 <div className="grid grid-cols-2 gap-4">
