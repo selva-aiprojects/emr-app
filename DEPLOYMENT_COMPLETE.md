@@ -231,6 +231,63 @@ Login with:
 
 ---
 
+## 🧩 Feature Flags Deployment Notes (Critical)
+
+### ✅ Required DB Objects
+Ensure these tables (and view, if used) exist in production:
+1. `emr.tenant_features` (tenant-level overrides)
+2. `emr.global_kill_switches` (global kill switches)
+3. `emr.tenant_feature_status` (if you rely on consolidated status view)
+
+If any of these are missing, feature flag evaluation will fail or silently fall back.
+
+### ✅ Tenant Overrides Now Support Disable
+Tenant overrides are evaluated as **true/false**, not just “enabled only.”
+- `enabled = true` adds a feature
+- `enabled = false` removes a feature even if the tier defaults include it
+
+### ✅ Module Gates Enforced in API
+Core module routes now require feature access on the backend (not just UI):
+- patients, appointments, emr/encounters
+- inventory + blood bank
+- insurance
+- reports
+- billing/expenses
+- employees/attendance
+- inpatient
+- lab
+- support tickets (tenant-scoped)
+
+### ✅ Cache Behavior (Rollout Timing)
+Feature flag changes propagate with short caching:
+- **Server kill switch cache:** ~10 seconds
+- **Client feature flag cache:** ~30 seconds
+
+If you change flags, allow ~30 seconds for full propagation.
+
+### ✅ Frontend Mapping Alignment
+Frontend module mapping now matches backend mapping:
+- `inventory` → `PHARMACY_LAB_ACCESS`
+
+This prevents mismatched UI vs API access.
+
+### ✅ Startup Feature Flag Schema Check
+On server startup, a schema check validates required objects:
+- `emr.tenant_features`
+- `emr.global_kill_switches`
+- `emr.tenant_feature_status`
+
+If any are missing, startup logs a warning so deployment can correct schema before runtime issues.
+
+### ✅ Login Acceleration (Tenant/Role Aware)
+Login now includes:
+- Resolved role permissions for the authenticated user
+- Feature flag status for the tenant
+
+The client uses this to render role‑based navigation immediately while background data loads.
+
+---
+
 ## 📊 Optional: Migrate Existing Data
 
 If you have existing data in `server/data/db.json`:

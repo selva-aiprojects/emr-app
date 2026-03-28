@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { Building2, Plus, Users, Search, Activity, ChevronRight, UserCircle, ShieldCheck, TrendingUp, AlertCircle, Loader2 } from 'lucide-react';
 import { api } from '../api.js';
 
 export default function DepartmentsPage({ tenant }) {
+  const { showToast } = useToast();
+
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,6 +36,7 @@ export default function DepartmentsPage({ tenant }) {
       setSubmitting(true);
       const dept = await api.createDepartment(form);
       setDepartments([...departments, dept]);
+      showToast({ message: 'Department saved successfully!', type: 'success', title: 'Departments' });
       setShowAdd(false);
       setForm({ name: '', code: '', hod_user_id: '' });
     } catch (err) {

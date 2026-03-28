@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { Settings, Palette, Image as ImageIcon, Globe, ShieldCheck, Save, Loader2, CheckCircle, AlertCircle, Building2 } from 'lucide-react';
 import { api } from '../api.js';
 
 export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
+  const { showToast } = useToast();
+
   const [form, setForm] = useState({
     displayName: tenant?.name || '',
     primaryColor: tenant?.theme?.primary || '#0f5a6e',
@@ -33,6 +36,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
 
     try {
       const updated = await api.updateTenantSettings(tenant.id, form);
+      showToast({ message: 'Settings saved successfully!', type: 'success', title: 'Settings' });
       if (onUpdateTenant) onUpdateTenant(updated);
       setStatus('success');
       

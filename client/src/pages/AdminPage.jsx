@@ -143,6 +143,11 @@ export default function AdminPage({ tenant, patients, onSaveSettings, onCreateUs
                     <option>Admin</option>
                     <option>Doctor</option>
                     <option>Nurse</option>
+                    <option>Lab</option>
+                    <option>Pharmacy</option>
+                    <option>HR</option>
+                    <option>Accounts</option>
+                    <option>Support Staff</option>
                     <option>Front Office</option>
                     <option>Billing</option>
                     <option>Inventory</option>

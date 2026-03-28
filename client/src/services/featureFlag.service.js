@@ -23,7 +23,7 @@ export const MODULE_FLAG_MAPPING = {
   accounts: FEATURE_FLAGS.ACCOUNTS_ACCESS,
   pharmacy: FEATURE_FLAGS.PHARMACY_LAB_ACCESS,
   lab: FEATURE_FLAGS.PHARMACY_LAB_ACCESS,
-  inventory: FEATURE_FLAGS.CORE_ENGINE_ACCESS,
+  inventory: FEATURE_FLAGS.PHARMACY_LAB_ACCESS,
   reports: FEATURE_FLAGS.CORE_ENGINE_ACCESS,
   support: FEATURE_FLAGS.CUSTOMER_SUPPORT_ACCESS,
   ticketing: FEATURE_FLAGS.CUSTOMER_SUPPORT_ACCESS,
@@ -38,7 +38,7 @@ export const MODULE_FLAG_MAPPING = {
 class FeatureFlagService {
   constructor() {
     this.cache = new Map();
-    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes
+    this.cacheTimeout = 30 * 1000; // 30 seconds
   }
 
   /**
@@ -94,6 +94,14 @@ class FeatureFlagService {
    */
   clearCache() {
     this.cache.clear();
+  }
+
+  seedCache(tenantId, flags) {
+    if (!tenantId || !flags) return;
+    this.cache.set(`features_${tenantId}`, {
+      data: flags,
+      timestamp: Date.now()
+    });
   }
 }
 

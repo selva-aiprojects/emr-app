@@ -31,9 +31,9 @@ test.describe('Multi-Role E2E Workflow', () => {
 
         // Select by label (visible text)
         await page.locator('select[name="tenantId"]').selectOption({ label: tenantName });
-        await page.getByPlaceholder('name@hospital.org').fill(user.email);
-        await page.getByPlaceholder('Enter your secure password').fill(user.password);
-        await page.getByRole('button', { name: 'Sign In' }).click();
+        await page.locator('input[type="email"]').fill(user.email);
+        await page.locator('input[type="password"]').fill(user.password);
+        await page.getByRole('button', { name: /Sign in/i }).click();
         await expect(page.getByText(user.name)).toBeVisible();
     }
 

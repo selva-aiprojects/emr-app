@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { api } from '../api.js';
 import { EmptyState } from '../components/ui/index.jsx';
 import { Wrench } from 'lucide-react';
@@ -11,6 +12,8 @@ const STATUS_STYLES = {
 };
 
 export default function SupportPage({ tenant, activeUser }) {
+  const { showToast } = useToast();
+
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -51,6 +54,7 @@ export default function SupportPage({ tenant, activeUser }) {
             setShowForm(false);
             e.target.reset();
             loadTickets();
+            showToast({ message: 'Support ticket raised!', type: 'success', title: 'Support' });
         } catch (err) {
             alert('Failed to create ticket: ' + err.message);
         } finally {
@@ -62,6 +66,7 @@ export default function SupportPage({ tenant, activeUser }) {
         try {
             await api.updateSupportStatus(id, newStatus);
             loadTickets();
+            showToast({ message: 'Ticket status updated.', type: 'success', title: 'Support' });
         } catch (err) {
             alert('Failed to update status: ' + err.message);
         }

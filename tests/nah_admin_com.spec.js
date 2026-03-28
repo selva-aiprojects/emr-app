@@ -16,8 +16,8 @@ test.describe('NAH Admin Login Verification', () => {
     await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
 
     // Fill credentials
-    await page.getByPlaceholder('name@hospital.org').fill(EMAIL);
-    await page.getByPlaceholder(/password/i).fill(PASSWORD);
+    await page.locator('input[type="email"]').fill(EMAIL);
+    await page.locator('input[type=\"password\"]').fill(PASSWORD);
 
     // Click Login
     await page.getByRole('button', { name: /Sign In|Continue|Login/i }).click();

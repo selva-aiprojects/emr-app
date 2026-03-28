@@ -61,7 +61,7 @@ const DEFAULT_FEATURES_BY_TIER = {
 // Cache for global kill switches
 let globalKillSwitchesCache = null;
 let killSwitchesCacheTime = 0;
-const KILL_SWITCHES_CACHE_TTL = 60000; // 1 minute
+const KILL_SWITCHES_CACHE_TTL = 10000; // 10 seconds
 
 /**
  * Get tenant's subscription tier
@@ -116,10 +116,14 @@ export async function evaluateFeatureFlag(tenantId, flag) {
     // Get custom features for tenant
     const customFeatures = await getTenantCustomFeatures(tenantId);
 
-    // Combine features
-    const enabledFeatures = [...defaultFeatures, ...customFeatures];
+    // Combine features with override support
+    const enabled = new Set(defaultFeatures);
+    customFeatures.forEach(({ featureFlag, enabled: isEnabled }) => {
+      if (isEnabled) enabled.add(featureFlag);
+      else enabled.delete(featureFlag);
+    });
 
-    return enabledFeatures.includes(flag);
+    return enabled.has(flag);
   } catch (error) {
     console.error(`Error evaluating feature flag ${flag}:`, error);
     return false; // Fail safe: disable feature on error
@@ -137,7 +141,11 @@ export async function getFeatureFlagStatus(tenantId) {
     const customFeatures = await getTenantCustomFeatures(tenantId);
     const killSwitches = await getGlobalKillSwitches();
 
-    const enabledList = [...defaultFeatures, ...customFeatures];
+    const enabled = new Set(defaultFeatures);
+    customFeatures.forEach(({ featureFlag, enabled: isEnabled }) => {
+      if (isEnabled) enabled.add(featureFlag);
+      else enabled.delete(featureFlag);
+    });
     const status = {};
 
     // Initialize all known flags as disabled
@@ -146,7 +154,7 @@ export async function getFeatureFlagStatus(tenantId) {
     });
 
     // Mark as enabled if part of tier/custom and not killed
-    enabledList.forEach(flag => {
+    enabled.forEach(flag => {
       if (!killSwitches[flag]) {
         status[flag] = { enabled: true };
       }
@@ -169,10 +177,14 @@ export async function getTenantFeatureFlags(tenantId) {
     const customFeatures = await getTenantCustomFeatures(tenantId);
     const killSwitches = await getGlobalKillSwitches();
 
-    const allFeatures = [...defaultFeatures, ...customFeatures];
+    const enabled = new Set(defaultFeatures);
+    customFeatures.forEach(({ featureFlag, enabled: isEnabled }) => {
+      if (isEnabled) enabled.add(featureFlag);
+      else enabled.delete(featureFlag);
+    });
 
     // Filter out killed features
-    return allFeatures.filter(flag => !killSwitches[flag]);
+    return Array.from(enabled).filter(flag => !killSwitches[flag]);
   } catch (error) {
     console.error('Error getting tenant feature flags:', error);
     return [];

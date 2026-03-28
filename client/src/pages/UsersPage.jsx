@@ -1,11 +1,16 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { ShieldCheck, Mail, Shield, UserX, UserCheck, Search, Filter, MoreVertical, Terminal, Key } from 'lucide-react';
 import { userName } from '../utils/format.js';
 import { EmptyState } from '../components/ui/index.jsx';
 
 export default function UsersPage({ users = [], activeUser, tenant, onUpdateUserRole, onResetPassword }) {
+  const { showToast } = useToast();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
@@ -18,6 +23,21 @@ export default function UsersPage({ users = [], activeUser, tenant, onUpdateUser
   }, [users, searchTerm, roleFilter]);
 
   const roles = useMemo(() => ['All', ...new Set(users.map(u => u.role))], [users]);
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const pageEnd = pageStart + pageSize;
+  const pagedUsers = filteredUsers.slice(pageStart, pageEnd);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, roleFilter]);
+
+  useEffect(() => {
+    if (safePage !== currentPage) {
+      setCurrentPage(safePage);
+    }
+  }, [safePage, currentPage]);
 
   return (
     <div className="page-shell-premium animate-fade-in">
@@ -69,8 +89,8 @@ export default function UsersPage({ users = [], activeUser, tenant, onUpdateUser
       </div>
 
       <main className="glass-panel p-0 overflow-hidden">
-        <div className="premium-table-container">
-          <table className="premium-table">
+        <div className="premium-table-container overflow-x-hidden">
+          <table className="premium-table table-fixed w-full">
             <thead>
               <tr>
                 <th>Personnel Identity</th>
@@ -91,27 +111,27 @@ export default function UsersPage({ users = [], activeUser, tenant, onUpdateUser
                     />
                   </td>
                 </tr>
-              ) : filteredUsers.map((user, idx) => (
+              ) : pagedUsers.map((user, idx) => (
                 <tr key={user.id} className="hover:bg-slate-50/50 transition-colors slide-up" style={{ animationDelay: `${idx * 20}ms` }}>
-                  <td>
+                  <td className="max-w-[240px]">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-slate-950 text-white flex items-center justify-center font-black text-xs shadow-lg border border-white/10">
                         {user.name?.[0]?.toUpperCase() || 'U'}
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-slate-900 tracking-tight">{user.name}</div>
-                        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                        <div className="text-sm font-bold text-slate-900 tracking-tight truncate">{user.name}</div>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 truncate">
                            <Terminal className="w-2.5 h-2.5" /> ID-{user.id.slice(0, 8)}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td>
+                  <td className="max-w-[260px]">
                     <div className="flex items-center gap-2 group">
                       <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-all">
                         <Mail className="w-3.5 h-3.5" />
                       </div>
-                      <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900">{user.email || 'NO_DOMAIN'}</span>
+                      <span className="text-xs font-bold text-slate-600 group-hover:text-slate-900 truncate">{user.email || 'NO_DOMAIN'}</span>
                     </div>
                   </td>
                   <td>
@@ -159,6 +179,31 @@ export default function UsersPage({ users = [], activeUser, tenant, onUpdateUser
           </table>
         </div>
       </main>
+
+      <div className="mt-6 flex items-center justify-between">
+        <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Showing {filteredUsers.length === 0 ? 0 : pageStart + 1}–{Math.min(pageEnd, filteredUsers.length)} of {filteredUsers.length}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            className="px-3 py-2 rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-500 disabled:opacity-40"
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            disabled={safePage === 1}
+          >
+            Prev
+          </button>
+          <div className="px-3 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
+            Page {safePage} / {totalPages}
+          </div>
+          <button
+            className="px-3 py-2 rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-500 disabled:opacity-40"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage === totalPages}
+          >
+            Next
+          </button>
+        </div>
+      </div>
 
       <div className="mt-8 p-6 glass-panel border-l-4 border-l-amber-500 flex items-start gap-5">
         <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">

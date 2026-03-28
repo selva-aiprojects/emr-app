@@ -28,7 +28,7 @@ test.describe('Golden Path E2E Workflow', () => {
   test('Tenant Management: Create new hospital tenant', async ({ page }) => {
     await page.goto('/login');
     // Select organization (superadmin)
-    await page.selectOption('select', 'superadmin');
+    await page.selectOption('select[name="tenantId"]', { label: 'Platform Governance Center' });
     await page.fill('input[type="email"]', superadmin.email);
     await page.fill('input[type="password"]', superadmin.password);
     await page.click('button[type="submit"]');
@@ -44,7 +44,7 @@ test.describe('Golden Path E2E Workflow', () => {
 
   test('HR & User Provisioning: Add users for all roles', async ({ page }) => {
     await page.goto('/login');
-    await page.selectOption('select', tenantAdmin.tenantId || '');
+    await page.selectOption('select[name="tenantId"]', tenantAdmin.tenantId || '');
     await page.fill('input[type="email"]', tenantAdmin.email);
     await page.fill('input[type="password"]', tenantAdmin.password);
     await page.click('button[type="submit"]');
@@ -62,7 +62,7 @@ test.describe('Golden Path E2E Workflow', () => {
 
   test('Inventory & Procurement: Procure and stock items', async ({ page }) => {
     await page.goto('/login');
-    await page.selectOption('select', tenantAdmin.tenantId || '');
+    await page.selectOption('select[name="tenantId"]', tenantAdmin.tenantId || '');
     await page.fill('input[type="email"]', users.admin.email);
     await page.fill('input[type="password"]', users.admin.password);
     await page.click('button[type="submit"]');
@@ -82,7 +82,7 @@ test.describe('Golden Path E2E Workflow', () => {
 
   test('Patient Life Cycle: Register IP and OP', async ({ page }) => {
     await page.goto('/login');
-    await page.selectOption('select', tenantAdmin.tenantId || '');
+    await page.selectOption('select[name="tenantId"]', tenantAdmin.tenantId || '');
     await page.fill('input[type="email"]', users.hr.email);
     await page.fill('input[type="password"]', users.hr.password);
     await page.click('button[type="submit"]');
@@ -97,7 +97,7 @@ test.describe('Golden Path E2E Workflow', () => {
 
   test('Assign Lab Test and Enter Result', async ({ page }) => {
     await page.goto('/login');
-    await page.selectOption('select', tenantAdmin.tenantId || '');
+    await page.selectOption('select[name="tenantId"]', tenantAdmin.tenantId || '');
     await page.fill('input[type="email"]', users.doctor.email);
     await page.fill('input[type="password"]', users.doctor.password);
     await page.click('button[type="submit"]');
@@ -108,7 +108,7 @@ test.describe('Golden Path E2E Workflow', () => {
     await expect(page.locator('[data-testid="lab-status"]')).toHaveText('Assigned');
     await page.goto('/logout');
     await page.goto('/login');
-    await page.selectOption('select', tenantAdmin.tenantId || '');
+    await page.selectOption('select[name="tenantId"]', tenantAdmin.tenantId || '');
     await page.fill('input[type="email"]', users.lab.email);
     await page.fill('input[type="password"]', users.lab.password);
     await page.click('button[type="submit"]');
@@ -121,7 +121,7 @@ test.describe('Golden Path E2E Workflow', () => {
 
   test('Pharmacy: Fulfill Prescription and Update Stock', async ({ page }) => {
     await page.goto('/login');
-    await page.selectOption('select', tenantAdmin.tenantId || '');
+    await page.selectOption('select[name="tenantId"]', tenantAdmin.tenantId || '');
     await page.fill('input[type="email"]', users.pharmacist.email);
     await page.fill('input[type="password"]', users.pharmacist.password);
     await page.click('button[type="submit"]');
@@ -138,7 +138,7 @@ test.describe('Golden Path E2E Workflow', () => {
 
   test('Billing: Generate Final Bill', async ({ page }) => {
     await page.goto('/login');
-    await page.selectOption('select', tenantAdmin.tenantId || '');
+    await page.selectOption('select[name="tenantId"]', tenantAdmin.tenantId || '');
     await page.fill('input[type="email"]', users.admin.email);
     await page.fill('input[type="password"]', users.admin.password);
     await page.click('button[type="submit"]');
@@ -151,7 +151,7 @@ test.describe('Golden Path E2E Workflow', () => {
 
   test('Analytics: Verify Admin Dashboard Metrics', async ({ page }) => {
     await page.goto('/login');
-    await page.selectOption('select', tenantAdmin.tenantId || '');
+    await page.selectOption('select[name="tenantId"]', tenantAdmin.tenantId || '');
     await page.fill('input[type="email"]', users.admin.email);
     await page.fill('input[type="password"]', users.admin.password);
     await page.click('button[type="submit"]');

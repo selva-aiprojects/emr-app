@@ -79,7 +79,7 @@ test.describe('Tenant Creation and Employee Management Workflow', () => {
 
         // Step 1: Login as Super Admin
         await test.step('Login as Super Admin', async () => {
-            await page.selectOption('select[name="tenantId"]', { label: 'System Administration' });
+            await page.selectOption('select[name="tenantId"]', { label: 'Platform Governance Center' });
             await page.fill('input[type="email"]', SUPER_ADMIN_EMAIL);
             await page.fill('input[type="password"]', SUPER_ADMIN_PASSWORD);
             await page.click('button[type="submit"]');

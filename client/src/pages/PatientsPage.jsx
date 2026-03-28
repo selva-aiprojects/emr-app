@@ -21,6 +21,8 @@ import {
   UserX
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/index.jsx';
+import { useToast } from '../hooks/useToast.jsx';
+
 
 export default function PatientsPage({
   activeUser,
@@ -31,6 +33,8 @@ export default function PatientsPage({
   setActivePatientId,
   onCreatePatient
 }) {
+  const { showToast } = useToast();
+
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');

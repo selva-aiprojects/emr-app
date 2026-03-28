@@ -66,7 +66,7 @@ test.describe('Multi-Tenant User Workflows', () => {
             await page.goto(CLIENT_URL);
 
             // Select Tenant
-            await page.selectOption('select', { label: user.tenant });
+            await page.selectOption('select[name="tenantId"]', { label: user.tenant });
 
             // Fill Credentials
             await page.fill('input[type="email"]', user.email);
@@ -78,7 +78,7 @@ test.describe('Multi-Tenant User Workflows', () => {
 
             // Verify Dashboard access
             await expect(page.locator('.app-root')).toBeVisible({ timeout: 15000 });
-            await expect(page.locator('text=Sign In')).not.toBeVisible();
+            await expect(page.getByText(/Sign in/i)).not.toBeVisible();
 
             // Check for role-specific expected text to verify module access
             if (user.expectedText) {
@@ -92,7 +92,7 @@ test.describe('Multi-Tenant User Workflows', () => {
             const logoutBtn = page.getByText('Sign Out');
             if (await logoutBtn.isVisible()) {
                 await logoutBtn.click();
-                await expect(page.locator('text=Sign In')).toBeVisible();
+                await expect(page.getByText(/Sign in/i)).toBeVisible();
             }
         });
     }

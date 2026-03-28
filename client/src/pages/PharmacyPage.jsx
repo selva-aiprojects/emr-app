@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { api } from '../api.js';
 import { 
   Plus, 
@@ -21,6 +22,8 @@ import { currency } from '../utils/format.js';
 import { EmptyState } from '../components/ui/index.jsx';
 
 export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
+  const { showToast } = useToast();
+
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('queue');
@@ -59,10 +62,8 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
         amount: item.amount || 250, // Simulated financial cost
         type: 'pharmacy'
       });
-      
-      // Visual feedback for Patient Journey Demo
-      alert(`✅ Dispensation Complete\n\n1. Stock Deducted\n2. Audit Log Created (Reference: AUD-${Math.random().toString(36).substr(2, 9).toUpperCase()})\n3. Bill Linked to Patient Ledger`);
-      
+      showToast({ message: 'Medication dispensed successfully!', type: 'success', title: 'Pharmacy' });
+
       loadQueue();
       if (onDispense) onDispense();
       setShowDispenseModal(null);

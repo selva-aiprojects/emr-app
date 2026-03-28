@@ -8,7 +8,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { testConnection, query } from './db/connection.js';
 import { hashPassword, comparePassword, generateToken } from './services/auth.service.js';
-import { authenticate, requireRole, requireTenant, requirePermission, restrictPatientAccess } from './middleware/auth.middleware.js';
+import { authenticate, requireRole, requireTenant, requirePermission, restrictPatientAccess, getPermissions } from './middleware/auth.middleware.js';
 import { evaluateAllFeatures, featureGate, moduleGate } from './middleware/featureFlag.middleware.js';
 import * as repo from './db/repository.js';
 import { createAuditLog } from './db/repository.js';
@@ -43,6 +43,32 @@ app.use((req, res, next) => {
 
 // Test database connection on startup
 testConnection();
+
+async function verifyFeatureFlagSchema() {
+  try {
+    const result = await query(`
+      SELECT
+        to_regclass('emr.tenant_features') AS tenant_features,
+        to_regclass('emr.global_kill_switches') AS global_kill_switches,
+        to_regclass('emr.tenant_feature_status') AS tenant_feature_status
+    `);
+    const row = result.rows[0] || {};
+    const missing = [];
+    if (!row.tenant_features) missing.push('emr.tenant_features');
+    if (!row.global_kill_switches) missing.push('emr.global_kill_switches');
+    if (!row.tenant_feature_status) missing.push('emr.tenant_feature_status');
+
+    if (missing.length) {
+      console.warn(`[FEATURE_FLAGS] Missing schema objects: ${missing.join(', ')}. Feature flags may not work as expected.`);
+    } else {
+      console.log('[FEATURE_FLAGS] Schema check passed.');
+    }
+  } catch (error) {
+    console.warn('[FEATURE_FLAGS] Schema check failed:', error.message);
+  }
+}
+
+verifyFeatureFlagSchema();
 
 // =====================================================
 // PUBLIC ROUTES (No authentication required)
@@ -169,6 +195,32 @@ app.post('/api/login', async (req, res) => {
       patientId: user.patient_id,
     });
 
+    let rolePermissions = [];
+    try {
+      const allPermissions = getPermissions();
+      rolePermissions = allPermissions[finalRole] || [];
+      const roleResult = await query(
+        `SELECT rp.permission 
+         FROM emr.role_permissions rp
+         JOIN emr.roles r ON rp.role_id = r.id
+         WHERE r.name = $1 AND (r.tenant_id = $2 OR r.is_system = true)`,
+        [finalRole, user.tenant_id]
+      );
+      if (roleResult.rows.length > 0) {
+        rolePermissions = roleResult.rows.map(r => r.permission);
+      }
+    } catch (err) {
+      console.warn('Failed to resolve dynamic role permissions:', err.message);
+    }
+
+    let featureFlags = null;
+    try {
+      const { getFeatureFlagStatus } = await import('./services/featureFlag.service.js');
+      featureFlags = await getFeatureFlagStatus(user.tenant_id);
+    } catch (err) {
+      console.warn('Failed to load feature flags at login:', err.message);
+    }
+
     return res.json({
       token,
       user: {
@@ -180,6 +232,8 @@ app.post('/api/login', async (req, res) => {
       },
       tenantId: user.tenant_id,
       role: finalRole,
+      permissions: { [finalRole]: rolePermissions },
+      featureFlags,
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -257,12 +311,11 @@ app.get('/api/tenants', async (_req, res) => {
 app.use('/api', authenticate);
 
 // Apply feature flag evaluation to all authenticated routes
-app.use('/api', evaluateAllFeatures);
+app.use('/api', evaluateAllFeatures);
 
 // Pharmacy microservice routes
 app.use('/api/pharmacy/v1', requireTenant, pharmacyRoutes);
 app.use('/api/ai/v1', requireTenant, aiRoutes);
-
 
 app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
   try {
@@ -280,14 +333,15 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
     // 1. Create the tenant record
     const tenant = await repo.createTenant({ name, code, subdomain, contactEmail, theme });
 
-    // 2. Apply subscription tier if provided (defaults to Basic in DB if not set)
+    // 2. Apply subscription tier if provided
     if (subscriptionTier && ['Free', 'Basic', 'Professional', 'Enterprise'].includes(subscriptionTier)) {
       await repo.setTenantTier(tenant.id, subscriptionTier);
       tenant.subscription_tier = subscriptionTier;
     }
 
     // 3. Create Default Administrator User for the new tenant
-    const defaultPassword = `${code.toLowerCase()}@${Math.floor(1000 + Math.random() * 9000)}`;
+    // IMPLEMENTED: Default password "Medflow@2026"
+    const defaultPassword = "Medflow@2026";
     const passwordHash = await hashPassword(defaultPassword);
     
     const adminLoginEmail = `admin@${subdomain}.com`;
@@ -306,7 +360,10 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
       name,
       subdomain,
       { email: adminLoginEmail, password: defaultPassword }
-    );
+    ).catch(e => {
+        console.error('Email sending failed:', e.message);
+        return { success: false };
+    });
 
     await repo.createAuditLog({
       tenantId: tenant.id,
@@ -319,14 +376,17 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
         code, 
         subscriptionTier: subscriptionTier || 'Basic',
         adminProvisioned: !!adminUser,
-        emailStatus: mailResult.success ? 'sent' : 'failed'
+        emailStatus: mailResult?.success ? 'sent' : 'failed',
+        defaultPassword: "Medflow@2026"
       },
     });
 
     res.status(201).json({
       ...tenant,
       adminProvisioned: true,
-      emailSent: mailResult.success
+      emailSent: mailResult?.success || false,
+      adminLoginEmail,
+      defaultPassword: "Medflow@2026"
     });
   } catch (error) {
     console.error('Error creating tenant:', error);
@@ -337,12 +397,67 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
   }
 });
 
+/**
+ * Superadmin endpoint to manually provision a tenant admin
+ */
+app.post('/api/admin/tenants/:id/provision-admin', authenticate, requireRole('Superadmin'), async (req, res) => {
+  try {
+    const { id: tenantId } = req.params;
+    const { name, email, password } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({ error: 'name and email are required' });
+    }
+
+    // Default password "Medflow@2026" if not provided
+    const userPassword = password || "Medflow@2026";
+    const passwordHash = await hashPassword(userPassword);
+    
+    // Check if user already exists
+    const existingUser = await repo.getUserByEmail(email, tenantId);
+    if (existingUser) {
+      return res.status(409).json({ error: 'User with this email already exists for this tenant' });
+    }
+
+    const user = await repo.createUser({
+      tenantId,
+      email,
+      passwordHash,
+      name,
+      role: 'Admin',
+    });
+
+    await repo.createAuditLog({
+      tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'tenant.admin.provision',
+      entityName: 'user',
+      entityId: user.id,
+      details: { email, role: 'Admin', provisionMode: 'manual_ui' },
+    });
+
+    res.status(201).json({
+      success: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      },
+      defaultPassword: userPassword
+    });
+  } catch (error) {
+    console.error('Error provisioning tenant admin:', error);
+    res.status(500).json({ error: 'Failed to provision tenant admin: ' + error.message });
+  }
+});
+
 app.put('/api/tenants/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
     
-    // In production, add requireSuperadmin middleware here
     if (!status || !['active', 'suspended'].includes(status)) {
       return res.status(400).json({ error: 'Valid status is required' });
     }
@@ -421,9 +536,9 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-app.post('/api/users', async (req, res) => {
-  try {
-    const { tenantId, name, email, role, patientId, password } = req.body;
+  app.post('/api/users', authenticate, requireTenant, requirePermission('users'), async (req, res) => {
+    try {
+      const { tenantId, name, email, role, patientId, password } = req.body;
 
     if (!tenantId || !name || !email || !role) {
       return res.status(400).json({ error: 'tenantId, name, email, and role are required' });
@@ -433,14 +548,14 @@ app.post('/api/users', async (req, res) => {
     const userPassword = password || `${name.split(' ')[0]}@123`;
     const passwordHash = await hashPassword(userPassword);
 
-    const user = await repo.createUser({
-      tenantId,
-      email,
-      passwordHash,
-      name,
-      role,
-      patientId: patientId || null,
-    });
+      const user = await repo.createUser({
+        tenantId,
+        email,
+        passwordHash,
+        name,
+        role,
+        patientId: patientId || null,
+      });
 
     await repo.createAuditLog({
       tenantId,
@@ -951,7 +1066,7 @@ function getDepartmentColor(department) {
 // PATIENTS
 // =====================================================
 
-app.post('/api/patients', requireTenant, requirePermission('patients'), async (req, res) => {
+app.post('/api/patients', requireTenant, requirePermission('patients'), moduleGate('patients'), async (req, res) => {
   try {
     const {
       firstName, lastName, dob, gender, phone, email, address,
@@ -993,7 +1108,7 @@ app.post('/api/patients', requireTenant, requirePermission('patients'), async (r
   }
 });
 
-app.patch('/api/patients/:id/clinical', requireTenant, restrictPatientAccess, async (req, res) => {
+app.patch('/api/patients/:id/clinical', requireTenant, restrictPatientAccess, moduleGate('patients'), async (req, res) => {
   try {
     const { id } = req.params;
     const { section, payload } = req.body;
@@ -1026,7 +1141,7 @@ app.patch('/api/patients/:id/clinical', requireTenant, restrictPatientAccess, as
   }
 });
 
-app.get('/api/patients', requireTenant, async (req, res) => {
+app.get('/api/patients', requireTenant, moduleGate('patients'), async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
@@ -1038,7 +1153,7 @@ app.get('/api/patients', requireTenant, async (req, res) => {
   }
 });
 
-app.get('/api/appointments', requireTenant, async (req, res) => {
+app.get('/api/appointments', requireTenant, moduleGate('appointments'), async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 100;
     const offset = parseInt(req.query.offset) || 0;
@@ -1050,7 +1165,7 @@ app.get('/api/appointments', requireTenant, async (req, res) => {
   }
 });
 
-app.get('/api/patients/search', requireTenant, async (req, res) => {
+app.get('/api/patients/search', requireTenant, moduleGate('patients'), async (req, res) => {
   try {
     const { text, date, type, status } = req.query;
     console.log('Patient search:', { text, date, type, status });
@@ -1063,7 +1178,7 @@ app.get('/api/patients/search', requireTenant, async (req, res) => {
   }
 });
 
-app.get('/api/patients/:id', requireTenant, async (req, res) => {
+app.get('/api/patients/:id', requireTenant, moduleGate('patients'), async (req, res) => {
   try {
     const { id } = req.params;
     const patient = await repo.getPatientById(id, req.tenantId, req.user.role);
@@ -1077,7 +1192,7 @@ app.get('/api/patients/:id', requireTenant, async (req, res) => {
   }
 });
 
-app.get('/api/patients/:id/print/:docType', requireTenant, restrictPatientAccess, async (req, res) => {
+app.get('/api/patients/:id/print/:docType', requireTenant, restrictPatientAccess, moduleGate('patients'), async (req, res) => {
   try {
     const { id, docType } = req.params;
 
@@ -1129,7 +1244,7 @@ app.get('/api/patients/:id/print/:docType', requireTenant, restrictPatientAccess
 // WALK-INS
 // =====================================================
 
-app.post('/api/walkins', requireTenant, requirePermission('appointments'), async (req, res) => {
+app.post('/api/walkins', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { name, phone, reason } = req.body;
 
@@ -1152,7 +1267,7 @@ app.post('/api/walkins', requireTenant, requirePermission('appointments'), async
   }
 });
 
-app.post('/api/walkins/:id/convert', requireTenant, requirePermission('patients'), async (req, res) => {
+app.post('/api/walkins/:id/convert', requireTenant, requirePermission('patients'), moduleGate('patients'), async (req, res) => {
   try {
     const { id } = req.params;
     const { dob, gender } = req.body;
@@ -1176,7 +1291,7 @@ app.post('/api/walkins/:id/convert', requireTenant, requirePermission('patients'
 // APPOINTMENTS
 // =====================================================
 
-app.post('/api/appointments', requireTenant, requirePermission('appointments'), async (req, res) => {
+app.post('/api/appointments', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { patientId, providerId, start, end, reason } = req.body;
 
@@ -1207,7 +1322,7 @@ app.post('/api/appointments', requireTenant, requirePermission('appointments'), 
   }
 });
 
-app.post('/api/appointments/self', requireTenant, async (req, res) => {
+app.post('/api/appointments/self', requireTenant, moduleGate('appointments'), async (req, res) => {
   try {
     const { patientId, providerId, start, end, reason } = req.body;
 
@@ -1243,7 +1358,7 @@ app.post('/api/appointments/self', requireTenant, async (req, res) => {
   }
 });
 
-app.patch('/api/appointments/:id/status', requireTenant, requirePermission('appointments'), async (req, res) => {
+app.patch('/api/appointments/:id/status', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -1267,7 +1382,7 @@ app.patch('/api/appointments/:id/status', requireTenant, requirePermission('appo
   }
 });
 
-app.patch('/api/appointments/:id/reschedule', requireTenant, async (req, res) => {
+app.patch('/api/appointments/:id/reschedule', requireTenant, moduleGate('appointments'), async (req, res) => {
   try {
     const { id } = req.params;
     const { start, end, reason } = req.body;
@@ -1304,7 +1419,7 @@ app.patch('/api/appointments/:id/reschedule', requireTenant, async (req, res) =>
 // ENCOUNTERS (EMR)
 // =====================================================
 
-app.get('/api/encounters', requireTenant, async (req, res) => {
+app.get('/api/encounters', requireTenant, moduleGate('emr'), async (req, res) => {
   try {
     const encounters = await repo.getEncounters(req.tenantId);
     res.json(encounters);
@@ -1314,7 +1429,7 @@ app.get('/api/encounters', requireTenant, async (req, res) => {
   }
 });
 
-app.post('/api/encounters', requireTenant, requirePermission('emr'), async (req, res) => {
+app.post('/api/encounters', requireTenant, requirePermission('emr'), moduleGate('emr'), async (req, res) => {
   try {
     const { patientId, providerId, type, complaint, diagnosis, notes } = req.body;
 
@@ -1345,7 +1460,7 @@ app.post('/api/encounters', requireTenant, requirePermission('emr'), async (req,
   }
 });
 
-app.post('/api/encounters/:id/discharge', requireTenant, requirePermission('emr'), async (req, res) => {
+app.post('/api/encounters/:id/discharge', requireTenant, requirePermission('emr'), moduleGate('emr'), async (req, res) => {
   try {
     const { id } = req.params;
     const { diagnosis, notes } = req.body;
@@ -1413,7 +1528,7 @@ app.patch('/api/invoices/:id/pay', requireTenant, requirePermission('billing'), 
   }
 });
 
-app.get('/api/invoices', requireTenant, requirePermission('billing'), async (req, res) => {
+app.get('/api/invoices', requireTenant, requirePermission('billing'), moduleGate('billing'), async (req, res) => {
   try {
     const invoices = await repo.getInvoices(req.tenantId);
     res.json(invoices);
@@ -1427,7 +1542,7 @@ app.get('/api/invoices', requireTenant, requirePermission('billing'), async (req
 // PHARMACY & PRESCRIPTIONS
 // =====================================================
 
-app.get('/api/prescriptions', requireTenant, requireRole('Nurse', 'Lab', 'Pharmacy'), async (req, res) => {
+app.get('/api/prescriptions', requireTenant, requireRole('Nurse', 'Lab', 'Pharmacy'), moduleGate('pharmacy'), async (req, res) => {
   try {
     const { status, patientId } = req.query;
     const prescriptions = await repo.getPrescriptions(req.tenantId, { status, patientId });
@@ -1438,7 +1553,7 @@ app.get('/api/prescriptions', requireTenant, requireRole('Nurse', 'Lab', 'Pharma
   }
 });
 
-app.get('/api/prescriptions/:id', requireTenant, async (req, res) => {
+app.get('/api/prescriptions/:id', requireTenant, moduleGate('pharmacy'), async (req, res) => {
   try {
     const prescription = await repo.getPrescriptionById(req.params.id, req.tenantId);
     if (!prescription) return res.status(404).json({ error: 'Prescription not found' });
@@ -1449,7 +1564,7 @@ app.get('/api/prescriptions/:id', requireTenant, async (req, res) => {
   }
 });
 
-app.post('/api/prescriptions', requireTenant, requireRole('Doctor'), async (req, res) => {
+app.post('/api/prescriptions', requireTenant, requireRole('Doctor'), moduleGate('pharmacy'), async (req, res) => {
   try {
     const { encounter_id, drug_name, dosage, frequency, duration, instructions, is_followup, followup_date, followup_notes } = req.body;
 
@@ -1486,7 +1601,7 @@ app.post('/api/prescriptions', requireTenant, requireRole('Doctor'), async (req,
   }
 });
 
-app.get('/api/prescriptions', requireTenant, requireRole('Nurse', 'Lab', 'Pharmacy'), async (req, res) => {
+app.get('/api/prescriptions', requireTenant, requireRole('Nurse', 'Lab', 'Pharmacy'), moduleGate('pharmacy'), async (req, res) => {
   try {
     const { status, patientId } = req.query;
     const prescriptions = await repo.getPrescriptions(req.tenantId, { status, patientId });
@@ -1497,7 +1612,7 @@ app.get('/api/prescriptions', requireTenant, requireRole('Nurse', 'Lab', 'Pharma
   }
 });
 
-app.patch('/api/prescriptions/:id/status', requireTenant, requirePermission('inventory'), async (req, res) => {
+app.patch('/api/prescriptions/:id/status', requireTenant, requirePermission('inventory'), moduleGate('pharmacy'), async (req, res) => {
   try {
     const { status } = req.body;
     const { id } = req.params;
@@ -1521,7 +1636,7 @@ app.patch('/api/prescriptions/:id/status', requireTenant, requirePermission('inv
   }
 });
 
-app.post('/api/prescriptions/:id/dispense', requireTenant, requirePermission('inventory'), async (req, res) => {
+app.post('/api/prescriptions/:id/dispense', requireTenant, requirePermission('inventory'), moduleGate('pharmacy'), async (req, res) => {
   try {
     const { id } = req.params;
     const { itemId, quantity } = req.body;
@@ -1545,7 +1660,7 @@ app.post('/api/prescriptions/:id/dispense', requireTenant, requirePermission('in
 // INVENTORY
 // =====================================================
 
-app.post('/api/inventory-items', requireTenant, requirePermission('inventory'), async (req, res) => {
+app.post('/api/inventory-items', requireTenant, requirePermission('inventory'), moduleGate('inventory'), async (req, res) => {
   try {
     const { code, name, category, stock, reorder } = req.body;
 
@@ -1573,7 +1688,7 @@ app.post('/api/inventory-items', requireTenant, requirePermission('inventory'), 
   }
 });
 
-app.get('/api/inventory-items', requireTenant, requirePermission('inventory'), async (req, res) => {
+app.get('/api/inventory-items', requireTenant, requirePermission('inventory'), moduleGate('inventory'), async (req, res) => {
   try {
     const items = await repo.getInventoryItems(req.tenantId);
     res.json(items);
@@ -1583,7 +1698,7 @@ app.get('/api/inventory-items', requireTenant, requirePermission('inventory'), a
   }
 });
 
-app.patch('/api/inventory-items/:id/stock', requireTenant, requirePermission('inventory'), async (req, res) => {
+app.patch('/api/inventory-items/:id/stock', requireTenant, requirePermission('inventory'), moduleGate('inventory'), async (req, res) => {
   try {
     const { id } = req.params;
     const { delta } = req.body;
@@ -1720,7 +1835,7 @@ app.get('/api/bootstrap', authenticate, async (req, res) => {
 // REPORTS
 // =====================================================
 
-app.get('/api/reports/summary', requireTenant, requirePermission('reports'), async (req, res) => {
+app.get('/api/reports/summary', requireTenant, requirePermission('reports'), moduleGate('reports'), async (req, res) => {
   try {
     const summary = await repo.getReportSummary(req.tenantId);
     res.json(summary);
@@ -1730,7 +1845,7 @@ app.get('/api/reports/summary', requireTenant, requirePermission('reports'), asy
   }
 });
 
-app.get('/api/reports/payouts', requireTenant, requirePermission('reports'), async (req, res) => {
+app.get('/api/reports/payouts', requireTenant, requirePermission('reports'), moduleGate('reports'), async (req, res) => {
   try {
     const payouts = await repo.getDoctorPayouts(req.tenantId);
     res.json(payouts);
@@ -1744,7 +1859,7 @@ app.get('/api/reports/payouts', requireTenant, requirePermission('reports'), asy
 // HR & ACCOUNTS
 // =====================================================
 
-app.post('/api/attendance', requireTenant, requirePermission('employees'), async (req, res) => {
+app.post('/api/attendance', requireTenant, requirePermission('employees'), moduleGate('employees'), async (req, res) => {
   try {
     /* Expected body: { employeeId, date, timeIn, timeOut, status } */
     const record = await repo.recordAttendance({ ...req.body, tenantId: req.tenantId });
@@ -1766,7 +1881,7 @@ app.post('/api/attendance', requireTenant, requirePermission('employees'), async
   }
 });
 
-app.get('/api/attendance', requireTenant, requirePermission('employees'), async (req, res) => {
+app.get('/api/attendance', requireTenant, requirePermission('employees'), moduleGate('employees'), async (req, res) => {
   try {
     const date = req.query.date || new Date().toISOString().slice(0, 10);
     const records = await repo.getAttendance(req.tenantId, date);
@@ -1777,7 +1892,7 @@ app.get('/api/attendance', requireTenant, requirePermission('employees'), async 
   }
 });
 
-app.post('/api/expenses', requireTenant, requirePermission('billing'), async (req, res) => {
+app.post('/api/expenses', requireTenant, requirePermission('billing'), moduleGate('billing'), async (req, res) => {
   try {
     /* Expected body: { category, description, amount, date, paymentMethod, reference } */
     const expense = await repo.addExpense({ ...req.body, tenantId: req.tenantId, recordedBy: req.user.id });
@@ -1799,7 +1914,7 @@ app.post('/api/expenses', requireTenant, requirePermission('billing'), async (re
   }
 });
 
-app.get('/api/expenses', requireTenant, requirePermission('billing'), async (req, res) => {
+app.get('/api/expenses', requireTenant, requirePermission('billing'), moduleGate('billing'), async (req, res) => {
   try {
     const month = req.query.month || null;
     const expenses = await repo.getExpenses(req.tenantId, { month });
@@ -1810,7 +1925,7 @@ app.get('/api/expenses', requireTenant, requirePermission('billing'), async (req
   }
 });
 
-app.get('/api/reports/financials', requireTenant, requirePermission('reports'), async (req, res) => {
+app.get('/api/reports/financials', requireTenant, requirePermission('reports'), moduleGate('reports'), async (req, res) => {
   try {
     /* Expected query: ?month=YYYY-MM-01 */
     const month = req.query.month || new Date().toISOString().slice(0, 8) + '01';
@@ -1826,7 +1941,7 @@ app.get('/api/reports/financials', requireTenant, requirePermission('reports'), 
 // INSURANCE
 // =====================================================
 
-app.get('/api/insurance/providers', requireTenant, requirePermission('insurance'), async (req, res) => {
+app.get('/api/insurance/providers', requireTenant, requirePermission('insurance'), moduleGate('insurance'), async (req, res) => {
   try {
     const providers = await repo.getInsuranceProviders(req.tenantId);
     res.json(providers);
@@ -1836,7 +1951,7 @@ app.get('/api/insurance/providers', requireTenant, requirePermission('insurance'
   }
 });
 
-app.post('/api/insurance/providers', requireTenant, requirePermission('insurance'), async (req, res) => {
+app.post('/api/insurance/providers', requireTenant, requirePermission('insurance'), moduleGate('insurance'), async (req, res) => {
   try {
     const provider = await repo.createInsuranceProvider({ ...req.body, tenantId: req.tenantId });
     res.status(201).json(provider);
@@ -1846,7 +1961,7 @@ app.post('/api/insurance/providers', requireTenant, requirePermission('insurance
   }
 });
 
-app.get('/api/insurance/claims', requireTenant, requirePermission('insurance'), async (req, res) => {
+app.get('/api/insurance/claims', requireTenant, requirePermission('insurance'), moduleGate('insurance'), async (req, res) => {
   try {
     const { status } = req.query;
     const claims = await repo.getClaims(req.tenantId, { status });
@@ -1857,7 +1972,7 @@ app.get('/api/insurance/claims', requireTenant, requirePermission('insurance'), 
   }
 });
 
-app.post('/api/insurance/claims', requireTenant, requirePermission('insurance'), async (req, res) => {
+app.post('/api/insurance/claims', requireTenant, requirePermission('insurance'), moduleGate('insurance'), async (req, res) => {
   try {
     const claim = await repo.createClaim({ ...req.body, tenantId: req.tenantId });
     res.status(201).json(claim);
@@ -1975,7 +2090,7 @@ app.post('/api/ambulances', requireTenant, requirePermission('admin'), async (re
 });
 
 // BLOOD BANK INVENTORY MASTERS
-app.get('/api/blood-bank/units', requireTenant, async (req, res) => {
+app.get('/api/blood-bank/units', requireTenant, moduleGate('inventory'), async (req, res) => {
   try {
     const units = await repo.getBloodUnits(req.tenantId);
     res.json(units);
@@ -1985,7 +2100,7 @@ app.get('/api/blood-bank/units', requireTenant, async (req, res) => {
   }
 });
 
-app.post('/api/blood-bank/units', requireTenant, requirePermission('inventory'), async (req, res) => {
+app.post('/api/blood-bank/units', requireTenant, requirePermission('inventory'), moduleGate('inventory'), async (req, res) => {
   try {
     const unit = await repo.createBloodUnit({ ...req.body, tenantId: req.tenantId, userId: req.user.id });
     res.status(201).json(unit);
@@ -1995,7 +2110,7 @@ app.post('/api/blood-bank/units', requireTenant, requirePermission('inventory'),
   }
 });
 
-app.get('/api/blood-bank/requests', requireTenant, async (req, res) => {
+app.get('/api/blood-bank/requests', requireTenant, moduleGate('inventory'), async (req, res) => {
   try {
     const requests = await repo.getBloodRequests(req.tenantId);
     res.json(requests);
@@ -2010,7 +2125,7 @@ app.get('/api/blood-bank/requests', requireTenant, async (req, res) => {
 // =====================================================
 
 // GET /api/lab/orders - List lab test orders for a tenant
-app.get('/api/lab/orders', requireTenant, async (req, res) => {
+app.get('/api/lab/orders', requireTenant, moduleGate('lab'), async (req, res) => {
   try {
     const { status } = req.query;
     let sql = `
@@ -2037,7 +2152,7 @@ app.get('/api/lab/orders', requireTenant, async (req, res) => {
 });
 
 // POST /api/lab/orders - Create a new lab test order
-app.post('/api/lab/orders', requireTenant, async (req, res) => {
+app.post('/api/lab/orders', requireTenant, moduleGate('lab'), async (req, res) => {
   try {
     const { patientId, encounterId, tests, priority = 'routine', notes } = req.body;
     if (!patientId || !tests || !tests.length) {
@@ -2073,7 +2188,7 @@ app.post('/api/lab/orders', requireTenant, async (req, res) => {
 });
 
 // PATCH /api/lab/orders/:id/status - Update lab order status (pending → in-progress → completed)
-app.patch('/api/lab/orders/:id/status', requireTenant, async (req, res) => {
+app.patch('/api/lab/orders/:id/status', requireTenant, moduleGate('lab'), async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -2092,7 +2207,7 @@ app.patch('/api/lab/orders/:id/status', requireTenant, async (req, res) => {
 });
 
 // POST /api/lab/orders/:id/results - Record test results for a lab order
-app.post('/api/lab/orders/:id/results', requireTenant, async (req, res) => {
+app.post('/api/lab/orders/:id/results', requireTenant, moduleGate('lab'), async (req, res) => {
   try {
     const { id } = req.params;
     const { results, notes, criticalFlag = false } = req.body;
@@ -2383,6 +2498,9 @@ app.get('/api/support/tickets', authenticate, (req, res, next) => {
     return next();
   }
   requireTenant(req, res, next);
+}, (req, res, next) => {
+  if (!req.tenantId) return next();
+  return moduleGate('support')(req, res, next);
 }, async (req, res) => {
   try {
     const tickets = await repo.getSupportTickets(req.tenantId);
@@ -2393,7 +2511,7 @@ app.get('/api/support/tickets', authenticate, (req, res, next) => {
   }
 });
 
-app.post('/api/support/tickets', requireTenant, async (req, res) => {
+app.post('/api/support/tickets', requireTenant, moduleGate('support'), async (req, res) => {
   try {
     const { type, location, description, priority } = req.body;
     if (!type || !description) return res.status(400).json({ error: 'type and description are required' });
@@ -2413,7 +2531,7 @@ app.post('/api/support/tickets', requireTenant, async (req, res) => {
   }
 });
 
-app.patch('/api/support/tickets/:id/status', requireTenant, async (req, res) => {
+app.patch('/api/support/tickets/:id/status', requireTenant, moduleGate('support'), async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -2435,7 +2553,7 @@ app.patch('/api/support/tickets/:id/status', requireTenant, async (req, res) => 
 // =====================================================
 
 // POST /api/inpatient/:id/discharge-invoice - Auto-create a draft invoice on discharge
-app.post('/api/inpatient/:id/discharge-invoice', requireTenant, async (req, res) => {
+app.post('/api/inpatient/:id/discharge-invoice', requireTenant, moduleGate('inpatient'), async (req, res) => {
   try {
     const { id } = req.params; // encounter id
     const { patientId, amount = 0, description } = req.body;

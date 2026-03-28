@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { 
   Truck, 
   MapPin, 
@@ -25,6 +26,8 @@ const MOCK_TRIPS = [
 ];
 
 export default function AmbulancePage({ tenant }) {
+  const { showToast } = useToast();
+
   const [fleet, setFleet] = useState(MOCK_AMBULANCES);
   const [trips, setTrips] = useState(MOCK_TRIPS);
   const [activeTab, setActiveTab] = useState('live'); // 'live' | 'fleet'

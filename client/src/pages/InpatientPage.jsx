@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { api } from '../api';
 import { getAIDischargeSummary } from '../ai-api.js';
 import '../styles/critical-care.css';
@@ -25,6 +26,8 @@ import {
 import PatientSearch from '../components/PatientSearch.jsx';
 
 export default function InpatientPage({ tenant, providers, onDischarge }) {
+  const { showToast } = useToast();
+
   const [encounters, setEncounters] = useState([]);
   const [wards, setWards] = useState([]);
   const [beds, setBeds] = useState({});
@@ -89,6 +92,7 @@ export default function InpatientPage({ tenant, providers, onDischarge }) {
         summary: summaryData 
       });
       
+      showToast({ message: 'Patient discharged!', type: 'success', title: 'Inpatient' });
       setEncounters(prev => prev.filter(e => e.id !== encounterId));
       setShowSummary(null);
       if (onDischarge) onDischarge();
@@ -441,7 +445,7 @@ export default function InpatientPage({ tenant, providers, onDischarge }) {
                           if (bestBed) {
                             alert(`AUTONOMOUS NODE ALLOCATION:\nBed ${bestBed.bed_number} identified as optimal best-fit for new influx.`);
                           } else {
-                            alert('FACILITY CAPACITY BREACH: No available shards in this sector.');
+                            showToast({ message: 'FACILITY CAPACITY BREACH: No available shards in this sector.', type: 'error' });
                           }
                         }}
                         className="text-[10px] font-black text-emerald-600 uppercase tracking-widest hover:text-emerald-700"
@@ -486,7 +490,7 @@ export default function InpatientPage({ tenant, providers, onDischarge }) {
                                      setDischargeDiagnosis(parts[0].replace('1. Final Diagnosis', '').trim());
                                      setDischargeMeds(summary); // Put full report in meds as a draft
                                    } catch (err) {
-                                     alert('AI Generation failed');
+                                     showToast({ message: 'AI Generation failed', type: 'error' });
                                    } finally {
                                      setIsGeneratingAI(false);
                                    }

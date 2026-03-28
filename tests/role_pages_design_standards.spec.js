@@ -30,9 +30,9 @@ async function login(page, user) {
   await page.locator('select[name="tenantId"]').waitFor({ state: 'visible', timeout: 10000 });
   await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
   
-  await page.getByPlaceholder('name@hospital.org').fill(user.email);
-  await page.getByPlaceholder('Enter your secure password').fill(PASSWORD);
-  await page.getByRole('button', { name: /Sign In|Continue/i }).click();
+  await page.locator('input[type="email"]').fill(user.email);
+  await page.locator('input[type="password"]').fill(PASSWORD);
+  await page.getByRole('button', { name: /Sign in|Continue/i }).click();
   
   // Wait for navigation
   await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
@@ -253,8 +253,8 @@ test.describe('Design Standards & Consistency', () => {
     await page.goto('/');
     
     // Check input fields on login page
-    const emailInput = page.getByPlaceholder('name@hospital.org');
-    const passwordInput = page.getByPlaceholder('Enter your secure password');
+    const emailInput = page.locator('input[type="email"]');
+    const passwordInput = page.locator('input[type="password"]');
     
     // Both should be visible
     await expect(emailInput).toBeVisible();
@@ -329,7 +329,7 @@ test.describe('Responsive Design & Accessibility', () => {
     await page.goto('/');
     
     // Check login button size
-    const loginBtn = page.getByRole('button', { name: /Sign In|Continue/i }).first();
+    const loginBtn = page.getByRole('button', { name: /Sign in|Continue/i }).first();
     
     if (await loginBtn.isVisible()) {
       const box = await loginBtn.boundingBox();
@@ -391,9 +391,9 @@ test.describe('Healthcare Design Standards Compliance', () => {
     await page.locator('select[name="tenantId"]').waitFor({ state: 'visible', timeout: 10000 });
     await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
     
-    await page.getByPlaceholder('name@hospital.org').fill('invalid@test.local');
-    await page.getByPlaceholder('Enter your secure password').fill('InvalidPassword123');
-    await page.getByRole('button', { name: /Sign In|Continue/i }).click();
+    await page.locator('input[type="email"]').fill('invalid@test.local');
+    await page.locator('input[type="password"]').fill('InvalidPassword123');
+    await page.getByRole('button', { name: /Sign in|Continue/i }).click();
     
     // Wait for error or redirect
     await page.waitForTimeout(3000);

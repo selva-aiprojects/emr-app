@@ -1,4 +1,5 @@
 import React from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { 
   Building2, 
   Bed, 
@@ -16,6 +17,8 @@ import {
 import '../styles/critical-care.css';
 
 export default function AdminMastersPage({ tenant, onViewChange }) {
+  const { showToast } = useToast();
+
   const masterModules = [
     {
       id: 'departments',

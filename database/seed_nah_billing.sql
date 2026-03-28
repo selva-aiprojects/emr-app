@@ -1,116 +1,103 @@
--- New Age Hospital (NAH) Billing and Financial Data
--- Creates realistic revenue, costs, and financial metrics
+-- New Age Hospital (NAH) Billing and Financial Data (Schema-Compatible)
+-- Uses enhanced invoices + expenses tables
 
 BEGIN;
 
 -- =====================================================
--- NAH INVOICES/BILLING (200+ invoices for realistic metrics)
+-- NAH INVOICES (Create from encounters)
 -- =====================================================
-INSERT INTO emr.invoices (tenant_id, patient_id, encounter_id, invoice_number, invoice_date, due_date, total_amount, status, payment_method, created_at)
-VALUES
--- Today's Invoices (8 new invoices)
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-003'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-003')),'INV-NAH-2024-001',CURRENT_DATE,CURRENT_DATE + INTERVAL '30 days',250.00,'pending','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-006'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-006')),'INV-NAH-2024-002',CURRENT_DATE,CURRENT_DATE + INTERVAL '30 days',180.00,'pending','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-009'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-009')),'INV-NAH-2024-003',CURRENT_DATE,CURRENT_DATE + INTERVAL '30 days',320.00,'pending','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-001'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-001')),'INV-NAH-2024-004',CURRENT_DATE,CURRENT_DATE + INTERVAL '30 days',150.00,'paid','cash',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MAT-002'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MAT-002')),'INV-NAH-2024-005',CURRENT_DATE,CURRENT_DATE + INTERVAL '30 days',280.00,'pending','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-001'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-001')),'INV-NAH-2024-006',CURRENT_DATE,CURRENT_DATE + INTERVAL '30 days',850.00,'pending','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-002'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-002')),'INV-NAH-2024-007',CURRENT_DATE,CURRENT_DATE + INTERVAL '30 days',650.00,'paid','card',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-003'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-003')),'INV-NAH-2024-008',CURRENT_DATE,CURRENT_DATE + INTERVAL '30 days',450.00,'pending','insurance',NOW()),
-
--- Yesterday's Invoices (12 invoices)
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-011'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '1 day' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-011')),'INV-NAH-2024-009',CURRENT_DATE - INTERVAL '1 day',CURRENT_DATE + INTERVAL '29 days',220.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-012'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '1 day' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-012')),'INV-NAH-2024-010',CURRENT_DATE - INTERVAL '1 day',CURRENT_DATE + INTERVAL '29 days',280.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-013'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '1 day' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-013')),'INV-NAH-2024-011',CURRENT_DATE - INTERVAL '1 day',CURRENT_DATE + INTERVAL '29 days',350.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-014'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '1 day' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-014')),'INV-NAH-2024-012',CURRENT_DATE - INTERVAL '1 day',CURRENT_DATE + INTERVAL '29 days',180.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-016'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '1 day' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-016')),'INV-NAH-2024-013',CURRENT_DATE - INTERVAL '1 day',CURRENT_DATE + INTERVAL '29 days',420.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-017'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '1 day' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-017')),'INV-NAH-2024-014',CURRENT_DATE - INTERVAL '1 day',CURRENT_DATE + INTERVAL '29 days',290.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-018'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '1 day' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-018')),'INV-NAH-2024-015',CURRENT_DATE - INTERVAL '1 day',CURRENT_DATE + INTERVAL '29 days',150.00,'paid','cash',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-019'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '1 day' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-019')),'INV-NAH-2024-016',CURRENT_DATE - INTERVAL '1 day',CURRENT_DATE + INTERVAL '29 days',380.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-020'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '1 day' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-020')),'INV-NAH-2024-017',CURRENT_DATE - INTERVAL '1 day',CURRENT_DATE + INTERVAL '29 days',260.00,'paid','insurance',NOW()),
-
--- This Week's Invoices (45 invoices)
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-CHRON-001'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-CHRON-001')),'INV-NAH-2024-018',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',450.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-CHRON-002'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-CHRON-002')),'INV-NAH-2024-019',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',520.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-SURG-001'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-SURG-001')),'INV-NAH-2024-020',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',680.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-SURG-002'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-SURG-002')),'INV-NAH-2024-021',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',420.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-GER-001'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-GER-001')),'INV-NAH-2024-022',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',380.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-GER-002'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-GER-002')),'INV-NAH-2024-023',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',850.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MH-001'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MH-001')),'INV-NAH-2024-024',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',320.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MH-002'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MH-002')),'INV-NAH-2024-025',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',280.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-003'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-003')),'INV-NAH-2024-026',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',350.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-004'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '2 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-004')),'INV-NAH-2024-027',CURRENT_DATE - INTERVAL '2 days',CURRENT_DATE + INTERVAL '28 days',280.00,'paid','insurance',NOW()),
-
--- Last Week's Invoices (68 invoices)
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-REHAB-001'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '7 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-REHAB-001')),'INV-NAH-2024-028',CURRENT_DATE - INTERVAL '7 days',CURRENT_DATE + INTERVAL '23 days',420.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-REHAB-002'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '7 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-REHAB-002')),'INV-NAH-2024-029',CURRENT_DATE - INTERVAL '7 days',CURRENT_DATE + INTERVAL '23 days',420.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ONC-001'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '7 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ONC-001')),'INV-NAH-2024-030',CURRENT_DATE - INTERVAL '7 days',CURRENT_DATE + INTERVAL '23 days',1250.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ONC-002'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '7 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ONC-002')),'INV-NAH-2024-031',CURRENT_DATE - INTERVAL '7 days',CURRENT_DATE + INTERVAL '23 days',980.00,'overdue','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-004'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '7 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-004')),'INV-NAH-2024-032',CURRENT_DATE - INTERVAL '7 days',CURRENT_DATE + INTERVAL '23 days',0.00,'cancelled','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-005'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '7 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-005')),'INV-NAH-2024-033',CURRENT_DATE - INTERVAL '7 days',CURRENT_DATE + INTERVAL '23 days',380.00,'paid','cash',NOW()),
-
--- Additional invoices for realistic volume
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-001'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '3 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-001')),'INV-NAH-2024-034',CURRENT_DATE - INTERVAL '3 days',CURRENT_DATE + INTERVAL '27 days',280.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-002'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '4 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-002')),'INV-NAH-2024-035',CURRENT_DATE - INTERVAL '4 days',CURRENT_DATE + INTERVAL '26 days',350.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-004'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '5 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-004')),'INV-NAH-2024-036',CURRENT_DATE - INTERVAL '5 days',CURRENT_DATE + INTERVAL '25 days',420.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-005'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '6 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-005')),'INV-NAH-2024-037',CURRENT_DATE - INTERVAL '6 days',CURRENT_DATE + INTERVAL '24 days',380.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-007'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '8 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-007')),'INV-NAH-2024-038',CURRENT_DATE - INTERVAL '8 days',CURRENT_DATE + INTERVAL '22 days',450.00,'paid','insurance',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-008'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '9 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-008')),'INV-NAH-2024-039',CURRENT_DATE - INTERVAL '9 days',CURRENT_DATE + INTERVAL '21 days',180.00,'paid','cash',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-010'),(SELECT id FROM emr.encounters WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND encounter_date = CURRENT_DATE - INTERVAL '10 days' AND patient_id = (SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-010')),'INV-NAH-2024-040',CURRENT_DATE - INTERVAL '10 days',CURRENT_DATE + INTERVAL '20 days',320.00,'paid','insurance',NOW())
-
+WITH enc AS (
+  SELECT
+    e.id,
+    e.tenant_id,
+    e.patient_id,
+    e.visit_date,
+    row_number() OVER (ORDER BY e.visit_date, e.id) AS rn
+  FROM emr.encounters e
+  WHERE e.tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'
+),
+calc AS (
+  SELECT
+    enc.*,
+    (100 + (enc.rn % 6) * 75)::numeric(12,2) AS subtotal,
+    round((100 + (enc.rn % 6) * 75)::numeric * 0.05, 2) AS tax
+  FROM enc
+)
+INSERT INTO emr.invoices (
+  tenant_id,
+  patient_id,
+  encounter_id,
+  invoice_number,
+  description,
+  subtotal,
+  tax,
+  total,
+  paid,
+  status,
+  created_at
+)
+SELECT
+  c.tenant_id,
+  c.patient_id,
+  c.id AS encounter_id,
+  format('INV-NAH-%s-%03s', to_char(c.visit_date, 'YYYYMMDD'), c.rn),
+  'Consultation and services',
+  c.subtotal,
+  c.tax,
+  c.subtotal + c.tax AS total,
+  CASE WHEN c.rn % 4 = 0 THEN c.subtotal + c.tax ELSE 0 END AS paid,
+  CASE
+    WHEN c.rn % 7 = 0 THEN 'void'
+    WHEN c.rn % 4 = 0 THEN 'paid'
+    ELSE 'issued'
+  END AS status,
+  now()
+FROM calc c
 ON CONFLICT DO NOTHING;
 
 -- =====================================================
--- NAH EXPENSES/COSTS (Operational costs for realistic metrics)
+-- NAH EXPENSES (Operational costs for realistic metrics)
 -- =====================================================
-INSERT INTO emr.expenses (tenant_id, expense_category, expense_date, amount, description, vendor, created_at)
+INSERT INTO emr.expenses (
+  tenant_id,
+  category,
+  description,
+  amount,
+  date,
+  payment_method,
+  reference,
+  recorded_by
+)
 VALUES
 -- Staff Salaries (Monthly)
-('20000000-0000-0000-0000-000000000001','salaries',CURRENT_DATE - INTERVAL '1 day',85000.00,'Monthly staff salaries','NAH Payroll',NOW()),
-('20000000-0000-0000-0000-000000000001','salaries',CURRENT_DATE - INTERVAL '32 days',85000.00,'Monthly staff salaries','NAH Payroll',NOW()),
-('20000000-0000-0000-0000-000000000001','salaries',CURRENT_DATE - INTERVAL '62 days',82000.00,'Monthly staff salaries','NAH Payroll',NOW()),
-('20000000-0000-0000-0000-000000000001','salaries',CURRENT_DATE - INTERVAL '92 days',88000.00,'Monthly staff salaries','NAH Payroll',NOW()),
-('20000000-0000-0000-0000-000000000001','salaries',CURRENT_DATE - INTERVAL '122 days',86000.00,'Monthly staff salaries','NAH Payroll',NOW()),
-('20000000-0000-0000-0000-000000000001','salaries',CURRENT_DATE - INTERVAL '152 days',87000.00,'Monthly staff salaries','NAH Payroll',NOW()),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Salary','Monthly staff salaries - NAH Payroll',85000.00,CURRENT_DATE - INTERVAL '1 day','Bank Transfer','NAH Payroll',NULL),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Salary','Monthly staff salaries - NAH Payroll',85000.00,CURRENT_DATE - INTERVAL '32 days','Bank Transfer','NAH Payroll',NULL),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Salary','Monthly staff salaries - NAH Payroll',82000.00,CURRENT_DATE - INTERVAL '62 days','Bank Transfer','NAH Payroll',NULL),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Salary','Monthly staff salaries - NAH Payroll',88000.00,CURRENT_DATE - INTERVAL '92 days','Bank Transfer','NAH Payroll',NULL),
 
 -- Medical Supplies
-('20000000-0000-0000-0000-000000000001','medical_supplies',CURRENT_DATE - INTERVAL '1 day',15000.00,'Weekly medical supplies','MedSupply Co',NOW()),
-('20000000-0000-0000-0000-000000000001','medical_supplies',CURRENT_DATE - INTERVAL '8 days',14500.00,'Weekly medical supplies','MedSupply Co',NOW()),
-('20000000-0000-0000-0000-000000000001','medical_supplies',CURRENT_DATE - INTERVAL '15 days',16000.00,'Weekly medical supplies','MedSupply Co',NOW()),
-('20000000-0000-0000-0000-000000000001','medical_supplies',CURRENT_DATE - INTERVAL '22 days',13800.00,'Weekly medical supplies','MedSupply Co',NOW()),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Purchase','Weekly medical supplies - MedSupply Co',15000.00,CURRENT_DATE - INTERVAL '1 day','Bank Transfer','MedSupply Co',NULL),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Purchase','Weekly medical supplies - MedSupply Co',14500.00,CURRENT_DATE - INTERVAL '8 days','Bank Transfer','MedSupply Co',NULL),
 
 -- Pharmacy Inventory
-('20000000-0000-0000-0000-000000000001','pharmacy',CURRENT_DATE - INTERVAL '1 day',22000.00,'Weekly pharmacy restock','PharmaCorp',NOW()),
-('20000000-0000-0000-0000-000000000001','pharmacy',CURRENT_DATE - INTERVAL '8 days',25000.00,'Weekly pharmacy restock','PharmaCorp',NOW()),
-('20000000-0000-0000-0000-000000000001','pharmacy',CURRENT_DATE - INTERVAL '15 days',21000.00,'Weekly pharmacy restock','PharmaCorp',NOW()),
-('20000000-0000-0000-0000-000000000001','pharmacy',CURRENT_DATE - INTERVAL '22 days',23500.00,'Weekly pharmacy restock','PharmaCorp',NOW()),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Purchase','Weekly pharmacy restock - PharmaCorp',22000.00,CURRENT_DATE - INTERVAL '1 day','Bank Transfer','PharmaCorp',NULL),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Purchase','Weekly pharmacy restock - PharmaCorp',25000.00,CURRENT_DATE - INTERVAL '8 days','Bank Transfer','PharmaCorp',NULL),
 
 -- Equipment Maintenance
-('20000000-0000-0000-0000-000000000001','maintenance',CURRENT_DATE - INTERVAL '5 days',8500.00,'MRI machine maintenance','MedTech Services',NOW()),
-('20000000-0000-0000-0000-000000000001','maintenance',CURRENT_DATE - INTERVAL '12 days',3200.00,'X-ray equipment maintenance','MedTech Services',NOW()),
-('20000000-0000-0000-0000-000000000001','maintenance',CURRENT_DATE - INTERVAL '19 days',5800.00,'Lab equipment maintenance','MedTech Services',NOW()),
-('20000000-0000-0000-0000-000000000001','maintenance',CURRENT_DATE - INTERVAL '26 days',4500.00,'General equipment maintenance','MedTech Services',NOW()),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Maintenance','MRI machine maintenance - MedTech Services',8500.00,CURRENT_DATE - INTERVAL '5 days','Bank Transfer','MedTech Services',NULL),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Maintenance','X-ray equipment maintenance - MedTech Services',3200.00,CURRENT_DATE - INTERVAL '12 days','Bank Transfer','MedTech Services',NULL),
 
 -- Utilities
-('20000000-0000-0000-0000-000000000001','utilities',CURRENT_DATE - INTERVAL '1 day',12000.00,'Monthly utilities','City Utilities',NOW()),
-('20000000-0000-0000-0000-000000000001','utilities',CURRENT_DATE - INTERVAL '32 days',11500.00,'Monthly utilities','City Utilities',NOW()),
-('20000000-0000-0000-0000-000000000001','utilities',CURRENT_DATE - INTERVAL '62 days',12800.00,'Monthly utilities','City Utilities',NOW()),
-('20000000-0000-0000-0000-000000000001','utilities',CURRENT_DATE - INTERVAL '92 days',12200.00,'Monthly utilities','City Utilities',NOW()),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Utilities','Monthly utilities - City Utilities',12000.00,CURRENT_DATE - INTERVAL '1 day','Bank Transfer','City Utilities',NULL),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Utilities','Monthly utilities - City Utilities',11500.00,CURRENT_DATE - INTERVAL '32 days','Bank Transfer','City Utilities',NULL),
 
--- Insurance & Licenses
-('20000000-0000-0000-0000-000000000001','insurance',CURRENT_DATE - INTERVAL '10 days',8500.00,'Medical malpractice insurance','HealthGuard Insurance',NOW()),
-('20000000-0000-0000-0000-000000000001','insurance',CURRENT_DATE - INTERVAL '40 days',8500.00,'Medical malpractice insurance','HealthGuard Insurance',NOW()),
-('20000000-0000-0000-0000-000000000001','insurance',CURRENT_DATE - INTERVAL '70 days',8500.00,'Medical malpractice insurance','HealthGuard Insurance',NOW()),
-('20000000-0000-0000-0000-000000000001','licenses',CURRENT_DATE - INTERVAL '15 days',3200.00,'Hospital license renewal','State Health Dept',NOW()),
-('20000000-0000-0000-0000-000000000001','licenses',CURRENT_DATE - INTERVAL '105 days',3200.00,'Pharmacy license renewal','State Pharmacy Board',NOW()),
+-- Certifications / Licenses
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Certifications','Medical malpractice insurance - HealthGuard',8500.00,CURRENT_DATE - INTERVAL '10 days','Bank Transfer','HealthGuard',NULL),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Certifications','Hospital license renewal - State Health Dept',3200.00,CURRENT_DATE - INTERVAL '15 days','Bank Transfer','State Health Dept',NULL),
 
--- Marketing & Administration
-('20000000-0000-0000-0000-000000000001','marketing',CURRENT_DATE - INTERVAL '7 days',5500.00,'Digital marketing campaign','Marketing Agency',NOW()),
-('20000000-0000-0000-0000-000000000001','marketing',CURRENT_DATE - INTERVAL '14 days',4800.00,'Print advertising','Local Newspaper',NOW()),
-('20000000-0000-0000-0000-000000000001','administration',CURRENT_DATE - INTERVAL '1 day',8500.00,'Office supplies and admin','Office Depot',NOW()),
-('20000000-0000-0000-0000-000000000001','administration',CURRENT_DATE - INTERVAL '8 days',7200.00,'Office supplies and admin','Office Depot',NOW()),
-('20000000-0000-0000-0000-000000000001','administration',CURRENT_DATE - INTERVAL '15 days',9100.00,'Office supplies and admin','Office Depot',NOW())
-
+-- Administration
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Other','Office supplies and admin - Office Depot',8500.00,CURRENT_DATE - INTERVAL '1 day','Bank Transfer','Office Depot',NULL),
+('f998a8f5-95b9-4fd7-a583-63cf574d65ed','Other','Office supplies and admin - Office Depot',7200.00,CURRENT_DATE - INTERVAL '8 days','Bank Transfer','Office Depot',NULL)
 ON CONFLICT DO NOTHING;
 
 COMMIT;

@@ -66,10 +66,10 @@ export default function CommunicationPage({ activeUser, notices = [], onCreateNo
         <article className="premium-panel">
           <form
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.target);
-              onCreateNotice({
+              await onCreateNotice({
                 title: fd.get('title'),
                 body: fd.get('body'),
                 priority: fd.get('priority'),
@@ -82,6 +82,7 @@ export default function CommunicationPage({ activeUser, notices = [], onCreateNo
                   .filter(Boolean)
               });
               e.target.reset();
+              showToast({ message: 'Notice published successfully!', type: 'success', title: 'Communication' });
               setShowComposer(false);
             }}
           >
@@ -158,7 +159,10 @@ export default function CommunicationPage({ activeUser, notices = [], onCreateNo
                       <button
                         type="button"
                         className="text-xs font-bold text-rose-600 hover:text-rose-700"
-                        onClick={() => onSetNoticeStatus(notice.id, 'archived')}
+                        onClick={async () => {
+                          await onSetNoticeStatus(notice.id, 'archived');
+                          showToast({ message: 'Notice archived.', type: 'success', title: 'Communication' });
+                        }}
                       >
                         Archive
                       </button>

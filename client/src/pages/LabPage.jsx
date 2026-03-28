@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { api } from '../api';
 import '../styles/critical-care.css';
 import { 
@@ -15,6 +16,8 @@ import {
 import { EmptyState } from '../components/ui/index.jsx';
 
 export default function LabPage({ tenant, activeUser }) {
+  const { showToast } = useToast();
+
   const [labOrders, setLabOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);

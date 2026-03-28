@@ -185,6 +185,13 @@ export async function updateTenantSettings(tenantId, data) {
   });
 }
 
+export async function provisionTenantAdmin(tenantId, data) {
+  return await apiRequest(`/admin/tenants/${tenantId}/provision-admin`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 // =====================================================
 // USERS
 // =====================================================

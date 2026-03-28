@@ -11,6 +11,7 @@
     "preview": "vite preview client --config client/vite.config.js",
     "start": "node server/index.js",
     "seed:nah": "node server/seed_nah_data.js",
+    "seed:e2e": "node tests/setup_demo_tiers.js && node scripts/seed_e2e_users.js",
     "test:integration": "node scripts/ensure_server.js && node scripts/integration_test.js",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test tests/smoke_tests.spec.js tests/smoke_seeded_roles.spec.js",

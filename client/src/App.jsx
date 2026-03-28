@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { api } from './api.js';
 import { fallbackPermissions } from './config/modules.js';
+import { featureFlagService } from './services/featureFlag.service.js';
 import AppLayout from './components/AppLayout.jsx';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -238,47 +239,40 @@ export default function App() {
     return roleKey;
   }
 
-  async function refreshTenantData(tenantId = session?.tenantId, userId = session?.user?.id, userRole = session?.user?.role) {
+  function mergePermissions(permissionsPayload) {
+    const merged = { ...fallbackPermissions };
+    if (permissionsPayload) {
+      Object.keys(permissionsPayload).forEach(role => {
+        const dbPerms = permissionsPayload[role] || [];
+        if (merged[role]) {
+          merged[role] = Array.from(new Set([...merged[role], ...dbPerms]));
+        } else {
+          merged[role] = dbPerms;
+        }
+      });
+    }
+    return merged;
+  }
+
+  async function refreshTenantData(
+    tenantId = session?.tenantId,
+    userId = session?.user?.id,
+    userRole = session?.user?.role,
+    options = {}
+  ) {
     if (!tenantId) {
       return;
     }
 
-    const [bootstrap, tenantUsers] = await Promise.all([
-      api.getBootstrap(tenantId, userId),
-      api.getUsers(tenantId)
-    ]);
+    const mode = options.mode || 'full';
+    const bootstrap = await api.getBootstrap(tenantId, userId);
 
-    const effectivePermissions = { ...fallbackPermissions };
-    if (bootstrap.permissions) {
-      Object.keys(bootstrap.permissions).forEach(role => {
-        const dbPerms = bootstrap.permissions[role] || [];
-        if (effectivePermissions[role]) {
-          effectivePermissions[role] = Array.from(new Set([...effectivePermissions[role], ...dbPerms]));
-        } else {
-          effectivePermissions[role] = dbPerms;
-        }
-      });
-    }
+    const effectivePermissions = mergePermissions(bootstrap.permissions);
     const normalizedRole = normalizeRole(userRole);
     const roleViews = effectivePermissions[normalizedRole] || effectivePermissions[userRole] || [];
     const canReadReports = roleViews.includes('reports');
 
-    let reports = null;
-    if (canReadReports) {
-      try {
-        reports = await api.getReportSummary(tenantId);
-      } catch (err) {
-        console.warn('Report summary unavailable for current role/session:', err.message);
-      }
-    }
-
-    const [noticeFeed, documentFeed] = await Promise.all([
-      api.getNotices(tenantId, 'all').catch(() => []),
-      api.getDocuments(tenantId).catch(() => [])
-    ]);
-
     setPermissions(effectivePermissions);
-    setUsers(tenantUsers || []);
     setPatients(bootstrap.patients || []);
     setAppointments(bootstrap.appointments || []);
     setWalkins(bootstrap.walkins || []);
@@ -289,12 +283,52 @@ export default function App() {
     setEmployeeLeaves(bootstrap.employeeLeaves || []);
     setInsuranceProviders(bootstrap.insuranceProviders || []);
     setClaims(bootstrap.claims || []);
-    setNotices(noticeFeed || []);
-    setDocuments(documentFeed || []);
-    setReportSummary(reports);
     if (!activePatientId && bootstrap.patients?.length) {
       setActivePatientId(bootstrap.patients[0].id);
     }
+
+    if (mode === 'fast') {
+      void (async () => {
+        const reportsPromise = canReadReports
+          ? api.getReportSummary(tenantId).catch((err) => {
+              console.warn('Report summary unavailable for current role/session:', err.message);
+              return null;
+            })
+          : Promise.resolve(null);
+
+        const [tenantUsers, reports, noticeFeed, documentFeed] = await Promise.all([
+          api.getUsers(tenantId).catch(() => []),
+          reportsPromise,
+          api.getNotices(tenantId, 'all').catch(() => []),
+          api.getDocuments(tenantId).catch(() => [])
+        ]);
+
+        setUsers(tenantUsers || []);
+        setNotices(noticeFeed || []);
+        setDocuments(documentFeed || []);
+        setReportSummary(reports);
+      })();
+      return;
+    }
+
+    const reportsPromise = canReadReports
+      ? api.getReportSummary(tenantId).catch((err) => {
+          console.warn('Report summary unavailable for current role/session:', err.message);
+          return null;
+        })
+      : Promise.resolve(null);
+
+    const [tenantUsers, reports, noticeFeed, documentFeed] = await Promise.all([
+      api.getUsers(tenantId).catch(() => []),
+      reportsPromise,
+      api.getNotices(tenantId, 'all').catch(() => []),
+      api.getDocuments(tenantId).catch(() => [])
+    ]);
+
+    setUsers(tenantUsers || []);
+    setNotices(noticeFeed || []);
+    setDocuments(documentFeed || []);
+    setReportSummary(reports);
   }
 
   async function refreshSuperadmin() {
@@ -327,7 +361,7 @@ export default function App() {
             if (session.user.role === 'Superadmin') {
               await refreshSuperadmin();
             } else {
-              await refreshTenantData(session.tenantId, session.user.id, session.user.role);
+              await refreshTenantData(session.tenantId, session.user.id, session.user.role, { mode: 'fast' });
             }
           } catch (e) {
             console.error('Failed to restore session data', e);
@@ -354,14 +388,25 @@ export default function App() {
       setLoading(true);
       setSession(loginData);
 
+      if (loginData?.permissions) {
+        setPermissions(mergePermissions(loginData.permissions));
+      }
+
+      if (loginData?.featureFlags && loginData?.tenantId) {
+        featureFlagService.seedCache(loginData.tenantId, loginData.featureFlags);
+      }
+
       if (loginData.role === 'Superadmin') {
-        await refreshSuperadmin();
         setView('superadmin');
+        refreshSuperadmin().catch((err) => {
+          console.error('Superadmin refresh failed:', err);
+        });
       } else {
-        // Fetch tenant data FIRST
-        await refreshTenantData(loginData.tenantId, loginData.user.id, loginData.user.role);
-        // Only show dashboard AFTER data is loaded
-        setView((loginData.user?.role || '').toLowerCase() === 'doctor' ? 'doctor_workspace' : 'dashboard');
+        const targetView = (loginData.user?.role || '').toLowerCase() === 'doctor' ? 'doctor_workspace' : 'dashboard';
+        setView(targetView);
+        refreshTenantData(loginData.tenantId, loginData.user.id, loginData.user.role, { mode: 'fast' }).catch((err) => {
+          console.error('Tenant refresh failed:', err);
+        });
       }
     } catch (err) {
       console.error('DIAGNOSTIC: Login process failed at step:', err);

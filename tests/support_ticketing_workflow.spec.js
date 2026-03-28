@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 
 const NAH_TENANT = 'New Age Hospital';
 const PASSWORD = 'Admin@123';
@@ -10,9 +10,9 @@ test.describe('Support Ticketing Persona Workflows', () => {
     await page.goto('/');
     await page.locator('select[name="tenantId"]').waitFor({ state: 'visible', timeout: 10000 });
     await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
-    await page.getByPlaceholder('professional@medflow.org').fill('admin@nah.local');
-    await page.getByPlaceholder('••••••••••••').fill(PASSWORD);
-    await page.getByRole('button', { name: /Authorize Entry/i }).click();
+    await page.locator('input[type="email"]').fill('admin@nah.local');
+    await page.locator('input[type="password"]').fill(PASSWORD);
+    await page.getByRole('button', { name: /Sign in|Authorize Entry|Continue to Workflow|Login/i }).click();
 
     // Wait for dashboard Navigation
     await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
@@ -47,7 +47,7 @@ test.describe('Support Ticketing Persona Workflows', () => {
     // Verify ticket appears in the list
     await expect(page.getByText('Automated Test: AC is leaking water.')).toBeVisible({ timeout: 10000 });
     
-    console.log('✅ Admin successfully created a support ticket');
+    console.log('âœ… Admin successfully created a support ticket');
   });
 
   test('Doctor cannot access the Support module', async ({ page }) => {
@@ -55,9 +55,9 @@ test.describe('Support Ticketing Persona Workflows', () => {
     await page.goto('/');
     await page.locator('select[name="tenantId"]').waitFor({ state: 'visible', timeout: 10000 });
     await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
-    await page.getByPlaceholder('professional@medflow.org').fill('cmo@nah.local');
-    await page.getByPlaceholder('••••••••••••').fill(PASSWORD);
-    await page.getByRole('button', { name: /Authorize Entry/i }).click();
+    await page.locator('input[type="email"]').fill('cmo@nah.local');
+    await page.locator('input[type="password"]').fill(PASSWORD);
+    await page.getByRole('button', { name: /Sign in|Authorize Entry|Continue to Workflow|Login/i }).click();
 
     await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
 
@@ -65,7 +65,8 @@ test.describe('Support Ticketing Persona Workflows', () => {
     const supportBtn = page.getByRole('button', { name: /Unit Maintenance/i, exact: false });
     await expect(supportBtn).toHaveCount(0);
     
-    console.log('✅ Doctor correctly restricted from Support module');
+    console.log('âœ… Doctor correctly restricted from Support module');
   });
 
 });
+

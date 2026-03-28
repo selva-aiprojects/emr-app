@@ -1,7 +1,10 @@
 import { ShieldCheck } from 'lucide-react';
+import { useToast } from '../hooks/useToast.jsx';
 import MetricCard from '../components/MetricCard';
 
 export default function InventoryPage({ inventory, onAddItem, onRestock }) {
+  const { showToast } = useToast();
+
   const totalItems = inventory.length;
   const lowStockItems = inventory.filter((item) => Number(item.stock) <= Number(item.reorder)).length;
 

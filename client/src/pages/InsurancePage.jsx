@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { Building2, Plus, Search, ShieldCheck, ArrowLeft, Send, ExternalLink, Calendar, Hash, User } from 'lucide-react';
 import { currency } from '../utils/format.js';
 
 export default function InsurancePage({ providers = [], claims = [], onCreateProvider, onCreateClaim }) {
+  const { showToast } = useToast();
+
   const [activeTab, setActiveTab] = useState('list'); // 'list' | 'detail' | 'claims'
   const [selectedProviderId, setSelectedProviderId] = useState(null);
   const [showRegister, setShowRegister] = useState(false);
@@ -21,6 +24,22 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
   const providerClaims = useMemo(() => 
     claims.filter(c => c.insuranceProviderId === selectedProviderId),
   [claims, selectedProviderId]);
+
+
+
+  const handleCreateProvider = async (e) => {
+    e.preventDefault();
+    await onCreateProvider(e);
+    setShowRegister(false);
+    showToast({ message: 'Payer provisioned successfully!', type: 'success', title: 'Insurance' });
+  };
+
+  const handleCreateClaim = async (e) => {
+    e.preventDefault();
+    await onCreateClaim(e);
+    setShowClaimModal(false);
+    showToast({ message: 'Insurance claim submitted!', type: 'success', title: 'Insurance' });
+  };
 
   const stats = useMemo(() => {
     const total = claims.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
@@ -157,7 +176,7 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
                 </button>
               </div>
 
-              <form className="space-y-6" onSubmit={(e) => { onCreateClaim(e); setShowClaimModal(false); }}>
+              <form className="space-y-6" onSubmit={handleCreateClaim}>
                 <input type="hidden" name="insuranceProviderId" value={selectedProviderId} />
                 
                 <div className="space-y-2">
@@ -349,7 +368,7 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2">Initialize institutional relationship & coverage threshold</p>
                 </div>
 
-                <form className="space-y-8" onSubmit={(e) => { onCreateProvider(e); setShowRegister(false); }}>
+                <form className="space-y-8" onSubmit={handleCreateProvider}>
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-2 md:col-span-2">
                          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Institutional Identity</label>

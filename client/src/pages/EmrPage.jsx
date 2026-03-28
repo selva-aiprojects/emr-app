@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import PatientSearch from '../components/PatientSearch.jsx';
 import { patientName } from '../utils/format.js';
 import { api } from '../api.js';
@@ -117,6 +118,8 @@ function printPrescription(enc, patient, medications, provider, tenant) {
 }
 
 export default function EmrPage({ tenant, activeUser, patients, providers, encounters, onCreateEncounter, onDischarge, onCreateDocument }) {
+  const { showToast } = useToast();
+
   const [activeTab, setActiveTab] = useState('active');
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [prescriptionItems, setPrescriptionItems] = useState([]);
@@ -184,7 +187,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
     const fd = new FormData(e.target);
 
     if (safetyData.safetyCheck && !safetyData.safetyCheck.isSafe && !safetyData.overrideSafety) {
-      alert('URGENT: Safety override required to commit therapeutic trajectory.');
+      showToast({ message: 'URGENT: Safety override required to commit therapeutic trajectory.', type: 'error' });
       return;
     }
 

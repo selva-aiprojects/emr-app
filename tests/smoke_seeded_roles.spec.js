@@ -8,12 +8,12 @@ const TENANTS = [
 ];
 
 const ROLES = [
-  { key: 'admin', email: 'admin@nah.com', password: 'Admin@123', displayName: /Admin/i },
-  { key: 'doctor', email: 'sarah@nah.com', password: 'Admin@123', displayName: /Sarah/i },
-  { key: 'nurse', email: 'joy@nah.com', password: 'Admin@123', displayName: /Joy/i },
-  { key: 'lab', email: 'leo@nah.com', password: 'Admin@123', displayName: /Leo/i },
-  { key: 'pharmacy', email: 'peter@nah.com', password: 'Admin@123', displayName: /Peter/i },
-  { key: 'billing', email: 'alex@nah.com', password: 'Admin@123', displayName: /Alex/i },
+  { key: 'admin', email: 'admin@nah.local', password: 'Admin@123', displayName: /Sarah/i },
+  { key: 'doctor', email: 'cmo@nah.local', password: 'Admin@123', displayName: /Michael/i },
+  { key: 'nurse', email: 'headnurse@nah.local', password: 'Admin@123', displayName: /Emily/i },
+  { key: 'lab', email: 'lab@nah.local', password: 'Admin@123', displayName: /Lisa/i },
+  { key: 'pharmacy', email: 'pharmacy@nah.local', password: 'Admin@123', displayName: /James/i },
+  { key: 'billing', email: 'billing@nah.local', password: 'Admin@123', displayName: /Robert/i },
 ];
 
 async function login(page, tenantLabel, email, password) {
@@ -26,7 +26,7 @@ async function login(page, tenantLabel, email, password) {
   await page.locator('select[name="tenantId"]').selectOption({ label: tenantLabel });
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
-  await page.getByRole('button', { name: /Continue to Workflow/i }).click();
+  await page.getByRole('button', { name: /Authorize Entry|Continue to Workflow|Login/i }).click();
 }
 
 for (const tenant of TENANTS) {

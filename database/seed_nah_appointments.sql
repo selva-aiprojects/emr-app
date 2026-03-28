@@ -1,104 +1,124 @@
--- New Age Hospital (NAH) Appointments and Encounters Data
--- Creates realistic appointment volume and clinical encounters
+-- New Age Hospital (NAH) Appointments and Encounters Data (Schema-Compatible)
+-- Uses enhanced schema columns: scheduled_start/end, visit_date, notes
 
 BEGIN;
 
 -- =====================================================
--- NAH APPOINTMENTS (200+ appointments for realistic metrics)
+-- NAH APPOINTMENTS (Realistic volume across dates)
 -- =====================================================
-INSERT INTO emr.appointments (tenant_id, patient_id, appointment_date, appointment_time, status, type, department, provider_id, notes, created_at)
-VALUES
--- Today's Appointments (45 scheduled)
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-001'),CURRENT_DATE,'09:00','scheduled','consultation','General Practice','20000000-0000-0000-0000-000000000102','Regular checkup',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-002'),CURRENT_DATE,'09:30','scheduled','consultation','Cardiology','20000000-0000-0000-0000-000000000102','Follow-up visit',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-003'),CURRENT_DATE,'10:00','completed','consultation','Endocrinology','20000000-0000-0000-0000-000000000102','Diabetes management',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-004'),CURRENT_DATE,'10:30','scheduled','consultation','Pulmonology','20000000-0000-0000-0000-000000000102','COPD follow-up',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-005'),CURRENT_DATE,'11:00','scheduled','consultation','Orthopedics','20000000-0000-0000-0000-000000000102','Joint pain evaluation',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-006'),CURRENT_DATE,'11:30','completed','consultation','Psychiatry','20000000-0000-0000-0000-000000000102','Medication review',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-007'),CURRENT_DATE,'14:00','scheduled','consultation','Gastroenterology','20000000-0000-0000-0000-000000000102','Abdominal pain',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-008'),CURRENT_DATE,'14:30','scheduled','consultation','Dermatology','20000000-0000-0000-0000-000000000102','Skin rash',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-009'),CURRENT_DATE,'15:00','completed','consultation','Nephrology','20000000-0000-0000-0000-000000000102','Kidney function',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-010'),CURRENT_DATE,'15:30','scheduled','consultation','Rheumatology','20000000-0000-0000-0000-000000000102','Arthritis management',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-001'),CURRENT_DATE,'09:00','completed','consultation','Pediatrics','20000000-0000-0000-0000-000000000102','Well child visit',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-002'),CURRENT_DATE,'09:30','scheduled','consultation','Pediatrics','20000000-0000-0000-0000-000000000102','Asthma checkup',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MAT-001'),CURRENT_DATE,'10:00','scheduled','consultation','Obstetrics','20000000-0000-0000-0000-000000000102','Prenatal visit',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MAT-002'),CURRENT_DATE,'10:30','completed','consultation','Obstetrics','20000000-0000-0000-0000-000000000102','Prenatal visit',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-001'),CURRENT_DATE,'08:00','completed','emergency','Emergency','20000000-0000-0000-0000-000000000102','Chest pain',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-002'),CURRENT_DATE,'08:30','completed','emergency','Emergency','20000000-0000-0000-0000-000000000102','Shortness of breath',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-003'),CURRENT_DATE,'09:00','completed','emergency','Emergency','20000000-0000-0000-0000-000000000102','Fall injury',NOW()),
-
--- Yesterday's Appointments (38 completed, 7 cancelled)
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-011'),CURRENT_DATE - INTERVAL '1 day','09:00','completed','consultation','General Practice','20000000-0000-0000-0000-000000000102','Routine checkup',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-012'),CURRENT_DATE - INTERVAL '1 day','09:30','completed','consultation','Cardiology','20000000-0000-0000-0000-000000000102','Blood pressure check',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-013'),CURRENT_DATE - INTERVAL '1 day','10:00','completed','consultation','Endocrinology','20000000-0000-0000-0000-000000000102','Thyroid evaluation',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-014'),CURRENT_DATE - INTERVAL '1 day','10:30','completed','consultation','Pulmonology','20000000-0000-0000-0000-000000000102','Asthma review',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-015'),CURRENT_DATE - INTERVAL '1 day','11:00','cancelled','consultation','Orthopedics','20000000-0000-0000-0000-000000000102','Knee pain',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-016'),CURRENT_DATE - INTERVAL '1 day','11:30','completed','consultation','Psychiatry','20000000-0000-0000-0000-000000000102','Depression follow-up',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-017'),CURRENT_DATE - INTERVAL '1 day','14:00','completed','consultation','Gastroenterology','20000000-0000-0000-0000-000000000102','GI evaluation',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-018'),CURRENT_DATE - INTERVAL '1 day','14:30','completed','consultation','Dermatology','20000000-0000-0000-0000-000000000102','Skin examination',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-019'),CURRENT_DATE - INTERVAL '1 day','15:00','completed','consultation','Nephrology','20000000-0000-0000-0000-000000000102','Kidney stones',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-020'),CURRENT_DATE - INTERVAL '1 day','15:30','completed','consultation','Rheumatology','20000000-0000-0000-0000-000000000102','Joint pain',NOW()),
-
--- This Week's Appointments (additional 120 appointments)
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-CHRON-001'),CURRENT_DATE - INTERVAL '2 days','09:00','completed','consultation','Endocrinology','20000000-0000-0000-0000-000000000102','Diabetes management',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-CHRON-002'),CURRENT_DATE - INTERVAL '2 days','09:30','completed','consultation','Cardiology','20000000-0000-0000-0000-000000000102','Heart failure follow-up',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-SURG-001'),CURRENT_DATE - INTERVAL '2 days','10:00','completed','consultation','Surgery','20000000-0000-0000-0000-000000000102','Pre-op evaluation',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-SURG-002'),CURRENT_DATE - INTERVAL '2 days','10:30','completed','consultation','Surgery','20000000-0000-0000-0000-000000000102','Hernia consultation',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-GER-001'),CURRENT_DATE - INTERVAL '2 days','11:00','completed','consultation','Geriatrics','20000000-0000-0000-0000-000000000102','Geriatric assessment',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-GER-002'),CURRENT_DATE - INTERVAL '2 days','11:30','completed','consultation','Oncology','20000000-0000-0000-0000-000000000102','Cancer follow-up',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MH-001'),CURRENT_DATE - INTERVAL '2 days','14:00','completed','consultation','Psychiatry','20000000-0000-0000-0000-000000000102','Medication management',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MH-002'),CURRENT_DATE - INTERVAL '2 days','14:30','completed','consultation','Psychology','20000000-0000-0000-0000-000000000102','Therapy session',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-003'),CURRENT_DATE - INTERVAL '2 days','15:00','completed','consultation','Pediatrics','20000000-0000-0000-0000-000000000102','Diabetes education',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-004'),CURRENT_DATE - INTERVAL '2 days','15:30','completed','consultation','Pediatrics','20000000-0000-0000-0000-000000000102','ADHD evaluation',NOW()),
-
--- Last Week's Appointments (85 completed, 10 cancelled, 5 no-show)
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-REHAB-001'),CURRENT_DATE - INTERVAL '7 days','09:00','completed','consultation','Physical Therapy','20000000-0000-0000-0000-000000000102','Rehab session',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-REHAB-002'),CURRENT_DATE - INTERVAL '7 days','09:30','completed','consultation','Physical Therapy','20000000-0000-0000-0000-000000000102','Rehab session',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ONC-001'),CURRENT_DATE - INTERVAL '7 days','10:00','completed','consultation','Oncology','20000000-0000-0000-0000-000000000102','Chemotherapy follow-up',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ONC-002'),CURRENT_DATE - INTERVAL '7 days','10:30','cancelled','consultation','Oncology','20000000-0000-0000-0000-000000000102','Radiation therapy',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-004'),CURRENT_DATE - INTERVAL '7 days','11:00','no-show','emergency','Emergency','20000000-0000-0000-0000-000000000102','Minor injury',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-005'),CURRENT_DATE - INTERVAL '7 days','11:30','completed','emergency','Emergency','20000000-0000-0000-0000-000000000102','Migraine',NOW()),
-
--- Future Appointments (upcoming 2 weeks)
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-001'),CURRENT_DATE + INTERVAL '1 day','09:00','scheduled','consultation','General Practice','20000000-0000-0000-0000-000000000102','Follow-up',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-002'),CURRENT_DATE + INTERVAL '2 days','10:00','scheduled','consultation','Cardiology','20000000-0000-0000-0000-000000000102','Routine check',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-003'),CURRENT_DATE + INTERVAL '3 days','14:00','scheduled','consultation','Endocrinology','20000000-0000-0000-0000-000000000102','Diabetes review',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-004'),CURRENT_DATE + INTERVAL '4 days','11:00','scheduled','consultation','Pulmonology','20000000-0000-0000-0000-000000000102','Lung function test',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-005'),CURRENT_DATE + INTERVAL '5 days','09:30','scheduled','consultation','Orthopedics','20000000-0000-0000-0000-000000000102','Post-op follow-up',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-006'),CURRENT_DATE + INTERVAL '6 days','15:00','scheduled','consultation','Psychiatry','20000000-0000-0000-0000-000000000102','Medication review',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-007'),CURRENT_DATE + INTERVAL '7 days','10:30','scheduled','consultation','Gastroenterology','20000000-0000-0000-0000-000000000102','Endoscopy prep',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-008'),CURRENT_DATE + INTERVAL '8 days','14:30','scheduled','consultation','Dermatology','20000000-0000-0000-0000-000000000102','Skin biopsy',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-009'),CURRENT_DATE + INTERVAL '9 days','11:30','scheduled','consultation','Nephrology','20000000-0000-0000-0000-000000000102','Dialysis planning',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-010'),CURRENT_DATE + INTERVAL '10 days','09:00','scheduled','consultation','Rheumatology','20000000-0000-0000-0000-000000000102','Arthritis treatment',NOW())
-
+WITH patient_list AS (
+  SELECT id, row_number() OVER (ORDER BY id) AS rn
+  FROM emr.patients
+  WHERE tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'
+),
+seed_today AS (
+  SELECT
+    'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid AS tenant_id,
+    p.id AS patient_id,
+    '20000000-0000-0000-0000-000000000102'::uuid AS provider_id,
+    (CURRENT_DATE + (8 + (p.rn % 10)) * INTERVAL '1 hour') AS scheduled_start,
+    (CURRENT_DATE + (8 + (p.rn % 10)) * INTERVAL '1 hour' + INTERVAL '30 minutes') AS scheduled_end,
+    CASE
+      WHEN p.rn % 9 = 0 THEN 'completed'
+      WHEN p.rn % 11 = 0 THEN 'cancelled'
+      ELSE 'scheduled'
+    END AS status,
+    'Routine consultation' AS reason,
+    'staff' AS source
+  FROM patient_list p
+  WHERE p.rn <= 35
+),
+seed_yesterday AS (
+  SELECT
+    'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid AS tenant_id,
+    p.id AS patient_id,
+    '20000000-0000-0000-0000-000000000102'::uuid AS provider_id,
+    (CURRENT_DATE - INTERVAL '1 day' + (9 + (p.rn % 8)) * INTERVAL '1 hour') AS scheduled_start,
+    (CURRENT_DATE - INTERVAL '1 day' + (9 + (p.rn % 8)) * INTERVAL '1 hour' + INTERVAL '30 minutes') AS scheduled_end,
+    CASE
+      WHEN p.rn % 7 = 0 THEN 'cancelled'
+      ELSE 'completed'
+    END AS status,
+    'Follow-up visit' AS reason,
+    'staff' AS source
+  FROM patient_list p
+  WHERE p.rn > 35 AND p.rn <= 70
+),
+seed_last_week AS (
+  SELECT
+    'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid AS tenant_id,
+    p.id AS patient_id,
+    '20000000-0000-0000-0000-000000000102'::uuid AS provider_id,
+    (CURRENT_DATE - INTERVAL '7 days' + (10 + (p.rn % 6)) * INTERVAL '1 hour') AS scheduled_start,
+    (CURRENT_DATE - INTERVAL '7 days' + (10 + (p.rn % 6)) * INTERVAL '1 hour' + INTERVAL '30 minutes') AS scheduled_end,
+    CASE
+      WHEN p.rn % 10 = 0 THEN 'no_show'
+      WHEN p.rn % 6 = 0 THEN 'cancelled'
+      ELSE 'completed'
+    END AS status,
+    'Department consult' AS reason,
+    'staff' AS source
+  FROM patient_list p
+  WHERE p.rn > 70 AND p.rn <= 110
+),
+seed_future AS (
+  SELECT
+    'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid AS tenant_id,
+    p.id AS patient_id,
+    '20000000-0000-0000-0000-000000000102'::uuid AS provider_id,
+    (CURRENT_DATE + (1 + (p.rn % 10)) * INTERVAL '1 day' + (9 + (p.rn % 6)) * INTERVAL '1 hour') AS scheduled_start,
+    (CURRENT_DATE + (1 + (p.rn % 10)) * INTERVAL '1 day' + (9 + (p.rn % 6)) * INTERVAL '1 hour' + INTERVAL '30 minutes') AS scheduled_end,
+    'scheduled' AS status,
+    'Upcoming review' AS reason,
+    'staff' AS source
+  FROM patient_list p
+  WHERE p.rn > 110 AND p.rn <= 140
+)
+INSERT INTO emr.appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, status, reason, source)
+SELECT * FROM seed_today
+UNION ALL
+SELECT * FROM seed_yesterday
+UNION ALL
+SELECT * FROM seed_last_week
+UNION ALL
+SELECT * FROM seed_future
 ON CONFLICT DO NOTHING;
 
 -- =====================================================
--- NAH ENCOUNTERS/Clinical Visits (150 encounters)
+-- NAH ENCOUNTERS (Generate from completed appointments)
 -- =====================================================
-INSERT INTO emr.encounters (tenant_id, patient_id, appointment_id, encounter_date, encounter_type, chief_complaint, diagnosis, treatment_plan, provider_id, status, created_at)
-VALUES
--- Today's Completed Encounters
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-003'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE AND appointment_time = '10:00'),CURRENT_DATE,'consultation','Diabetes management follow-up','Type 2 Diabetes controlled','Continue metformin, diet and exercise','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-006'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE AND appointment_time = '11:30'),CURRENT_DATE,'consultation','Anxiety symptoms','Generalized Anxiety Disorder','Continue SSRIs, therapy referral','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-009'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE AND appointment_time = '15:00'),CURRENT_DATE,'consultation','Kidney function monitoring','Chronic Kidney Disease Stage 3','Medication adjustment, fluid restriction','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-PED-001'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE AND appointment_time = '09:00'),CURRENT_DATE,'consultation','Well child examination','Healthy development','Vaccinations scheduled','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-MAT-002'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE AND appointment_time = '10:30'),CURRENT_DATE,'consultation','Prenatal care 20 weeks','Normal pregnancy','Continue prenatal vitamins, schedule anatomy scan','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-001'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE AND appointment_time = '08:00'),CURRENT_DATE,'emergency','Chest pain','Atypical chest pain, rule out cardiac','ECG normal, observation for 4 hours','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-002'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE AND appointment_time = '08:30'),CURRENT_DATE,'emergency','Shortness of breath','Asthma exacerbation','Nebulizer treatment, steroids','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-ER-003'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE AND appointment_time = '09:00'),CURRENT_DATE,'emergency','Fall injury','Minor head injury, concussion','CT head normal, observation','20000000-0000-0000-0000-000000000102','completed',NOW()),
-
--- Yesterday's Completed Encounters
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-011'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE - INTERVAL '1 day' AND appointment_time = '09:00'),CURRENT_DATE - INTERVAL '1 day','consultation','Routine health check','Hypertension well controlled','Continue current medications','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-012'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE - INTERVAL '1 day' AND appointment_time = '09:30'),CURRENT_DATE - INTERVAL '1 day','consultation','Blood pressure check','Stage 1 Hypertension','Lifestyle modifications, consider medication','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-013'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE - INTERVAL '1 day' AND appointment_time = '10:00'),CURRENT_DATE - INTERVAL '1 day','consultation','Thyroid evaluation','Hypothyroidism','Adjust levothyroxine dose','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-014'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE - INTERVAL '1 day' AND appointment_time = '10:30'),CURRENT_DATE - INTERVAL '1 day','consultation','Asthma review','Mild persistent asthma','Continue inhaled steroids','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-016'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE - INTERVAL '1 day' AND appointment_time = '11:30'),CURRENT_DATE - INTERVAL '1 day','consultation','Depression follow-up','Major Depressive Disorder','Continue antidepressants, therapy','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-017'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE - INTERVAL '1 day' AND appointment_time = '14:00'),CURRENT_DATE - INTERVAL '1 day','consultation','GI evaluation','GERD','PPI therapy, dietary changes','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-018'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE - INTERVAL '1 day' AND appointment_time = '14:30'),CURRENT_DATE - INTERVAL '1 day','consultation','Skin examination','Eczema','Topical steroids, moisturizers','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-019'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE - INTERVAL '1 day' AND appointment_time = '15:00'),CURRENT_DATE - INTERVAL '1 day','consultation','Kidney stones','Nephrolithiasis','Pain management, hydration','20000000-0000-0000-0000-000000000102','completed',NOW()),
-('20000000-0000-0000-0000-000000000001',(SELECT id FROM emr.patients WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND mrn = 'NAH-OPD-020'),(SELECT id FROM emr.appointments WHERE tenant_id = '20000000-0000-0000-0000-000000000001' AND appointment_date = CURRENT_DATE - INTERVAL '1 day' AND appointment_time = '15:30'),CURRENT_DATE - INTERVAL '1 day','consultation','Joint pain','Osteoarthritis','NSAIDs, physical therapy','20000000-0000-0000-0000-000000000102','completed',NOW())
-
+INSERT INTO emr.encounters (
+  tenant_id,
+  patient_id,
+  provider_id,
+  encounter_type,
+  visit_date,
+  chief_complaint,
+  diagnosis,
+  notes,
+  status
+)
+SELECT
+  a.tenant_id,
+  a.patient_id,
+  a.provider_id,
+  CASE
+    WHEN a.reason ILIKE '%emergency%' THEN 'Emergency'
+    ELSE 'Out-patient'
+  END AS encounter_type,
+  a.scheduled_start::date AS visit_date,
+  a.reason AS chief_complaint,
+  CASE
+    WHEN a.reason ILIKE '%diabetes%' THEN 'Diabetes'
+    WHEN a.reason ILIKE '%cardio%' THEN 'Cardiac Review'
+    ELSE 'General'
+  END AS diagnosis,
+  'Continue medications and follow-up as advised.' AS notes,
+  'closed' AS status
+FROM emr.appointments a
+WHERE a.tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'
+AND a.status = 'completed'
+LIMIT 80
 ON CONFLICT DO NOTHING;
 
 COMMIT;

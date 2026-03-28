@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { 
   Briefcase, 
   Stethoscope, 
@@ -19,6 +20,8 @@ import { api } from '../api.js';
 import '../styles/critical-care.css';
 
 export default function ServiceCatalogPage({ tenant }) {
+  const { showToast } = useToast();
+
   const [services, setServices] = useState([]);
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('all');
@@ -49,6 +52,7 @@ export default function ServiceCatalogPage({ tenant }) {
       setSubmitting(true);
       const service = await api.createService(form);
       setServices([...services, service]);
+      showToast({ message: 'Service saved successfully!', type: 'success', title: 'Service Catalog' });
       setShowAdd(false);
       setForm({ name: '', code: '', category: 'Clinical', base_rate: 0, tax_percent: 0 });
     } catch (err) {

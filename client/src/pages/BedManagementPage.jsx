@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { Bed, Plus, Search, Loader2, ShieldCheck, Activity, UserCircle, ChevronRight, LayoutPanelTop, Building2, TrendingUp, Filter } from 'lucide-react';
 import { api } from '../api.js';
 
 export default function BedManagementPage({ tenant }) {
+  const { showToast } = useToast();
+
   const [wards, setWards] = useState([]);
   const [beds, setBeds] = useState({}); // { wardId: [beds] }
   const [loading, setLoading] = useState(true);
@@ -48,6 +51,7 @@ export default function BedManagementPage({ tenant }) {
       setSubmitting(true);
       const ward = await api.createWard(wardForm);
       setWards([...wards, ward]);
+      showToast({ message: 'Ward saved successfully!', type: 'success', title: 'Bed Management' });
       setShowAddWard(false);
       setWardForm({ name: '', type: 'General', base_rate: 0 });
     } catch (err) {
@@ -63,6 +67,7 @@ export default function BedManagementPage({ tenant }) {
     try {
       setSubmitting(true);
       const bed = await api.createBed({ ...bedForm, ward_id: selectedWard.id });
+      showToast({ message: 'Bed record saved!', type: 'success', title: 'Bed Management' });
       setBeds(prev => ({ ...prev, [selectedWard.id]: [...(prev[selectedWard.id] || []), bed] }));
       setBedForm({ bed_number: '' });
     } catch (err) {

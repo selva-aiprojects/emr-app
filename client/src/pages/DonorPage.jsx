@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { 
   Droplet, 
   Users, 
@@ -14,6 +15,8 @@ import {
 import MetricCard from '../components/MetricCard.jsx';
 
 export default function DonorPage({ tenant }) {
+  const { showToast } = useToast();
+
   const [searchTerm, setSearchTerm] = useState('');
 
   const bloodInventory = [

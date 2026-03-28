@@ -4,15 +4,15 @@ test.describe('Superadmin Portal Validation', () => {
   test('Superadmin can log in and see tenant creation feature', async ({ page }) => {
     await page.goto('http://localhost:5177/login');
 
-    // Select Platform Governance Center
-    await page.locator('select[name="tenantId"]').selectOption('superadmin');
+    // Select Platform Governance Center Center
+    await page.locator('select[name="tenantId"]').selectOption({ label: 'Platform Governance Center' });
     
     // Fill credentials
     await page.locator('input[type="email"]').fill('superadmin@emr.local');
     await page.locator('input[type="password"]').fill('Admin@123');
     
     // Submit
-    await page.getByRole('button', { name: /Authorize Entry/i }).click();
+    await page.getByRole('button', { name: /Sign in|Authorize Entry|Continue to Workflow|Login/i }).click();
 
     // Verify redirect to Superadmin Page
     await expect(page.getByText('Platform Control', { exact: false })).toBeVisible({ timeout: 15000 });

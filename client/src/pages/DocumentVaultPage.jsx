@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { Archive, FileText, Trash2, Upload } from 'lucide-react';
 import { EmptyState } from '../components/ui/index.jsx';
 
@@ -16,6 +17,8 @@ const CATEGORY_OPTIONS = [
 const canManageDocs = (role) => ['Admin', 'Doctor', 'Nurse', 'Lab', 'Pharmacy', 'Front Office'].includes(role);
 
 export default function DocumentVaultPage({ activeUser, documents = [], patients = [], onCreateDocument, onSetDocumentDeleted }) {
+  const { showToast } = useToast();
+
   const [showUpload, setShowUpload] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -74,10 +77,10 @@ export default function DocumentVaultPage({ activeUser, documents = [], patients
         <article className="premium-panel">
           <form
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               const fd = new FormData(e.target);
-              onCreateDocument({
+              await onCreateDocument({
                 patientId: fd.get('patientId') || null,
                 category: fd.get('category'),
                 title: fd.get('title'),
@@ -91,6 +94,7 @@ export default function DocumentVaultPage({ activeUser, documents = [], patients
                   .filter(Boolean)
               });
               e.target.reset();
+              showToast({ message: 'Document saved to vault!', type: 'success', title: 'Documents' });
               setShowUpload(false);
             }}
           >
@@ -179,7 +183,10 @@ export default function DocumentVaultPage({ activeUser, documents = [], patients
                     className={`text-xs font-bold inline-flex items-center gap-1 ${
                       doc.is_deleted ? 'text-emerald-600 hover:text-emerald-700' : 'text-rose-600 hover:text-rose-700'
                     }`}
-                    onClick={() => onSetDocumentDeleted(doc.id, !doc.is_deleted)}
+                    onClick={async () => {
+                      await onSetDocumentDeleted(doc.id, !doc.is_deleted);
+                      showToast({ message: doc.is_deleted ? 'Document restored.' : 'Document archived.', type: 'success', title: 'Documents' });
+                    }}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     {doc.is_deleted ? 'Restore' : 'Soft Delete'}

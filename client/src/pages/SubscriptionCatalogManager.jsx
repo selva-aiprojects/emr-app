@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { api } from '../api.js';
 import { 
   Package, 
@@ -22,6 +23,7 @@ import {
 import '../styles/critical-care.css';
 
 export default function SubscriptionCatalogManager() {
+  const { showToast } = useToast();
   const [subscriptions, setSubscriptions] = useState([]);
   const [features, setFeatures] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -131,6 +133,7 @@ export default function SubscriptionCatalogManager() {
         prev.map(sub => sub.id === subscription.id ? subscription : sub)
       );
       setEditingSubscription(null);
+      showToast({ message: 'Subscription updated.', type: 'success', title: 'Subscriptions' });
     } catch (error) {
       console.error('Handshake failed:', error);
     } finally {
@@ -145,7 +148,7 @@ export default function SubscriptionCatalogManager() {
       
       console.log(`Deploying ${subscription.name} protocol to global nodes...`);
       await new Promise(resolve => setTimeout(resolve, 1000));
-      alert(`Subscription protocol successfully deployed to all relevant network nodes.`);
+      showToast({ message: 'Subscription deployed to all nodes.', type: 'success', title: 'Subscriptions' });
     } catch (error) {
        console.error('Deployment error:', error);
     }
@@ -287,7 +290,7 @@ export default function SubscriptionCatalogManager() {
                 Structural changes to subscription tiers are staged in the catalog registry before being committed to global tenant nodes. Any modifications to feature provisioning will trigger a sequential terminal handshake across all active sessions to normalize access control lists.
               </p>
               <div className="flex gap-3 mt-6">
-                 <button className="btn-premium px-8" onClick={() => alert('Publishing to cloud registry...')}>
+                 <button className="btn-premium px-8" onClick={() => showToast({ message: 'Catalog publishing initiated.', type: 'success', title: 'Subscriptions' })}>
                     Publish Global Catalog Changes
                  </button>
                  <button className="px-6 py-2.5 rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all" onClick={resetToDefaults}>

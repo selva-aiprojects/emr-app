@@ -8,7 +8,7 @@ test.describe('EMR New Features Validation', () => {
     await page.goto('/');
     
     // Login as Superadmin
-    await page.locator('select[name="tenantId"]').selectOption({ label: 'Platform Governance' });
+    await page.locator('select[name="tenantId"]').selectOption({ label: 'Platform Governance Center' });
     await page.locator('input[type="email"]').fill('superadmin@emr.local');
     await page.locator('input[type="password"]').fill('Admin@123'); // Superadmin demo password
     await page.getByRole('button', { name: /Continue to Workflow/i }).click();

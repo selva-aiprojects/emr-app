@@ -42,14 +42,17 @@ export default function TenantCreationForm({ onCreate }) {
     setStatus(null);
   }
 
+  const [provisionedData, setProvisionedData] = useState(null);
+
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
     setStatus(null);
     setErrMsg('');
+    setProvisionedData(null);
 
     try {
-      await onCreate({
+      const result = await onCreate({
         name:             form.name.trim(),
         code:             form.code.trim().toUpperCase(),
         subdomain:        form.subdomain.trim().toLowerCase(),
@@ -58,6 +61,7 @@ export default function TenantCreationForm({ onCreate }) {
         primaryColor:     form.primaryColor,
         accentColor:      form.accentColor,
       });
+      setProvisionedData(result);
       setStatus('success');
       setForm(INITIAL);
     } catch (err) {
@@ -239,9 +243,32 @@ export default function TenantCreationForm({ onCreate }) {
 
         {/* Status Messages */}
         {status === 'success' && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
-            <CheckCircle className="w-4 h-4" />
-            <span className="font-semibold">Tenant provisioned successfully!</span>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
+              <CheckCircle className="w-4 h-4" />
+              <span className="font-semibold">Tenant provisioned successfully!</span>
+            </div>
+            
+            {provisionedData && (
+              <div className="bg-slate-900 rounded-xl p-4 text-white shadow-xl animate-in fade-in zoom-in duration-300">
+                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 border-b border-white/10 pb-2">
+                  System Generated Admin Credentials
+                </div>
+                <div className="space-y-3">
+                   <div className="flex justify-between items-center group">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">Email:</span>
+                      <span className="text-xs font-mono font-bold text-slate-100">{provisionedData.adminLoginEmail}</span>
+                   </div>
+                   <div className="flex justify-between items-center group">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase">Password:</span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">{provisionedData.defaultPassword}</span>
+                   </div>
+                </div>
+                <div className="mt-4 p-2 bg-white/5 rounded-lg border border-white/10 text-[9px] text-slate-400 leading-relaxed italic">
+                  Note: Email communication is currently being optimized. Please manually share these credentials with the client.
+                </div>
+              </div>
+            )}
           </div>
         )}
         {status === 'error' && (

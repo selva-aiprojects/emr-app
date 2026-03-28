@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { api } from '../api.js';
 import { currency } from '../utils/format.js';
 import { 
@@ -26,6 +27,8 @@ const CATEGORIES = ['Purchase', 'Salary', 'Maintenance', 'Utilities', 'Govt Fees
 const PAYMENT_METHODS = ['Bank Transfer', 'Cash', 'Cheque', 'Card'];
 
 export default function AccountsPage({ tenant, initialTab = 'snapshot' }) {
+  const { showToast } = useToast();
+
   const [financials, setFinancials] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -79,6 +82,7 @@ export default function AccountsPage({ tenant, initialTab = 'snapshot' }) {
       setExpenses(expenseList || []);
       e.target.reset();
       setActiveTab('ledger');
+      showToast({ message: 'Expense entry recorded!', type: 'success', title: 'Accounts' });
     } catch (err) {
       alert('Failed to authorize transaction: ' + err.message);
     }

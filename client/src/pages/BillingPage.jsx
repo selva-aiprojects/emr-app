@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import PatientSearch from '../components/PatientSearch.jsx';
 import { currency, patientName } from '../utils/format.js';
 import { api } from '../api.js';
@@ -118,9 +119,24 @@ export default function BillingPage({
   onIssueInvoice,
   onMarkPaid 
 }) {
+  const { showToast } = useToast();
+
   const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'settlement'
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentLink, setShowPaymentLink] = useState(null);
+
+
+
+  const handleIssueInvoice = async (e) => {
+    e.preventDefault();
+    try {
+      await onIssueInvoice(e);
+      showToast({ message: 'Invoice created successfully!', type: 'success', title: 'Billing' });
+      setActiveView('list');
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   const handleSecurePayment = async (invoice) => {
     setIsProcessing(true);
@@ -143,8 +159,13 @@ export default function BillingPage({
   };
 
   const finalizePayment = async () => {
-    await onMarkPaid(showPaymentLink.id, 'PayLink-Gateway');
-    setShowPaymentLink(null);
+    try {
+      await onMarkPaid(showPaymentLink.id, 'PayLink-Gateway');
+      showToast({ message: 'Payment recorded successfully!', type: 'success', title: 'Billing' });
+      setShowPaymentLink(null);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   if (!tenant) {
@@ -238,10 +259,7 @@ export default function BillingPage({
                </div>
             </header>
 
-            <form className="space-y-12" onSubmit={(e) => {
-              onIssueInvoice(e);
-              setActiveView('list');
-            }}>
+            <form className="space-y-12" onSubmit={handleIssueInvoice}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600 mb-6">Recipient Identity Shard</h4>

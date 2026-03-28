@@ -10,7 +10,7 @@ test.describe('UI Integrity & Login Tests', () => {
 
         console.log('Filling credentials...');
         // Login
-        await page.selectOption('select', 'EHS'); // Select Tenant
+        await page.selectOption('select[name="tenantId"]', { label: 'Enterprise Hospital Systems' }); // Select Tenant
         await page.fill('input[type="email"]', 'doctor@ehs.local');
         await page.fill('input[type="password"]', 'Test@123');
 
@@ -37,7 +37,7 @@ test.describe('UI Integrity & Login Tests', () => {
 
         console.log('Filling credentials (Support)...');
         // Login
-        await page.selectOption('select', 'EHS'); // Select Tenant
+        await page.selectOption('select[name="tenantId"]', { label: 'Enterprise Hospital Systems' }); // Select Tenant
         await page.fill('input[type="email"]', 'support@ehs.local');
         await page.fill('input[type="password"]', 'Test@123');
 

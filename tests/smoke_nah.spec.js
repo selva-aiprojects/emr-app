@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 
 /**
  * Smoke Tests for New Age Hospital (NAH) Tenant
@@ -31,11 +31,11 @@ for (const user of NAH_USERS) {
     await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
 
     // Fill email and password
-    await page.getByPlaceholder('professional@medflow.org').fill(user.email);
-    await page.getByPlaceholder('••••••••••••').fill(PASSWORD);
+    await page.locator('input[type="email"]').fill(user.email);
+    await page.locator('input[type="password"]').fill(PASSWORD);
 
     // Click login button
-    await page.getByRole('button', { name: /Authorize Entry/i }).click();
+    await page.getByRole('button', { name: /Sign in|Authorize Entry|Continue to Workflow|Login/i }).click();
 
     // Wait for page navigation away from login
     await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
@@ -49,7 +49,7 @@ for (const user of NAH_USERS) {
     expect(url !== '/').toBeTruthy();
     expect(bodyText.length).toBeGreaterThan(100); // Page has content
     
-    console.log(`✅ ${user.role} (${user.email}) login successful`);
+    console.log(`âœ… ${user.role} (${user.email}) login successful`);
   });
 }
 
@@ -68,7 +68,7 @@ test('NAH: Verify tenant selection dropdown works', async ({ page }) => {
   // Verify Kidz Clinic is in the list
   expect(options.some((opt) => opt.includes('Kidz Clinic'))).toBeTruthy();
 
-  console.log(`✅ Found ${options.length} tenants: ${options.join(', ')}`);
+  console.log(`âœ… Found ${options.length} tenants: ${options.join(', ')}`);
 });
 
 test('NAH: Admin can access dashboard after login', async ({ page }) => {
@@ -78,9 +78,9 @@ test('NAH: Admin can access dashboard after login', async ({ page }) => {
   await page.locator('select[name="tenantId"]').waitFor({ state: 'visible', timeout: 10000 });
   await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
 
-  await page.getByPlaceholder('professional@medflow.org').fill('admin@nah.local');
-  await page.getByPlaceholder('••••••••••••').fill(PASSWORD);
-  await page.getByRole('button', { name: /Authorize Entry/i }).click();
+  await page.locator('input[type="email"]').fill('admin@nah.local');
+  await page.locator('input[type="password"]').fill(PASSWORD);
+  await page.getByRole('button', { name: /Sign in|Authorize Entry|Continue to Workflow|Login/i }).click();
 
   // Wait for page navigation
   await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 15000 }).catch(() => {});
@@ -93,7 +93,7 @@ test('NAH: Admin can access dashboard after login', async ({ page }) => {
   const isLoggedIn = (url !== '/' && bodyText.length > 100) || bodyText.toLowerCase().includes('dashboard');
   expect(isLoggedIn).toBeTruthy();
 
-  console.log('✅ Admin dashboard loaded successfully');
+  console.log('âœ… Admin dashboard loaded successfully');
 });
 
 test('NAH: Invalid credentials are rejected', async ({ page }) => {
@@ -103,9 +103,9 @@ test('NAH: Invalid credentials are rejected', async ({ page }) => {
   await page.locator('select[name="tenantId"]').selectOption({ label: NAH_TENANT });
 
   // Try invalid credentials
-  await page.getByPlaceholder('professional@medflow.org').fill('admin@nah.local');
-  await page.getByPlaceholder('••••••••••••').fill('WrongPassword123');
-  await page.getByRole('button', { name: /Authorize Entry/i }).click();
+  await page.locator('input[type="email"]').fill('admin@nah.local');
+  await page.locator('input[type="password"]').fill('WrongPassword123');
+  await page.getByRole('button', { name: /Sign in|Authorize Entry|Continue to Workflow|Login/i }).click();
 
   // Should show error or stay on login page
   await page.waitForTimeout(2000);
@@ -116,5 +116,6 @@ test('NAH: Invalid credentials are rejected', async ({ page }) => {
 
   expect(isLoginPage || hasError).toBeTruthy();
 
-  console.log('✅ Invalid credentials rejected correctly');
+  console.log('âœ… Invalid credentials rejected correctly');
 });
+

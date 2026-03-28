@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import axios from 'axios';
 import { 
   Shield, 
@@ -18,6 +19,7 @@ import {
 import '../styles/critical-care.css';
 
 export default function RoleManagementPage({ tenant, activeUser }) {
+  const { showToast } = useToast();
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -53,6 +55,7 @@ export default function RoleManagementPage({ tenant, activeUser }) {
       fetchRoles();
       setShowCreateModal(false);
       setEditingRole(null);
+      showToast({ message: editingRole ? 'Role updated successfully!' : 'Role created successfully!', type: 'success', title: 'Roles' });
     } catch (err) {
       setError('Failed to save role');
       console.error('Error saving role:', err);
@@ -65,6 +68,7 @@ export default function RoleManagementPage({ tenant, activeUser }) {
     try {
       await axios.delete(`/api/roles/${roleId}`);
       fetchRoles();
+      showToast({ message: 'Role deleted.', type: 'success', title: 'Roles' });
     } catch (err) {
       setError('Failed to delete role');
       console.error('Error deleting role:', err);

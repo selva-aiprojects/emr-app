@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { api } from '../api';
 import '../styles/critical-care.css';
 import SaveToast from '../components/ui/SaveToast.jsx';
+import { useToast } from '../hooks/useToast.jsx';
+
 import { 
   Users, 
   UserPlus, 
@@ -16,39 +18,48 @@ import {
   Activity
 } from 'lucide-react';
 
-export default function EmployeesPage({ tenant, initialTab = 'roster' }) {
-  const [employees, setEmployees] = useState([]);
+export default function EmployeesPage({ tenant, initialTab = 'roster', employees: employeesProp = [], onCreateEmployee }) {
+  const { showToast } = useToast();
+
+  const [employees, setEmployees] = useState(Array.isArray(employeesProp) ? employeesProp : []);
+  const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab); // 'roster' | 'attendance' | 'leaves' | 'payroll'
   const [showRegModal, setShowRegModal] = useState(false);
   const [toast, setToast] = useState(null);
+  const [roleSelection, setRoleSelection] = useState('Doctor');
 
   useEffect(() => {
     setActiveTab(initialTab);
   }, [initialTab]);
 
-  useMemo(() => {
-    async function load() {
+  useEffect(() => {
+    if (Array.isArray(employeesProp)) {
+      setEmployees(employeesProp);
+    }
+  }, [employeesProp]);
+
+  useEffect(() => {
+    async function loadDepartments() {
       if (!tenant?.id) return;
-      setLoading(true);
       try {
-        const data = await api.getEmployees(tenant.id);
-        setEmployees(data);
+        const data = await api.getDepartments();
+        setDepartments(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('Personnel Sync Interrupted:', err);
-      } finally {
-        setLoading(false);
+        console.error('Department Sync Interrupted:', err);
       }
     }
-    load();
+    loadDepartments();
   }, [tenant?.id]);
 
   const stats = {
     total: employees.length,
-    active: employees.filter(e => e.status === 'active').length,
+    active: employees.filter(e => e.status === 'active').length || employees.length,
     onLeave: 2,
     deptCount: 4
   };
+
+  const isDoctorRole = roleSelection === 'Doctor';
 
   return (
     <div className="page-shell-premium animate-fade-in">
@@ -63,20 +74,28 @@ export default function EmployeesPage({ tenant, initialTab = 'roster' }) {
               <ShieldCheck className="w-3 h-3 text-emerald-500" /> Personnel Integrity Validated • Workforce sync operational
            </p>
         </div>
-        <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">
-          {[
-            { id: 'roster', label: 'Workforce Roster', icon: Users },
-            { id: 'attendance', label: 'Attendance Log', icon: Clock },
-            { id: 'payroll', label: 'Payroll Ledger', icon: Wallet }
-          ].map(tab => (
-            <button 
-              key={tab.id}
-              className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-              onClick={() => setActiveTab(tab.id)}
-            >
-              <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-3">
+          <button
+            className="clinical-btn bg-slate-900 text-white px-6 !min-h-[44px] rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg"
+            onClick={() => setShowRegModal(true)}
+          >
+            <UserPlus className="w-4 h-4 mr-2" /> Add Employee
+          </button>
+          <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">
+            {[
+              { id: 'roster', label: 'Workforce Roster', icon: Users },
+              { id: 'attendance', label: 'Attendance Log', icon: Clock },
+              { id: 'payroll', label: 'Payroll Ledger', icon: Wallet }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -146,7 +165,7 @@ export default function EmployeesPage({ tenant, initialTab = 'roster' }) {
                       </div>
                     </td>
                     <td>
-                       <div className="text-xs font-black text-slate-700 uppercase tracking-tighter">{emp.role || 'Service Technician'}</div>
+                       <div className="text-xs font-black text-slate-700 uppercase tracking-tighter">{emp.designation || emp.role || 'Service Technician'}</div>
                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1 italic">{emp.department || 'General Services'}</div>
                     </td>
                     <td>
@@ -301,18 +320,78 @@ export default function EmployeesPage({ tenant, initialTab = 'roster' }) {
                 </button>
              </header>
 
-             <form className="space-y-10">
+             <form className="space-y-10" onSubmit={(e) => {
+               if (onCreateEmployee) return onCreateEmployee(e);
+               e.preventDefault();
+             }}>
                 <div className="grid grid-cols-2 gap-8">
                    <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Legal Name</label>
-                      <input className="input-field py-4 bg-slate-50 border-none rounded-xl" required />
+                      <input name="name" className="input-field py-4 bg-slate-50 border-none rounded-xl" required />
                    </div>
                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Institutional Shard (Dept)</label>
-                      <select className="input-field h-[56px] bg-slate-50 border-none rounded-xl font-bold">
-                         <option>Pathology</option>
-                         <option>Emergency Services</option>
-                         <option>Administration</option>
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Role Shard</label>
+                      <select
+                        name="designation"
+                        className="input-field h-[56px] bg-slate-50 border-none rounded-xl font-bold"
+                        value={roleSelection}
+                        onChange={(e) => setRoleSelection(e.target.value)}
+                      >
+                         <option>Doctor</option>
+                         <option>Nurse</option>
+                         <option>Lab</option>
+                         <option>Pharmacy</option>
+                         <option>Admin</option>
+                         <option>Billing</option>
+                         <option>Front Office</option>
+                      </select>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                        {isDoctorRole ? 'Department Mapping (Required)' : 'Department Mapping'}
+                      </label>
+                      {departments.length > 0 ? (
+                        <select
+                          name="department"
+                          className="input-field h-[56px] bg-slate-50 border-none rounded-xl font-bold"
+                          required={isDoctorRole}
+                          defaultValue=""
+                        >
+                           <option value="" disabled>Select Department...</option>
+                           {departments.map((dept) => (
+                             <option key={dept.id} value={dept.name}>{dept.name}</option>
+                           ))}
+                        </select>
+                      ) : (
+                        <input
+                          name="department"
+                          className="input-field py-4 bg-slate-50 border-none rounded-xl"
+                          placeholder="e.g. Cardiology"
+                          required={isDoctorRole}
+                        />
+                      )}
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Joining Vector</label>
+                      <input name="joinDate" type="date" className="input-field py-4 bg-slate-50 border-none rounded-xl" />
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Employee Code</label>
+                      <input name="code" className="input-field py-4 bg-slate-50 border-none rounded-xl" placeholder="EMP-001" required />
+                   </div>
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Shift Vector</label>
+                      <select name="shift" className="input-field h-[56px] bg-slate-50 border-none rounded-xl font-bold" defaultValue="Morning">
+                         <option>Morning</option>
+                         <option>Evening</option>
+                         <option>Night</option>
+                         <option>Rotating</option>
                       </select>
                    </div>
                 </div>
@@ -320,11 +399,11 @@ export default function EmployeesPage({ tenant, initialTab = 'roster' }) {
                 <div className="grid grid-cols-2 gap-8">
                    <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Base Compensation Nodes</label>
-                      <input className="input-field py-4 bg-slate-50 border-none rounded-xl" placeholder="Locked currency..." />
+                      <input name="salary" className="input-field py-4 bg-slate-50 border-none rounded-xl" placeholder="45000" />
                    </div>
                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Joining Vector</label>
-                      <input type="date" className="input-field py-4 bg-slate-50 border-none rounded-xl" />
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Designation</label>
+                      <input name="designationLabel" className="input-field py-4 bg-slate-50 border-none rounded-xl" placeholder={roleSelection} disabled />
                    </div>
                 </div>
 

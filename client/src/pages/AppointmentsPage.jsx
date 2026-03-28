@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import PatientSearch from '../components/PatientSearch.jsx';
 import AppointmentActions from '../components/AppointmentActions.jsx';
 import { patientName, userName } from '../utils/format.js';
@@ -20,6 +21,8 @@ export default function AppointmentsPage({
   setView, setActivePatientId, onCreateAppointment, onCreatePatient, onCreateWalkin,
   onSelfAppointment, onConvertWalkin, onSetAppointmentStatus, onReschedule
 }) {
+  const { showToast } = useToast();
+
   const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'walkins'
   const [isRegistering, setIsRegistering] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState('');
@@ -33,6 +36,70 @@ export default function AppointmentsPage({
       setActiveTab('appointments');
     }
   }, [isDoctor, activeTab]);
+
+  const handleAppointmentSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (isPatient) {
+        await onSelfAppointment(e);
+      } else {
+        await onCreateAppointment(e);
+      }
+      showToast({ message: 'Appointment scheduled successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleWalkinSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await onCreateWalkin(e);
+      showToast({ message: 'Walk-in registered successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleRegisterPatient = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      const newP = await onCreatePatient({
+        firstName: fd.get('firstName'),
+        lastName: fd.get('lastName'),
+        dob: fd.get('dob'),
+        gender: fd.get('gender'),
+        phone: fd.get('phone'),
+        email: fd.get('email')
+      });
+      if (newP && newP.id) {
+        setSelectedPatientId(newP.id);
+        setIsRegistering(false);
+      }
+      showToast({ message: 'Patient registered successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleStatusUpdate = async (id, status) => {
+    try {
+      await onSetAppointmentStatus(id, status);
+      showToast({ message: 'Appointment status updated.', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleConvertWalkin = async (id) => {
+    try {
+      await onConvertWalkin(id);
+      showToast({ message: 'Walk-in admitted successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
 
   return (
     <div className="page-shell-premium animate-fade-in">
@@ -85,7 +152,7 @@ export default function AppointmentsPage({
                  </p>
               </header>
 
-              <form className="space-y-10" onSubmit={isPatient ? onSelfAppointment : onCreateAppointment}>
+              <form className="space-y-10" onSubmit={handleAppointmentSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <div className="space-y-8">
                     {!isPatient && (
@@ -153,26 +220,7 @@ export default function AppointmentsPage({
                  </button>
               </header>
 
-              <form className="space-y-8" onSubmit={async (e) => {
-                e.preventDefault();
-                const fd = new FormData(e.target);
-                try {
-                  const newP = await onCreatePatient({
-                    firstName: fd.get('firstName'),
-                    lastName: fd.get('lastName'),
-                    dob: fd.get('dob'),
-                    gender: fd.get('gender'),
-                    phone: fd.get('phone'),
-                    email: fd.get('email')
-                  });
-                  if (newP && newP.id) {
-                    setSelectedPatientId(newP.id);
-                    setIsRegistering(false);
-                  }
-                } catch (err) {
-                  alert(err.message);
-                }
-              }}>
+              <form className="space-y-8" onSubmit={handleRegisterPatient}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <div className="space-y-2">
@@ -222,7 +270,7 @@ export default function AppointmentsPage({
                  <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Add Patient to Waiting list</p>
               </header>
 
-              <form className="space-y-10" onSubmit={onCreateWalkin}>
+              <form className="space-y-10" onSubmit={handleWalkinSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <div className="space-y-8">
                     <div className="space-y-2">
@@ -301,7 +349,7 @@ export default function AppointmentsPage({
                       <AppointmentActions
                         appointment={a}
                         user={activeUser}
-                        onStatus={(status) => onSetAppointmentStatus(a.id, status)}
+                        onStatus={(status) => handleStatusUpdate(a.id, status)}
                         onReschedule={() => onReschedule(a)}
                       />
                     </div>
@@ -339,7 +387,7 @@ export default function AppointmentsPage({
                       <div className="text-[10px] font-bold text-slate-400 truncate mt-0.5 uppercase tracking-tighter">{w.reason}</div>
                     </div>
                     {w.status !== 'converted' ? (
-                      <button onClick={() => onConvertWalkin(w.id)} className="clinical-btn bg-slate-100 text-slate-600 hover:bg-emerald-600 hover:text-white px-5 !min-h-[36px] text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border-none">ADMIT</button>
+                      <button onClick={() => handleConvertWalkin(w.id)} className="clinical-btn bg-slate-100 text-slate-600 hover:bg-emerald-600 hover:text-white px-5 !min-h-[36px] text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border-none">ADMIT</button>
                     ) : (
                       <span className="text-[9px] font-black text-slate-300 px-4 py-1.5 bg-slate-50 rounded-lg border border-slate-100 tracking-widest">LOGGED</span>
                     )}

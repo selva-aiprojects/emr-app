@@ -23,9 +23,12 @@ export async function getTenantTier(tenantId) {
  * Get custom feature flags for a tenant
  */
 export async function getTenantCustomFeatures(tenantId) {
-  const sql = 'SELECT feature_flag FROM emr.tenant_features WHERE tenant_id = $1 AND enabled = true';
+  const sql = 'SELECT feature_flag, enabled FROM emr.tenant_features WHERE tenant_id = $1';
   const result = await query(sql, [tenantId]);
-  return result.rows.map(row => row.feature_flag);
+  return result.rows.map(row => ({
+    featureFlag: row.feature_flag,
+    enabled: row.enabled === true
+  }));
 }
 
 /**
