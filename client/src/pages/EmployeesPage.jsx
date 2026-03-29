@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { api } from '../api';
 import '../styles/critical-care.css';
-import SaveToast from '../components/ui/SaveToast.jsx';
 import { useToast } from '../hooks/useToast.jsx';
 
 import { 
@@ -26,7 +25,6 @@ export default function EmployeesPage({ tenant, initialTab = 'roster', employees
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab); // 'roster' | 'attendance' | 'leaves' | 'payroll'
   const [showRegModal, setShowRegModal] = useState(false);
-  const [toast, setToast] = useState(null);
   const [roleSelection, setRoleSelection] = useState('Doctor');
 
   useEffect(() => {
@@ -417,7 +415,6 @@ export default function EmployeesPage({ tenant, initialTab = 'roster', employees
         </div>
       )}
     </div>
-    {toast && <SaveToast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </>
   );
 }

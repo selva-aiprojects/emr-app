@@ -72,8 +72,8 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {/* Toast Mount Point — fixed bottom-right, stacked */}
-      <div className="fixed bottom-6 right-6 z-[9999] flex flex-col gap-3 pointer-events-none">
+      {/* Toast Mount Point — fixed top-6 right-6, stacked */}
+      <div className="fixed top-24 right-6 z-[10000] flex flex-col gap-3 pointer-events-none">
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onClose={dismiss} />
         ))}

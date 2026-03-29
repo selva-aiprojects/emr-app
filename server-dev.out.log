@@ -6894,3 +6894,60 @@ Restarting 'server/index.js'
 Failed running 'server/index.js'. Waiting for file changes before restarting...
 Restarting 'server/index.js'
 Failed running 'server/index.js'. Waiting for file changes before restarting...
+Restarting 'server/index.js'
+Failed running 'server/index.js'. Waiting for file changes before restarting...
+Restarting 'server/index.js'
+Failed running 'server/index.js'. Waiting for file changes before restarting...
+Restarting 'server/index.js'
+Failed running 'server/index.js'. Waiting for file changes before restarting...
+Restarting 'server/index.js'
+Failed running 'server/index.js'. Waiting for file changes before restarting...
+Restarting 'server/index.js'
+Server running on port 4000
+Environment: development
+Frontend bundle path: D:\Training\working\EMR-Application\client\dist
+✅ Connected to PostgreSQL database
+[DB_QUERY] {
+  text: 'SELECT NOW() as now, current_database() as database',
+  params: undefined,
+  tenantId: undefined
+}
+✅ Connected to PostgreSQL database
+[DB_QUERY] {
+  text: '\n' +
+    '      SELECT\n' +
+    "        to_regclass('emr.tenant_features') AS tenant_features,\n" +
+    "        to_regclass('emr.global_kill_switches') AS global_kill_switches,\n" +
+    "        to_regclass('emr.tenant_feature_status') AS tenant_feature_status\n" +
+    '    ',
+  params: undefined,
+  tenantId: undefined
+}
+Executed query {
+  text: 'SELECT NOW() as now, current_database() as database',
+  duration: 4275,
+  rows: 1
+}
+✅ Database connection test successful
+   Database: emr
+   Server time: Sat Mar 28 2026 22:13:18 GMT+0530 (India Standard Time)
+Executed query {
+  text: '\n' +
+    '      SELECT\n' +
+    "        to_regclass('emr.tenant_features') AS tenant_features,\n" +
+    "        to_regclass('emr.global_kill_switches') AS global_kill_switches,\n" +
+    "        to_regclass('emr.tenant_feature_status') AS tenant_feature_status\n" +
+    '    ',
+  duration: 4639,
+  rows: 1
+}
+[FEATURE_FLAGS] Schema check passed.
+Restarting 'server/index.js'
+Failed running 'server/index.js'. Waiting for file changes before restarting...
+Restarting 'server/index.js'
+Failed running 'server/index.js'. Waiting for file changes before restarting...
+Restarting 'server/index.js'
+Failed running 'server/index.js'. Waiting for file changes before restarting...
+Restarting 'server/index.js'
+Restarting 'server/index.js'
+Failed running 'server/index.js'. Waiting for file changes before restarting...

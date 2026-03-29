@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
 import { api, provisionTenantAdmin } from '../api.js';
+import { Bell, Zap } from 'lucide-react';
 import DashboardMetrics from '../components/superadmin/DashboardMetrics.jsx';
 import TenantList from '../components/superadmin/TenantList.jsx';
 import TenantCreationForm from '../components/superadmin/TenantCreationForm.jsx';
@@ -9,7 +11,17 @@ import IssuesTable from '../components/superadmin/IssuesTable.jsx';
 import TicketStatus from '../components/superadmin/TicketStatus.jsx';
 import InfraUsage from '../components/superadmin/InfraUsage.jsx';
 
-function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTenant, onRefresh, issues = [], tickets = [], infra = {} }) {
+function SuperadminPage({ 
+  viewMode = 'superadmin',
+  superOverview: propOverview, 
+  tenants = [], 
+  onCreateTenant, 
+  onRefresh, 
+  issues = [], 
+  tickets = [], 
+  infra = {} 
+}) {
+  const { showToast } = useToast();
   const superOverview = propOverview || {};
 
   const metrics = {
@@ -20,40 +32,72 @@ function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTen
   };
 
   async function handleProvisionAdmin(tenantId, data) {
-    const result = await provisionTenantAdmin(tenantId, data);
-    if (onRefresh) onRefresh();
-    return result;
+    try {
+      const result = await provisionTenantAdmin(tenantId, data);
+      showToast({ message: 'Tenant Admin Provisioned successfully!', type: 'success', title: 'Security node' });
+      if (onRefresh) onRefresh();
+      return result;
+    } catch (err) {
+      showToast({ message: err.message, type: 'error', title: 'Provisioning Error' });
+      throw err;
+    }
   }
 
-  return (
-    <div className="intelligence-hub slide-up">
+  // 1. DASHBOARD VIEW (Metrics, Tickets, Issues, Capacity)
+  if (viewMode === 'superadmin') {
+    return (
+      <div className="intelligence-hub slide-up">
+        {/* Platform Metrics */}
+        <DashboardMetrics {...metrics} />
 
-      {/* 1. Platform Metrics — Full Width */}
-      <DashboardMetrics {...metrics} />
-
-      {/* 2. PRIMARY: Tenant Node Registry — Full Width */}
-      <TenantList tenants={tenants} onSelect={() => {}} />
-
-      {/* 3. Operations: Create + Provision + Reset — 3 columns */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <TenantCreationForm onCreate={onCreateTenant} />
-        <TenantAdminProvisioningForm tenants={tenants} onProvision={handleProvisionAdmin} />
-        <ResetPasswordForm tenants={tenants} />
-      </div>
-
-      {/* 4. SECONDARY: Issues + Infra + Tickets */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-        <div className="lg:col-span-2">
-          <IssuesTable issues={issues} />
-        </div>
-        <div className="lg:col-span-1 space-y-8">
-          <InfraUsage {...infra} />
-          <TicketStatus tickets={tickets} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+          <div className="lg:col-span-2">
+            <h3 className="section-header-premium mb-4 flex items-center gap-2">
+               <Bell className="w-5 h-5" /> Urgent Platform Issues
+            </h3>
+            <IssuesTable issues={issues} />
+          </div>
+          <div className="lg:col-span-1 space-y-8">
+            <h3 className="section-header-premium mb-4 flex items-center gap-2">
+               <Zap className="w-5 h-5" /> Infrastructure Health
+            </h3>
+            <InfraUsage {...infra} />
+            <TicketStatus tickets={tickets} />
+          </div>
         </div>
       </div>
+    );
+  }
 
-    </div>
-  );
+  // 2. TENANT MANAGEMENT VIEW (List + Creation)
+  if (viewMode === 'tenant_management') {
+    return (
+      <div className="intelligence-hub slide-up space-y-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <div className="xl:col-span-2">
+            <TenantList tenants={tenants} onSelect={() => {}} />
+          </div>
+          <div className="xl:col-span-1">
+             <TenantCreationForm onCreate={onCreateTenant} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. USER PROVISIONING VIEW (Provisioning + Password Resets)
+  if (viewMode === 'user_provisioning') {
+    return (
+      <div className="intelligence-hub slide-up space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <TenantAdminProvisioningForm tenants={tenants} onProvision={handleProvisionAdmin} />
+          <ResetPasswordForm tenants={tenants} />
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export default SuperadminPage;

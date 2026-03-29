@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { useToast } from './hooks/useToast.jsx';
 import { api } from './api.js';
 import { fallbackPermissions } from './config/modules.js';
 import { featureFlagService } from './services/featureFlag.service.js';

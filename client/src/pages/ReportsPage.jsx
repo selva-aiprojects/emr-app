@@ -36,12 +36,20 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
   }, [tenant?.id]);
 
   const isSuper = !tenant;
+  const superTenants = isSuper ? (superOverview?.tenants || []) : [];
+  const superTotals = isSuper ? {
+    patients: superOverview?.totals?.patients || superTenants.reduce((sum, t) => sum + (t.patients || 0), 0),
+    users: superOverview?.totals?.users || superTenants.reduce((sum, t) => sum + (t.users || 0), 0),
+    tenants: superOverview?.totals?.tenants || superTenants.length,
+    revenue: superOverview?.totals?.revenue || superTenants.reduce((sum, t) => sum + (t.revenue || 0), 0)
+  } : null;
+
   const metrics = isSuper
     ? {
-        velocity: `${superOverview?.activePatients || 0} Entities`,
-        liquidity: currency((superOverview?.totalRevenue || 0) * 0.1),
-        load: `${superOverview?.totalUsers || 0} Users`,
-        receivables: superOverview?.activeTenants || 0,
+        velocity: `${superTotals.patients} Entities`,
+        liquidity: currency(superTotals.revenue),
+        load: `${superTotals.users} Users`,
+        receivables: superTotals.tenants,
       }
     : {
         velocity: `${reportSummary?.periodical?.dailyAppointments || 0} pts/day`,
@@ -54,7 +62,7 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
     ? superOverview?.monthlyComparison?.revenue
     : reportSummary?.monthlyComparison?.revenue) || [];
 
-  const totalMonthlyRev = monthlyRevenue.reduce((sum, r) => sum + r.amount, 0);
+  const totalMonthlyRev = monthlyRevenue.reduce((sum, r) => sum + (r.amount || 0), 0);
   const avgRev = totalMonthlyRev / (monthlyRevenue.length || 1);
 
   return (
@@ -94,7 +102,7 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
               <span className="vital-label">{isSuper ? 'Entity Velocity' : 'Clinical Velocity'}</span>
               <Users className="w-4 h-4 text-emerald-500 opacity-50" />
            </div>
-           <span className="stat-value tabular-nums mt-2">{isSuper ? (superOverview?.activePatients || 0) : (reportSummary?.periodical?.dailyAppointments || 0)}</span>
+           <span className="stat-value tabular-nums mt-2">{isSuper ? superTotals.patients : (reportSummary?.periodical?.dailyAppointments || 0)}</span>
            <span className="stat-sub text-slate-400 mt-1">{isSuper ? 'Entities' : 'Patients/day'}</span>
            <p className="text-[10px] font-black text-emerald-600 mt-2 uppercase tracking-widest">+12.4% Trajectory</p>
         </div>
@@ -114,7 +122,7 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
               <span className="vital-label">{isSuper ? 'User Engagement' : 'Resource Load'}</span>
               <Activity className="w-4 h-4 text-emerald-500 opacity-50" />
            </div>
-           <span className="stat-value tabular-nums mt-2">{isSuper ? (superOverview?.totalUsers || 0) : (reportSummary?.periodical?.openAppointments || 0)}</span>
+           <span className="stat-value tabular-nums mt-2">{isSuper ? superTotals.users : (reportSummary?.periodical?.openAppointments || 0)}</span>
            <span className="stat-sub text-slate-400 mt-1">{isSuper ? 'Users' : 'Open'}</span>
            <p className="text-[10px] font-black text-slate-400 mt-2 uppercase tracking-widest">Nominal Capacity</p>
         </div>
@@ -124,7 +132,7 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
               <span className="vital-label">{isSuper ? 'Node Count' : 'Aging Receivables'}</span>
               <FileText className="w-4 h-4 text-amber-500 opacity-50" />
            </div>
-           <span className="stat-value tabular-nums mt-2">{isSuper ? (superOverview?.activeTenants || 0) : (reportSummary?.periodical?.pendingInvoices || 0)}</span>
+           <span className="stat-value tabular-nums mt-2">{isSuper ? superTotals.tenants : (reportSummary?.periodical?.pendingInvoices || 0)}</span>
            <span className="stat-sub text-slate-400 mt-1">{isSuper ? 'Tenants' : 'Invoices'}</span>
            <p className="text-[10px] font-black text-amber-600 mt-2 uppercase tracking-widest">Audit Recommended</p>
         </div>
@@ -141,7 +149,7 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
               <h3 className="text-xs font-black uppercase text-slate-400 tracking-[0.2em] mb-3">Strategic Narrative Insights • AI Layer</h3>
               <p className="text-slate-700 text-base font-medium leading-relaxed max-w-5xl">
                 {isSuper
-                  ? `Platform health is optimal. Aggregate patient engagement across ${superOverview?.activeTenants || 0} facilities shows a strong upward trend. Node stability is maintaining 99.9% uptime with zero priority regressions.`
+                  ? `Platform health is optimal. Aggregate patient engagement across ${superTotals.tenants} facilities shows a strong upward trend. Node stability is maintaining 99.9% uptime with zero priority regressions.`
                   : slmInsights?.narrative || 'Initializing operational narrative engine... Baseline metrics indicate high clinical retention and optimal resource allocation.'}
               </p>
               <div className="flex gap-3 mt-6">
@@ -155,9 +163,9 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
             <div className="text-right shrink-0">
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 font-tabular">{isSuper ? 'Platform Forecast' : 'Growth Forecast'}</div>
               <div className="text-3xl font-black text-emerald-600 tracking-tight tabular-nums">
-                {isSuper ? '+18.4%' : currency(slmInsights?.forecast || avgRev * 1.12)}
+                {isSuper ? currency(superOverview?.totals?.revenue || 0) : currency(slmInsights?.forecast || avgRev * 1.12)}
               </div>
-              <div className="text-[10px] font-black text-emerald-600/60 uppercase mt-1 tracking-widest">Projected Expansion</div>
+              <div className="text-[10px] font-black text-emerald-600/60 uppercase mt-1 tracking-widest">{isSuper ? 'Total Network Yield' : 'Projected Expansion'}</div>
             </div>
           </div>
         </article>

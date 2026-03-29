@@ -39,6 +39,8 @@ import "../styles/critical-care.css";
 /* ─── NAV ICONS ──────────────────────────────────────────────────── */
 const navIcons = {
   superadmin: ShieldCheck,
+  tenant_management: Grid2X2,
+  user_provisioning: UserCircle,
   dashboard: LayoutDashboard,
   doctor_workspace: HeartPulse,
   users: UserCircle,
@@ -267,7 +269,7 @@ export default function AppLayout({
 
   /* ── Sidebar content ── */
   const SidebarContent = (
-    <div className="flex flex-col h-full bg-gradient-to-b from-[var(--medical-navy)] to-[var(--medical-navy-light)] border-r border-white/[0.05] shadow-2xl">
+    <div className="flex flex-col h-full bg-gradient-to-b from-[var(--medical-navy-light)] to-[var(--medical-navy)] border-r border-white/[0.05] shadow-2xl">
 
       {/* ── HEADER ── */}
       <div className={`flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? "justify-center p-4" : "justify-between px-5 py-4"}`}>
@@ -283,10 +285,10 @@ export default function AppLayout({
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="text-[13px] font-black tracking-tight text-white uppercase leading-none">
+              <h1 className="text-[13px] font-black tracking-tight text-white uppercase leading-none" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
                 {BRAND.name}
               </h1>
-              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest truncate mt-0.5">
+              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest truncate mt-0.5" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                 {facilityName}
               </p>
             </div>
@@ -373,7 +375,7 @@ export default function AppLayout({
       <aside
         className={`
           fixed lg:static inset-y-0 left-0 z-[100]
-          bg-[var(--medical-navy)] flex-shrink-0
+          bg-[var(--medical-navy-light)] flex-shrink-0
           transition-all duration-300 ease-in-out h-full
           ${sidebarCollapsed ? "w-[60px]" : "w-[260px]"}
           ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}

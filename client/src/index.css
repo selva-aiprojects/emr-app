@@ -101,7 +101,7 @@ textarea {
   top: 0;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, var(--medical-navy) 0%, var(--medical-navy-light) 100%);
+  background: linear-gradient(180deg, var(--medical-navy-light) 0%, var(--medical-navy) 100%);
   color: white;
   z-index: 50;
   border-right: 2px solid var(--clinical-blue);

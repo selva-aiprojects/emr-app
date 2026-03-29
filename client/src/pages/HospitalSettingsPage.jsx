@@ -28,6 +28,25 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
     }
   }, [tenant]);
 
+  const fileInputRef = React.useRef(null);
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      showToast({ message: 'Logo must be smaller than 2MB', type: 'error', title: 'File Size' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setForm({ ...form, logo_url: reader.result });
+      showToast({ message: 'Logo processed successfully!', type: 'success', title: 'Branding' });
+    };
+    reader.readAsDataURL(file);
+  };
+
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
@@ -36,13 +55,16 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
 
     try {
       const updated = await api.updateTenantSettings(tenant.id, form);
-      showToast({ message: 'Settings saved successfully!', type: 'success', title: 'Settings' });
+      showToast({ message: 'Institutional Branding Updated Successfully!', type: 'success', title: 'Branding Configuration' });
+      console.log('DIAGNOSTIC: showToast called successfully');
       if (onUpdateTenant) onUpdateTenant(updated);
       setStatus('success');
       
       // Update CSS variables real-time
-      document.documentElement.style.setProperty('--clinical-blue', form.primaryColor);
-      document.documentElement.style.setProperty('--clinical-blue-light', `${form.primaryColor}20`);
+      if (form.primaryColor) {
+        document.documentElement.style.setProperty('--clinical-primary', form.primaryColor);
+        document.documentElement.style.setProperty('--medical-navy', form.primaryColor);
+      }
     } catch (err) {
       setStatus('error');
       setError(err.message || 'Failed to update settings');
@@ -55,8 +77,8 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
     <div className="page-shell-premium slide-up">
       <header className="page-header-premium mb-8">
         <div>
-          <h1 className="page-title-rich flex items-center gap-3">
-             <Settings className="w-8 h-8 text-slate-900" />
+          <h1 className="page-title-rich flex items-center gap-3 text-slate-900">
+             <Settings className="w-8 h-8 text-[#0077B6]" />
              Institutional Branding & Settings
           </h1>
           <p className="dim-label italic">Customize your hospital's digital identity, theme, and operational configurations.</p>
@@ -70,7 +92,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
             {/* General Identity */}
             <section className="clinical-card p-8">
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-[#0077B6]">
                   <Building2 size={20} />
                 </div>
                 <div>
@@ -79,9 +101,9 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 gap-8">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Facility Display Name</label>
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Facility Display Name</label>
                   <input 
                     type="text" 
                     className="input-field"
@@ -91,21 +113,68 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Hospital Logo URL</label>
-                  <div className="flex gap-4">
+                
+                <div className="space-y-4">
+                  <label className="block text-xs font-black text-slate-500 uppercase tracking-widest leading-none">Institutional Logo</label>
+                  
+                  <div className="flex flex-col md:flex-row gap-6 items-start">
+                    {/* Upload Dropzone */}
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex-1 w-full p-8 border-2 border-dashed border-slate-200 rounded-3xl bg-slate-50/50 hover:bg-slate-50 hover:border-[#0077B6]/30 transition-all cursor-pointer group relative overflow-hidden"
+                    >
+                      <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                        className="hidden" 
+                        accept="image/*"
+                      />
+                      <div className="flex flex-col items-center text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-400 group-hover:text-[#0077B6] group-hover:scale-110 transition-all mb-3">
+                          <ImageIcon size={24} />
+                        </div>
+                        <p className="text-xs font-black text-slate-700 uppercase tracking-tight mb-1">Click to upload logo</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">PNG, SVG or JPG (Max 2MB)</p>
+                      </div>
+                    </div>
+
+                    {/* Preview Area */}
+                    <div className="w-full md:w-[200px] flex flex-col items-center">
+                      <div className="w-[120px] h-[120px] rounded-3xl border border-slate-100 bg-white p-4 flex items-center justify-center shadow-xl mb-3 overflow-hidden relative group">
+                        {form.logo_url ? (
+                          <img src={form.logo_url} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
+                        ) : (
+                          <div className="flex flex-col items-center opacity-20">
+                             <ImageIcon size={32} />
+                             <span className="text-[9px] font-black uppercase mt-1">No logo</span>
+                          </div>
+                        )}
+                        {form.logo_url && (
+                          <button 
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setForm({...form, logo_url: ''}); }}
+                            className="absolute inset-0 bg-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-black uppercase tracking-widest"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest text-center leading-relaxed">
+                        This logo will appear in your sidebar, reports, and invoices.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Or specify a remote URL:</p>
                     <input 
                       type="url" 
-                      className="input-field flex-1"
-                      value={form.logo_url}
+                      className="input-field text-xs py-2 bg-slate-50/50"
+                      value={form.logo_url?.startsWith('data:') ? '' : form.logo_url}
                       onChange={e => setForm({...form, logo_url: e.target.value})}
                       placeholder="https://example.com/logo.png"
                     />
-                    {form.logo_url && (
-                      <div className="w-[60px] h-[60px] rounded-xl border-2 border-slate-100 bg-white p-2 flex items-center justify-center overflow-hidden">
-                        <img src={form.logo_url} alt="Logo Preview" className="max-w-full max-h-full object-contain" />
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
