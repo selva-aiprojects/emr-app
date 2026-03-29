@@ -72,7 +72,7 @@ export default function Chatbot({ context }) {
                                 </svg>
                             </div>
                             <div>
-                                <h4>EMR Assistant</h4>
+                                <h4>Healthezee Assistant</h4>
                                 <span>{context.tenant?.name || 'System'}</span>
                             </div>
                         </div>
