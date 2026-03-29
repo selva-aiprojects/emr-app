@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 const ToastContext = createContext(null);
@@ -69,10 +69,19 @@ export function ToastProvider({ children }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
+  /* Global Event Listener for non-hook notifications */
+  useEffect(() => {
+    const handleExternalNotify = (e) => {
+      if (e.detail) showToast(e.detail);
+    };
+    window.addEventListener('medflow-notify', handleExternalNotify);
+    return () => window.removeEventListener('medflow-notify', handleExternalNotify);
+  }, [showToast]);
+
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {/* Toast Mount Point — fixed top-6 right-6, stacked */}
+      {/* Toast Mount Point — fixed top-24 right-6, stacked */}
       <div className="fixed top-24 right-6 z-[10000] flex flex-col gap-3 pointer-events-none">
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onClose={dismiss} />
