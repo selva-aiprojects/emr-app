@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medflow EMR - Enterprise Architecture</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Deep Slate */
+            color: #f8fafc;
+            min-height: 100vh;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .diagram-container {
+            max-width: 1200px;
+            width: 100%;
+        }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6);
+        }
+
+        .module-list li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            font-weight: 500;
+        }
+
+        .module-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 8px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: 0.8;
+        }
+
+        .connector-vertical {
+            width: 2px;
+            height: 48px;
+            background: linear-gradient(to bottom, rgba(56, 189, 248, 0.5), rgba(52, 211, 153, 0.5));
+            margin: 0 auto;
+        }
+
+        /* Decorative Background Orbs */
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: -1;
+            opacity: 0.25;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Ambient Lighting Background -->
+    <div class="glow-orb" style="top: -100px; left: -100px; width: 500px; height: 500px; background: #3b82f6;"></div>
+    <div class="glow-orb" style="bottom: -100px; right: -100px; width: 600px; height: 600px; background: #10b981;"></div>
+
+    <div class="diagram-container">
+        <!-- HEADER TITLE -->
+        <div class="text-center mb-16 mt-8">
+            <h1 class="text-5xl font-extrabold tracking-tight mb-4">Medflow EMR <span class="text-slate-500">Architecture</span></h1>
+            <p class="text-slate-400 font-medium tracking-widest uppercase">Enterprise SaaS Topology Matrix</p>
+        </div>
+
+        <!-- TOP LAYER: DOMAIN MODULES -->
+        <div class="glass-card gap-8 p-10 mb-8 relative border-t-4 border-t-amber-500">
+            <div class="flex items-center gap-3 mb-8">
+                <i data-lucide="layers" class="text-amber-500 w-8 h-8"></i>
+                <h2 class="text-3xl font-bold">Clinical & Operations Domain</h2>
+                <div class="ml-auto px-4 py-2 rounded-full bg-amber-500/10 text-xs font-bold text-amber-500 uppercase tracking-widest border border-amber-500/20">Multi-Tenant RBAC Security</div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- OP MODULE -->
+                <div class="bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><i data-lucide="stethoscope" class="w-5 h-5 text-amber-400"></i> Outpatient (OP)</h3>
+                    <ul class="module-list text-amber-200">
+                        <li>Consultancy & EMR Core</li>
+                        <li>Digital Prescriptions</li>
+                        <li>Pharmacy & Lab Integrations</li>
+                        <li>Outpatient Billing Engine</li>
+                    </ul>
+                </div>
+
+                <!-- IP MODULE -->
+                <div class="bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><i data-lucide="bed-double" class="w-5 h-5 text-emerald-400"></i> Inpatient (IP)</h3>
+                    <ul class="module-list text-emerald-200">
+                        <li>Real-time Bed Management</li>
+                        <li>Operation Theatre Scheduling</li>
+                        <li>Insurance & Claim Processing</li>
+                        <li>Wards & Admissions Flow</li>
+                    </ul>
+                </div>
+
+                <!-- ERP MODULE -->
+                <div class="bg-slate-800/40 p-6 rounded-2xl border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2"><i data-lucide="building-2" class="w-5 h-5 text-blue-400"></i> Enterprise (ERP)</h3>
+                    <ul class="module-list text-blue-200">
+                        <li>Stock & Inventory Logistics</li>
+                        <li>Ambulance & Fleet Dispatch</li>
+                        <li>Blood Bank Indexing</li>
+                        <li>HR, Payroll & Staff Roster</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="connector-vertical"></div>
+
+        <!-- ENGINE LAYER: FRONTEND & BACKEND -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <!-- FRONTEND -->
+            <div class="glass-card p-10 relative border-t-4 border-t-cyan-400">
+                <div class="flex items-center gap-3 mb-8">
+                    <i data-lucide="monitor-smartphone" class="text-cyan-400 w-8 h-8"></i>
+                    <h2 class="text-3xl font-bold">Client Interface <span class="text-cyan-400/50">(Frontend)</span></h2>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                        <span class="font-bold text-slate-200">Framework Engine</span>
+                        <span class="text-sm font-mono text-cyan-400 bg-cyan-400/10 px-3 py-1.5 rounded-lg border border-cyan-400/20">React 18 / Vite</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                        <span class="font-bold text-slate-200">Architecture</span>
+                        <span class="text-sm font-mono text-slate-300">SPA + Distributed Hooks</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                        <span class="font-bold text-slate-200">Design System</span>
+                        <span class="text-sm font-mono text-slate-300">Fast CSS / Lucide / ECharts</span>
+                    </div>
+                </div>
+
+                <div class="mt-8 pt-8 border-t border-slate-700/50 flex gap-4 justify-center">
+                    <div class="flex items-center gap-2 px-5 py-2.5 bg-slate-800 rounded-xl text-sm font-bold text-slate-300 border border-slate-700"><i data-lucide="laptop" class="w-4 h-4 text-cyan-400"></i> Web Clients</div>
+                    <div class="flex items-center gap-2 px-5 py-2.5 bg-slate-800 rounded-xl text-sm font-bold text-slate-300 border border-slate-700"><i data-lucide="tablet-smartphone" class="w-4 h-4 text-cyan-400"></i> Mobile PADs</div>
+                </div>
+            </div>
+
+            <!-- BACKEND -->
+            <div class="glass-card p-10 relative border-t-4 border-t-emerald-500 flex flex-col">
+                <div class="flex items-center gap-3 mb-8">
+                    <i data-lucide="server" class="text-emerald-500 w-8 h-8"></i>
+                    <h2 class="text-3xl font-bold">Core API <span class="text-emerald-500/50">(Backend)</span></h2>
+                </div>
+
+                <div class="space-y-4 flex-1">
+                    <div class="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                        <span class="font-bold text-slate-200">Application Runtime</span>
+                        <span class="text-sm font-mono text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-lg border border-emerald-400/20">Node.js / Express</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                        <span class="font-bold text-slate-200">Auth Gateway</span>
+                        <span class="text-sm font-mono text-slate-300">Tenant-Scoped JWT (RS256)</span>
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
+                        <span class="font-bold text-slate-200">Communication</span>
+                        <span class="text-sm font-mono text-slate-300">RESTful Middleware Pipeline</span>
+                    </div>
+                </div>
+
+                <!-- AI Integrated -->
+                <div class="mt-8 p-5 bg-indigo-500/10 rounded-xl border border-indigo-500/30 flex items-center justify-between relative overflow-hidden">
+                    <div class="absolute right-[-20px] top-[-20px] opacity-10"><i data-lucide="brain-circuit" class="w-32 h-32 text-indigo-400"></i></div>
+                    <div class="flex items-center gap-4 relative z-10">
+                        <div class="p-2 bg-indigo-500/20 rounded-lg"><i data-lucide="box" class="text-indigo-400 w-5 h-5"></i></div>
+                        <div>
+                            <div class="font-bold text-white text-md">Intelligence Integration</div>
+                            <div class="text-xs text-indigo-300 font-mono mt-1">Google Gemini-1.5-Flash Ecosystem</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="connector-vertical"></div>
+
+        <!-- INFRASTRUCTURE LAYER -->
+        <div class="glass-card p-10 relative border-t-4 border-t-indigo-500">
+            <div class="flex items-center gap-3 mb-8">
+                <i data-lucide="database" class="text-indigo-400 w-8 h-8"></i>
+                <h2 class="text-3xl font-bold">Data & Infrastructure Plane</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="flex items-start gap-5 p-6 bg-slate-800/40 rounded-2xl border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
+                    <div class="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center shrink-0 border border-blue-500/30">
+                        <i data-lucide="hard-drive" class="w-7 h-7 text-blue-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-xl">PostgreSQL Relational DB</h3>
+                        <p class="text-sm text-slate-400 mt-2 leading-relaxed">Single-Schema Pattern with strict Row-Level isolation mapped dynamically per Hospital Tenant boundary.</p>
+                        <div class="mt-4 inline-block px-3 py-1 bg-slate-900 rounded-[6px] text-xs font-mono text-blue-300 border border-slate-800">Pool-Driven Connections</div>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-5 p-6 bg-slate-800/40 rounded-2xl border border-slate-700/50 hover:bg-slate-800/60 transition-colors">
+                    <div class="w-14 h-14 rounded-2xl bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/30">
+                        <i data-lucide="boxes" class="w-7 h-7 text-indigo-400"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white text-xl">Docker / ESG Hosting</h3>
+                        <p class="text-sm text-slate-400 mt-2 leading-relaxed">Horizontally scaled container clusters bridging persistent database layers with dynamic API load generation.</p>
+                        <div class="mt-4 inline-block px-3 py-1 bg-slate-900 rounded-[6px] text-xs font-mono text-indigo-300 border border-slate-800">Containerized Scale-Out</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-12 text-slate-500 text-sm font-medium tracking-wide">
+            CONFIDENTIAL ARCHITECTURE PATTERN // MEDFLOW EMR SYSTEMS
+        </div>
+
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

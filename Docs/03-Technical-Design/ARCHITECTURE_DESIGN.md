@@ -8,21 +8,72 @@ The Medflow EMR is a multi-tenant SaaS platform optimized for healthcare clinica
 ## 2. Architecture Diagram (High Level)
 ```mermaid
 graph TD
-    Client[Web Browser / SPA] -->|HTTPS REST| API[Express Application Server]
-    API -->|SQL| DB[(PostgreSQL Data Store)]
-    API -->|SDK| AI[Google Gemini Core]
+    classDef default font-family:sans-serif;
     
-    subgraph "SaaS Governance"
-        SA[Superadmin Node]
-        TM[Tenant Management]
-        UP[Provisioning Engine]
+    subgraph HMS["Medflow EMR Core Modules"]
+        direction LR
+        RBAC["Multi-Tenancy & RBAC"]
+        OP["OP Module\nConsultancy, Prescription, EMR\nPharmacy, Lab, Billing"]
+        IP["IP Module\nBed Mgmt, Theatres\nInsurance"]
+        ERP["ERP\nStock Inventory, Ambulance\nBlood Bank, HR & Staff"]
     end
+
+    subgraph "Frontend Layer"
+        FE["Frontend\nReactJS (React 18, Vite)\nSPA Pattern\nCentralized Hooks\nVanilla CSS\nApache ECharts"]
+    end
+
+    subgraph "Backend Layer"
+        BE["Backend\nNode.js (Express)\nREST API & Middleware\nJWT (RS256)\nGoogle Gemini AI Engine"]
+    end
+
+    subgraph "Intelligence"
+        AI["AI Analytics & Reports\nApache ECharts\nGoogle Gemini"]
+    end
+
+    subgraph "Data Layer"
+        DB["Database\nPostgreSQL\nPool-Driven PG Connection"]
+    end
+
+    Infra["Docker / ESG Containerization"]
     
-    subgraph "Tenant Core"
-        CM[Clinical Workspace]
-        FM[Financial Node]
-        OM[Operations Hub]
-    end
+    WebClient["Web App Interface"]
+    MobileClient["Mobile App Interface"]
+
+    %% Edges
+    HMS <==> FE
+    HMS <==> BE
+    
+    FE <==> BE
+    BE <.-> AI
+    
+    FE -.-> WebClient
+    FE -.-> MobileClient
+    
+    BE ==> DB
+    DB ==> Infra
+    
+    RBAC ~~~ OP
+    OP ~~~ IP
+    IP ~~~ ERP
+
+    classDef op fill:#fef3c7,stroke:#f59e0b,stroke-width:2px;
+    classDef ip fill:#ecfdf5,stroke:#10b981,stroke-width:2px;
+    classDef erp fill:#fef3c7,stroke:#f59e0b,stroke-width:2px;
+    classDef mt fill:#eff6ff,stroke:#3b82f6,stroke-width:2px;
+    
+    classDef front fill:#eff6ff,stroke:#2563eb,stroke-width:3px;
+    classDef back fill:#f0fdf4,stroke:#16a34a,stroke-width:3px;
+    classDef data fill:#eff6ff,stroke:#2563eb,stroke-width:3px;
+    classDef ai fill:#f8fafc,stroke:#94a3b8,stroke-width:2px,stroke-dasharray: 4 4;
+    
+    class RBAC mt;
+    class OP op;
+    class IP ip;
+    class ERP erp;
+    class FE front;
+    class BE back;
+    class DB data;
+    class AI ai;
 ```
 
 ## 3. Tech Stack Matrix

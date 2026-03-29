@@ -82,14 +82,18 @@ graph TD
 6. Repository uses parameterized SQL and returns transformed DTOs.
 7. API serializes JSON response.
 
-## 4. Security Model
-- Auth: bcrypt password verification + JWT claims (`userId`, `tenantId`, `role`, optional `patientId`).
-- Tenant isolation: enforced in middleware and repository-level query patterns.
-- Superadmin policy: tenant-context access is blocked by default; break-glass headers are required by middleware.
-- Role permissions:
-  - Backend authority: `PERMISSIONS` in `server/middleware/auth.middleware.js`
-  - Frontend fallback visibility: `fallbackPermissions` in `client/src/config/modules.js`
-- Auditing: write operations create audit records in `emr.audit_logs` via `createAuditLog`.
+## 4. Security & Authentication Model
+- **Auth Engine**: Stateless JSON Web Token (JWT) authentication using RS256/HS256 signatures. Sessions are persistent on the client securely via storage APIs.
+- **Identity Claims**: JWT payloads securely encode `userId`, `tenantId`, `role`, and optional `patientId` for low-latency boundary verification.
+- **Tenant Isolation Pipeline**: 
+  - Strictly enforced in HTTP middleware via the `requireTenant` interceptor.
+  - The frontend `api.js` adapter automatically injects the `x-tenant-id` header into all network requests directly from the authenticated user's session context.
+  - Repository-level query patterns unconditionally scope all queries using parameterization (`WHERE tenant_id = $1`).
+- **Role-Based Access Control (RBAC)**:
+  - **Backend Authority**: Strict validation against the `PERMISSIONS` matrix in `server/middleware/auth.middleware.js`.
+  - **Frontend UX Gates**: Progressive visibility enforced by `fallbackPermissions` in `client/src/config/modules.js`.
+- **Superadmin Zero-Trust Policy**: `SYS` level access is inherently isolated. Tenant-context operations are completely blocked by default for superadmins; explicit break-glass headers are dynamically required when managing tenant instances.
+- **Cryptographic Auditing**: All system state mutations create immutable ledger records in `emr.audit_logs`.
 
 ## 5. State and Data Loading
 - Login flow:
