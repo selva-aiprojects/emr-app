@@ -1,0 +1,34 @@
+<svg width="600" height="200" viewBox="0 0 600 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- LOGO ICON -->
+  <g transform="translate(20, 20)">
+    <!-- Blue part of the cross -->
+    <path d="M40 0 H80 V40 H120 V80 H80 V120 H40 V80 H0 V40 H40 V0z" fill="#0056b3" />
+    <!-- Overlay green part/arrow area shadow -->
+    <path d="M80 40 V120 H40 V80" fill="#004080" opacity="0.1" />
+    
+    <!-- Green part and arrow -->
+    <path d="M80 40 L120 0 L130 10 L120 20 H110 V60 H80 V40z" fill="#28a745" />
+    <path d="M80 80 H120 V120 H80 V80z" fill="#28a745" />
+    
+    <!-- Refined Cross with Arrow integration -->
+    <rect x="40" y="0" width="40" height="120" fill="#0056b3" rx="4" />
+    <rect x="0" y="40" width="120" height="40" fill="#0056b3" rx="4" />
+    
+    <!-- Green highlight and upward arrow mimicking the user's logo -->
+    <path d="M80 40 H120 V80 H80 V120 L140 20 L150 30 L145 10 L125 5 L135 15 L80 120 V40z" fill="#28a745" rx="4" />
+    <path d="M60 120 L150 10 M140 10 L150 10 L150 20" stroke="#28a745" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- White Heart in center -->
+    <path d="M60 75 C60 70 50 70 50 78 C50 85 60 92 60 92 C60 92 70 85 70 78 C70 70 60 70 60 75z" fill="white" />
+  </g>
+
+  <!-- LOGO TEXT -->
+  <text x="180" y="110" font-family="Arial, sans-serif" font-weight="bold" font-size="72" letter-spacing="-2">
+    <tspan fill="#003366">health</tspan><tspan fill="#339966">ezee</tspan>
+  </text>
+  
+  <!-- SUBTEXT -->
+  <text x="182" y="150" font-family="Arial, sans-serif" font-size="24" fill="#666666" letter-spacing="1">
+    Hospital Management System
+  </text>
+</svg>

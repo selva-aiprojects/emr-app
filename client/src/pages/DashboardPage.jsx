@@ -254,7 +254,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
     });
 
     const csvData = [
-      ['MEDFLOW EMR CARE - CLINICAL EXECUTIVE REPORT'],
+      ['HEALTHEZEE EMR CARE - CLINICAL EXECUTIVE REPORT'],
       [`Generated on: ${todayStr}`],
       ['Facility:', tenant?.name || 'Authorized Facility'],
       [''],
@@ -370,7 +370,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       </div>
 
       {/* ── MISSING FLOW: Offer Announcement for Tenant Scaling ── */}
-      <OfferAnnouncement />
+      <OfferAnnouncement tenant={tenant} />
 
       {/* ── NEW: COST GOVERNANCE (For Admin roles) ── */}
       {(activeUser?.role === 'Admin' || activeUser?.role === 'Management' || activeUser?.role === 'Accounts') && (

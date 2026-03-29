@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BRAND } from '../config/branding.js';
-import { AlertCircle, ArrowRight, Activity, Database, Mail, Lock, ChevronRight } from 'lucide-react';
+import { AlertCircle, ArrowRight, Activity, Database, Mail, Lock, ChevronRight, HeartPulse } from 'lucide-react';
 
 export default function LoginPage({ onLogin, tenants, loading: propLoading, error: propError }) {
   const [credentials, setCredentials] = useState({
@@ -72,39 +72,39 @@ export default function LoginPage({ onLogin, tenants, loading: propLoading, erro
         {/* Left Panel - Hero Section */}
         <div className="hidden md:flex flex-col justify-between p-10 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)' }}>
 
-          <div className="relative z-10 flex items-center gap-4">
-            <img src="/medflow-icon.svg" alt={BRAND.name} className="h-12 w-12" />
-            <div>
-              <div className="text-xl font-black tracking-tight" style={{ color: '#ffffff' }}>{BRAND.name}</div>
-              <div className="text-xs uppercase tracking-widest mt-1" style={{ color: '#94a3b8' }}>Clinical Operations Suite</div>
-            </div>
+          <div className="relative z-10">
+            <img 
+              src="/healthezee-logo.png" 
+              alt="Healthezee Logo" 
+              className="h-16 w-auto object-contain drop-shadow-lg" 
+            />
           </div>
 
           <div className="relative z-10">
-            <h3 className="text-3xl font-black leading-tight mb-4" style={{ color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.6)' }}>
-              Secure access for{' '}
-              <span style={{ color: '#60a5fa' }}>every care team.</span>
+            <h3 className="text-5xl font-black leading-tight mb-4 tracking-tighter" style={{ color: '#ffffff', textShadow: '0 4px 12px rgba(0,0,0,0.4)', fontFamily: '"Outfit", sans-serif' }}>
+              Precision care,<br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">reimagined.</span>
             </h3>
-            <p className="text-sm leading-relaxed" style={{ color: '#e2e8f0' }}>
-              Manage patients, appointments, and clinical workflows with confidence. Your data stays encrypted and role-secured.
+            <p className="text-base leading-relaxed" style={{ color: '#e2e8f0' }}>
+              The next generation EMR for high-performance care teams. Access your workspace securely.
             </p>
-            <div className="mt-8 flex items-center gap-3 text-xs font-bold" style={{ color: '#94a3b8' }}>
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                <Database className="w-4 h-4" style={{ color: '#818cf8' }} />
+            <div className="mt-10 flex items-center gap-3 text-xs font-bold" style={{ color: '#94a3b8' }}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/10" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                <Activity className="w-5 h-5 text-[#60a5fa]" />
               </div>
-              Tenant-aware access control
+              Enterprise Identity Protection Active
             </div>
           </div>
         </div>
 
         {/* Right Panel - Form Section */}
-        <div className="p-8 md:p-10 flex flex-col justify-center">
-          <div className="md:hidden flex items-center gap-3 mb-8">
-            <img src="/medflow-icon.svg" alt={BRAND.name} className="h-10 w-10" />
-            <div>
-              <div className="text-lg font-black">{BRAND.name}</div>
-              <div className="text-[10px] uppercase tracking-widest text-slate-400">Clinical Operations Suite</div>
-            </div>
+        <div className="p-8 md:p-12 flex flex-col justify-center bg-white">
+          <div className="md:hidden flex items-center justify-center mb-10">
+            <img 
+              src="/healthezee-logo.png" 
+              alt="Healthezee Logo" 
+              className="h-10 w-auto object-contain" 
+            />
           </div>
 
           <h2 className="text-2xl font-black text-slate-900 mb-2">Sign in</h2>

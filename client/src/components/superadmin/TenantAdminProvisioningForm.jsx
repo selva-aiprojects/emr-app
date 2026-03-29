@@ -5,7 +5,7 @@ const INITIAL = {
   tenantId: '',
   name: '',
   email: '',
-  password: 'Medflow@2026', // Requested default
+  password: 'Healthezee@2026', // Requested default
 };
 
 export default function TenantAdminProvisioningForm({ tenants = [], onProvision }) {
@@ -40,7 +40,7 @@ export default function TenantAdminProvisioningForm({ tenants = [], onProvision 
       setProvisionedData(result);
       setStatus('success');
       // Keep tenant selected but clear user details
-      setForm(prev => ({ ...prev, name: '', email: '', password: 'Medflow@2026' }));
+      setForm(prev => ({ ...prev, name: '', email: '', password: 'Healthezee@2026' }));
     } catch (err) {
       setStatus('error');
       setErrMsg(err.message || 'Failed to provision admin');

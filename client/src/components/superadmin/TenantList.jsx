@@ -93,7 +93,7 @@ export default function TenantList({ tenants = [], onSelect }) {
                       {tenant.subdomain && (
                         <div className="flex items-center gap-1 text-[11px] text-slate-400 font-mono">
                           <Globe className="w-3 h-3" />
-                          {tenant.subdomain}.medflow.app
+                          {tenant.subdomain}.healthezee.app
                         </div>
                       )}
                       {tenant.contact_email && (

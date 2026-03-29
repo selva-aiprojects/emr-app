@@ -430,7 +430,11 @@ export default function AppLayout({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-6">
+            <div className="hidden lg:flex items-center pr-4 border-r border-slate-100">
+               <img src="/healthezee-logo.png" alt="Healthezee Logo" className="h-7 w-auto object-contain" />
+            </div>
+            
             <div className="hidden md:block w-64">
               <SmartSearch
                 onSearch={handleSearchResult}

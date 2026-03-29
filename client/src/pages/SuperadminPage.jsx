@@ -104,7 +104,7 @@ function SuperadminPage({
     return (
       <div className="intelligence-hub slide-up space-y-12">
         <PlatformAccounts tenants={tenants} />
-        <OfferManagement />
+        <OfferManagement tenants={tenants} />
       </div>
     );
   }

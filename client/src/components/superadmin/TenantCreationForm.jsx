@@ -99,7 +99,7 @@ export default function TenantCreationForm({ onCreate }) {
             name="name"
             value={form.name}
             onChange={handleChange}
-            placeholder="e.g. MedFlow Basic Clinic"
+            placeholder="e.g. Healthezee Basic Clinic"
             required
             className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white text-slate-800 placeholder-slate-400"
           />
@@ -156,7 +156,7 @@ export default function TenantCreationForm({ onCreate }) {
               name="subdomain"
               value={form.subdomain}
               onChange={handleChange}
-              placeholder="e.g. medflow-basic"
+              placeholder="e.g. healthezee-basic"
               maxLength={50}
               required
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white text-slate-800 placeholder-slate-400 lowercase"
@@ -236,7 +236,7 @@ export default function TenantCreationForm({ onCreate }) {
             </div>
             <div>
               <div className="text-xs font-bold text-slate-800">{form.name || 'Tenant Name'}</div>
-              <div className="text-[10px] text-slate-400">{form.subdomain || 'subdomain'}.medflow.app · {selectedTier?.icon} {form.subscriptionTier}</div>
+              <div className="text-[10px] text-slate-400">{form.subdomain || 'subdomain'}.healthezee.app · {selectedTier?.icon} {form.subscriptionTier}</div>
             </div>
           </div>
         )}

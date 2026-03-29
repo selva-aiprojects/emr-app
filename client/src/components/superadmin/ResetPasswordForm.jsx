@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { KeyRound, Building, Mail, Lock, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { resetTenantUserPassword } from '../../api.js';
 
-const INITIAL = { tenantId: '', email: '', newPassword: 'Medflow@2026' };
+const INITIAL = { tenantId: '', email: '', newPassword: 'Healthezee@2026' };
 
 export default function ResetPasswordForm({ tenants = [] }) {
   const [form, setForm] = useState(INITIAL);
@@ -116,7 +116,7 @@ export default function ResetPasswordForm({ tenants = [] }) {
             </button>
           </div>
           <p className="text-[9px] text-slate-400 mt-1 italic font-medium">
-            Default: Medflow@2026 — change if needed before submitting.
+            Default: Healthezee@2026 — change if needed before submitting.
           </p>
         </div>
 

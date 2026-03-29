@@ -117,6 +117,7 @@ export default function App() {
     if (!isDoctor) return patients;
     return patients.filter((p) => doctorPatientIds?.has(p.id));
   }, [isDoctor, patients, doctorPatientIds]);
+
   const scopedAppointments = useMemo(() => (isDoctor ? doctorAppointments : appointments), [isDoctor, doctorAppointments, appointments]);
   const scopedEncounters = useMemo(() => {
     if (!isDoctor) return encounters;
@@ -135,7 +136,7 @@ export default function App() {
 
     // Superadmin bypasses all tenant/tier restrictions — they have no tenant
     if (activeUser.role.toLowerCase() === 'superadmin') {
-      return ['superadmin', 'tenant_management', 'user_provisioning', 'dashboard', 'admin', 'reports', 'support'];
+      return ['superadmin', 'tenant_management', 'user_provisioning', 'financial_control', 'dashboard', 'admin', 'reports', 'support'];
     }
 
     // Normalize role for permission mapping
@@ -481,7 +482,7 @@ export default function App() {
       >
         <ErrorBoundary>
           <Suspense fallback={suspenseFallback}>
-            {['superadmin', 'tenant_management', 'user_provisioning'].includes(view) && (
+            {['superadmin', 'tenant_management', 'user_provisioning', 'financial_control'].includes(view) && (
             <SuperadminPage
               viewMode={view}
               superOverview={superOverview}
@@ -804,17 +805,17 @@ export default function App() {
                 coverageLimit: Number(fd.get('coverageLimit')),
                 contactPerson: fd.get('contactPerson'),
                 phone: fd.get('phone'),
-                email: fd.get('email')
+                email: fd.get('email'),
+                address: fd.get('address')
               }));
-              e.target.reset();
             }}
             onCreateClaim={(e) => {
               e.preventDefault();
               const fd = new FormData(e.target);
-              withRefresh(() => api.createClaim({
+              withRefresh(() => api.createInsuranceClaim({
                 tenantId: session.tenantId,
-                patientId: fd.get('patientId'),
                 providerId: fd.get('providerId'),
+                patientId: fd.get('patientId'),
                 amount: Number(fd.get('amount')),
                 claimNumber: fd.get('claimNumber')
               }));
@@ -945,5 +946,3 @@ export default function App() {
     </>
   );
 }
-
-
