@@ -75,6 +75,12 @@ async function apiRequest(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Auto-inject tenant context for all API endpoints
+  const user = getStoredUser();
+  if (user && user.tenantId && !headers['x-tenant-id']) {
+    headers['x-tenant-id'] = user.tenantId;
+  }
+
   const config = {
     ...options,
     headers,
