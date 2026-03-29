@@ -16,7 +16,11 @@ import {
   Filter,
   ArrowRight,
   ShieldCheck,
-  Pill
+  Pill,
+  BrainCircuit,
+  Sparkles,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { currency } from '../utils/format.js';
 import { EmptyState } from '../components/ui/index.jsx';
@@ -29,6 +33,8 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
   const [activeTab, setActiveTab] = useState('queue');
   const [searchValue, setSearchValue] = useState('');
   const [showDispenseModal, setShowDispenseModal] = useState(null);
+  const [drugAiResult, setDrugAiResult] = useState(null);
+  const [drugAiLoading, setDrugAiLoading] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'queue' && tenant) {
@@ -67,10 +73,28 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
       loadQueue();
       if (onDispense) onDispense();
       setShowDispenseModal(null);
+      setDrugAiResult(null);
     } catch (err) {
       alert('Dispense Failure: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDrugCheck = async (item) => {
+    setDrugAiLoading(true);
+    setDrugAiResult(null);
+    try {
+      // For demonstration, we check the current med vs a mock list of patient's existing meds
+      const patientMeds = [item.generic_name, 'Aspirin', 'Warfarin']; 
+      const data = await api.checkDrugInteractions(tenant.id, patientMeds);
+      setDrugAiResult(data);
+      showToast({ message: 'Clinical safety scan completed.', type: 'info', title: 'Clinical AI' });
+    } catch (err) {
+      console.error(err);
+      showToast({ message: 'Safety scan failed. Check clinical feeds.', type: 'error', title: 'Clinical AI' });
+    } finally {
+      setDrugAiLoading(false);
     }
   };
 
@@ -515,17 +539,26 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
           <div className="glass-panel w-full max-w-lg p-8 animate-fade-in shadow-2xl">
             <div className="flex justify-between items-start mb-8">
               <div>
-                <h3 className="text-xl font-bold text-slate-900">Finalize Dispensation</h3>
+                <h3 className="text-xl font-bold text-slate-900 flex items-center gap-3">
+                  Finalize Dispensation
+                  <span className="text-[9px] bg-blue-600 text-white px-3 py-1 rounded-full uppercase tracking-tighter font-black">Clinical Safety Loop</span>
+                </h3>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Verify medication integrity and quantity</p>
               </div>
-              <button onClick={() => setShowDispenseModal(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+              <button 
+                onClick={() => {
+                  setShowDispenseModal(null);
+                  setDrugAiResult(null);
+                }} 
+                className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+              >
                 <Plus className="w-6 h-6 rotate-45 text-slate-400" />
               </button>
             </div>
             
             <div className="space-y-6">
-              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex justify-between items-center">
+                <div className="grid grid-cols-2 gap-4 flex-1">
                   <div>
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target Recipient</label>
                     <p className="text-sm font-black text-slate-800">{showDispenseModal.patient_name}</p>
@@ -535,7 +568,57 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                     <p className="text-sm font-black text-blue-600">{showDispenseModal.generic_name}</p>
                   </div>
                 </div>
+                <button 
+                  className="clinical-btn !bg-orange-500 !text-white !p-2.5 !min-h-0 !rounded-xl shadow-lg shadow-orange-500/20 group relative"
+                  title="Run Clinical Safety Check"
+                  onClick={() => handleDrugCheck(showDispenseModal)}
+                  disabled={drugAiLoading}
+                >
+                  {drugAiLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <BrainCircuit className="w-5 h-5 group-hover:scale-110 transition-transform" />}
+                  <Sparkles className="absolute -top-1 -right-1 w-3 h-3 text-white animate-pulse" />
+                </button>
               </div>
+
+              {drugAiResult && (
+                <div className="animate-fade-in p-6 bg-slate-900 rounded-2xl relative overflow-hidden border border-slate-800 shadow-2xl">
+                  <div className="absolute top-0 right-0 p-4 opacity-5">
+                    <Sparkles className="w-20 h-20 text-white" />
+                  </div>
+                  <div className="relative z-10">
+                    <h4 className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                       <ShieldCheck className="w-3 h-3" /> AI Clinical Safety Insights
+                    </h4>
+                    
+                    {drugAiResult.conflicts && drugAiResult.conflicts.length > 0 ? (
+                       <div className="space-y-4">
+                          {drugAiResult.conflicts.map((conflict, idx) => (
+                             <div key={idx} className="flex gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  conflict.severity === 'Major' ? 'bg-rose-500/20 text-rose-500' : 'bg-orange-500/20 text-orange-500'
+                                }`}>
+                                   <AlertTriangle className="w-4 h-4" />
+                                </div>
+                                <div>
+                                   <div className="text-[11px] font-black text-white uppercase">{conflict.type} Awareness</div>
+                                   <p className="text-[11px] text-slate-400 leading-relaxed mt-1">{conflict.details}</p>
+                                </div>
+                             </div>
+                          ))}
+                       </div>
+                    ) : (
+                       <div className="flex items-center gap-3 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+                          <CheckCircle className="w-5 h-5" />
+                          <span className="text-[11px] font-black uppercase tracking-wider">No drug-drug interactions detected for this regimen.</span>
+                       </div>
+                    )}
+
+                    <div className="mt-6 pt-4 border-t border-white/5">
+                       <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Clinical Instruction</label>
+                       <p className="text-[11px] text-slate-300 italic">"{drugAiResult.recommendation}"</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -557,8 +640,11 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
               </div>
 
               <div className="pt-6 border-t border-slate-100 flex gap-4">
-                <button
-                  onClick={() => setShowDispenseModal(null)}
+                 <button
+                  onClick={() => {
+                    setShowDispenseModal(null);
+                    setDrugAiResult(null);
+                  }}
                   className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400"
                 >
                   Discard

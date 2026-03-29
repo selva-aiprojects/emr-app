@@ -54,14 +54,15 @@ export async function getFinancialSummary(tenantId, month) {
     SELECT COALESCE(SUM(paid), 0) as total_income 
     FROM emr.invoices 
     WHERE tenant_id = $1 AND status IN ('paid', 'partially_paid') 
-    AND DATE_TRUNC('month', created_at) = $2
+    AND DATE_TRUNC('month', created_at) = $2::timestamp
   `;
 
     // 2. Expenses
     const expenseSql = `
-    SELECT category, COALESCE(SUM(amount), 0) as total_amount
-    FROM emr.expenses
-    WHERE tenant_id = $1 AND DATE_TRUNC('month', date) = $2
+    SELECT category, COALESCE(SUM(amount), 0) as total_amount 
+    FROM emr.expenses 
+    WHERE tenant_id = $1 
+    AND DATE_TRUNC('month', date) = $2::timestamp 
     GROUP BY category
   `;
 

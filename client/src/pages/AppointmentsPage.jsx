@@ -13,8 +13,10 @@ import {
   ShieldCheck, 
   Clock3,
   ChevronRight,
-  Plus
+  Plus,
+  Clock4
 } from 'lucide-react';
+import AppointmentRescheduleModal from '../components/AppointmentRescheduleModal.jsx';
 
 export default function AppointmentsPage({
   activeUser, session, patients, providers, walkins, appointments, users,
@@ -26,6 +28,7 @@ export default function AppointmentsPage({
   const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'walkins'
   const [isRegistering, setIsRegistering] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [reschedulingAppointment, setReschedulingAppointment] = useState(null);
   const [regFirstName, setRegFirstName] = useState('');
   const [regLastName, setRegLastName] = useState('');
   const isPatient = activeUser.role === 'Patient';
@@ -101,8 +104,27 @@ export default function AppointmentsPage({
     }
   };
 
+  const handleReschedule = async (data) => {
+    try {
+      await onReschedule(data.id, { start: data.start, end: data.end, reason: data.reason });
+      setReschedulingAppointment(null);
+      showToast({ message: 'Appointment rescheduled successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   return (
     <div className="page-shell-premium animate-fade-in">
+      {reschedulingAppointment && (
+        <AppointmentRescheduleModal 
+          appointment={reschedulingAppointment}
+          onClose={() => setReschedulingAppointment(null)}
+          onConfirm={handleReschedule}
+          patients={patients}
+          providers={providers}
+        />
+      )}
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
            <h1 className="flex items-center gap-3">
@@ -350,7 +372,7 @@ export default function AppointmentsPage({
                         appointment={a}
                         user={activeUser}
                         onStatus={(status) => handleStatusUpdate(a.id, status)}
-                        onReschedule={() => onReschedule(a)}
+                        onReschedule={() => setReschedulingAppointment(a)}
                       />
                     </div>
                   </div>

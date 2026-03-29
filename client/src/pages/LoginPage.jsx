@@ -2,15 +2,18 @@ import { useMemo, useState } from 'react';
 import { BRAND } from '../config/branding.js';
 import { AlertCircle, ArrowRight, Activity, Database, Mail, Lock, ChevronRight } from 'lucide-react';
 
-export default function LoginPage({ onLogin, tenants }) {
+export default function LoginPage({ onLogin, tenants, loading: propLoading, error: propError }) {
   const [credentials, setCredentials] = useState({
     tenantId: '',
     email: '',
     password: ''
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [internalLoading, setInternalLoading] = useState(false);
+  const [internalError, setInternalError] = useState('');
   const [showDemoCredentials, setShowDemoCredentials] = useState(false);
+
+  const isLoading = propLoading || internalLoading;
+  const error = propError || internalError;
 
   const tenantOptions = useMemo(() => tenants || [], [tenants]);
 
@@ -29,12 +32,12 @@ export default function LoginPage({ onLogin, tenants }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError('');
+    setInternalLoading(true);
+    setInternalError('');
 
     if (!credentials.tenantId) {
-      setError('Please select a facility to continue.');
-      setIsLoading(false);
+      setInternalError('Please select a facility to continue.');
+      setInternalLoading(false);
       return;
     }
 
@@ -43,9 +46,9 @@ export default function LoginPage({ onLogin, tenants }) {
       const data = await api.login(credentials.tenantId, credentials.email, credentials.password);
       onLogin(data);
     } catch (err) {
-      setError(err.message || 'Sign in failed. Please verify your credentials.');
+      setInternalError(err.message || 'Sign in failed. Please verify your credentials.');
     } finally {
-      setIsLoading(false);
+      setInternalLoading(false);
     }
   };
 
@@ -126,7 +129,7 @@ export default function LoginPage({ onLogin, tenants }) {
                     </option>
                   ))}
                 </select>
-                <Database className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Database className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-200 rotate-90 pointer-events-none" />
               </div>
             </div>
@@ -142,7 +145,7 @@ export default function LoginPage({ onLogin, tenants }) {
                   onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
                   required
                 />
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
             </div>
 
@@ -157,7 +160,7 @@ export default function LoginPage({ onLogin, tenants }) {
                   onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
                   required
                 />
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
             </div>
 

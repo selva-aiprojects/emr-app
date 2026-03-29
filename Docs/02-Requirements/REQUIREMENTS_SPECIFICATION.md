@@ -17,6 +17,7 @@ The system encompasses the full patient journey from registration and appointmen
 ### 2.1 Multi-Tenancy & Authentication
 - **REQ-AUTH-01**: **Tenant Isolation**. Data for each tenant (hospital) must be strictly isolated. Users from Tenant A must never access Tenant B's data.
 - **REQ-AUTH-02**: **Identity Management**. The system must support secure login using Email/Password with JWT-based session management.
+- **REQ-AUTH-04**: **Multi-Factor Authentication (MFA)**. The system must support a two-step verification handshake (2FA) for high-privilege roles or enabled accounts to prevent unauthorized access.
 - **REQ-AUTH-03**: **Role-Based Access Control (RBAC)**.
   - **Superadmin**: Platform-wide oversight, tenant creation, platform reports.
   - **Admin**: Full control over tenant operations, users, and settings.
@@ -42,6 +43,7 @@ The system encompasses the full patient journey from registration and appointmen
 - **REQ-PAT-03**: **Longitudinal Record**. Display a consolidated view of a patient's entire clinical history (visits, diagnoses, medications) in a chronological timeline.
 - **REQ-PAT-04**: **Clinical Journaling**. Allow authorized roles to append notes and diagnostics to patient records.
 - **REQ-PAT-05**: **Record Output**. Enable printing/export of patient clinical summaries.
+- **REQ-PAT-06**: **Digital Health ID (ABHA)**. Automatically generate and manage unique, mock Government Health IDs (ABHA) for clinical compliance in relevant regions.
 
 ### 2.3 Appointments & Scheduling
 - **REQ-APT-01**: **Booking**. Support scheduling for future dates and time slots.
@@ -63,6 +65,7 @@ The system encompasses the full patient journey from registration and appointmen
 - **REQ-INV-02**: **Logistics Registry**. Track resource categories (Pharmaceuticals, Consumables, etc.) and automate low-stock flagging.
 - **REQ-INV-03**: **Restock Workflow**. Permit controlled stock increments and auditability.
 - **REQ-LOG-01**: **Ambulance Service**. Enable real-time tracking of ambulance fleet status (Available/On Mission/Maintenance) and emergency dispatch logs.
+- **REQ-LOG-02**: **Automated Archive**. Implement a background task engine to automatically archive stale patient records and old appointments (>30 days) to optimize operational data flow.
 
 ### 2.6 Billing & Finance
 - **REQ-BIL-01**: **Invoicing**. Generate distinct invoices for Consultations, Pharmacy, and Lab services.
@@ -115,6 +118,12 @@ The system encompasses the full patient journey from registration and appointmen
 - **REQ-AI-02**: **Treatment Decision Support**. Provide AI-driven treatment suggestions based on current diagnosis and historical metadata (Doctor role only).
 - **REQ-AI-03**: **Automated Reporting**. Assist in generating formal Inpatient Discharge Summaries using admission course notes and vitals telemetry.
 - **REQ-AI-04**: **Contextual Assistance**. Provide a staff-facing chatbot (Geminai) for navigational and operational queries within the tenant workspace.
+- **REQ-AI-05**: **Clinical Safety Engine**. Implement AI-driven safety checks for drug-drug interactions and laboratory result interpretations to prevent adverse clinical outcomes.
+- **REQ-NOT-01**: **Multi-Channel Notifications**. Enable automated clinical alerts and security notifications via SMS, Email, and WhatsApp (e.g., Lab Results Ready, Authentication Challenges).
+
+### 2.14 Database Resilience & Engineering
+- **REQ-DB-01**: **Consolidated Installation Script**. The system must maintain a single, authoritative `CONSOLIDATED_EMR_INSTALL.sql` file that contains the complete schema, all feature migrations, and a base validation dataset (Superadmin & Demo Tenant) to ensure idempotent environment setup.
+- **REQ-DB-02**: **Self-Healing Schema**. The backend server must implement a startup "Bridge Verification" task that automatically detects and repairs missing database columns or tables required by the application code, preventing 500 errors during environmental synchronization.
 
 ### 2.12 End-to-End Validation Dataset
 - **REQ-DATA-01**: System must support seeded validation datasets for at least two tenants.

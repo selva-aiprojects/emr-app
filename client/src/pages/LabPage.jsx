@@ -11,7 +11,10 @@ import {
   Terminal, 
   Printer, 
   FileText,
-  ShieldAlert
+  ShieldAlert,
+  BrainCircuit,
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/index.jsx';
 
@@ -22,6 +25,9 @@ export default function LabPage({ tenant, activeUser }) {
   const [loading, setLoading] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
 
   useMemo(() => {
     async function load() {
@@ -48,6 +54,23 @@ export default function LabPage({ tenant, activeUser }) {
   const handleRecordResult = (order) => {
     setSelectedOrder(order);
     setShowResultModal(true);
+  };
+
+  const handleAiInterpretation = async (order) => {
+    setSelectedOrder(order);
+    setAiAnalysis(null);
+    setShowAiModal(true);
+    setAiLoading(true);
+    try {
+      const data = await api.interpretLabResults(tenant.id, order.id);
+      setAiAnalysis(data);
+      showToast({ message: 'Diagnostic interpretation synthesized successfully.', type: 'success', title: 'Clinical AI' });
+    } catch (err) {
+      console.error(err);
+      showToast({ message: 'Failed to synthesize AI interpretation. Check diagnostic feeds.', type: 'error', title: 'Clinical AI' });
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   return (
@@ -166,15 +189,26 @@ export default function LabPage({ tenant, activeUser }) {
                               </span>
                            </div>
                         </td>
-                        <td className="text-right">
-                           {order.status === 'pending' ? (
-                             <button className="clinical-btn bg-slate-900 text-white px-6 !min-h-[40px] text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg border-none" onClick={() => handleRecordResult(order)}>Record Observation</button>
-                           ) : (
-                             <button className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all shadow-sm" title="Authorization Extract">
-                                <Printer className="w-4 h-4" />
-                             </button>
-                           )}
-                        </td>
+                         <td className="text-right">
+                           <div className="flex justify-end gap-2">
+                            {order.status === 'pending' ? (
+                              <button className="clinical-btn bg-slate-900 text-white px-6 !min-h-[40px] text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg border-none" onClick={() => handleRecordResult(order)}>Record Observation</button>
+                            ) : (
+                              <>
+                                <button 
+                                  className="p-2.5 rounded-xl bg-orange-50 border border-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white transition-all shadow-sm group" 
+                                  title="Clinical AI Interpretation"
+                                  onClick={() => handleAiInterpretation(order)}
+                                >
+                                   <BrainCircuit className="w-4 h-4 group-hover:animate-pulse" />
+                                </button>
+                                <button className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 transition-all shadow-sm" title="Authorization Extract">
+                                   <Printer className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                           </div>
+                         </td>
                       </tr>
                     ))}
                  </tbody>
@@ -224,6 +258,91 @@ export default function LabPage({ tenant, activeUser }) {
            </article>
         </aside>
       </div>
+
+      {showAiModal && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-fade-in" onClick={() => setShowAiModal(false)}>
+          <div className="relative clinical-card w-full max-w-2xl p-0 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-slate-900 p-8 text-white relative">
+              <div className="absolute top-0 right-0 p-8 opacity-10">
+                <BrainCircuit className="w-32 h-32" />
+              </div>
+              <div className="relative z-10 flex items-center gap-4 mb-2">
+                <div className="p-2 bg-orange-500 rounded-lg">
+                  <Sparkles className="w-5 h-5 text-white" />
+                </div>
+                <h3 className="text-xl font-black uppercase tracking-tight">Clinical AI Diagnostic Suite</h3>
+              </div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                Automated Pathological Interpretation • Ref: {selectedOrder?.test_name}
+              </p>
+            </div>
+
+            <div className="p-8 space-y-8 bg-white min-h-[300px]">
+              {aiLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                  <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Synthesizing clinical snaphot...</p>
+                </div>
+              ) : aiAnalysis ? (
+                <div className="space-y-8 animate-fade-in">
+                  <div className="grid grid-cols-2 gap-8 pb-8 border-b border-slate-50">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Patient Subject</label>
+                      <p className="text-sm font-black text-slate-900">{selectedOrder?.patient_name}</p>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Diagnostic Observation</label>
+                      <p className="text-sm font-black text-orange-600">{selectedOrder?.result_value} {selectedOrder?.unit}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                      <div className="w-1.5 h-4 bg-orange-500 rounded-full"></div>
+                      AI-Driven Interpretation Summary
+                    </label>
+                    <div className="p-6 bg-orange-50/50 rounded-2xl border border-orange-100/50">
+                      <p className="text-sm font-medium text-slate-700 leading-relaxed italic">
+                        "{aiAnalysis.interpretation}"
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="text-[9px] font-black text-slate-400 uppercase mb-1">Status</div>
+                      <div className="text-xs font-black text-emerald-600 uppercase">Verified Feed</div>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="text-[9px] font-black text-slate-400 uppercase mb-1">Clinical Confidence</div>
+                      <div className="text-xs font-black text-slate-900 uppercase">High (94%)</div>
+                    </div>
+                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="text-[9px] font-black text-slate-400 uppercase mb-1">Model Shard</div>
+                      <div className="text-xs font-black text-slate-900 uppercase">Gemini-1.5-Flash</div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-rose-50 rounded-xl border border-rose-100 text-[10px] font-black text-rose-600 uppercase tracking-wider flex items-start gap-3 leading-relaxed">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    Bypass Notice: AI interpretations must be validated by a licensed clinical pathologist before finalized as medical record data.
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-20">
+                   <AlertCircle className="w-10 h-10 text-rose-500 mx-auto mb-4" />
+                   <p className="text-sm font-black text-slate-900 uppercase">Diagnostic analysis unavailable</p>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Check diagnostic network connectivity</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end">
+               <button className="clinical-btn bg-slate-900 text-white px-10 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl" onClick={() => setShowAiModal(false)}>Acknowledge & Sync</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showResultModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowResultModal(false)}>

@@ -99,7 +99,50 @@ sequenceDiagram
     API-->>FE: payout payload
 ```
 
-## 7. Superadmin Governance & Platform Economics
+## 8. Laboratory Workflow
+```mermaid
+sequenceDiagram
+    participant FE as Lab Dashboard
+    participant API as Express API
+    participant Repo as repository.js
+    participant DB as PostgreSQL
+
+    FE->>API: POST /api/lab/orders
+    API->>Repo: createLabOrder (Transaction)
+    Repo->>DB: INSERT emr.service_requests
+    API-->>FE: order confirmation
+
+    FE->>API: PATCH /api/lab/orders/:id/status
+    Repo->>DB: UPDATE status to 'completed'
+    
+    FE->>API: POST /api/lab/orders/:id/results
+    API->>Repo: recordLabResults
+    Repo->>DB: UPDATE emr.service_requests results
+    API->>Repo: createAuditLog
+    Repo->>DB: INSERT emr.audit_logs
+    API-->>FE: Results verification
+```
+
+## 9. Emergency Fleet Workflow
+```mermaid
+sequenceDiagram
+    participant FE as Fleet Dashboard
+    participant API as Express API
+    participant Repo as repository.js
+    participant DB as PostgreSQL
+
+    FE->>API: POST /api/ambulances/dispatch
+    API->>Repo: dispatchAmbulance
+    Repo->>DB: INSERT emr.ambulance_dispatches
+    API-->>FE: dispatch token
+
+    FE->>API: PATCH /api/ambulances/:id/status
+    API->>Repo: updateAmbulanceStatus
+    Repo->>DB: UPDATE emr.ambulances status + location
+    API-->>FE: Live status update
+```
+
+## 10. Superadmin Governance & Platform Economics
 ```mermaid
 sequenceDiagram
     participant SA as Superadmin UI

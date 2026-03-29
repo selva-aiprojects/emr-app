@@ -44,14 +44,24 @@ export default function AccountsPage({ tenant, initialTab = 'snapshot' }) {
       if (!tenant?.id) return;
       setLoading(true);
       try {
-        const [data, expenseList] = await Promise.all([
-          api.getFinancials(tenant.id, currentMonth),
-          api.getExpenses(tenant.id, currentMonth)
-        ]);
-        setFinancials(data);
-        setExpenses(expenseList || []);
+        // Use individual setters to handle partial success
+        api.getFinancials(tenant.id, currentMonth)
+          .then(data => setFinancials(data))
+          .catch(err => {
+            console.error('Failed to load financial summary:', err);
+            // Don't alert here to avoid spamming the user, but we could set an error state
+          });
+
+        api.getExpenses(tenant.id, currentMonth)
+          .then(list => setExpenses(list || []))
+          .catch(err => {
+            console.error('Failed to load expense list:', err);
+            // Often due to subscription tier limits
+            setExpenses([]);
+          });
+
       } catch (err) {
-        console.error('Failed to load financial records:', err);
+        console.error('Unexpected error in financial records loader:', err);
       } finally {
         setLoading(false);
       }

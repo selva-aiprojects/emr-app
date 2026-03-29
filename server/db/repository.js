@@ -438,7 +438,7 @@ function maskPatientData(patient, role) {
 }
 
 // Updated signature to accept limit and offset for pagination
-export async function getPatients(tenantId, userRole = null, limit = 50, offset = 0) {
+export async function getPatients(tenantId, userRole = null, limit = 50, offset = 0, includeArchived = false) {
   // Use a subquery to limit patients BEFORE joining massive clinical record blobs
   const sql = `
     SELECT 
@@ -453,13 +453,13 @@ export async function getPatients(tenantId, userRole = null, limit = 50, offset 
       ) as clinical_records
     FROM (
       SELECT * FROM emr.patients
-      WHERE tenant_id = $1
+      WHERE tenant_id = $1 AND (is_archived = false OR $4 = true)
       ORDER BY created_at DESC
       LIMIT $2 OFFSET $3
     ) p
   `;
 
-  const result = await query(sql, [tenantId, limit, offset]);
+  const result = await query(sql, [tenantId, limit, offset, includeArchived]);
 
   return result.rows.map(patient => {
     const records = patient.clinical_records || [];
@@ -484,7 +484,7 @@ export async function getPatients(tenantId, userRole = null, limit = 50, offset 
   });
 }
 
-export async function searchPatients(tenantId, { text, date, type, status, limit = 50 }) {
+export async function searchPatients(tenantId, { text, date, type, status, limit = 50, includeArchived = false }) {
   let sql = `
     SELECT DISTINCT p.*,
            e.encounter_type as latest_encounter_type,
@@ -496,11 +496,11 @@ export async function searchPatients(tenantId, { text, date, type, status, limit
       WHERE patient_id = p.id 
       ORDER BY visit_date DESC LIMIT 1
     ) e ON true
-    WHERE p.tenant_id = $1
+    WHERE p.tenant_id = $1 AND (p.is_archived = false OR $2 = true)
   `;
 
-  const params = [tenantId];
-  let paramIdx = 2;
+  const params = [tenantId, includeArchived];
+  let paramIdx = 3;
 
   if (text) {
     // Simple text search across common fields
@@ -606,6 +606,15 @@ export async function getPatientDocuments(patientId, tenantId) {
 
 export async function createPatient({ tenantId, userId, firstName, lastName, dob, gender, phone, email, address, bloodGroup, emergencyContact, insurance, medicalHistory }) {
   const mrn = await generateMRN(tenantId);
+  
+  // Regional compliance: Generate mock ABHA (Gov Health ID)
+  const abhaId = `91-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`;
+  const finalMedicalHistory = {
+    ...medicalHistory,
+    governmentHealthId: abhaId,
+    abhaStatus: 'Active'
+  };
+
 
   const sql = `
     INSERT INTO emr.patients (
@@ -629,8 +638,9 @@ export async function createPatient({ tenantId, userId, firstName, lastName, dob
     bloodGroup || null,
     emergencyContact || null,
     insurance || null,
-    JSON.stringify(medicalHistory || {}),
+    JSON.stringify(finalMedicalHistory),
   ]);
+
 
   const patient = result.rows[0];
 
@@ -2069,6 +2079,8 @@ export default {
   // Ambulance
   getAmbulances,
   createAmbulance,
+  updateAmbulanceStatus,
+  dispatchAmbulance,
 
   // Blood Bank
   getBloodUnits,
@@ -2183,6 +2195,43 @@ export async function createAmbulance({ tenantId, userId, vehicle_number, model,
     details: { vehicle_number }
   });
 
+  return ambulance;
+}
+
+export async function updateAmbulanceStatus(id, tenantId, status, location) {
+  const sql = `
+    UPDATE emr.ambulances
+    SET status = $1, last_location = COALESCE($2, last_location), updated_at = NOW()
+    WHERE id = $3 AND tenant_id = $4
+    RETURNING *
+  `;
+  const result = await query(sql, [status, location, id, tenantId]);
+  if (result.rows.length === 0) throw new Error('Ambulance not found');
+  
+  await createAuditLog({
+    tenantId,
+    action: `ambulance.status.${status}`,
+    entityName: 'ambulance',
+    entityId: id,
+    details: { location }
+  });
+  
+  return result.rows[0];
+}
+
+export async function dispatchAmbulance({ id, tenantId, userId, incident_location, patient_name, priority }) {
+  // Update status to 'On Mission'
+  const ambulance = await updateAmbulanceStatus(id, tenantId, 'On Mission', incident_location);
+  
+  await createAuditLog({
+    tenantId,
+    userId,
+    action: 'ambulance.dispatch',
+    entityName: 'ambulance',
+    entityId: id,
+    details: { incident_location, patient_name, priority }
+  });
+  
   return ambulance;
 }
 

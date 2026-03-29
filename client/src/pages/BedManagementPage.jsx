@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
 import { Bed, Plus, Search, Loader2, ShieldCheck, Activity, UserCircle, ChevronRight, LayoutPanelTop, Building2, TrendingUp, Filter } from 'lucide-react';
 import { api } from '../api.js';
+import WardGraphics from '../components/WardGraphics.jsx';
 
 export default function BedManagementPage({ tenant }) {
   const { showToast } = useToast();
@@ -14,6 +15,7 @@ export default function BedManagementPage({ tenant }) {
   const [wardForm, setWardForm] = useState({ name: '', type: 'General', base_rate: 0 });
   const [bedForm, setBedForm] = useState({ bed_number: '' });
   const [submitting, setSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState('plan'); // 'grid' | 'plan'
 
   useEffect(() => {
     loadWards();
@@ -90,6 +92,20 @@ export default function BedManagementPage({ tenant }) {
            <p className="dim-label italic">Monitor ward throughput, bed occupancy shards, and real-time facility asset allocation for {tenant?.name}.</p>
         </div>
         <div className="flex gap-4">
+           <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-100 gap-1 mr-4">
+              <button 
+                onClick={() => setViewMode('grid')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${viewMode === 'grid' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                 Resource Grid
+              </button>
+              <button 
+                onClick={() => setViewMode('plan')}
+                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${viewMode === 'plan' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                 Floor Plan
+              </button>
+           </div>
            <button 
              onClick={() => setShowAddWard(!showAddWard)}
              className="clinical-btn bg-slate-900 text-white px-8 rounded-2xl shadow-2xl hover:bg-slate-700 transition-all border-none"
@@ -229,6 +245,11 @@ export default function BedManagementPage({ tenant }) {
                         <p className="text-[10px] font-bold text-slate-500 italic mt-2">Initialize floor plan by adding the first bed asset.</p>
                       </div>
                    </div>
+                 ) : viewMode === 'plan' ? (
+                    <WardGraphics 
+                      beds={currentBeds} 
+                      onBedClick={() => {}} 
+                    />
                  ) : (
                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
                      {currentBeds.map(bed => (

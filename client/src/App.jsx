@@ -625,12 +625,12 @@ export default function App() {
               });
             }}
             onSetAppointmentStatus={(appointmentId, status) => withRefresh(() => api.setAppointmentStatus(appointmentId, { tenantId: session.tenantId, userId: activeUser.id, status }))}
-            onReschedule={(appointment) => {
-              const start = window.prompt('New start (YYYY-MM-DDTHH:mm)', appointment.start);
-              if (!start) return;
-              const end = window.prompt('New end (YYYY-MM-DDTHH:mm)', appointment.end);
-              if (!end) return;
-              withRefresh(() => api.rescheduleAppointment(appointment.id, { tenantId: session.tenantId, userId: activeUser.id, start, end }));
+            onReschedule={(appointmentId, data) => {
+              withRefresh(() => api.rescheduleAppointment(appointmentId, { 
+                tenantId: session.tenantId, 
+                userId: activeUser.id, 
+                ...data 
+              }));
             }}
           />
         )}

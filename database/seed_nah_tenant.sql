@@ -6,7 +6,7 @@ BEGIN;
 -- =====================================================
 -- NEW AGE HOSPITAL (NAH) TENANT SETUP
 -- =====================================================
-INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, status, created_at)
+INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, subscription_tier, status, created_at)
 VALUES (
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid,
   'New Age Hospital',
@@ -14,19 +14,20 @@ VALUES (
   'newagehospital',
   '{"primary": "#0f766e", "accent": "#06b6d4", "secondary": "#64748b", "success": "#10b981", "warning": "#f59e0b", "danger": "#ef4444"}',
   '{"dashboard": true, "patients": true, "appointments": true, "emr": true, "inpatient": true, "pharmacy": true, "billing": true, "insurance": true, "inventory": true, "employees": true, "accounts": true, "reports": true, "admin": true, "lab": true, "support": true, "telehealth": false}',
+  'Professional',
   'active',
   NOW()
-) ON CONFLICT (code) DO NOTHING;
+) ON CONFLICT (code) DO UPDATE SET subscription_tier = 'Professional', features = EXCLUDED.features;
 
 -- =====================================================
 -- NAH ADMIN USER
--- Email: admin@nah.local / Password: Admin@123
+-- Email: admin@newage.hospital / Password: Admin@123
 -- =====================================================
 INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
 VALUES (
   '20000000-0000-0000-0000-000000000101'::uuid,
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid,
-  'admin@nah.local',
+  'admin@newage.hospital',
   '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC',
   'Dr. Sarah Johnson',
   'Admin',

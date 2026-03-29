@@ -136,6 +136,74 @@ export async function generateDischargeSummary(tenantId, encounterId) {
   }
 }
 
+/**
+ * Analyzes lab results and provides a summary.
+ */
+export async function interpretLabResults(tenantId, labOrderId, resultsData) {
+  try {
+    const prompt = `
+      As a clinical pathologist's assistant, analyze the following laboratory results:
+      
+      Order ID: ${labOrderId}
+      Test Results: ${JSON.stringify(resultsData)}
+      
+      Provide:
+      1. Summary of Abnormal Values (Highlighting anything outside standard reference ranges)
+      2. Potential Clinical Implications
+      3. Suggested Next Steps (Further diagnostic tests or specialist consultations)
+      
+      Disclaimer: This is an AI analysis. All results must be reviewed by the ordering physician and verified against reference laboratory standards.
+    `;
+
+    if (!GEMINI_API_KEY) {
+      return "### SIMULATED LAB INTERPRETATION\n\nResults for Order " + labOrderId + " appear to show normal variance. Please verify against critical flag markers.\n\n*Set GEMINI_API_KEY for live analysis.*";
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error('AI Lab interpretation failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Checks for potential drug-drug interactions.
+ */
+export async function checkDrugInteractions(tenantId, medications) {
+  try {
+    const prompt = `
+      As an AI clinical pharmacist, check for potential interactions between these medications:
+      
+      Current/New Medications: ${JSON.stringify(medications)}
+      
+      Categorize findings as:
+      - CONTRAINDICATED (Must not be used together)
+      - MAJOR INTERACTION (Avoid if possible)
+      - MODERATE INTERACTION (Monitor closely)
+      - MINOR/NO INTERACTION
+      
+      Provide a brief rationale for each major/contraindicated finding.
+      
+      Disclaimer: This is an AI safety check. Cross-reference with official pharmacopeia before prescribing.
+    `;
+
+    if (!GEMINI_API_KEY) {
+      return "### SIMULATED INTERACTION CHECK\n\nChecked " + medications.length + " medications. No contraindications found in demo mode.\n\n*Set GEMINI_API_KEY for live clinical safety checks.*";
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error) {
+    console.error('AI Interaction check failed:', error);
+    throw error;
+  }
+}
+
 // Helper utilities
 function calculateAge(dob) {
   if (!dob) return 'Unknown';

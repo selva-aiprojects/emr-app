@@ -1,22 +1,22 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import ReactEcharts from 'echarts-for-react';
 
 // Professional Healthcare Color Palette
 const HEALTHCARE_COLORS = {
-  primary: '#0f766e',      // Medical teal
-  secondary: '#06b6d4',    // Medical cyan
-  accent: '#10b981',       // Medical green
-  warning: '#f59e0b',      // Medical amber
-  danger: '#ef4444',       // Medical red
-  success: '#22c55e',      // Medical success green
-  info: '#3b82f6',         // Medical blue
-  muted: '#64748b',        // Medical gray
-  lightGray: '#f8fafc',    // Light background
-  white: '#ffffff',        // White surface
-  darkText: '#1e293b',     // Dark text
-  mutedText: '#64748b',    // Muted text
-  border: '#e2e8f0',       // Border color
-  grid: '#f1f5f9'          // Grid lines
+  primary: '#0f766e',
+  secondary: '#06b6d4',
+  accent: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  success: '#22c55e',
+  info: '#3b82f6',
+  muted: '#64748b',
+  lightGray: '#f8fafc',
+  white: '#ffffff',
+  darkText: '#1e293b',
+  mutedText: '#64748b',
+  border: '#e2e8f0',
+  grid: '#f1f5f9'
 };
 
 // Apache ECharts - Patient Overview Chart (Line Chart)
@@ -39,129 +39,53 @@ export const PatientOverviewChart = ({ data = [] }) => {
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
       borderColor: HEALTHCARE_COLORS.border,
       borderWidth: 1,
-      textStyle: {
-        color: HEALTHCARE_COLORS.darkText,
-        fontSize: 12,
-        fontWeight: 500
-      },
-      axisPointer: {
-        type: 'line',
-        lineStyle: {
-          color: HEALTHCARE_COLORS.border,
-          type: 'dashed'
-        }
-      }
+      textStyle: { color: HEALTHCARE_COLORS.darkText, fontSize: 12, fontWeight: 500 },
+      axisPointer: { type: 'line', lineStyle: { color: HEALTHCARE_COLORS.border, type: 'dashed' } }
     },
     legend: {
       data: ['New Patients', 'Returning Patients'],
-      textStyle: {
-        color: HEALTHCARE_COLORS.mutedText,
-        fontSize: 12,
-        fontWeight: 600
-      },
-      top: 0,
-      left: 'center'
+      textStyle: { color: HEALTHCARE_COLORS.mutedText, fontSize: 12, fontWeight: 600 },
+      top: 0, left: 'center'
     },
-    grid: {
-      top: 40,
-      left: 35,
-      right: 15,
-      bottom: 30,
-      containLabel: true,
-      backgroundColor: 'transparent'
-    },
+    grid: { top: 40, left: 35, right: 15, bottom: 30, containLabel: true, backgroundColor: 'transparent' },
     xAxis: {
       type: 'category',
       data: chartData.map(d => d.label),
-      axisLine: {
-        lineStyle: {
-          color: HEALTHCARE_COLORS.grid,
-          width: 1
-        }
-      },
-      axisLabel: {
-        color: HEALTHCARE_COLORS.mutedText,
-        fontSize: 12,
-        fontWeight: 500
-      },
-      splitLine: {
-        lineStyle: {
-          color: HEALTHCARE_COLORS.grid,
-          type: 'dashed'
-        }
-      }
+      axisLine: { lineStyle: { color: HEALTHCARE_COLORS.grid, width: 1 } },
+      axisLabel: { color: HEALTHCARE_COLORS.mutedText, fontSize: 12, fontWeight: 500 },
+      splitLine: { lineStyle: { color: HEALTHCARE_COLORS.grid, type: 'dashed' } }
     },
     yAxis: {
       type: 'value',
-      axisLine: {
-        lineStyle: {
-          color: HEALTHCARE_COLORS.grid
-        }
-      },
-      axisLabel: {
-        color: HEALTHCARE_COLORS.mutedText,
-        fontSize: 11,
-        fontWeight: 500
-      },
-      splitLine: {
-        lineStyle: {
-          color: HEALTHCARE_COLORS.grid,
-          type: 'dashed'
-        }
-      }
+      axisLine: { lineStyle: { color: HEALTHCARE_COLORS.grid } },
+      axisLabel: { color: HEALTHCARE_COLORS.mutedText, fontSize: 11, fontWeight: 500 },
+      splitLine: { lineStyle: { color: HEALTHCARE_COLORS.grid, type: 'dashed' } }
     },
     series: [
       {
         name: 'New Patients',
         data: chartData.map(d => d.value1),
-        type: 'line',
-        smooth: true,
-        lineStyle: {
-          width: 2.5
-        },
+        type: 'line', smooth: true,
+        lineStyle: { width: 2.5 },
         areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: `${HEALTHCARE_COLORS.primary}40` },
-              { offset: 1, color: `${HEALTHCARE_COLORS.primary}05` }
-            ]
-          }
+          color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [{ offset: 0, color: `${HEALTHCARE_COLORS.primary}40` }, { offset: 1, color: `${HEALTHCARE_COLORS.primary}05` }] }
         },
-        symbolSize: 6,
-        itemStyle: {
-          borderColor: '#fff',
-          borderWidth: 2
-        }
+        symbolSize: 6, itemStyle: { borderColor: '#fff', borderWidth: 2 }
       },
       {
         name: 'Returning Patients',
         data: chartData.map(d => d.value2),
-        type: 'line',
-        smooth: true,
-        lineStyle: {
-          width: 2.5
-        },
+        type: 'line', smooth: true,
+        lineStyle: { width: 2.5 },
         areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0, y: 0, x2: 0, y2: 1,
-            colorStops: [
-              { offset: 0, color: `${HEALTHCARE_COLORS.accent}40` },
-              { offset: 1, color: `${HEALTHCARE_COLORS.accent}05` }
-            ]
-          }
+          color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [{ offset: 0, color: `${HEALTHCARE_COLORS.accent}40` }, { offset: 1, color: `${HEALTHCARE_COLORS.accent}05` }] }
         },
-        symbolSize: 6,
-        itemStyle: {
-          borderColor: '#fff',
-          borderWidth: 2
-        }
+        symbolSize: 6, itemStyle: { borderColor: '#fff', borderWidth: 2 }
       }
     ]
   };
-
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
 };
 
@@ -184,92 +108,36 @@ export const RevenueTrendChart = ({ data = [] }) => {
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
       borderColor: HEALTHCARE_COLORS.border,
       borderWidth: 1,
-      textStyle: {
-        color: HEALTHCARE_COLORS.darkText,
-        fontSize: 12,
-        fontWeight: 500
-      },
-      formatter: (params) => {
-        if (params.length > 0) {
-          return `${params[0].name}<br/>Revenue: $${params[0].value.toLocaleString()}`;
-        }
-        return '';
-      }
+      textStyle: { color: HEALTHCARE_COLORS.darkText, fontSize: 12, fontWeight: 500 },
+      formatter: (params) => params.length > 0 ? `${params[0].name}<br/>Revenue: $${params[0].value.toLocaleString()}` : ''
     },
-    grid: {
-      top: 20,
-      left: 50,
-      right: 20,
-      bottom: 40,
-      containLabel: false,
-      backgroundColor: 'transparent'
-    },
+    grid: { top: 20, left: 50, right: 20, bottom: 40, containLabel: false, backgroundColor: 'transparent' },
     xAxis: {
       type: 'category',
       data: chartData.map(d => d.label),
-      axisLine: {
-        lineStyle: {
-          color: HEALTHCARE_COLORS.grid,
-          width: 1
-        }
-      },
-      axisLabel: {
-        color: HEALTHCARE_COLORS.mutedText,
-        fontSize: 12,
-        fontWeight: 500
-      },
-      splitLine: {
-        show: false
-      }
+      axisLine: { lineStyle: { color: HEALTHCARE_COLORS.grid, width: 1 } },
+      axisLabel: { color: HEALTHCARE_COLORS.mutedText, fontSize: 12, fontWeight: 500 },
+      splitLine: { show: false }
     },
     yAxis: {
       type: 'value',
-      axisLine: {
-        lineStyle: {
-          color: HEALTHCARE_COLORS.grid
-        }
-      },
-      axisLabel: {
-        color: HEALTHCARE_COLORS.mutedText,
-        fontSize: 11,
-        fontWeight: 500,
-        formatter: (value) => `$${(value / 1000).toFixed(0)}K`
-      },
-      splitLine: {
-        lineStyle: {
-          color: HEALTHCARE_COLORS.grid,
-          type: 'dashed'
-        }
-      }
+      axisLine: { lineStyle: { color: HEALTHCARE_COLORS.grid } },
+      axisLabel: { color: HEALTHCARE_COLORS.mutedText, fontSize: 11, fontWeight: 500, formatter: (v) => `$${(v / 1000).toFixed(0)}K` },
+      splitLine: { lineStyle: { color: HEALTHCARE_COLORS.grid, type: 'dashed' } }
     },
-    series: [
-      {
-        data: chartData.map(d => d.value),
-        type: 'bar',
-        barWidth: '60%',
-        itemStyle: {
-          color: HEALTHCARE_COLORS.info,
-          borderRadius: [8, 8, 0, 0]
-        },
-        emphasis: {
-          itemStyle: {
-            color: HEALTHCARE_COLORS.primary,
-            opacity: 0.8
-          }
-        }
-      }
-    ]
+    series: [{
+      data: chartData.map(d => d.value),
+      type: 'bar', barWidth: '60%',
+      itemStyle: { color: HEALTHCARE_COLORS.info, borderRadius: [8, 8, 0, 0] },
+      emphasis: { itemStyle: { color: HEALTHCARE_COLORS.primary, opacity: 0.8 } }
+    }]
   };
-
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Department Distribution Chart (Pie Chart)
 export const DepartmentDistributionChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data.map(d => ({
-    name: d.label || d.name,
-    value: d.value
-  })) : [
+  const chartData = data.length > 0 ? data.map(d => ({ name: d.label || d.name, value: d.value })) : [
     { value: 28, name: 'Cardiology' },
     { value: 22, name: 'Orthopedics' },
     { value: 18, name: 'Neurology' },
@@ -287,61 +155,32 @@ export const DepartmentDistributionChart = ({ data = [] }) => {
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
       borderColor: HEALTHCARE_COLORS.border,
       borderWidth: 1,
-      textStyle: {
-        color: HEALTHCARE_COLORS.darkText,
-        fontSize: 12,
-        fontWeight: 500
-      },
+      textStyle: { color: HEALTHCARE_COLORS.darkText, fontSize: 12, fontWeight: 500 },
       formatter: (params) => `${params.name}<br/>${params.value} beds (${params.percent}%)`
     },
     legend: {
-      orient: 'vertical',
-      right: 10,
-      top: 'center',
+      orient: 'vertical', right: 10, top: 'center',
       data: chartData.map(d => d.name),
-      textStyle: {
-        color: HEALTHCARE_COLORS.mutedText,
-        fontSize: 10,
-        fontWeight: 600
-      },
+      textStyle: { color: HEALTHCARE_COLORS.mutedText, fontSize: 10, fontWeight: 600 },
       icon: 'circle'
     },
-    series: [
-      {
-        data: chartData,
-        type: 'pie',
-        radius: ['45%', '85%'],
-        center: ['35%', '50%'],
-        avoidLabelOverlap: true,
-        itemStyle: {
-          borderRadius: 8,
-          borderColor: '#fff',
-          borderWidth: 2
-        },
-        label: {
-          show: false // Hide labels on lines as they cause shrinking
-        },
-        emphasis: {
-          label: {
-            show: true,
-            fontSize: 14,
-            fontWeight: 'bold',
-            formatter: '{b}\n{c}'
-          }
-        }
-      }
-    ]
+    series: [{
+      data: chartData,
+      type: 'pie',
+      radius: ['45%', '85%'],
+      center: ['35%', '50%'],
+      avoidLabelOverlap: true,
+      itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold', formatter: '{b}\n{c}' } }
+    }]
   };
-
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Appointment Status Chart (Horizontal Bar)
 export const AppointmentStatusChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data.map(d => ({
-    name: d.label || d.name,
-    value: d.value
-  })) : [
+  const chartData = data.length > 0 ? data.map(d => ({ name: d.label || d.name, value: d.value })) : [
     { name: 'Scheduled', value: 45 },
     { name: 'Completed', value: 32 },
     { name: 'Cancelled', value: 8 },
@@ -356,83 +195,35 @@ export const AppointmentStatusChart = ({ data = [] }) => {
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
       borderColor: HEALTHCARE_COLORS.border,
       borderWidth: 1,
-      textStyle: {
-        color: HEALTHCARE_COLORS.darkText,
-        fontSize: 12,
-        fontWeight: 500
-      },
-      axisPointer: {
-        type: 'shadow'
-      }
+      textStyle: { color: HEALTHCARE_COLORS.darkText, fontSize: 12, fontWeight: 500 },
+      axisPointer: { type: 'shadow' }
     },
-    grid: {
-      top: 10,
-      left: 100,
-      right: 20,
-      bottom: 10,
-      containLabel: false,
-      backgroundColor: 'transparent'
-    },
+    grid: { top: 10, left: 100, right: 20, bottom: 10, containLabel: false, backgroundColor: 'transparent' },
     xAxis: {
       type: 'value',
-      axisLine: {
-        show: false
-      },
-      axisLabel: {
-        color: HEALTHCARE_COLORS.mutedText,
-        fontSize: 10,
-        fontWeight: 500
-      },
-      splitLine: {
-        lineStyle: {
-          color: HEALTHCARE_COLORS.grid,
-          type: 'dashed'
-        }
-      }
+      axisLine: { show: false },
+      axisLabel: { color: HEALTHCARE_COLORS.mutedText, fontSize: 10, fontWeight: 500 },
+      splitLine: { lineStyle: { color: HEALTHCARE_COLORS.grid, type: 'dashed' } }
     },
     yAxis: {
       type: 'category',
       data: chartData.map(d => d.name),
-      axisLine: {
-        lineStyle: {
-          color: HEALTHCARE_COLORS.grid
-        }
-      },
-      axisLabel: {
-        color: HEALTHCARE_COLORS.darkText,
-        fontSize: 12,
-        fontWeight: 600
-      }
+      axisLine: { lineStyle: { color: HEALTHCARE_COLORS.grid } },
+      axisLabel: { color: HEALTHCARE_COLORS.darkText, fontSize: 12, fontWeight: 600 }
     },
-    series: [
-      {
-        data: chartData.map(d => d.value),
-        type: 'bar',
-        barWidth: '50%',
-        itemStyle: {
-          borderRadius: [0, 8, 8, 0]
-        },
-        label: {
-          show: true,
-          position: 'right',
-          color: HEALTHCARE_COLORS.darkText,
-          fontSize: 11,
-          fontWeight: 600,
-          formatter: (params) => params.value
-        }
-      }
-    ]
+    series: [{
+      data: chartData.map(d => d.value),
+      type: 'bar', barWidth: '50%',
+      itemStyle: { borderRadius: [0, 8, 8, 0] },
+      label: { show: true, position: 'right', color: HEALTHCARE_COLORS.darkText, fontSize: 11, fontWeight: 600, formatter: (params) => params.value }
+    }]
   };
-
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Bed Occupancy Chart (Pie/Doughnut)
 export const BedOccupancyChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data.map(d => ({
-    name: d.label || d.name,
-    value: d.value
-  })) : [
+  const chartData = data.length > 0 ? data.map(d => ({ name: d.label || d.name, value: d.value })) : [
     { value: 65, name: 'Occupied' },
     { value: 35, name: 'Available' }
   ];
@@ -445,47 +236,23 @@ export const BedOccupancyChart = ({ data = [] }) => {
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
       borderColor: HEALTHCARE_COLORS.border,
       borderWidth: 1,
-      textStyle: {
-        color: HEALTHCARE_COLORS.darkText,
-        fontSize: 12,
-        fontWeight: 500
-      },
+      textStyle: { color: HEALTHCARE_COLORS.darkText, fontSize: 12, fontWeight: 500 },
       formatter: (params) => `${params.name}<br/>${params.value} beds (${params.percent}%)`
     },
     legend: {
       data: chartData.map(d => d.name),
-      textStyle: {
-        color: HEALTHCARE_COLORS.mutedText,
-        fontSize: 11,
-        fontWeight: 500
-      },
-      bottom: 0,
-      left: 'center'
+      textStyle: { color: HEALTHCARE_COLORS.mutedText, fontSize: 11, fontWeight: 500 },
+      bottom: 0, left: 'center'
     },
-    series: [
-      {
-        data: chartData,
-        type: 'pie',
-        radius: ['40%', '65%'],
-        center: ['50%', '45%'],
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.2)'
-          }
-        },
-        label: {
-          show: true,
-          color: HEALTHCARE_COLORS.white,
-          fontSize: 12,
-          fontWeight: 700,
-          formatter: (params) => `{percent|${params.percent}%}`
-        }
-      }
-    ]
+    series: [{
+      data: chartData,
+      type: 'pie',
+      radius: ['40%', '65%'],
+      center: ['50%', '45%'],
+      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.2)' } },
+      label: { show: true, color: HEALTHCARE_COLORS.white, fontSize: 12, fontWeight: 700, formatter: (params) => `{percent|${params.percent}%}` }
+    }]
   };
-
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
 };
 
@@ -512,8 +279,7 @@ export const TopDiagnosesChart = ({ data = [] }) => {
     },
     series: [{
       data: chartData.map(d => d.value),
-      type: 'bar',
-      barWidth: '60%',
+      type: 'bar', barWidth: '60%',
       itemStyle: { borderRadius: [0, 6, 6, 0] },
       label: { show: true, position: 'right', fontWeight: 700 }
     }]
@@ -534,26 +300,17 @@ export const TopServicesChart = ({ data = [] }) => {
   const option = {
     color: ['#0f766e', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b'],
     backgroundColor: 'transparent',
-    tooltip: { 
-      trigger: 'item', 
+    tooltip: {
+      trigger: 'item',
       formatter: '{b}: ${c} ({d}%)',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
-      borderColor: '#e2e8f0',
-      borderWidth: 1,
+      borderColor: '#e2e8f0', borderWidth: 1,
       textStyle: { color: '#1e293b', fontSize: 11 }
     },
     legend: {
-      orient: 'vertical',
-      right: '5%',
-      top: 'middle',
-      type: 'scroll',
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: {
-        fontSize: 10,
-        fontWeight: 600,
-        color: '#64748b'
-      }
+      orient: 'vertical', right: '5%', top: 'middle',
+      type: 'scroll', itemWidth: 10, itemHeight: 10,
+      textStyle: { fontSize: 10, fontWeight: 600, color: '#64748b' }
     },
     series: [{
       name: 'Revenue Mix',
@@ -563,32 +320,16 @@ export const TopServicesChart = ({ data = [] }) => {
       center: ['35%', '50%'],
       avoidLabelOverlap: true,
       itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
-      label: { 
-        show: true,
-        formatter: '{b}: {d}%',
-        fontSize: 10,
-        fontWeight: 600,
-        color: '#64748b'
-      },
-      emphasis: { 
-        label: { 
-          show: true, 
-          fontSize: 12, 
-          fontWeight: 'bold',
-          formatter: '{b}\n${c}' 
-        } 
-      }
+      label: { show: true, formatter: '{b}: {d}%', fontSize: 10, fontWeight: 600, color: '#64748b' },
+      emphasis: { label: { show: true, fontSize: 12, fontWeight: 'bold', formatter: '{b}\n${c}' } }
     }]
   };
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
 };
 
-// Apache ECharts - Staff Distribution Chart (Treemap)
+// Apache ECharts - Staff Distribution Chart
 export const StaffDistributionChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data.map(d => ({
-    name: d.designation,
-    value: parseInt(d.count)
-  })) : [
+  const chartData = data.length > 0 ? data.map(d => ({ name: d.designation, value: parseInt(d.count) })) : [
     { name: 'Doctors', value: 12 },
     { name: 'Nurses', value: 24 },
     { name: 'Lab Technicians', value: 8 },
@@ -600,13 +341,7 @@ export const StaffDistributionChart = ({ data = [] }) => {
     color: ['#0f766e', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#3b82f6', '#f59e0b', '#10b981'],
     backgroundColor: 'transparent',
     tooltip: { trigger: 'item', formatter: '{b}: {c} ({d}%)' },
-    legend: {
-      orient: 'vertical',
-      left: 'left',
-      bottom: '10%',
-      textStyle: { fontSize: 10 },
-      type: 'scroll'
-    },
+    legend: { orient: 'vertical', left: 'left', bottom: '10%', textStyle: { fontSize: 10 }, type: 'scroll' },
     series: [{
       name: 'Staffing',
       type: 'pie',
@@ -622,7 +357,7 @@ export const StaffDistributionChart = ({ data = [] }) => {
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
 };
 
-// Apache ECharts - Patient Journey Chart (Funnel)
+// Apache ECharts - Patient Journey Chart (Horizontal Bar / Funnel)
 export const PatientJourneyChart = ({ data = [] }) => {
   const chartData = data.length > 0 ? data.map(d => ({
     name: d.status.charAt(0).toUpperCase() + d.status.slice(1),
@@ -649,17 +384,152 @@ export const PatientJourneyChart = ({ data = [] }) => {
     series: [{
       name: 'Patients',
       data: chartData.map(d => d.value),
-      type: 'bar',
-      barWidth: '60%',
-      itemStyle: { 
+      type: 'bar', barWidth: '60%',
+      itemStyle: {
         color: (params) => {
           const colors = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'];
           return colors[params.dataIndex % colors.length];
         },
-        borderRadius: [0, 6, 6, 0] 
+        borderRadius: [0, 6, 6, 0]
       },
       label: { show: true, position: 'right', fontWeight: 700 }
     }]
+  };
+  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+};
+
+// Apache ECharts - No-Show Rate Analysis (Line + Bar combo)
+export const NoShowRateChart = ({ data = [] }) => {
+  const chartData = data.length > 0 ? data : [
+    { label: 'Mon', noShow: 3, rate: 7.1 },
+    { label: 'Tue', noShow: 5, rate: 9.3 },
+    { label: 'Wed', noShow: 2, rate: 4.2 },
+    { label: 'Thu', noShow: 6, rate: 10.0 },
+    { label: 'Fri', noShow: 4, rate: 7.3 },
+    { label: 'Sat', noShow: 1, rate: 3.6 },
+    { label: 'Sun', noShow: 0, rate: 0.0 },
+  ];
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(255,255,255,0.95)',
+      borderColor: HEALTHCARE_COLORS.border, borderWidth: 1,
+      textStyle: { color: HEALTHCARE_COLORS.darkText, fontSize: 12 },
+      formatter: (params) => {
+        const bar = params.find(p => p.seriesName === 'No-Shows');
+        const line = params.find(p => p.seriesName === 'No-Show Rate %');
+        return `${params[0]?.axisValue}<br/>No-Shows: <b>${bar?.value ?? 0}</b><br/>Rate: <b>${line?.value ?? 0}%</b>`;
+      }
+    },
+    legend: {
+      data: ['No-Shows', 'No-Show Rate %'],
+      top: 0, left: 'center',
+      textStyle: { fontSize: 11, fontWeight: 600, color: HEALTHCARE_COLORS.mutedText }
+    },
+    grid: { top: 36, left: 40, right: 55, bottom: 30, containLabel: true },
+    xAxis: {
+      type: 'category',
+      data: chartData.map(d => d.label),
+      axisLabel: { color: HEALTHCARE_COLORS.mutedText, fontSize: 11 }
+    },
+    yAxis: [
+      { type: 'value', name: 'Count', nameTextStyle: { fontSize: 10 }, axisLabel: { fontSize: 10 }, splitLine: { lineStyle: { type: 'dashed' } } },
+      { type: 'value', name: 'Rate %', nameTextStyle: { fontSize: 10 }, axisLabel: { fontSize: 10, formatter: '{value}%' }, splitLine: { show: false }, max: 30 }
+    ],
+    series: [
+      {
+        name: 'No-Shows',
+        type: 'bar',
+        data: chartData.map(d => d.noShow),
+        barWidth: '45%',
+        itemStyle: { color: HEALTHCARE_COLORS.danger, borderRadius: [4, 4, 0, 0] }
+      },
+      {
+        name: 'No-Show Rate %',
+        type: 'line',
+        yAxisIndex: 1,
+        data: chartData.map(d => d.rate),
+        smooth: true,
+        lineStyle: { width: 2.5, color: HEALTHCARE_COLORS.warning },
+        itemStyle: { color: HEALTHCARE_COLORS.warning, borderColor: '#fff', borderWidth: 2 },
+        symbolSize: 6,
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: `${HEALTHCARE_COLORS.warning}30` },
+              { offset: 1, color: `${HEALTHCARE_COLORS.warning}00` }
+            ]
+          }
+        }
+      }
+    ]
+  };
+  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+};
+
+// Apache ECharts - Doctor Performance Chart (Multi-metric horizontal bar)
+export const DoctorPerformanceChart = ({ data = [] }) => {
+  const chartData = data.length > 0 ? data : [
+    { name: 'Dr. Arjun Kumar', consultations: 42, avgTime: 18, satisfaction: 92 },
+    { name: 'Dr. Priya Nair', consultations: 37, avgTime: 22, satisfaction: 88 },
+    { name: 'Dr. Meera Singh', consultations: 29, avgTime: 15, satisfaction: 95 },
+    { name: 'Dr. Rajan Pillai', consultations: 51, avgTime: 12, satisfaction: 80 },
+    { name: 'Dr. Suresh Babu', consultations: 24, avgTime: 25, satisfaction: 91 },
+  ];
+
+  const option = {
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(255,255,255,0.95)',
+      borderColor: HEALTHCARE_COLORS.border, borderWidth: 1,
+      textStyle: { fontSize: 11 }
+    },
+    legend: {
+      data: ['Consultations', 'Avg. Time (min)', 'Satisfaction %'],
+      top: 0, left: 'center',
+      textStyle: { fontSize: 10, fontWeight: 600, color: HEALTHCARE_COLORS.mutedText }
+    },
+    grid: { top: 40, left: 120, right: 20, bottom: 20, containLabel: false },
+    xAxis: {
+      type: 'value',
+      axisLine: { show: false },
+      axisLabel: { color: HEALTHCARE_COLORS.mutedText, fontSize: 10 },
+      splitLine: { lineStyle: { type: 'dashed', color: HEALTHCARE_COLORS.grid } }
+    },
+    yAxis: {
+      type: 'category',
+      data: chartData.map(d => d.name),
+      axisLabel: { color: HEALTHCARE_COLORS.darkText, fontSize: 10, fontWeight: 600 }
+    },
+    series: [
+      {
+        name: 'Consultations',
+        type: 'bar',
+        data: chartData.map(d => d.consultations),
+        barMaxWidth: 12,
+        itemStyle: { color: HEALTHCARE_COLORS.primary, borderRadius: [0, 4, 4, 0] },
+        label: { show: true, position: 'right', fontSize: 10, fontWeight: 700 }
+      },
+      {
+        name: 'Avg. Time (min)',
+        type: 'bar',
+        data: chartData.map(d => d.avgTime),
+        barMaxWidth: 12,
+        itemStyle: { color: HEALTHCARE_COLORS.info, borderRadius: [0, 4, 4, 0] }
+      },
+      {
+        name: 'Satisfaction %',
+        type: 'bar',
+        data: chartData.map(d => d.satisfaction),
+        barMaxWidth: 12,
+        itemStyle: { color: HEALTHCARE_COLORS.accent, borderRadius: [0, 4, 4, 0] }
+      }
+    ]
   };
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
 };
@@ -673,5 +543,7 @@ export default {
   TopDiagnosesChart,
   TopServicesChart,
   StaffDistributionChart,
-  PatientJourneyChart
+  PatientJourneyChart,
+  NoShowRateChart,
+  DoctorPerformanceChart
 };

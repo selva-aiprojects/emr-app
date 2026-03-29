@@ -6,7 +6,9 @@ import {
   AppointmentStatusChart,
   BedOccupancyChart,
   StaffDistributionChart,
-  PatientJourneyChart
+  PatientJourneyChart,
+  NoShowRateChart,
+  DoctorPerformanceChart
 } from '../components/EChartsComponents.jsx';
 import { currency } from '../utils/format.js';
 import { api } from '../api.js';
@@ -95,6 +97,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lowStockAlerts, setLowStockAlerts] = useState([]);
+  const [timeFilter, setTimeFilter] = useState('daily');
   const [realtimeMetrics, setRealtimeMetrics] = useState({
     totalPatients: 0,
     totalAppointments: 0,
@@ -139,7 +142,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
   useEffect(() => {
     loadDashboardData();
     loadAlerts();
-  }, []);
+  }, [timeFilter]);
 
   async function loadDashboardData() {
     try {
@@ -149,7 +152,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         return;
       }
       
-      const data = await api.get(`/dashboard/metrics?tenantId=${tenant.id}`);
+      const data = await api.get(`/dashboard/metrics?tenantId=${tenant.id}&timeFilter=${timeFilter}`);
       
       setRealtimeMetrics({
         totalPatients: data.totalPatients || 0,
@@ -329,14 +332,18 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
            </p>
         </div>
         <div className="flex items-center gap-4">
-          <button 
-            onClick={handleTodayFilter}
-            className="clinical-btn !rounded-2xl shadow-xl shadow-blue-500/10 min-w-[120px]"
-            disabled={loading}
-          >
-            <Activity className="w-4 h-4 mr-2" />
-            {loading ? 'Syncing...' : 'Sync Data'}
-          </button>
+          <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+             {['daily', 'weekly', 'monthly', 'yearly'].map(filter => (
+               <button
+                 key={filter}
+                 onClick={() => setTimeFilter(filter)}
+                 disabled={loading}
+                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${timeFilter === filter ? 'bg-white shadow-sm text-[var(--clinical-primary)]' : 'text-slate-400 hover:text-slate-600'}`}
+               >
+                 {filter}
+               </button>
+             ))}
+          </div>
           <button 
             onClick={handleExportReport}
             className="px-6 py-2.5 bg-white border border-[var(--accent-soft)] rounded-2xl hover:bg-[var(--accent-soft)]/40 transition-all text-xs font-black uppercase tracking-widest text-[var(--clinical-secondary)] shadow-sm flex items-center"
@@ -571,6 +578,37 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
            </div>
            <div className="h-[330px]">
               <PatientJourneyChart data={realtimeMetrics.patientJourney} />
+           </div>
+        </div>
+      </div>
+
+      {/* NEW: ANALYTICS ROW - No-Show Rate + Doctor Performance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        {/* No-Show Rate Analysis */}
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px]">
+           <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">No-Show Rate Analysis</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Daily missed appointments & rate trend</p>
+              </div>
+              <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-100 rounded-full px-3 py-1">Risk Metric</span>
+           </div>
+           <div className="h-[270px]">
+              <NoShowRateChart />
+           </div>
+        </div>
+
+        {/* Doctor Performance */}
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px]">
+           <div className="flex justify-between items-center mb-4">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Doctor Performance</h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Consultations · Avg time · Satisfaction</p>
+              </div>
+              <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 rounded-full px-3 py-1">Workforce KPI</span>
+           </div>
+           <div className="h-[270px]">
+              <DoctorPerformanceChart data={realtimeMetrics.doctors?.filter(d => d.consultations !== undefined) || []} />
            </div>
         </div>
       </div>

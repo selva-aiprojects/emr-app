@@ -5,6 +5,7 @@ import { patientName } from '../utils/format.js';
 import { api } from '../api.js';
 import { getAIPatientSummary, getAITreatmentSuggestion } from '../ai-api.js';
 import Prescriber from '../components/pharmacy/Prescriber.jsx';
+import PatientTimeline from '../components/PatientTimeline.jsx';
 import '../styles/critical-care.css';
 import { 
   History, 
@@ -331,6 +332,11 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
           <button className={`premium-tab-item ${activeTab === 'new' ? 'active' : ''}`} onClick={() => setActiveTab('new')}>
              <Plus className="w-4 h-4" /> New Assessment
           </button>
+          {selectedPatientId && (
+            <button className={`premium-tab-item ${activeTab === 'timeline' ? 'active' : ''}`} onClick={() => setActiveTab('timeline')}>
+               <Sparkles className="w-4 h-4" /> Clinical Timeline
+            </button>
+          )}
           <button className="premium-tab-item !text-rose-600 bg-rose-50/50 hover:bg-rose-100/50 border-rose-100" onClick={() => { setActiveTab('new'); setTimeout(() => { const sel = document.querySelector('select[name="type"]'); if(sel) { sel.value = "Emergency"; sel.scrollIntoView(); } }, 100); }}>
              <AlertCircle className="w-4 h-4" /> Emergency Visit
           </button>
@@ -569,6 +575,24 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
           </main>
         </>
       )}
+
+        {activeTab === 'timeline' && (
+           <main className="col-span-12 space-y-12 animate-fade-in">
+              <header className="flex flex-col items-center justify-center py-10 text-center gap-4 bg-white/40 rounded-[40px] border border-white shadow-xl">
+                 <div className="w-16 h-16 bg-slate-900 text-[var(--primary-soft)] rounded-[24px] flex items-center justify-center shadow-2xl">
+                    <Sparkles size={32} />
+                 </div>
+                 <div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Subject Longitudinal Shard</h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2 italic">Aesthetic clinical journey visualization • Unified Persistence Ledger</p>
+                 </div>
+              </header>
+              <PatientTimeline 
+                encounters={patientHistory} 
+                patient={selectedPatient} 
+              />
+           </main>
+        )}
 
         {(activeTab === 'active' || activeTab === 'history') && (
           <main className="col-span-12 space-y-8">

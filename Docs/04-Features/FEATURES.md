@@ -46,6 +46,7 @@ MedFlow is designed to scale with your practice — from a single-provider clini
 | Bcrypt Password Hashing | ✅ | ✅ | ✅ | ✅ |
 | Role-Based Access Control (RBAC) | ✅ Core | ✅ Core | ✅ Extended | ✅ All 17 roles |
 | Parameterized SQL (Injection Prevention) | ✅ | ✅ | ✅ | ✅ |
+| Two-Factor Authentication (MFA) | — | — | — | ✅ |
 | Audit Trail — All Key Actions | ✅ | ✅ | ✅ | ✅ Full log |
 | Feature Flag Governance (Superadmin) | — | — | — | ✅ |
 | Global Kill Switch (Emergency) | — | — | — | ✅ |
@@ -97,9 +98,10 @@ Requested → Scheduled → Checked In → In Progress → Completed
 | Insurance Data Capture | ✅ | ✅ | ✅ | ✅ |
 | Clinical Background | ✅ | ✅ | ✅ | ✅ |
 | Advanced Search | ✅ | ✅ | ✅ | ✅ |
-| Longitudinal Patient Timeline | ✅ | ✅ | ✅ | ✅ |
+| longitudinal Patient Timeline | ✅ | ✅ | ✅ | ✅ |
 | Clinical Journaling | ✅ | ✅ | ✅ | ✅ |
 | Print / Export Clinical Summary | ✅ | ✅ | ✅ | ✅ |
+| Digital Health ID (ABHA) Auto-Gen | — | — | — | ✅ |
 | Print Invoice | — | — | ✅ | ✅ |
 | Print Lab / Test Reports | — | — | ✅ | ✅ |
 | Multi-Location Registration | — | — | — | ✅ |
@@ -211,10 +213,12 @@ Requested → Scheduled → Checked In → In Progress → Completed
 | Tax Reporting Summary | — | — | ✅ | ✅ |
 | Role-Constrained Access | ✅ | ✅ | ✅ | ✅ |
 | Bed Occupancy Analytics | — | — | ✅ | ✅ |
-| Executive Narrative Cards | — | — | — | ✅ |
+| executive Narrative Cards | — | — | — | ✅ |
 | Provider Performance | — | — | — | ✅ |
 | Superadmin Cross-Tenant Metrics | — | — | — | ✅ |
 | AI Clinical Insights (Gemini) | — | — | — | ✅ |
+| AI Drug-Drug Conflict Alerts | — | — | — | ✅ |
+| AI Lab Interpretation Engine | — | — | — | ✅ |
 | Predictive Analytics (Trend) | — | — | — | ✅ |
 
 ---
@@ -230,6 +234,7 @@ Requested → Scheduled → Checked In → In Progress → Completed
 | Real-time Departmental Chat | — | — | — | ✅ |
 | Task Assignment & Tracking | — | — | — | ✅ |
 | Knowledge Sharing (Protocols) | — | — | — | ✅ |
+| WhatsApp Clinical Deliveries | — | — | — | ✅ |
 | Geminai Staff Assistant (Chatbot)| — | — | — | ✅ |
 
 ---

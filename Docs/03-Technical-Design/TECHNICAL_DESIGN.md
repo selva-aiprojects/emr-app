@@ -51,6 +51,7 @@ graph TD
 | | Routing | Express Middleware | Pipeline pattern for modular Auth, Tenant, and Feature gating checks. |
 | | Identity | JWT (RS256) | Stateless authentication with tenant-scoped claims. |
 | | AI Engine | Google Gemini | State-of-the-art LLM for clinical summarization. |
+| | **Integrity** | Surgical Repair Layer | Validated API registry with non-redundant route definitions. |
 | **Database** | Core Engine | PostgreSQL | Relational database schema with strict ACID compliance for financial records. |
 | | Connection | Pool-driven PG | Optimized resource utilization for multi-tenant queries. |
 | **Infra** | Deployment | Docker / ESG | Containerized scalability across regions. |
@@ -105,33 +106,30 @@ graph TD
   - `GET /api/reports/summary` only for roles with report permission
 - Top-level state in `App.jsx` stores patients, appointments, walk-ins, encounters, billing, inventory, employees, insurance, and reports.
 
-## 6. Core Domain Modules
-- Platform: superadmin, tenant/user management, feature flags, subscription controls.
-- Clinical: patients, appointments, encounters, clinical records, prescriptions, inpatient.
-- Financial: invoices/payments, expenses, financial summaries, doctor payouts.
-- Operations: inventory, employees, attendance/leaves, insurance claims/providers.
-- Analytics: summary reports and payout reporting.
+## 6. Core Domain Modules (Operational Parity)
+- **Platform**: superadmin, tenant/user management, feature flags, subscription controls.
+- **Clinical**: patients, appointments, encounters, clinical records, prescriptions, inpatient.
+- **Laboratory**: **Fully Operational** - orders (`service_requests`), results recording, and critical alerts.
+- **Emergency**: **Fully Operational** - Ambulance fleet management, dispatching, and status tracking.
+- **Diagnostics**: **Fully Operational** - Blood Bank inventory, donor tracking, and emergency requests.
+- **Financial**: invoices/payments, expenses, financial summaries, doctor payouts, insurance claims.
+- **Operations**: inventory, employees, attendance/leaves, insurance providers, support tickets.
+- **Analytics**: summary reports, doctor performance, and real-time KPI aggregation.
+- **Communication**: Internal Notice Board for institutional alerts.
 
 ## 7. Data Model (Primary Tables)
-- `emr.tenants`
-- `emr.users`
-- `emr.patients`
-- `emr.clinical_records`
-- `emr.walkins`
-- `emr.appointments`
-- `emr.encounters`
-- `emr.prescriptions`
-- `emr.inventory_items`
-- `emr.invoices`
-- `emr.expenses`
-- `emr.employees`
-- `emr.attendance`
-- `emr.employee_leaves`
-- `emr.insurance_providers`
-- `emr.claims`
-- `emr.audit_logs`
-- `emr.tenant_features`
-- `emr.global_kill_switches`
+- `emr.tenants` / `emr.users` / `emr.audit_logs`
+- `emr.patients` / `emr.clinical_records` / `emr.encounters`
+- `emr.appointments` / `emr.walkins` / `emr.prescriptions`
+- `emr.service_requests` (Laboratory Orders & Results)
+- `emr.ambulances` / `emr.ambulance_dispatches` (Fleet Management)
+- `emr.blood_units` / `emr.blood_requests` (Diagnostics)
+- `emr.inventory_items` / `emr.invoices` / `emr.expenses`
+- `emr.employees` / `emr.attendance` / `emr.employee_leaves`
+- `emr.insurance_providers` / `emr.claims`
+- `emr.support_tickets` / `emr.notices` (Ops & Comms)
+- `emr.documents` / `emr.document_audit_logs` (Vault)
+- `emr.tenant_features` / `emr.global_kill_switches`
 
 ## 8. Multi-Tier Governance Architecture
 Access to high-level modules is controlled through a cumulative tiering system:
@@ -167,7 +165,13 @@ New administrative layers for tenant-level control:
 - **Service Catalog**: Refactored to a database-driven `emr.services` registry for dynamic pricing.
 - **Branding Engine**: `emr.tenants` utilizes `logo_url` and theme attributes for institutional identity persistence across the login and workspace layers.
 
-## 10. Documentation Boundaries
+## 13. Audit Governance Layer
+The system implements a mandatory auditing pipeline for all state mutations:
+- **Transaction Hook**: Every repository method for Laboratory, Ambulance, and Pharmacy modules triggers `repo.createAuditLog`.
+- **Schema**: Stores `tenantId`, `userId`, `action` (e.g., `lab.result.record`), `entityName`, `entityId`, and `metadata` (JSONB).
+- **Security**: Immutable record-keeping for forensic clinical trail tracking.
+
+## 14. Documentation Boundaries
 - `TECHNICAL_DESIGN.md` (this file): canonical architecture and design decisions.
 - `ARCHITECTURE_DESIGN.md`: Detailed system architecture and tech stack specifics.
 - `TECHNICAL_HANDBOOK.md`: implementation and change workflows for developers.

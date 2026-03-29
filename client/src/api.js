@@ -642,6 +642,24 @@ export async function setDocumentDeleted(id, tenantId, isDeleted) {
     body: JSON.stringify({ tenantId, isDeleted }),
   });
 }
+
+// =====================================================
+// CLINICAL AI INTELLIGENCE
+// =====================================================
+
+export async function interpretLabResults(tenantId, orderId) {
+  return await apiRequest('/ai/lab-interpretation', {
+    method: 'POST',
+    body: JSON.stringify({ tenantId, orderId }),
+  });
+}
+
+export async function checkDrugInteractions(tenantId, meds) {
+  return await apiRequest('/ai/drug-check', {
+    method: 'POST',
+    body: JSON.stringify({ tenantId, meds }),
+  });
+}
 // =====================================================
 // INSURANCE
 // =====================================================
@@ -796,6 +814,10 @@ const apiClient = {
   createBloodUnit,
   getBloodRequests,
   createBloodRequest,
+
+  // Clinical AI
+  interpretLabResults,
+  checkDrugInteractions,
 
   // Communication
   getNotices,
