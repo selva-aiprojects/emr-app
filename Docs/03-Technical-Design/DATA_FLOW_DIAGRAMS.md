@@ -98,3 +98,28 @@ sequenceDiagram
     Repo->>DB: doctor encounter + invoice aggregates
     API-->>FE: payout payload
 ```
+
+## 7. Superadmin Governance & Platform Economics
+```mermaid
+sequenceDiagram
+    participant SA as Superadmin UI
+    participant API as Express API
+    participant Inf as Infra Service
+    participant Repo as repository.js
+    participant DB as PostgreSQL
+
+    SA->>API: GET /api/superadmin/overview
+    API->>Repo: getSuperadminOverview
+    Repo->>DB: aggregation of cross-tenant metrics
+    API-->>SA: Platform KPIs (Tenants/Users/Tickets)
+
+    SA->>API: PATCH /api/admin/tenants/:id/tier
+    API->>Repo: updateTenantTier
+    Repo->>DB: UPDATE emr.tenants set tier
+    API-->>SA: Tier Update Confirmation
+
+    SA->>API: GET /api/infra/usage (Simulated)
+    API->>Inf: Calculate Node Compute & Vendor Costs
+    Inf-->>API: Cloud Cost Matrix
+    API-->>SA: Fiscal Control Data (AWS/S3/DB)
+```

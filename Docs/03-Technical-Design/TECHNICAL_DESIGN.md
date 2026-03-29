@@ -5,12 +5,57 @@ Last updated: 2026-02-19
 This document is the canonical technical design reference for the EMR application. It reflects the current implementation in `client/src` and `server/`.
 
 ## 1. Architecture Summary
-- Application type: Multi-tenant SPA + REST API.
-- Frontend: React (Vite), centralized application state in `client/src/App.jsx`.
-- Backend: Express API in `server/index.js` with middleware-driven auth, tenant checks, permissions, and feature gates.
-- Data layer: PostgreSQL, shared schema (`emr.*`), tenant isolation through `tenant_id` scoping.
+```mermaid
+graph TD
+    subgraph "Platform Layer (Superadmin)"
+        SA[Superadmin Dashboard] -->|Manage| TM[Tenant Management]
+        TM -->|Provision| UP[User Provisioning]
+        SA -->|Configure| OM[Offer Management]
+    }
 
-## 2. Source of Truth by Layer
+    subgraph "Tenant Layer (Hospital Admin)"
+        TA[Admin Master Hub] -->|Config| DS[Departments & Beds]
+        TA -->|Ops| HS[Hospital Settings]
+        TA -->|Financial| CG[Cost Governance]
+    }
+
+    subgraph "Clinical Workspace (Staff)"
+        CW[Doctor/Nurse Desk] -->|EMR| PT[Patients & Clinical]
+        CW -->|Workflow| AP[Appointments & Inpatient]
+    }
+
+    SA -.->|Subscription Tier| TA
+    TM -.->|Auth Node| CW
+    PT -->|Revenue Shard| CG
+```
+
+- **Application Model**: Multi-tenant SaaS SPA + RESTful API.
+- **Frontend**: React (Vite) with a centralized state machine in `App.jsx`. Uses a proprietary **Critical Care Design System** (Vanilla CSS) for ultra-low latency and cognitive clarity.
+- **Backend**: Express.js with a modular middleware-driven pipeline (Auth -> Tenant -> Permission -> Feature Gate).
+- **Data Layer**: PostgreSQL with a single-schema, tenant-isolated architecture.
+- **Intelligence**: Integrated **Google Gemini-1.5-Flash** for context-aware clinical decision support.
+- **Observability**: Real-time KPI aggregation via `getRealtimeTick` and Apache ECharts.
+
+## 2. Tech Stack & Integration Matrix
+
+| Layer | Component | Technology | Rationale |
+| :--- | :--- | :--- | :--- |
+| **Frontend** | Framework | ReactJS (React 18, Vite) | High-speed HMR and component reactivity. |
+| | Architecture | SPA Pattern | Single Page Application design for seamless UX without page reloads. |
+| | State Mgmt | Centralized Hooks | Simplified data flow for complex clinical states. |
+| | Design System | Vanilla CSS | Zero-runtime CSS overhead with custom design tokens. |
+| | Icons | Lucide-React | Premium, consistent iconography. |
+| | Visualizations | Apache ECharts | Enterprise-grade performance for high-density datasets. |
+| **Backend** | Runtime | Node.js (Express) | Asynchronous I/O for high-concurrency patient loads. |
+| | Architecture | REST API | RESTful architectural pattern for predictable client-server interaction. |
+| | Routing | Express Middleware | Pipeline pattern for modular Auth, Tenant, and Feature gating checks. |
+| | Identity | JWT (RS256) | Stateless authentication with tenant-scoped claims. |
+| | AI Engine | Google Gemini | State-of-the-art LLM for clinical summarization. |
+| **Database** | Core Engine | PostgreSQL | Relational database schema with strict ACID compliance for financial records. |
+| | Connection | Pool-driven PG | Optimized resource utilization for multi-tenant queries. |
+| **Infra** | Deployment | Docker / ESG | Containerized scalability across regions. |
+
+## 3. Source of Truth by Layer
 
 ### Frontend
 - App orchestration/state: `client/src/App.jsx`
@@ -120,5 +165,6 @@ New administrative layers for tenant-level control:
 
 ## 10. Documentation Boundaries
 - `TECHNICAL_DESIGN.md` (this file): canonical architecture and design decisions.
+- `ARCHITECTURE_DESIGN.md`: Detailed system architecture and tech stack specifics.
 - `TECHNICAL_HANDBOOK.md`: implementation and change workflows for developers.
 - `DATA_FLOW_DIAGRAMS.md`: diagrams and sequence/flow visuals aligned to current API.
