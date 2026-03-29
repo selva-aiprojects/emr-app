@@ -2285,6 +2285,26 @@ app.get('/api/departments', requireTenant, async (req, res) => {
   }
 });
 
+app.get('/api/employees', requireTenant, requirePermission('employees'), moduleGate('employees'), async (req, res) => {
+  try {
+    const employees = await repo.getEmployees(req.tenantId);
+    res.json(employees);
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({ error: 'Failed to fetch employees' });
+  }
+});
+
+app.post('/api/employees', requireTenant, requirePermission('employees'), moduleGate('employees'), async (req, res) => {
+  try {
+    const employee = await repo.createEmployee({ ...req.body, tenantId: req.tenantId });
+    res.status(201).json(employee);
+  } catch (error) {
+    console.error('Error creating employee:', error);
+    res.status(500).json({ error: 'Failed to create employee' });
+  }
+});
+
 app.post('/api/departments', requireTenant, requirePermission('admin'), async (req, res) => {
   try {
     const dept = await repo.createDepartment({ ...req.body, tenantId: req.tenantId });

@@ -432,7 +432,7 @@ export async function updateInventoryStock(itemId, tenantId, delta) {
 }
 
 export async function getEmployees(tenantId) {
-  return await apiRequest(`/users?tenantId=${tenantId}&role=Doctor,Nurse,Pharmacist,Lab,Admin`);
+  return await apiRequest(`/employees?tenantId=${tenantId}`);
 }
 
 export async function createEmployee(data) {
