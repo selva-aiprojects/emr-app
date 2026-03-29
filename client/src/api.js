@@ -76,9 +76,12 @@ async function apiRequest(endpoint, options = {}) {
   }
 
   // Auto-inject tenant context for all API endpoints
+  const session = getStoredSession();
   const user = getStoredUser();
-  if (user && user.tenantId && !headers['x-tenant-id']) {
-    headers['x-tenant-id'] = user.tenantId;
+  const activeTenantId = session?.tenantId || user?.tenantId;
+  
+  if (activeTenantId && !headers['x-tenant-id']) {
+    headers['x-tenant-id'] = activeTenantId;
   }
 
   const config = {

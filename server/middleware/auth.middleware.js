@@ -61,11 +61,13 @@ export async function authenticate(req, res, next) {
 
     // Normalize role for consistency
     const userRole = user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase();
-    const finalRole = userRole === 'Front office'
-      ? 'Front Office'
-      : (userRole === 'Support staff'
-        ? 'Support Staff'
-        : (userRole === 'Hr' ? 'HR' : userRole));
+    let finalRole = userRole;
+
+    // Canonicalize specialized or alias roles to system-standard equivalents
+    if (userRole === 'Front office') finalRole = 'Front Office';
+    else if (userRole === 'Support staff') finalRole = 'Support Staff';
+    else if (userRole === 'Hr') finalRole = 'HR';
+    else if (userRole === 'Administrator' || userRole === 'Admin role') finalRole = 'Admin';
 
     // Attach user info to request object
     req.user = {

@@ -115,8 +115,9 @@ export default function App() {
   }, [isDoctor, doctorAppointments, encounters, activeUser]);
   const scopedPatients = useMemo(() => {
     if (!isDoctor) return patients;
-    return patients.filter((p) => doctorPatientIds?.has(p.id));
-  }, [isDoctor, patients, doctorPatientIds]);
+    // For Doctors: Show patients with appointments/encounters OR the currently active patient (e.g. just created)
+    return patients.filter((p) => doctorPatientIds?.has(p.id) || p.id === activePatientId);
+  }, [isDoctor, patients, doctorPatientIds, activePatientId]);
 
   const scopedAppointments = useMemo(() => (isDoctor ? doctorAppointments : appointments), [isDoctor, doctorAppointments, appointments]);
   const scopedEncounters = useMemo(() => {
@@ -139,9 +140,12 @@ export default function App() {
       return ['superadmin', 'tenant_management', 'user_provisioning', 'financial_control', 'dashboard', 'admin', 'reports', 'support'];
     }
 
-    // Normalize role for permission mapping
     const roleKey = activeUser.role.charAt(0).toUpperCase() + activeUser.role.slice(1).toLowerCase();
-    const normalizedRole = roleKey === 'Front office' ? 'Front Office' : (roleKey === 'Support staff' ? 'Support Staff' : (roleKey === 'Hr' ? 'HR' : roleKey));
+    let normalizedRole = roleKey;
+    if (roleKey === 'Front office') normalizedRole = 'Front Office';
+    else if (roleKey === 'Support staff') normalizedRole = 'Support Staff';
+    else if (roleKey === 'Hr') normalizedRole = 'HR';
+    else if (roleKey === 'Administrator' || roleKey === 'Admin role') normalizedRole = 'Admin';
 
     const roleViews = permissions[normalizedRole] || permissions[activeUser.role] || ['dashboard'];
     
@@ -240,6 +244,7 @@ export default function App() {
     if (roleKey === 'Front office') return 'Front Office';
     if (roleKey === 'Support staff') return 'Support Staff';
     if (roleKey === 'Hr') return 'HR';
+    if (roleKey === 'Administrator' || roleKey === 'Admin role') return 'Admin';
     return roleKey;
   }
 

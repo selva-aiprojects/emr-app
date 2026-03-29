@@ -1324,57 +1324,6 @@ if (process.env.NODE_ENV === 'production' || process.env.ENABLE_CRON === 'true')
 // PATIENTS
 // =====================================================
 
-app.post('/api/patients', requireTenant, requirePermission('patients'), moduleGate('patients'), async (req, res) => {
-  try {
-    const {
-      firstName, lastName, dob, gender, phone, email, address,
-      bloodGroup, emergencyContact, insurance,
-      chronicConditions, allergies, surgeries, familyHistory
-    } = req.body;
-
-    if (!firstName || !lastName) {
-      return res.status(400).json({ error: 'firstName and lastName are required' });
-    }
-
-    const medicalHistory = {
-      chronicConditions: chronicConditions || '',
-      allergies: allergies || '',
-      surgeries: surgeries || '',
-      familyHistory: familyHistory || '',
-    };
-
-    const medicalHistoryWithABHA = {
-      ...medicalHistory,
-      abhaId: `ABHA-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
-    };
-
-    const patient = await repo.createPatient({
-      tenantId: req.tenantId,
-      userId:    await query(sql, [
-      tenantId,
-      mrn,
-      firstName,
-      lastName,
-      dob || null,
-      gender || null,
-      phone || null,
-      email || null,
-      address || null,
-      bloodGroup || null,
-      emergencyContact || null,
-      insurance || null,
-      JSON.stringify(medicalHistoryWithABHA),
-    ]),
-   insurance,
-      medicalHistory,
-    });
-
-    res.status(201).json(patient);
-  } catch (error) {
-    console.error('Error creating patient:', error);
-    res.status(500).json({ error: 'Failed to create patient' });
-  }
-});
 
 app.patch('/api/patients/:id/clinical', requireTenant, restrictPatientAccess, moduleGate('patients'), async (req, res) => {
   try {

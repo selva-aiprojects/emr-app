@@ -45,13 +45,18 @@ export default function PatientsPage({
   const tenantId = tenant?.id || session?.tenantId || null;
 
   const effectivePatients = useMemo(() => {
-    return (Array.isArray(patientsProp) && page === 0 && patients.length === 0) ? patientsProp : patients;
+    // Priority 1: If page > 0, always use our paginated local state
+    if (page > 0) return patients;
+    // Priority 2: Use patientsProp if available (provides instant sync from App.jsx refreshes)
+    if (Array.isArray(patientsProp) && patientsProp.length > 0) return patientsProp;
+    // Priority 3: Fallback to our local registry state
+    return patients;
   }, [patientsProp, patients, page]);
 
   useEffect(() => {
     async function load() {
-      // Use bootstrap data only on initial load (page 0) if explicit fetch hasn't happened.
-      if (Array.isArray(patientsProp) && page === 0 && patients.length === 0) {
+      // If we're on page 0 and have patientsProp, don't trigger a redundant load
+      if (page === 0 && Array.isArray(patientsProp) && patientsProp.length > 0) {
         setLoading(false);
         return;
       }
@@ -68,7 +73,7 @@ export default function PatientsPage({
       }
     }
     load();
-  }, [tenantId, patientsProp, page]);
+  }, [tenantId, page, patientsProp?.length]);
 
   async function handleOnboard(e) {
     if (onCreatePatient) {

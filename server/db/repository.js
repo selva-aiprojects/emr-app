@@ -1717,9 +1717,11 @@ export async function getBootstrapData(tenantId, userId) {
   if (userRole) {
     userRole = userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase();
     if (userRole === 'Front office') userRole = 'Front Office';
-    if (userRole === 'Support staff') userRole = 'Support Staff';
-    if (userRole === 'Hr') userRole = 'HR';
+    else if (userRole === 'Support staff') userRole = 'Support Staff';
+    else if (userRole === 'Hr') userRole = 'HR';
+    else if (userRole === 'Administrator' || userRole === 'Admin role') userRole = 'Admin';
   }
+
 
   // Also update the role on the user object itself for the frontend
   user.role = userRole;
