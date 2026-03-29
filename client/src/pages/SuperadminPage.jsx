@@ -10,6 +10,8 @@ import ResetPasswordForm from '../components/superadmin/ResetPasswordForm.jsx';
 import IssuesTable from '../components/superadmin/IssuesTable.jsx';
 import TicketStatus from '../components/superadmin/TicketStatus.jsx';
 import InfraUsage from '../components/superadmin/InfraUsage.jsx';
+import PlatformAccounts from '../components/superadmin/PlatformAccounts.jsx';
+import OfferManagement from '../components/superadmin/OfferManagement.jsx';
 
 function SuperadminPage({ 
   viewMode = 'superadmin',
@@ -93,6 +95,16 @@ function SuperadminPage({
           <TenantAdminProvisioningForm tenants={tenants} onProvision={handleProvisionAdmin} />
           <ResetPasswordForm tenants={tenants} />
         </div>
+      </div>
+    );
+  }
+
+  // 4. FINANCIAL CONTROL VIEW (Offers + Platform Accounts)
+  if (viewMode === 'financial_control') {
+    return (
+      <div className="intelligence-hub slide-up space-y-12">
+        <PlatformAccounts tenants={tenants} />
+        <OfferManagement />
       </div>
     );
   }

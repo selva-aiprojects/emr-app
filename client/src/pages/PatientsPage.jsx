@@ -40,7 +40,6 @@ export default function PatientsPage({
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('registry');
   const [page, setPage] = useState(0);
-  const [toast, setToast] = useState(null);
   const isDoctor = (activeUser?.role || '').toLowerCase() === 'doctor';
 
   const tenantId = tenant?.id || session?.tenantId || null;
@@ -73,8 +72,14 @@ export default function PatientsPage({
 
   async function handleOnboard(e) {
     if (onCreatePatient) {
-      // Delegate to App.jsx handler to keep global state consistent.
-      return onCreatePatient(e);
+      try {
+        await onCreatePatient(e);
+        showToast({ message: 'Patient Provisioned in Registry', type: 'success', title: 'Clinical Records' });
+        setActiveTab('registry');
+      } catch (err) {
+        showToast({ message: 'Provisioning Failure: ' + err.message, type: 'error', title: 'Registry Fault' });
+      }
+      return;
     }
 
     if (!tenantId) return;
@@ -94,9 +99,9 @@ export default function PatientsPage({
       setPatients(data || []);
       setActiveTab('registry');
       e.target.reset();
-      setToast({ message: 'Patient registered successfully!', type: 'success' });
+      showToast({ message: 'Patient registered successfully!', type: 'success' });
     } catch (err) {
-      setToast({ message: 'Registration failed: ' + err.message, type: 'error' });
+      showToast({ message: 'Registration failed: ' + err.message, type: 'error' });
     }
   }
 
@@ -401,14 +406,6 @@ export default function PatientsPage({
             {effectivePatients.length} ACTIVE SHARDS IN REGISTRY
          </div>
       </footer>
-      {/* Save Toast */}
-      {toast && (
-        <SaveToast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
     </div>
   );
 }

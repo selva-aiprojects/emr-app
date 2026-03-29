@@ -67,20 +67,34 @@ h1, h2, h3, h4, .font-display {
 
 /* PREMIUM PAGE SHELL */
 .page-shell-premium {
-  max-width: 1440px;
+  max-width: 1600px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem;
   animation: slideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(--font-sans);
 }
 
+@media (min-width: 768px) {
+  .page-shell-premium {
+    padding: 2.5rem;
+  }
+}
+
 .page-header-premium {
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 2rem;
-  margin-bottom: 2rem;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
   font-family: var(--font-sans);
+}
+
+@media (min-width: 768px) {
+  .page-header-premium {
+    flex-direction: row;
+    align-items: center;
+  }
 }
 
 .page-header-premium h1 {
@@ -118,9 +132,21 @@ h1, h2, h3, h4, .font-display {
 /* VITALS MONITORING SYSTEM */
 .vitals-monitor {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(1, 1fr);
   gap: 1.5rem;
   margin-bottom: 2.5rem;
+}
+
+@media (min-width: 640px) {
+  .vitals-monitor {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .vitals-monitor {
+    grid-template-columns: repeat(4, 1fr);
+  }
 }
 
 .vital-node {

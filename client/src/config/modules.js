@@ -2,6 +2,7 @@ export const moduleMeta = {
   superadmin: { title: 'Platform Control', subtitle: 'Global Metrics' },
   tenant_management: { title: 'Tenant Onboarding', subtitle: 'Provisioning' },
   user_provisioning: { title: 'Identity Provisioning', subtitle: 'User Access' },
+  financial_control: { title: 'Financial Control', subtitle: 'Offers & Accounts' },
   dashboard: { title: 'Hospital Dashboard', subtitle: 'Operational overview' },
   doctor_workspace: { title: 'Doctor Desk', subtitle: 'Today\'s appointments & patients' },
   patients: { title: 'OP&IP Registration', subtitle: 'Demographics and clinical folders' },
@@ -38,7 +39,7 @@ export const moduleMeta = {
 };
 
 export const fallbackPermissions = {
-  Superadmin: ['superadmin', 'tenant_management', 'user_provisioning', 'dashboard', 'admin', 'reports', 'support'],
+  Superadmin: ['superadmin', 'tenant_management', 'user_provisioning', 'financial_control', 'dashboard', 'admin', 'reports', 'support'],
   Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings', 'admin_masters'],
   Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'reports', 'lab', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],

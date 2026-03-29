@@ -41,6 +41,7 @@ const navIcons = {
   superadmin: ShieldCheck,
   tenant_management: Grid2X2,
   user_provisioning: UserCircle,
+  financial_control: Receipt,
   dashboard: LayoutDashboard,
   doctor_workspace: HeartPulse,
   users: UserCircle,
@@ -104,6 +105,7 @@ function getSidebarGroups(role) {
       { name: "Global Governance", modules: ["superadmin"] },
       { name: "Tenant Management", modules: ["tenant_management"] },
       { name: "User Provisioning", modules: ["user_provisioning"] },
+      { name: "Financial Control", modules: ["financial_control"] },
       ...SIDEBAR_GROUPS_DEFAULT
     ];
   }

@@ -319,10 +319,15 @@ export default function EmployeesPage({ tenant, initialTab = 'roster', employees
                 </button>
              </header>
 
-             <form className="space-y-10" onSubmit={(e) => {
-               if (onCreateEmployee) return onCreateEmployee(e);
-               e.preventDefault();
-             }}>
+              <form className="space-y-10" onSubmit={async (e) => {
+                try {
+                  if (onCreateEmployee) await onCreateEmployee(e);
+                  showToast({ message: 'Personnel Provisioned Successfully', type: 'success', title: 'Workforce Hub' });
+                  setShowRegModal(false);
+                } catch (err) {
+                  showToast({ message: err.message, type: 'error', title: 'Provisioning Error' });
+                }
+              }}>
                 <div className="grid grid-cols-2 gap-8">
                    <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Legal Name</label>

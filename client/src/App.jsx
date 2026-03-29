@@ -82,6 +82,8 @@ export default function App() {
   const [documents, setDocuments] = useState([]);
   const [activePatientId, setActivePatientId] = useState('');
   const [loading, setLoading] = useState(false);
+  const { showToast } = useToast();
+
 
   console.log('DEBUG: SuperadminPage render', { superOverview, tenantsLength: tenants?.length });
   const [error, setError] = useState('');
@@ -418,7 +420,7 @@ export default function App() {
     }
   }
 
-  async function withRefresh(action) {
+  async function withRefresh(action, successMsg = '') {
     try {
       setError('');
       await action();
