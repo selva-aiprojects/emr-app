@@ -3,8 +3,6 @@
 
 import { query } from './connection.js';
 
-const tenantId = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'; // New Age Hospital
-
 export async function getRealtimeDashboardMetrics(tenantId) {
   try {
     console.log('🔍 Calculating real-time dashboard metrics...');
