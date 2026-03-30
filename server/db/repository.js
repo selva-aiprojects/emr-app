@@ -2757,6 +2757,30 @@ export async function getOPDBillById(billId, tenantId) {
   return result.rows[0];
 }
 
+export async function getOPDBillById(billId, tenantId) {
+  const sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number,
+      a.start as appointment_time
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    WHERE b.id = $1 AND b.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [billId, tenantId]);
+  return result.rows[0];
+}
+
 // =====================================================
 // EXOTEL SMS PROVIDER INTEGRATION
 // =====================================================
@@ -4010,29 +4034,6 @@ export async function deleteOPDToken(tokenId, tenantId) {
 
 
 
-export async function getOPDBillById(billId, tenantId) {
-  const sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      p.email as patient_email,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number,
-      a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
-    WHERE b.id = $1 AND b.tenant_id = $2
-  `;
-  
-  const result = await query(sql, [billId, tenantId]);
-  return result.rows[0];
-}
 
 // =====================================================
 // EXOTEL SMS PROVIDER INTEGRATION
@@ -5219,29 +5220,6 @@ export async function getOPDTokenById(tokenId, tenantId) {
 
 
 
-export async function getOPDBillById(billId, tenantId) {
-  const sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      p.email as patient_email,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number,
-      a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
-    WHERE b.id = $1 AND b.tenant_id = $2
-  `;
-  
-  const result = await query(sql, [billId, tenantId]);
-  return result.rows[0];
-}
 
 // =====================================================
 // EXOTEL SMS PROVIDER INTEGRATION
@@ -6496,29 +6474,6 @@ export async function deleteOPDToken(tokenId, tenantId) {
 
 
 
-export async function getOPDBillById(billId, tenantId) {
-  const sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      p.email as patient_email,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number,
-      a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
-    WHERE b.id = $1 AND b.tenant_id = $2
-  `;
-  
-  const result = await query(sql, [billId, tenantId]);
-  return result.rows[0];
-}
 
 // =====================================================
 // EXOTEL SMS PROVIDER INTEGRATION
@@ -7766,29 +7721,6 @@ export async function getOPDTokenById(tokenId, tenantId) {
 
 
 
-export async function getOPDBillById(billId, tenantId) {
-  const sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      p.email as patient_email,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number,
-      a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
-    WHERE b.id = $1 AND b.tenant_id = $2
-  `;
-  
-  const result = await query(sql, [billId, tenantId]);
-  return result.rows[0];
-}
 
 // =====================================================
 // EXOTEL SMS PROVIDER INTEGRATION
@@ -9043,29 +8975,6 @@ export async function deleteOPDToken(tokenId, tenantId) {
 
 
 
-export async function getOPDBillById(billId, tenantId) {
-  const sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      p.email as patient_email,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number,
-      a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
-    WHERE b.id = $1 AND b.tenant_id = $2
-  `;
-  
-  const result = await query(sql, [billId, tenantId]);
-  return result.rows[0];
-}
 
 // =====================================================
 // EXOTEL SMS PROVIDER INTEGRATION
