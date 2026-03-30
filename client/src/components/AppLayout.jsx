@@ -271,7 +271,7 @@ export default function AppLayout({
 
   /* ── Sidebar content ── */
   const SidebarContent = (
-    <div className="flex flex-col h-full bg-gradient-to-b from-[var(--medical-navy-light)] to-[var(--medical-navy)] border-r border-white/[0.05] shadow-2xl">
+    <div className="flex flex-col h-full bg-[var(--medical-navy)] border-r border-white/[0.05] shadow-2xl">
 
       {/* ── HEADER ── */}
       <div className={`flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? "justify-center p-4" : "justify-between px-5 py-4"}`}>
