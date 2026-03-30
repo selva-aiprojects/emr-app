@@ -658,6 +658,7 @@ export async function createPatient({ tenantId, userId, firstName, lastName, dob
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: `patient.create`,
     entityName: 'patient',
     entityId: patient.id,
@@ -699,6 +700,7 @@ export async function addClinicalRecord({ tenantId, userId, patientId, section, 
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: `patient.${section}.add`,
     entityName: 'clinical_record',
     entityId: result.rows[0].id,
@@ -732,6 +734,7 @@ export async function createWalkin({ tenantId, userId, name, phone, reason }) {
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'walkin.create',
     entityName: 'walkin',
     entityId: result.rows[0].id,
@@ -781,6 +784,7 @@ export async function convertWalkinToPatient({ walkinId, tenantId, userId, dob, 
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'walkin.convert',
     entityName: 'walkin',
     entityId: walkinId,
@@ -833,6 +837,7 @@ export async function createAppointment({ tenantId, userId, patientId, providerI
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: `appointment.${source === 'self' ? 'self_requested' : 'create'}`,
     entityName: 'appointment',
     entityId: appointment.id,
@@ -874,6 +879,7 @@ export async function updateAppointmentStatus({ appointmentId, tenantId, userId,
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: `appointment.${status}`,
     entityName: 'appointment',
     entityId: appointmentId,
@@ -909,6 +915,7 @@ export async function rescheduleAppointment({ appointmentId, tenantId, userId, s
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'appointment.rescheduled',
     entityName: 'appointment',
     entityId: appointmentId,
@@ -967,6 +974,7 @@ export async function createEncounter({ tenantId, userId, patientId, providerId,
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'encounter.create',
     entityName: 'encounter',
     entityId: encounter.id,
@@ -1001,6 +1009,7 @@ export async function dischargePatient({ tenantId, userId, encounterId, diagnosi
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'encounter.discharge',
     entityName: 'encounter',
     entityId: encounterId,
@@ -1070,6 +1079,7 @@ export async function createInvoice({ tenantId, userId, patientId, description, 
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: isPaidNow ? 'invoice.create_paid' : 'invoice.issue',
     entityName: 'invoice',
     entityId: invoice.id,
@@ -1107,6 +1117,7 @@ export async function payInvoice({ invoiceId, tenantId, userId, paymentMethod = 
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'invoice.paid',
     entityName: 'invoice',
     entityId: invoiceId,
@@ -1167,6 +1178,7 @@ export async function createInventoryItem({ tenantId, userId, code, name, catego
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'inventory.create',
     entityName: 'inventory_item',
     entityId: item.id,
@@ -1207,6 +1219,7 @@ export async function updateInventoryStock({ itemId, tenantId, userId, delta }) 
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: `inventory.${transactionType}`,
     entityName: 'inventory_item',
     entityId: itemId,
@@ -1650,6 +1663,7 @@ RETURNING *
     await createAuditLog({
       tenantId,
       userId,
+      userName: null, // Add missing userName parameter
       action: `prescription.${status.toLowerCase()} `,
       entityName: 'prescription',
       entityId: id,
@@ -1700,6 +1714,8 @@ export async function getBootstrapData(tenantId, userId) {
     claims
   ] = await Promise.all([
     getUserById(userId),
+    userName: null, // Add missing userName parameter
+    userName: null, // Add missing userName parameter
     // Placeholder for other data to be fetched below
     Promise.resolve([]),
     getAppointments(tenantId),
@@ -2129,6 +2145,7 @@ export async function createSupportTicket({ tenantId, userId, type, location, de
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'support.ticket.create',
     entityName: 'support_ticket',
     entityId: ticket.id,
@@ -2165,6 +2182,7 @@ export async function updateSupportTicketStatus({ id, tenantId, userId, status }
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: `support.ticket.status.${status}`,
     entityName: 'support_ticket',
     entityId: id,
@@ -2194,6 +2212,8 @@ export async function createAmbulance({ tenantId, userId, vehicle_number, model,
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
+    userName: null, // Add missing userName parameter
     action: 'ambulance.create',
     entityName: 'ambulance',
     entityId: ambulance.id,
@@ -2231,6 +2251,7 @@ export async function dispatchAmbulance({ id, tenantId, userId, incident_lat, in
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'ambulance.dispatch',
     entityName: 'ambulance',
     entityId: id,
@@ -2261,6 +2282,7 @@ export async function createBloodUnit({ tenantId, userId, blood_group, component
   await createAuditLog({
     tenantId,
     userId,
+    userName: null, // Add missing userName parameter
     action: 'blood_bank.unit.create',
     entityName: 'blood_unit',
     entityId: unit.id,
