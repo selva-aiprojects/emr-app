@@ -3,6 +3,7 @@ import { useToast } from '../hooks/useToast.jsx';
 import { Bed, Plus, Search, Loader2, ShieldCheck, Activity, UserCircle, ChevronRight, LayoutPanelTop, Building2, TrendingUp, Filter } from 'lucide-react';
 import { api } from '../api.js';
 import WardGraphics from '../components/WardGraphics.jsx';
+import EnhancedBedCards from '../components/EnhancedBedCards.jsx';
 
 export default function BedManagementPage({ tenant }) {
   const { showToast } = useToast();
@@ -89,7 +90,7 @@ export default function BedManagementPage({ tenant }) {
               <LayoutPanelTop className="w-8 h-8 text-slate-900" />
               Institutional Ward & Bed Management
            </h1>
-           <p className="dim-label italic">Monitor ward throughput, bed occupancy shards, and real-time facility asset allocation for {tenant?.name}.</p>
+           <p className="dim-label italic">Monitor ward throughput, bed occupancy shards, and real-time facility asset allocation for {tenant?.name || 'New Age Hospital'}.</p>
         </div>
         <div className="flex gap-4">
            <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-100 gap-1 mr-4">
@@ -251,74 +252,114 @@ export default function BedManagementPage({ tenant }) {
                       onBedClick={() => {}} 
                     />
                  ) : (
-                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
-                     {currentBeds.map(bed => (
-                       <article key={bed.id} className={`p-6 rounded-3xl border-2 transition-all group ${
-                         bed.status === 'occupied' 
-                         ? 'bg-rose-50 border-rose-100 text-rose-700' 
-                         : 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:scale-[1.05] hover:shadow-2xl'
-                       }`}>
-                          <div className="flex justify-between items-start mb-4">
-                             <Bed size={20} className={bed.status === 'occupied' ? 'text-rose-400' : 'text-emerald-400'} />
-                             <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${
-                               bed.status === 'occupied' ? 'bg-rose-100 border-rose-200' : 'bg-emerald-100 border-emerald-200'
-                             }`}>
-                               {bed.status || 'Available'}
-                             </span>
-                          </div>
-                          <div className="text-lg font-black tracking-tight">{bed.bed_number}</div>
-                          <div className="text-[10px] font-bold uppercase tracking-wider opacity-60 mt-0.5">{selectedWard.name}</div>
-                          
-                          <div className="mt-4 pt-4 border-t border-current/10 flex items-center gap-2">
-                             <UserCircle size={10} className="opacity-40" />
-                             <span className="text-[8px] font-black uppercase tracking-widest opacity-40">
-                               {bed.status === 'occupied' ? 'Patient Linked' : 'No Assignment'}
-                             </span>
-                          </div>
-                       </article>
-                     ))}
-                   </div>
+                   <EnhancedBedCards 
+                     currentBeds={currentBeds} 
+                     selectedWard={selectedWard} 
+                   />
                  )}
                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-               <article className="clinical-card bg-slate-900 text-white border-none p-8 flex items-center justify-between">
-                  <div>
-                    <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Ward Occupancy</h5>
-                    <div className="flex items-end gap-3">
-                       <span className="text-3xl font-black">
-                         {selectedWard ? currentBeds.filter(b => b.status === 'occupied').length : 0}
-                         <span className="text-slate-600 text-sm ml-1">/ {currentBeds.length}</span>
-                       </span>
-                    </div>
-                  </div>
-                  <Activity size={32} className="text-indigo-500 opacity-50" />
-               </article>
-
-               <article className="clinical-card bg-white border-none shadow-premium p-8 flex items-center justify-between">
-                  <div>
-                    <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Available Capacity</h5>
-                    <div className="flex items-end gap-3 text-emerald-600">
-                       <span className="text-3xl font-black">{selectedWard ? currentBeds.filter(b => b.status !== 'occupied').length : 0}</span>
-                       <span className="text-[10px] font-bold uppercase mb-1">UNITS Ready</span>
-                    </div>
-                  </div>
-                  <TrendingUp size={32} className="text-emerald-500 opacity-20" />
-               </article>
-
-               <article className="clinical-card bg-white border-none shadow-premium p-8 overflow-hidden relative group">
+               {/* Ward Occupancy Card */}
+               <article className="clinical-card bg-gradient-to-br from-slate-900 to-slate-800 text-white border-none p-8 flex items-center justify-between relative overflow-hidden group">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"40\" height=\"40\" viewBox=\"0 0 40 40\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"%23ffffff10\" fill-opacity=\"0.1\"%3E%3Crect x=\"0\" y=\"0\" width=\"20\" height=\"20\"/%3E%3Crect x=\"20\" y=\"20\" width=\"20\" height=\"20\"/%3E%3C/g%3E%3C/svg%3E')] opacity-50"></div>
+                  
                   <div className="relative z-10">
-                     <h5 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Operational Policy</h5>
-                     <p className="text-[10px] font-medium text-slate-500 leading-relaxed italic">
-                        Real-time bed shards drive automatic daily billing. Changing ward rates will apply to current admissions at next census (midnight).
-                     </p>
+                     <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-indigo-500/30">
+                           <Activity size={24} className="animate-pulse" />
+                        </div>
+                        <div>
+                           <h5 className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Ward Occupancy</h5>
+                           <p className="text-xs text-slate-400 font-medium">Real-time bed utilization</p>
+                        </div>
+                     </div>
+                     <div className="flex items-end gap-3">
+                        <div className="text-center">
+                           <div className="text-3xl font-black text-white">{selectedWard ? currentBeds.filter(b => b.status === 'occupied').length : 0}</div>
+                           <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Occupied</div>
+                        </div>
+                        <div className="text-center">
+                           <div className="text-lg font-bold text-slate-300">/</div>
+                           <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Total</div>
+                           <div className="text-3xl font-black text-white">{currentBeds.length}</div>
+                           <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Beds</div>
+                        </div>
+                        <div className="text-center">
+                           <div className="text-2xl font-bold text-indigo-200">{currentBeds.length > 0 ? Math.round((currentBeds.filter(b => b.status === 'occupied').length / currentBeds.length) * 100) : 0}%</div>
+                           <div className="text-xs text-slate-400 font-medium uppercase tracking-wider">Occupancy Rate</div>
+                        </div>
+                     </div>
                   </div>
-                  <ShieldCheck size={40} className="absolute -bottom-4 -right-4 text-slate-50 opacity-10 group-hover:scale-[1.5] transition-transform" />
+               </article>
+
+               {/* Available Capacity Card */}
+               <article className="clinical-card bg-gradient-to-br from-emerald-50 to-green-50 border-emerald-200 shadow-emerald-100/50 p-8 flex items-center justify-between relative overflow-hidden group">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"40\" height=\"40\" viewBox=\"0 0 40 40\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"%2310b9810\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"20\" cy=\"20\" r=\"15\"/%3E%3Ccircle cx=\"20\" cy=\"20\" r=\"20\" fill-opacity=\"0.2\"/%3E%3Ccircle cx=\"20\" cy=\"20\" r=\"15\" fill-opacity=\"0.3\"/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+                  
+                  <div className="relative z-10">
+                     <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center text-white shadow-xl shadow-emerald-500/30">
+                           <TrendingUp size={24} />
+                        </div>
+                        <div>
+                           <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-1">Available Capacity</h5>
+                           <p className="text-xs text-emerald-600 font-medium">Ready for admission</p>
+                        </div>
+                     </div>
+                     <div className="flex items-end gap-4">
+                        <div className="text-center">
+                           <div className="text-5xl font-black text-emerald-700">{selectedWard ? currentBeds.filter(b => b.status !== 'occupied').length : 0}</div>
+                           <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">UNITS READY</div>
+                        </div>
+                        <div className="flex-1 flex items-end justify-end">
+                           <div className="text-right">
+                              <div className="text-3xl font-black text-emerald-700">{selectedWard ? Math.round((currentBeds.filter(b => b.status !== 'occupied').length / currentBeds.length) * 100) : 0}%</div>
+                              <div className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Available Rate</div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               </article>
+
+               {/* Operational Status Card */}
+               <article className="clinical-card bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200 shadow-amber-100/50 p-8 overflow-hidden relative group">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"40\" height=\"40\" viewBox=\"0 0 40 40\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"%23f59e0b10\" fill-opacity=\"0.1\"%3E%3Cpolygon points=\"20,10 50,50 10,50\"/%3E%3Cpolygon points=\"30,20 45,45 15,45\"/%3E%3Cpolygon points=\"30,30 40,40 20,40\"/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+                  
+                  <div className="relative z-10">
+                     <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-xl shadow-amber-500/30">
+                           <ShieldCheck size={24} />
+                        </div>
+                        <div>
+                           <h5 className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">Operational Status</h5>
+                           <p className="text-xs text-amber-600 font-medium">System performance</p>
+                        </div>
+                     </div>
+                     <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-amber-100/50 rounded-xl">
+                           <span className="text-sm font-medium text-amber-800">System Status</span>
+                           <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                              <span className="text-sm font-bold text-amber-700">Operational</span>
+                           </div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-amber-100/50 rounded-xl">
+                           <span className="text-sm font-medium text-amber-800">Last Update</span>
+                           <span className="text-sm font-bold text-amber-700">{new Date().toLocaleTimeString()}</span>
+                        </div>
+                     </div>
+                  </div>
+                  <div className="absolute -bottom-4 -right-4 text-amber-200 opacity-20 group-hover:scale-110 transition-transform duration-500">
+                     <ShieldCheck size={80} />
+                  </div>
                </article>
             </div>
          </main>
       </div>
     </div>
-  );
 }
