@@ -468,31 +468,14 @@ export async function getAppointments(tenantId, filters = {}) {
 // =====================================================
 
 export async function createEncounter({ tenantId, userId, patientId, providerId, type, complaint, diagnosis, notes }) {
-  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
-  const billNumberResult = await query(billNumberSql, [tenantId]);
-  const billNumber = billNumberResult.rows[0].bill_number;
-  
   const sql = `
-    INSERT INTO emr.opd_bills (
-      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
-      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
-      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
-      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
-      tax_amount, total_amount, payment_method, insurance_provider, policy_number, notes, created_by
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, CURRENT_TIME,
-            $8, $9, $10, $11,
-            $12, $13, $14, $15, $16,
-            $17, $18, $19, $20, $21, $22,
-            $23, $24, $25, $26, $27)
+    INSERT INTO emr.encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, 'open')
     RETURNING *
   `;
-  
   const result = await query(sql, [
-    tenantId, patientId, tokenId, appointmentId, billNumber,
-    patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy
+    tenantId, patientId, providerId, type, complaint, diagnosis, notes
   ]);
-  
   return result.rows[0];
 }
 
