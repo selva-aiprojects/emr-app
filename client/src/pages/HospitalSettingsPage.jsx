@@ -175,6 +175,11 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
                     <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Or specify a remote URL:</p>
                     <input 
                       type="url" 
+                      className="input-field text-xs py-2 bg-slate-50/50"
+                      value={form.logo_url?.startsWith('data:') ? '' : form.logo_url}
+                      onChange={e => setForm({...form, logo_url: e.target.value})}
+                      placeholder="https://example.com/logo.png"
+                    />
                   </div>
                 </div>
 
