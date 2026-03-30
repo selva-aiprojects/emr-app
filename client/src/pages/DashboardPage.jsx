@@ -185,24 +185,13 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         masterStats: data.masterStats || {}
       });
 
-      // Set report data for charts
+      // Set report data for charts - use real historical data
       setReportData({
-        patientData: [
-          { label: 'Mon', value1: data.patientStats?.new_patients || 0, value2: data.patientStats?.returning_patients || 0 },
-          { label: 'Tue', value1: Math.floor((data.patientStats?.new_patients || 0) * 1.2), value2: Math.floor((data.patientStats?.returning_patients || 0) * 1.1) },
-          { label: 'Wed', value1: Math.floor((data.patientStats?.new_patients || 0) * 1.1), value2: Math.floor((data.patientStats?.returning_patients || 0) * 1.2) },
-          { label: 'Thu', value1: Math.floor((data.patientStats?.new_patients || 0) * 1.3), value2: Math.floor((data.patientStats?.returning_patients || 0) * 1.1) },
-          { label: 'Fri', value1: Math.floor((data.patientStats?.new_patients || 0) * 1.4), value2: Math.floor((data.patientStats?.returning_patients || 0) * 1.3) },
-          { label: 'Sat', value1: Math.floor((data.patientStats?.new_patients || 0) * 1.2), value2: Math.floor((data.patientStats?.returning_patients || 0) * 0.9) },
-          { label: 'Sun', value1: Math.floor((data.patientStats?.new_patients || 0) * 1.1), value2: Math.floor((data.patientStats?.returning_patients || 0) * 0.8) }
+        patientData: data.patientTrend && data.patientTrend.length > 0 ? data.patientTrend : [
+          { label: 'Mon', value1: data.patientStats?.new_patients || 0, value2: data.patientStats?.returning_patients || 0 }
         ],
         financialData: data.revenueTrend && data.revenueTrend.length > 0 ? data.revenueTrend : [
-          { label: 'Jan', value: Math.floor((data.totalRevenue || 0) * 0.15) },
-          { label: 'Feb', value: Math.floor((data.totalRevenue || 0) * 0.17) },
-          { label: 'Mar', value: Math.floor((data.totalRevenue || 0) * 0.16) },
-          { label: 'Apr', value: Math.floor((data.totalRevenue || 0) * 0.18) },
-          { label: 'May', value: Math.floor((data.totalRevenue || 0) * 0.17) },
-          { label: 'Jun', value: Math.floor((data.totalRevenue || 0) * 0.17) }
+          { label: 'Current', value: data.totalRevenue || 0 }
         ],
         departmentDistribution: data.departmentDistribution || [],
         appointmentStatus: [
@@ -212,9 +201,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           { label: 'No-Show', value: data.appointmentStats?.no_show_today || 0 }
         ],
         bedOccupancy: [
-          { label: 'ICU', value: Math.floor((data.bedOccupancy?.occupied || 0) * 0.3) },
-          { label: 'General', value: Math.floor((data.bedOccupancy?.occupied || 0) * 0.7) }
-        ]
+          { label: 'Occupied', value: data.bedOccupancy?.occupied || 0 },
+          { label: 'Available', value: data.bedOccupancy?.available || 0 }
+        ],
       });
       
       setLoading(false);
