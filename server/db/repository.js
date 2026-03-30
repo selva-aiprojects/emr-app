@@ -201,13 +201,16 @@ export async function generateMRN(tenantId) {
   const tenantResult = await query('SELECT code FROM emr.tenants WHERE id = $1', [tenantId]);
   const tenantCode = tenantResult.rows[0]?.code || 'UNK';
 
-  const countResult = await query(
-    'SELECT COUNT(*) as count FROM emr.patients WHERE tenant_id = $1',
-    [tenantId]
+  // Get the highest numeric MRN for this tenant
+  const maxResult = await query(
+    'SELECT MAX(CASE WHEN mrn ~ $2 THEN CAST(SUBSTRING(mrn, LENGTH($2) + 1) AS INTEGER) ELSE 0 END) as max_num FROM emr.patients WHERE tenant_id = $1 AND mrn LIKE $2',
+    [tenantId, `${tenantCode}-%`]
   );
 
-  const count = parseInt(countResult.rows[0].count) + 1001;
-  return `${tenantCode}-${count}`;
+  const maxNum = parseInt(maxResult.rows[0].max_num) || 0;
+  const nextNum = maxNum + 1;
+  
+  return `${tenantCode}-${nextNum}`;
 }
 
 /**
