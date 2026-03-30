@@ -444,6 +444,15 @@ export default function AppLayout({
                 appointments={appointments}
               />
             </div>
+            <div className="lg:hidden w-full max-w-xs">
+              {/* Mobile search - only visible on mobile */}
+              <SmartSearch
+                onSearch={handleSearchResult}
+                placeholder="Search patients, records..."
+                patients={patients}
+                appointments={appointments}
+              />
+            </div>
             <NotificationSystem />
             <ActionMenu 
               trigger={

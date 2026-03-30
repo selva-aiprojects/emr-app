@@ -129,7 +129,7 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
 
             {/* Search Dropdown */}
             {isOpen && !selectedPatient && (searchTerm || patients.length > 0) && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-[300px] overflow-y-auto divide-y divide-slate-100">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-[9999] max-h-[300px] overflow-y-auto divide-y divide-slate-100">
                     {loading && <div className="p-4 text-center text-sm text-slate-500">🔍 Scouring clinical records...</div>}
 
                     {!loading && patients.length === 0 && searchTerm && (

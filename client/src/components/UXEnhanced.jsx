@@ -183,7 +183,7 @@ export function SmartSearch({
         className="h-11 w-full rounded-2xl border border-[var(--border)] bg-gray-50/50 pl-12 pr-4 text-sm text-[var(--text-main)] outline-none transition-all focus:bg-white focus:border-[var(--clinical-blue)]/30 focus:ring-4 focus:ring-[var(--clinical-blue)]/5"
       />
       {isFocused && searchResults.length > 0 && (
-        <div className="absolute right-0 top-full z-[200] mt-2 w-full rounded-2xl border border-[var(--border)] bg-white p-2 shadow-2xl animate-fade-in">
+        <div className="absolute right-0 top-full z-[9999] mt-2 w-full rounded-2xl border border-[var(--border)] bg-white p-2 shadow-2xl animate-fade-in">
           {searchResults.map((item) => (
             <button
               key={item.id}
