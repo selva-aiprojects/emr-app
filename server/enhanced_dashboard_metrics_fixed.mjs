@@ -1,7 +1,7 @@
 // Enhanced Dashboard Metrics with Real-time Data
 // This script fixes dashboard metrics to calculate from actual database records
 
-import { query } from './connection.js';
+import { query } from './db/connection.js';
 
 export async function getRealtimeDashboardMetrics(tenantId) {
   try {
