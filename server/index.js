@@ -11,7 +11,7 @@ import { hashPassword, comparePassword, generateToken } from './services/auth.se
 import { authenticate, requireRole, requireTenant, requirePermission, restrictPatientAccess, getPermissions } from './middleware/auth.middleware.js';
 import { evaluateAllFeatures, featureGate, moduleGate } from './middleware/featureFlag.middleware.js';
 import * as repo from './db/repository.js';
-import { createAuditLog } from './db/repository.js';
+import { createAuditLog, calculatePerformanceScore } from './db/repository.js';
 import * as ai from './services/ai.service.js';
 import * as notify from './services/notification.service.js';
 import pharmacyRoutes from '../pharmacy-service/src/routes/pharmacy.routes.js';
