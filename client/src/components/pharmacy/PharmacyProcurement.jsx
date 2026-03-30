@@ -212,7 +212,7 @@ export default function PharmacyProcurement({ tenant }) {
                                         <td className="px-4 py-3 font-semibold text-slate-800">{po.vendor_name}</td>
                                         <td className="px-4 py-3 text-slate-500">{po.creator_name || '—'}</td>
                                         <td className="px-4 py-3 text-right font-bold text-slate-700">
-                                            {po.total_amount ? `$${parseFloat(po.total_amount).toFixed(2)}` : '—'}
+                                            {po.total_amount ? `₹${parseFloat(po.total_amount).toFixed(2)}` : '—'}
                                         </td>
                                         <td className="px-4 py-3 text-center">
                                             <span className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase ${getStatusBadge(po.status)}`}>

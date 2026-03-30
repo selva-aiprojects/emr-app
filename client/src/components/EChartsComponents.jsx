@@ -109,7 +109,7 @@ export const RevenueTrendChart = ({ data = [] }) => {
       borderColor: HEALTHCARE_COLORS.border,
       borderWidth: 1,
       textStyle: { color: HEALTHCARE_COLORS.darkText, fontSize: 12, fontWeight: 500 },
-      formatter: (params) => params.length > 0 ? `${params[0].name}<br/>Revenue: $${params[0].value.toLocaleString()}` : ''
+      formatter: (params) => params.length > 0 ? `${params[0].name}<br/>Revenue: ₹${params[0].value.toLocaleString()}` : ''
     },
     grid: { top: 20, left: 50, right: 20, bottom: 40, containLabel: false, backgroundColor: 'transparent' },
     xAxis: {
@@ -122,7 +122,7 @@ export const RevenueTrendChart = ({ data = [] }) => {
     yAxis: {
       type: 'value',
       axisLine: { lineStyle: { color: HEALTHCARE_COLORS.grid } },
-      axisLabel: { color: HEALTHCARE_COLORS.mutedText, fontSize: 11, fontWeight: 500, formatter: (v) => `$${(v / 1000).toFixed(0)}K` },
+      axisLabel: { color: HEALTHCARE_COLORS.mutedText, fontSize: 11, fontWeight: 500, formatter: (v) => `₹${(v / 1000).toFixed(0)}K` },
       splitLine: { lineStyle: { color: HEALTHCARE_COLORS.grid, type: 'dashed' } }
     },
     series: [{

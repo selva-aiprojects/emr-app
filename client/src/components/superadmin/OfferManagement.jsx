@@ -164,7 +164,7 @@ export default function OfferManagement({ tenants = [] }) {
                   <div className="text-right">
                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Monthly Billing</p>
                      <div className="flex items-center justify-end gap-1">
-                        <span className="text-sm font-black text-slate-400">$</span>
+                        <span className="text-sm font-black text-slate-400">₹</span>
                         <input 
                           type="number" 
                           value={tier.price} 
