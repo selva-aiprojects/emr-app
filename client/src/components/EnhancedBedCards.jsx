@@ -103,7 +103,7 @@ export function EnhancedStatisticsCards({ selectedWard, currentBeds }) {
       {/* Ward Occupancy Card */}
       <article className="clinical-card bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 text-white border-none p-8 flex items-center justify-between relative overflow-hidden group">
         {/* Background Pattern */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"%23ffffff10\" fill-opacity=\"0.1\"%3E%3Crect x=\"0\" y=\"0\" width=\"30\" height=\"30\"/%3E%3Crect x=\"30\" y=\"30\" width=\"30\" height=\"30\"/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22%23ffffff10%22%20fill-opacity%3D%220.1%22%3E%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%2230%22%20height%3D%2230%22/%3E%3Crect%20x%3D%2230%22%20y%3D%2230%22%20width%3D%2230%22%20height%3D%2230%22/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
         
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-4">
@@ -143,7 +143,7 @@ export function EnhancedStatisticsCards({ selectedWard, currentBeds }) {
       {/* Available Capacity Card */}
       <article className="clinical-card bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-emerald-300 shadow-emerald-200/50 p-8 flex items-center justify-between relative overflow-hidden group">
         {/* Background Pattern */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"%2310b9810\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"25\"/%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"20\" fill=\"%2310b9815\" fill-opacity=\"0.2\"/%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"15\" fill=\"%2310b9820\" fill-opacity=\"0.3\"/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22%2310b9810%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%2225%22/%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%2220%22%20fill%3D%22%2310b9815%22%20fill-opacity%3D%220.2%22/%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%2215%22%20fill%3D%22%2310b9820%22%20fill-opacity%3D%220.3%22/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
         
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-4">
@@ -174,7 +174,7 @@ export function EnhancedStatisticsCards({ selectedWard, currentBeds }) {
       {/* Operational Status Card */}
       <article className="clinical-card bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 border-amber-300 shadow-amber-200/50 p-8 overflow-hidden relative group">
         {/* Background Pattern */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"%23f59e0b10\" fill-opacity=\"0.1\"%3E%3Cpolygon points=\"30,10 50,50 10,50\"/%3E%3Cpolygon points=\"30,20 45,45 15,45\"/%3E%3Cpolygon points=\"30,30 40,40 20,40\"/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22%23f59e0b10%22%20fill-opacity%3D%220.1%22%3E%3Cpolygon%20points%3D%2230%2C10%2050%2C50%2010%2C50%22/%3E%3Cpolygon%20points%3D%2230%2C20%2045%2C45%2015%2C45%22/%3E%3Cpolygon%20points%3D%2230%2C30%2040%2C40%2020%2C40%22/%3E%3C/g%3E%3C/svg%3E')] opacity-30"></div>
         
         <div className="relative z-10">
           <div className="flex items-center gap-4 mb-4">
