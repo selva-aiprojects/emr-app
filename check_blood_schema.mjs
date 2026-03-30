@@ -1,18 +1,18 @@
 import { query } from './server/db/connection.js';
 
-async function checkAmbulanceSchema() {
+async function checkBloodBankSchema() {
   try {
-    console.log('🔍 Checking ambulance table schema...');
+    console.log('🔍 Checking blood bank table schema...');
     
     const result = await query(`
       SELECT column_name, data_type, is_nullable, column_default
       FROM information_schema.columns 
-      WHERE table_name = 'ambulances' 
+      WHERE table_name = 'blood_units' 
       AND table_schema = 'emr'
       ORDER BY ordinal_position
     `);
 
-    console.log('📋 Ambulance table schema:');
+    console.log('📋 Blood Units table schema:');
     result.rows.forEach(col => {
       console.log(`  - ${col.column_name}: ${col.data_type} (${col.is_nullable}) ${col.column_default ? `DEFAULT ${col.column_default}` : ''}`);
     });
@@ -23,4 +23,4 @@ async function checkAmbulanceSchema() {
   process.exit(0);
 }
 
-checkAmbulanceSchema();
+checkBloodBankSchema();

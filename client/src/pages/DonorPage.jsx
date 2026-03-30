@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
+import { getBloodUnits, getBloodRequests } from '../api.js';
 import { 
   Droplet, 
   Users, 
@@ -18,21 +19,69 @@ export default function DonorPage({ tenant }) {
   const { showToast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [bloodUnits, setBloodUnits] = useState([]);
+  const [bloodRequests, setBloodRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const bloodInventory = [
-    { group: 'A+', units: 42, pulse: 'Stable', level: 85 },
-    { group: 'A-', units: 12, pulse: 'Low', level: 40 },
-    { group: 'B+', units: 38, pulse: 'Stable', level: 75 },
-    { group: 'O+', units: 65, pulse: 'Optimum', level: 95 },
-    { group: 'O-', units: 8, pulse: 'CRITICAL', level: 15 },
-    { group: 'AB+', units: 15, pulse: 'Stable', level: 60 },
-  ];
+  // Fetch blood bank data from backend
+  useEffect(() => {
+    const fetchBloodBankData = async () => {
+      try {
+        if (tenant?.id) {
+          const [unitsData, requestsData] = await Promise.all([
+            getBloodUnits(tenant.id),
+            getBloodRequests(tenant.id)
+          ]);
+          setBloodUnits(unitsData);
+          setBloodRequests(requestsData);
+        }
+      } catch (error) {
+        console.error('Error fetching blood bank data:', error);
+        showToast('Failed to load blood bank data', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const recentDonors = [
-    { id: 'D-9021', name: 'James Wilson', group: 'O+', date: '2026-03-25', vitals: 'Excellent', status: 'Cleared' },
-    { id: 'D-9022', name: 'Sarah Connor', group: 'A-', date: '2026-03-24', vitals: 'Stable', status: 'In Review' },
-    { id: 'D-9023', name: 'Michael Chen', group: 'AB+', date: '2026-03-23', vitals: 'Good', status: 'Cleared' },
-  ];
+    fetchBloodBankData();
+  }, [tenant?.id, showToast]);
+
+  // Transform blood units to inventory format
+  const bloodInventory = bloodUnits.reduce((acc, unit) => {
+    const existing = acc.find(item => item.group === unit.blood_group);
+    if (existing) {
+      existing.units += unit.volume_ml / 250; // Assuming 250ml per unit
+    } else {
+      acc.push({
+        group: unit.blood_group,
+        units: unit.volume_ml / 250,
+        pulse: unit.status === 'Available' ? 'Stable' : 'Low',
+        level: unit.volume_ml > 500 ? 85 : unit.volume_ml > 200 ? 60 : 30
+      });
+    }
+    return acc;
+  }, []);
+
+  // Transform blood requests to donor format
+  const recentDonors = bloodRequests.map(request => ({
+    id: `BR-${request.id}`,
+    name: request.patient_name || 'Unknown Patient',
+    group: request.requested_group,
+    date: new Date(request.created_at).toISOString().split('T')[0],
+    vitals: request.priority === 'urgent' ? 'Critical' : 'Stable',
+    status: request.status
+  }));
+
+  if (loading) {
+    return (
+      <div className="intelligence-hub slide-up flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Droplet className="w-12 h-12 text-red-300 animate-pulse mx-auto mb-4" />
+          <p className="text-slate-500">Loading Blood Bank Data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="intelligence-hub slide-up space-y-8 pb-20">
