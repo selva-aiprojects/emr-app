@@ -362,4 +362,5 @@ export default function BedManagementPage({ tenant }) {
          </main>
       </div>
     </div>
+  );
 }
