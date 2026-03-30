@@ -558,6 +558,8 @@ export default function App() {
                 });
                 if (newPatient && newPatient.id) {
                   setActivePatientId(newPatient.id);
+                  // Add new patient to the patients list
+                  setPatients(prev => [...prev, newPatient]);
                   setView('emr');
                 }
               });

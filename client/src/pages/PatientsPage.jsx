@@ -47,9 +47,9 @@ export default function PatientsPage({
   const effectivePatients = useMemo(() => {
     // Priority 1: If page > 0, always use our paginated local state
     if (page > 0) return patients;
-    // Priority 2: Use patientsProp if available (provides instant sync from App.jsx refreshes)
-    if (Array.isArray(patientsProp) && patientsProp.length > 0) return patientsProp;
-    // Priority 3: Fallback to our local registry state
+    // Priority 2: Use patientsProp if available AND we don't have newer local data
+    if (Array.isArray(patientsProp) && patientsProp.length > 0 && patients.length === 0) return patientsProp;
+    // Priority 3: Use our local registry state (includes newly created patients)
     return patients;
   }, [patientsProp, patients, page]);
 
@@ -100,8 +100,9 @@ export default function PatientsPage({
         dob: fd.get('dob'),
         gender: fd.get('gender')
       });
-      const data = await api.getPatients(tenantId);
-      setPatients(data || []);
+      // Immediately refresh patient list to show newly created patient
+      const refreshedData = await api.getPatients(tenantId);
+      setPatients(refreshedData || []);
       setActiveTab('registry');
       e.target.reset();
       showToast({ message: 'Patient registered successfully!', type: 'success' });
