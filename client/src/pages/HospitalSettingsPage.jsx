@@ -175,24 +175,23 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
                     <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">Or specify a remote URL:</p>
                     <input 
                       type="url" 
-                      className="input-field text-xs py-2 bg-slate-50/50"
-                      value={form.logo_url?.startsWith('data:') ? '' : form.logo_url}
-                      onChange={e => setForm({...form, logo_url: e.target.value})}
-                      placeholder="https://example.com/logo.png"
-                    />
                   </div>
                 </div>
-              </div>
-            </section>
 
-            {/* Visual Theme */}
-            <section className="clinical-card p-8">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-                  <Palette size={20} />
+                <div className="flex justify-end pt-4">
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="clinical-btn bg-slate-900 text-white px-10 py-4 rounded-2xl shadow-2xl hover:bg-slate-700 transition-all disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Synchronizing...</>
+                    ) : (
+                      <><Save className="w-4 h-4 mr-2" /> Persist Changes</>
+                    )}
+                  </button>
                 </div>
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Visual Aesthetic</h3>
+              </form>
                   <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Theme Colors & Primary Tones</p>
                 </div>
               </div>
@@ -307,6 +306,4 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
       </div>
     </div>
   );
-} finally {
-    // Component cleanup if needed
 }
