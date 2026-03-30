@@ -211,6 +211,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
                         onChange={e => setForm({...form, primaryColor: e.target.value})}
                         className="w-10 h-10 rounded-lg cursor-pointer border-none p-0"
                       />
+                      />
                    </div>
                    <div 
                     className="h-2 rounded-full w-full opacity-20 mb-2" 
@@ -227,6 +228,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
                         value={form.accentColor}
                         onChange={e => setForm({...form, accentColor: e.target.value})}
                         className="w-10 h-10 rounded-lg cursor-pointer border-none p-0"
+                      />
                       />
                    </div>
                    <div 
