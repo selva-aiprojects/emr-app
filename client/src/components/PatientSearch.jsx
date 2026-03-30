@@ -102,7 +102,7 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
                         <input
                             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all text-sm bg-white"
                             type="text"
-                            placeholder="Find by Name, MRN, Phone..."
+                            placeholder="Search by Name, MRN, or Phone..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             onFocus={() => setIsOpen(true)}

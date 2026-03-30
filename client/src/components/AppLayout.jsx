@@ -435,7 +435,8 @@ export default function AppLayout({
                <img src="/healthezee-logo.png" alt="Healthezee Logo" className="h-7 w-auto object-contain" />
             </div>
             
-            <div className="hidden md:block w-64">
+            <div className="hidden lg:block w-64">
+              {/* Only show sidebar search on desktop, hide on mobile to prevent overlap with top search */}
               <SmartSearch
                 onSearch={handleSearchResult}
                 placeholder="Search patients, records..."

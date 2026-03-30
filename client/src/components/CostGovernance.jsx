@@ -55,7 +55,7 @@ export default function CostGovernance({ tenant }) {
 
             <div className="space-y-1">
                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Avg Yield / Patient</span>
-               <div className="text-lg font-black text-indigo-600 tabular-nums">$14.20</div>
+               <div className="text-lg font-black text-indigo-600 tabular-nums">₹14.20</div>
                <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Fiscal Performance</div>
             </div>
          </div>

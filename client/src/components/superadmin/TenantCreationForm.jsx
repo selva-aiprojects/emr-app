@@ -3,9 +3,9 @@ import { Building2, Hash, Globe, Palette, Star, Loader2, CheckCircle, AlertCircl
 
 const TIERS = [
   { value: 'Free',         label: 'Free',         color: '#8b5cf6', icon: '🆓', price: 'Free' },
-  { value: 'Basic',        label: 'Basic',        color: '#6b7280', icon: '🩺', price: '$99/mo' },
-  { value: 'Professional', label: 'Professional', color: '#3b82f6', icon: '⭐', price: '$299/mo' },
-  { value: 'Enterprise',   label: 'Enterprise',   color: '#10b981', icon: '🏢', price: '$599/mo' },
+  { value: 'Basic',        label: 'Basic',        color: '#6b7280', icon: '🩺', price: '₹99/mo' },
+  { value: 'Professional', label: 'Professional', color: '#3b82f6', icon: '⭐', price: '₹299/mo' },
+  { value: 'Enterprise',   label: 'Enterprise',   color: '#10b981', icon: '🏢', price: '₹599/mo' },
 ];
 
 const INITIAL = {

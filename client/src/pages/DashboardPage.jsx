@@ -407,7 +407,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
               <DollarSign className="w-6 h-6 text-[var(--clinical-accent)]" />
             </div>
           </div>
-          <p className="metric-value">${(realtimeMetrics.totalRevenue / 1000).toFixed(0)}K</p>
+          <p className="metric-value">{currency(realtimeMetrics.totalRevenue)}</p>
           <p className="metric-label">Revenue</p>
           <span className="text-xs text-indigo-600 font-medium">+15%</span>
         </div>
