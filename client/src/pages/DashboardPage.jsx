@@ -22,7 +22,6 @@ import {
   Activity,
   AlertCircle,
   ShieldCheck,
-  DollarSign,
   HeartPulse,
   TrendingUp,
   Stethoscope,
@@ -404,7 +403,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         <div className="dashboard-card metric-card">
           <div className="flex justify-center mb-3">
             <div className="bg-[var(--clinical-accent-soft)] rounded-lg p-3">
-              <DollarSign className="w-6 h-6 text-[var(--clinical-accent)]" />
+              <span className="text-2xl font-bold text-[var(--clinical-accent)]">₹</span>
             </div>
           </div>
           <p className="metric-value">{currency(realtimeMetrics.totalRevenue)}</p>
@@ -549,7 +548,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px]">
            <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Revenue Mix by Service</h3>
-              <DollarSign className="w-4 h-4 text-emerald-500" />
+              <span className="text-2xl font-bold text-emerald-500">₹</span>
            </div>
            <div className="h-[280px]">
               <TopServicesChart data={realtimeMetrics.topServices} />
