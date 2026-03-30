@@ -7,7 +7,7 @@ export const moduleMeta = {
   dashboard: { title: 'Hospital Dashboard', subtitle: 'Operational overview' },
   doctor_workspace: { title: 'Doctor Desk', subtitle: 'Today\'s appointments & patients' },
   patients: { title: 'Patients', subtitle: 'Demographics and clinical folders' },
-  appointments: { title: 'OPD Scheduling', subtitle: 'Doctor bookings & walk-ins' },
+  appointments: { title: 'Appointments', subtitle: 'Doctor bookings & walk-ins' },
   emr: { title: 'Clinical Desk / EMR', subtitle: 'Diagnosis, history & e-Prescription' },
   inpatient: { title: 'IPD / Bed Management', subtitle: 'Admission, Ward & Bed tracker' },
   pharmacy: { title: 'Pharmacy / Drug Dispensing', subtitle: 'Prescription fulfillment' },
