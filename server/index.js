@@ -1701,6 +1701,385 @@ app.patch('/api/appointments/:id/reschedule', requireTenant, moduleGate('appoint
 });
 
 // =====================================================
+// DOCTOR AVAILABILITY FOR OPD SCHEDULING
+// =====================================================
+
+// Get doctor availability slots
+app.get('/api/doctor-availability', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { doctorId, date } = req.query;
+    
+    const availability = await repo.getDoctorAvailability(
+      req.tenantId, 
+      doctorId || null, 
+      date || null
+    );
+    
+    res.json(availability);
+  } catch (error) {
+    console.error('Error fetching doctor availability:', error);
+    res.status(500).json({ error: 'Failed to fetch doctor availability' });
+  }
+});
+
+// Get available slots for a specific doctor on a specific date
+app.get('/api/doctor-availability/slots', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { doctorId, date } = req.query;
+    
+    if (!doctorId || !date) {
+      return res.status(400).json({ error: 'doctorId and date are required' });
+    }
+    
+    const slots = await repo.getAvailableSlotsForDoctor(req.tenantId, doctorId, date);
+    res.json(slots);
+  } catch (error) {
+    console.error('Error fetching available slots:', error);
+    res.status(500).json({ error: 'Failed to fetch available slots' });
+  }
+});
+
+// Get doctor availability calendar
+app.get('/api/doctor-availability/calendar', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { doctorId, startDate, endDate } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+    
+    const calendar = await repo.getDoctorAvailabilityCalendar(
+      req.tenantId, 
+      doctorId || null, 
+      startDate, 
+      endDate
+    );
+    
+    res.json(calendar);
+  } catch (error) {
+    console.error('Error fetching availability calendar:', error);
+    res.status(500).json({ error: 'Failed to fetch availability calendar' });
+  }
+});
+
+// Create doctor availability (for admin/doctor to set their schedule)
+app.post('/api/doctor-availability', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { doctorId, date, startTime, endTime, slotDurationMinutes = 15, maxAppointments = 1, notes } = req.body;
+    
+    if (!doctorId || !date || !startTime || !endTime) {
+      return res.status(400).json({ error: 'doctorId, date, startTime, and endTime are required' });
+    }
+    
+    // Generate slots automatically
+    const slots = await repo.generateDoctorAvailabilitySlots({
+      tenantId: req.tenantId,
+      doctorId,
+      date,
+      startTime,
+      endTime,
+      slotDurationMinutes,
+      maxAppointmentsPerSlot: maxAppointments,
+      createdBy: req.user.id
+    });
+    
+    res.status(201).json(slots);
+  } catch (error) {
+    console.error('Error creating doctor availability:', error);
+    res.status(500).json({ error: 'Failed to create doctor availability' });
+  }
+});
+
+// Update doctor availability slot
+app.patch('/api/doctor-availability/:id', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const availability = await repo.updateDoctorAvailabilitySlot(id, req.tenantId, updates);
+    
+    if (!availability) {
+      return res.status(404).json({ error: 'Availability slot not found' });
+    }
+    
+    res.json(availability);
+  } catch (error) {
+    console.error('Error updating doctor availability:', error);
+    res.status(500).json({ error: 'Failed to update doctor availability' });
+  }
+});
+
+// Delete doctor availability slot
+app.delete('/api/doctor-availability/:id', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const availability = await repo.deleteDoctorAvailability(id, req.tenantId);
+    
+    if (!availability) {
+      return res.status(404).json({ error: 'Availability slot not found' });
+    }
+    
+    res.json({ message: 'Availability slot deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting doctor availability:', error);
+    if (error.message.includes('Cannot delete availability slot with existing appointments')) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to delete doctor availability' });
+  }
+});
+
+// =====================================================
+// OPD TOKEN QUEUE SYSTEM
+// =====================================================
+
+// Generate new OPD token
+app.post('/api/opd-tokens', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { patientId, departmentId, doctorId, priority = 'general', visitType = 'new', chiefComplaint, appointmentId } = req.body;
+
+    if (!patientId || !departmentId) {
+      return res.status(400).json({ error: 'patientId and departmentId are required' });
+    }
+
+    const token = await repo.generateOPDToken({
+      tenantId: req.tenantId,
+      patientId,
+      departmentId,
+      doctorId,
+      priority,
+      visitType,
+      chiefComplaint,
+      appointmentId,
+      createdBy: req.user.id
+    });
+
+    await createAuditLog({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'opd.token.create',
+      entityName: 'opd_token',
+      entityId: token.id,
+      details: { tokenNumber: token.full_token, priority, visitType }
+    });
+
+    res.status(201).json(token);
+  } catch (error) {
+    console.error('Error creating OPD token:', error);
+    res.status(500).json({ error: 'Failed to create OPD token' });
+  }
+});
+
+// Get OPD tokens with filters
+app.get('/api/opd-tokens', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { status, departmentId, doctorId, date, priority } = req.query;
+    
+    const tokens = await repo.getOPDTokens(req.tenantId, {
+      status,
+      departmentId,
+      doctorId,
+      date,
+      priority
+    });
+
+    res.json(tokens);
+  } catch (error) {
+    console.error('Error fetching OPD tokens:', error);
+    res.status(500).json({ error: 'Failed to fetch OPD tokens' });
+  }
+});
+
+// Get specific OPD token
+app.get('/api/opd-tokens/:id', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const token = await repo.getOPDTokenById(id, req.tenantId);
+    
+    if (!token) {
+      return res.status(404).json({ error: 'Token not found' });
+    }
+
+    res.json(token);
+  } catch (error) {
+    console.error('Error fetching OPD token:', error);
+    res.status(500).json({ error: 'Failed to fetch OPD token' });
+  }
+});
+
+// Update token status
+app.patch('/api/opd-tokens/:id/status', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, doctorId } = req.body;
+
+    const validStatuses = ['waiting', 'called', 'in_progress', 'completed', 'cancelled', 'no_show'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const token = await repo.updateTokenStatus(id, req.tenantId, status, { doctorId });
+
+    if (!token) {
+      return res.status(404).json({ error: 'Token not found' });
+    }
+
+    await createAuditLog({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'opd.token.update_status',
+      entityName: 'opd_token',
+      entityId: id,
+      details: { oldStatus: token.status, newStatus: status }
+    });
+
+    res.json(token);
+  } catch (error) {
+    console.error('Error updating token status:', error);
+    res.status(500).json({ error: 'Failed to update token status' });
+  }
+});
+
+// Call next token
+app.post('/api/opd-tokens/call-next', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { departmentId, doctorId } = req.body;
+
+    if (!departmentId) {
+      return res.status(400).json({ error: 'departmentId is required' });
+    }
+
+    const token = await repo.callNextToken(req.tenantId, departmentId, doctorId);
+
+    if (!token) {
+      return res.status(404).json({ error: 'No tokens waiting in queue' });
+    }
+
+    await createAuditLog({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'opd.token.call_next',
+      entityName: 'opd_token',
+      entityId: token.id,
+      details: { tokenNumber: token.full_token }
+    });
+
+    res.json(token);
+  } catch (error) {
+    console.error('Error calling next token:', error);
+    res.status(500).json({ error: 'Failed to call next token' });
+  }
+});
+
+// Get queue statistics
+app.get('/api/opd-tokens/stats', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { departmentId, doctorId, date } = req.query;
+    
+    const stats = await repo.getTokenQueueStats(req.tenantId, {
+      departmentId,
+      doctorId,
+      date
+    });
+
+    res.json(stats);
+  } catch (error) {
+    console.error('Error fetching token stats:', error);
+    res.status(500).json({ error: 'Failed to fetch token statistics' });
+  }
+});
+
+// Get active tokens by department
+app.get('/api/opd-tokens/department-summary', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const departmentStats = await repo.getActiveTokensByDepartment(req.tenantId);
+    res.json(departmentStats);
+  } catch (error) {
+    console.error('Error fetching department summary:', error);
+    res.status(500).json({ error: 'Failed to fetch department summary' });
+  }
+});
+
+// Update token vitals
+app.post('/api/opd-tokens/:id/vitals', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const vitalsData = req.body;
+
+    const token = await repo.updateTokenVitals(id, req.tenantId, {
+      ...vitalsData,
+      createdBy: req.user.id
+    });
+
+    if (!token) {
+      return res.status(404).json({ error: 'Token not found' });
+    }
+
+    await createAuditLog({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'opd.token.vitals_recorded',
+      entityName: 'opd_token',
+      entityId: id,
+      details: vitalsData
+    });
+
+    res.json(token);
+  } catch (error) {
+    console.error('Error updating token vitals:', error);
+    res.status(500).json({ error: 'Failed to update token vitals' });
+  }
+});
+
+// Get token history for patient
+app.get('/api/opd-tokens/patient/:patientId/history', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { limit = 10 } = req.query;
+
+    const history = await repo.getTokenHistory(req.tenantId, patientId, parseInt(limit));
+    res.json(history);
+  } catch (error) {
+    console.error('Error fetching token history:', error);
+    res.status(500).json({ error: 'Failed to fetch token history' });
+  }
+});
+
+// Delete OPD token
+app.delete('/api/opd-tokens/:id', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const token = await repo.deleteOPDToken(id, req.tenantId);
+
+    if (!token) {
+      return res.status(404).json({ error: 'Token not found' });
+    }
+
+    await createAuditLog({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'opd.token.delete',
+      entityName: 'opd_token',
+      entityId: id,
+      details: { tokenNumber: token.full_token }
+    });
+
+    res.json({ message: 'Token deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting OPD token:', error);
+    res.status(500).json({ error: 'Failed to delete OPD token' });
+  }
+});
+
+// =====================================================
 // ENCOUNTERS (EMR)
 // =====================================================
 

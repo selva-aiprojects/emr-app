@@ -2106,6 +2106,71 @@ export default {
   createBloodUnit,
   getBloodRequests,
   createBloodRequest,
+
+  // Doctor Availability
+  getDoctorAvailability,
+  createDoctorAvailability,
+  generateDoctorAvailabilitySlots,
+  updateDoctorAvailabilitySlot,
+  incrementAppointmentCount,
+  decrementAppointmentCount,
+  getAvailableSlotsForDoctor,
+  getDoctorAvailabilityCalendar,
+  deleteDoctorAvailability,
+
+  // OPD Token Queue System
+  generateOPDToken,
+  getOPDTokens,
+  getOPDTokenById,
+  updateTokenStatus,
+  callNextToken,
+  getTokenQueueStats,
+  getActiveTokensByDepartment,
+  updateTokenVitals,
+  getTokenHistory,
+  deleteOPDToken,
+
+  // OPD Billing System
+  createOPDBill,
+  getOPDBills,
+  getOPDBillById,
+  updateOPDBill,
+  addBillItem,
+  updateBillStatus,
+  processPayment,
+  getBillingStats,
+  getServicePackages,
+  createServicePackage,
+  applyServicePackage,
+
+  // Communication System
+  createCommunicationTemplate,
+  getCommunicationTemplates,
+  sendCommunication,
+  getPatientCommunications,
+  updateCommunicationStatus,
+  getCommunicationSettings,
+  updateCommunicationSettings,
+  scheduleAppointmentReminder,
+  sendTokenCallNotification,
+  sendBillingReminder,
+
+  // Exotel SMS Integration
+  createExotelConfiguration,
+  getExotelConfigurations,
+  updateExotelConfiguration,
+  createSMSCampaign,
+  getSMSCampaigns,
+  sendExotelSMS,
+  getExotelSMSLogs,
+  createExotelNumberPool,
+  getExotelNumberPools,
+  processExotelWebhook,
+  processExotelDeliveryReport,
+  retryFailedSMS,
+  getPendingRetries,
+  processScheduledCampaigns,
+  getExotelSMSStats,
 };
 
 /**
@@ -2309,5 +2374,8167 @@ export async function createBloodRequest({ tenantId, patientId, encounterId, req
   `;
   const result = await query(sql, [tenantId, patientId, encounterId, requested_group, component, units_requested, priority || 'Normal', requested_by]);
   return result.rows[0];
+}
+
+// =====================================================
+// DOCTOR AVAILABILITY FOR OPD SCHEDULING
+// =====================================================
+
+export async function getDoctorAvailability(tenantId, doctorId, date) {
+  const sql = `
+    SELECT 
+      id,
+      doctor_id,
+      date,
+      start_time,
+      end_time,
+      slot_duration_minutes,
+      is_available,
+      max_appointments,
+      current_appointments,
+      status,
+      notes
+    FROM emr.doctor_availability 
+    WHERE tenant_id = $1 
+      AND ($2::uuid IS NULL OR doctor_id = $2)
+      AND ($3::date IS NULL OR date = $3)
+      AND is_available = true
+      AND status = 'available'
+      AND current_appointments < max_appointments
+    ORDER BY date, start_time
+  `;
+  
+  const result = await query(sql, [tenantId, doctorId, date]);
+  return result.rows;
+}
+
+export async function createDoctorAvailability({ tenantId, doctorId, date, startTime, endTime, slotDurationMinutes = 15, maxAppointments = 1, notes, createdBy }) {
+  const sql = `
+    INSERT INTO emr.doctor_availability (
+      tenant_id, doctor_id, date, start_time, end_time, 
+      slot_duration_minutes, max_appointments, notes, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, doctorId, date, startTime, endTime, 
+    slotDurationMinutes, maxAppointments, notes, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function generateDoctorAvailabilitySlots({ tenantId, doctorId, date, startTime, endTime, slotDurationMinutes = 15, maxAppointmentsPerSlot = 1, createdBy }) {
+  const slots = [];
+  const current = new Date(`${date} ${startTime}`);
+  const end = new Date(`${date} ${endTime}`);
+  
+  while (current < end) {
+    const slotEndTime = new Date(current.getTime() + slotDurationMinutes * 60000);
+    
+    if (slotEndTime <= end) {
+      const sql = `
+        INSERT INTO emr.doctor_availability (
+          tenant_id, doctor_id, date, start_time, end_time, 
+          slot_duration_minutes, max_appointments, created_by
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING *
+      `;
+      
+      const result = await query(sql, [
+        tenantId, 
+        doctorId, 
+        date, 
+        current.toTimeString().slice(0, 5), // HH:MM format
+        slotEndTime.toTimeString().slice(0, 5), // HH:MM format
+        slotDurationMinutes, 
+        maxAppointmentsPerSlot, 
+        createdBy
+      ]);
+      
+      slots.push(result.rows[0]);
+    }
+    
+    current.setTime(current.getTime() + slotDurationMinutes * 60000);
+  }
+  
+  return slots;
+}
+
+export async function updateDoctorAvailabilitySlot(availabilityId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 2;
+  
+  if (updates.is_available !== undefined) {
+    fields.push(`is_available = $${paramIndex++}`);
+    values.push(updates.is_available);
+  }
+  
+  if (updates.status !== undefined) {
+    fields.push(`status = $${paramIndex++}`);
+    values.push(updates.status);
+  }
+  
+  if (updates.max_appointments !== undefined) {
+    fields.push(`max_appointments = $${paramIndex++}`);
+    values.push(updates.max_appointments);
+  }
+  
+  if (updates.notes !== undefined) {
+    fields.push(`notes = $${paramIndex++}`);
+    values.push(updates.notes);
+  }
+  
+  if (fields.length === 0) {
+    throw new Error('No valid fields to update');
+  }
+  
+  const sql = `
+    UPDATE emr.doctor_availability 
+    SET ${fields.join(', ')}, updated_at = NOW()
+    WHERE id = $1 AND tenant_id = $${paramIndex}
+    RETURNING *
+  `;
+  
+  values.unshift(availabilityId);
+  values.push(tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function incrementAppointmentCount(availabilityId, tenantId) {
+  const sql = `
+    UPDATE emr.doctor_availability 
+    SET current_appointments = current_appointments + 1,
+        updated_at = NOW()
+    WHERE id = $1 
+      AND tenant_id = $2 
+      AND current_appointments < max_appointments
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [availabilityId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// OPD TOKEN QUEUE SYSTEM
+// =====================================================
+
+export async function generateOPDToken({ tenantId, patientId, departmentId, doctorId, priority = 'general', visitType = 'new', chiefComplaint, appointmentId, createdBy }) {
+  // Get next token number
+  const nextTokenSql = `
+    SELECT get_next_token_number($1, $2) as token_number
+  `;
+  const tokenResult = await query(nextTokenSql, [tenantId, departmentId]);
+  const tokenNumber = tokenResult.rows[0].token_number;
+  
+  // Create the token
+  const sql = `
+    INSERT INTO emr.opd_tokens (
+      tenant_id, patient_id, token_number, token_prefix, status, priority,
+      department_id, doctor_id, appointment_id, visit_type, chief_complaint, created_by
+    )
+    VALUES ($1, $2, $3, 'OPD', $4, $5, $6, $7, $8, $9, $10, $11)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, tokenNumber, 'waiting', priority,
+    departmentId, doctorId, appointmentId, visitType, chiefComplaint, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getOPDTokens(tenantId, filters = {}) {
+  const { status, departmentId, doctorId, date, priority } = filters;
+  
+  let sql = `
+    SELECT 
+      t.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.age,
+      p.gender,
+      d.name as department_name,
+      u.name as doctor_name,
+      a.start as appointment_time
+    FROM emr.opd_tokens t
+    LEFT JOIN emr.patients p ON t.patient_id = p.id
+    LEFT JOIN emr.departments d ON t.department_id = d.id
+    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    WHERE t.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND t.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (departmentId) {
+    sql += ` AND t.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND t.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  if (date) {
+    sql += ` AND DATE(t.created_at) = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  if (priority) {
+    sql += ` AND t.priority = $${paramIndex++}`;
+    params.push(priority);
+  }
+  
+  sql += ` ORDER BY 
+    CASE 
+      WHEN t.priority = 'urgent' THEN 1
+      WHEN t.priority = 'senior_citizen' THEN 2
+      WHEN t.priority = 'follow_up' THEN 3
+      ELSE 4
+    END,
+    t.token_number ASC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function getOPDTokenById(tokenId, tenantId) {
+  const sql = `
+    SELECT 
+      t.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.age,
+      p.gender,
+      p.blood_group,
+      p.address,
+      d.name as department_name,
+      u.name as doctor_name,
+      a.start as appointment_time
+    FROM emr.opd_tokens t
+    LEFT JOIN emr.patients p ON t.patient_id = p.id
+    LEFT JOIN emr.departments d ON t.department_id = d.id
+    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    WHERE t.id = $1 AND t.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [tokenId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// OPD BILLING SYSTEM
+// =====================================================
+
+export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
+  // Generate bill number
+  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
+  const billNumberResult = await query(billNumberSql, [tenantId]);
+  const billNumber = billNumberResult.rows[0].bill_number;
+  
+  const sql = `
+    INSERT INTO emr.opd_bills (
+      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
+      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
+      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
+      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
+      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
+      notes, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
+            $6, $7, $8, $9, $10, $11,
+            $12, $13, $14, $15, $16,
+            $17, $18, $19, $20, $21, $22,
+            $23, $24, $25, $26, $27)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, tokenId, appointmentId, billNumber,
+    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
+    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
+    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
+    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
+    notes, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getOPDBills(tenantId, filters = {}) {
+  const { status, departmentId, doctorId, date, patientId } = filters;
+  
+  let sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    WHERE b.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND b.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (departmentId) {
+    sql += ` AND b.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND b.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  if (date) {
+    sql += ` AND b.bill_date = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  if (patientId) {
+    sql += ` AND b.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function getOPDBillById(billId, tenantId) {
+  const sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number,
+      a.start as appointment_time
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    WHERE b.id = $1 AND b.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [billId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// EXOTEL SMS PROVIDER INTEGRATION
+// =====================================================
+
+export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_configurations (
+      tenant_id, account_sid, api_key, api_token, subdomain, from_number,
+      webhook_url, delivery_report_webhook, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, false, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber,
+    webhookUrl, deliveryReportWebhook, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelConfigurations(tenantId, isActive = true) {
+  const sql = `
+    SELECT * FROM emr.exotel_configurations
+    WHERE tenant_id = $1 AND is_active = $2
+    ORDER BY is_default DESC, created_at DESC
+  `;
+  
+  const result = await query(sql, [tenantId, isActive]);
+  return result.rows;
+}
+
+export async function updateExotelConfiguration(configId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_configurations
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(configId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_sms_campaigns (
+      tenant_id, campaign_name, campaign_type, description, template_id,
+      target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
+      status, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, campaignName, campaignType, description, templateId,
+    targetAudience, JSON.stringify(filters), scheduleType, scheduledAt, 
+    recurringPattern ? JSON.stringify(recurringPattern) : null, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getSMSCampaigns(tenantId, filters = {}) {
+  const { status, campaignType, startDate, endDate } = filters;
+  
+  let sql = `
+    SELECT 
+      c.*,
+      ct.template_name,
+      ct.message_content,
+      COUNT(l.id) as sent_count,
+      COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
+      COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
+    FROM emr.exotel_sms_campaigns c
+    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    WHERE c.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND c.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (campaignType) {
+    sql += ` AND c.campaign_type = $${paramIndex++}`;
+    params.push(campaignType);
+  }
+  
+  if (startDate) {
+    sql += ` AND c.scheduled_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND c.scheduled_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  sql += ` GROUP BY c.id, ct.template_name, ct.message_content ORDER BY c.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendExotelSMS({ tenantId, toNumber, messageContent, messageType = 'transactional', priority = 1, campaignId = null, communicationId = null, externalId = null }) {
+  // Get available Exotel number
+  const availableNumberSql = `SELECT get_available_exotel_number($1, $2) as from_number`;
+  const numberResult = await query(availableNumberSql, [tenantId, messageType]);
+  const fromNumber = numberResult.rows[0].from_number;
+  
+  if (!fromNumber) {
+    throw new Error('No available Exotel number found for this message type');
+  }
+  
+  // Get Exotel configuration
+  const configSql = `
+    SELECT account_sid, api_key, api_token, subdomain 
+    FROM emr.exotel_configurations 
+    WHERE tenant_id = $1 AND is_active = true 
+    ORDER BY is_default DESC 
+    LIMIT 1
+  `;
+  const configResult = await query(configSql, [tenantId]);
+  const config = configResult.rows[0];
+  
+  if (!config) {
+    throw new Error('No active Exotel configuration found');
+  }
+  
+  // Create SMS log entry
+  const logSql = `
+    INSERT INTO emr.exotel_sms_logs (
+      tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
+      message_content, message_type, priority, status, external_id, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'queued', $10, NOW())
+    RETURNING *
+  `;
+  
+  const logResult = await query(logSql, [
+    tenantId, campaignId, communicationId, config.account_sid, fromNumber, toNumber,
+    messageContent, messageType, priority, externalId
+  ]);
+  
+  const smsLog = logResult.rows[0];
+  
+  // Update number pool usage
+  await query(`SELECT update_exotel_number_usage($1, $2, 1)`, [tenantId, fromNumber]);
+  
+  // Send SMS via Exotel API
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: config.account_sid,
+      apiKey: config.api_key,
+      apiToken: config.api_token,
+      subdomain: config.subdomain,
+      fromNumber,
+      toNumber,
+      messageContent,
+      priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with Exotel response
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      webhookData: exotelResponse.webhookData
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      const communicationStatus = exotelResponse.status === 'sent' ? 'sent' : 'failed';
+      await updateCommunicationStatus(communicationId, tenantId, communicationStatus, {
+        externalId: exotelResponse.messageSid,
+        provider: 'exotel',
+        failedReason: exotelResponse.errorMessage
+      });
+    }
+    
+    return { success: true, smsLog, exotelResponse };
+  } catch (error) {
+    // Update log with error
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'API_ERROR',
+      errorMessage: error.message
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      await updateCommunicationStatus(communicationId, tenantId, 'failed', {
+        provider: 'exotel',
+        failedReason: error.message
+      });
+    }
+    
+    return { success: false, error: error.message, smsLog };
+  }
+}
+
+export async function sendExotelAPIRequest({ accountSid, apiKey, apiToken, subdomain, fromNumber, toNumber, messageContent, priority, externalId }) {
+  // Exotel SMS API endpoint
+  const apiUrl = `https://${subdomain}.exotel.in/v1/Accounts/${accountSid}/Sms/send`;
+  
+  const authString = Buffer.from(`${accountSid}:${apiToken}`).toString('base64');
+  
+  const payload = {
+    SmsSid: externalId,
+    SenderId: fromNumber,
+    To: toNumber,
+    MessageBody: messageContent,
+    Priority: priority,
+    Type: 'txn', // Transactional SMS
+    DltTemplateId: '1207160012345678901' // Template ID for DLT compliance
+  };
+  
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  const responseData = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(`Exotel API Error: ${responseData.message || 'Unknown error'}`);
+  }
+  
+  return {
+    messageSid: responseData.SmsSid,
+    status: responseData.Status === 'sent' ? 'sent' : 'queued',
+    sentTimestamp: responseData.Date,
+    cost: responseData.Cost || 0,
+    webhookData: responseData
+  };
+}
+
+export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_sms_logs
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(smsLogId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getExotelSMSLogs(tenantId, filters = {}) {
+  const { status, toNumber, fromNumber, startDate, endDate, campaignId, limit = 100 } = filters;
+  
+  let sql = `
+    SELECT 
+      l.*,
+      c.campaign_name,
+      ct.template_name,
+      p.name as patient_name,
+      p.phone as patient_phone
+    FROM emr.exotel_sms_logs l
+    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    WHERE l.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND l.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (toNumber) {
+    sql += ` AND l.to_number = $${paramIndex++}`;
+    params.push(toNumber);
+  }
+  
+  if (fromNumber) {
+    sql += ` AND l.from_number = $${paramIndex++}`;
+    params.push(fromNumber);
+  }
+  
+  if (startDate) {
+    sql += ` AND l.created_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND l.created_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  if (campaignId) {
+    sql += ` AND l.campaign_id = $${paramIndex++}`;
+    params.push(campaignId);
+  }
+  
+  sql += ` ORDER BY l.created_at DESC LIMIT $${paramIndex++}`;
+  params.push(limit);
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_number_pools (
+      tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
+      daily_limit, monthly_limit, priority, is_active, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, poolName, phoneNumber, numberType, departmentId, doctorId,
+    dailyLimit, monthlyLimit, priority, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelNumberPools(tenantId, filters = {}) {
+  const { isActive = true, numberType, departmentId, doctorId } = filters;
+  
+  let sql = `
+    SELECT 
+      np.*,
+      d.name as department_name,
+      u.name as doctor_name,
+      ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
+      ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
+    FROM emr.exotel_number_pools np
+    LEFT JOIN emr.departments d ON np.department_id = d.id
+    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    WHERE np.tenant_id = $1 AND np.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (numberType) {
+    sql += ` AND np.number_type = $${paramIndex++}`;
+    params.push(numberType);
+  }
+  
+  if (departmentId) {
+    sql += ` AND np.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND np.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  sql += ` ORDER BY np.priority ASC, np.pool_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function processExotelWebhook(tenantId, eventData) {
+  const sql = `
+    INSERT INTO emr.exotel_webhook_events (
+      tenant_id, event_type, event_data, message_sid, account_sid, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, eventData.eventType || 'unknown', 
+    JSON.stringify(eventData), 
+    eventData.SmsSid, 
+    eventData.AccountSid
+  ]);
+  
+  const webhookEvent = result.rows[0];
+  
+  // Process delivery reports
+  if (eventData.Status) {
+    await processExotelDeliveryReport(tenantId, eventData);
+  }
+  
+  return webhookEvent;
+}
+
+export async function processExotelDeliveryReport(tenantId, deliveryData) {
+  const { SmsSid, Status, ErrorCode, ErrorMessage, Date, Cost } = deliveryData;
+  
+  // Update SMS log with delivery status
+  const updateData = {
+    status: Status.toLowerCase(),
+    deliveryStatus: Status.toLowerCase(),
+    deliveryTimestamp: Date ? new Date(Date) : null,
+    errorCode: ErrorCode,
+    errorMessage: ErrorMessage,
+    cost: Cost || 0,
+    webhookData: JSON.stringify(deliveryData)
+  };
+  
+  // Find the SMS log entry
+  const findSql = `
+    SELECT id, communication_id, to_number 
+    FROM emr.exotel_sms_logs 
+    WHERE message_sid = $1 AND tenant_id = $2
+  `;
+  
+  const findResult = await query(findSql, [SmsSid, tenantId]);
+  const smsLog = findResult.rows[0];
+  
+  if (smsLog) {
+    await updateExotelSMSLog(smsLog.id, tenantId, updateData);
+    
+    // Update communication status if linked
+    if (smsLog.communication_id) {
+      const communicationStatus = Status.toLowerCase() === 'delivered' ? 'delivered' : 
+                              Status.toLowerCase() === 'failed' ? 'failed' : 'sent';
+      
+      await updateCommunicationStatus(smsLog.communication_id, tenantId, communicationStatus, {
+        externalId: SmsSid,
+        provider: 'exotel',
+        failedReason: ErrorMessage
+      });
+    }
+    
+    // Schedule retry for failed messages
+    if (Status.toLowerCase() === 'failed' && ErrorCode !== '404') {
+      await scheduleSMSRetry(smsLog.id);
+    }
+  }
+}
+
+export async function scheduleSMSRetry(smsLogId) {
+  const sql = `SELECT schedule_sms_retry($1)`;
+  await query(sql, [smsLogId]);
+}
+
+export async function getExotelSMSStats(tenantId, filters = {}) {
+  const { startDate, endDate, messageType, fromNumber } = filters;
+  
+  let sql = `SELECT get_exotel_sms_stats($1, $2, $3)`;
+  const params = [tenantId, startDate, endDate];
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function retryFailedSMS(tenantId, smsLogId) {
+  const sql = `
+    SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
+    FROM emr.exotel_sms_logs l
+    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
+  `;
+  
+  const result = await query(sql, [smsLogId, tenantId]);
+  const smsLog = result.rows[0];
+  
+  if (!smsLog) {
+    throw new Error('SMS log not found or not in failed status');
+  }
+  
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: smsLog.account_sid,
+      apiKey: smsLog.api_key,
+      apiToken: smsLog.api_token,
+      subdomain: smsLog.subdomain,
+      fromNumber: smsLog.from_number,
+      toNumber: smsLog.to_number,
+      messageContent: smsLog.message_content,
+      priority: smsLog.priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with retry result
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: true, exotelResponse };
+  } catch (error) {
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'RETRY_FAILED',
+      errorMessage: error.message,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getPendingRetries(tenantId) {
+  const sql = `
+    SELECT 
+      l.*,
+      EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
+    FROM emr.exotel_sms_logs l
+    WHERE l.tenant_id = $1 
+      AND l.status = 'queued' 
+      AND l.next_retry_at IS NOT NULL 
+      AND l.next_retry_at <= NOW() + INTERVAL '1 hour'
+      AND l.retry_count < l.max_retries
+    ORDER BY l.next_retry_at ASC
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function processScheduledCampaigns(tenantId) {
+  const sql = `
+    SELECT c.* 
+    FROM emr.exotel_sms_campaigns c
+    WHERE c.tenant_id = $1 
+      AND c.status = 'scheduled' 
+      AND c.scheduled_at <= NOW()
+    ORDER BY c.scheduled_at ASC
+  `;
+  
+  const campaigns = await query(sql, [tenantId]);
+  
+  for (const campaign of campaigns) {
+    // Update campaign status to active
+    await query(`
+      UPDATE emr.exotel_sms_campaigns 
+      SET status = 'active', updated_at = NOW()
+      WHERE id = $1
+    `, [campaign.id]);
+    
+    // Process campaign based on target audience
+    await processSMSCampaign(campaign, tenantId);
+  }
+}
+
+export async function processSMSCampaign(campaign, tenantId) {
+  const { targetAudience, filters } = campaign;
+  
+  let targetNumbers = [];
+  
+  switch (targetAudience) {
+    case 'all_patients':
+      const patientsSql = `
+        SELECT DISTINCT phone FROM emr.patients 
+        WHERE tenant_id = $1 AND phone IS NOT NULL
+      `;
+      const patientsResult = await query(patientsSql, [tenantId]);
+      targetNumbers = patientsResult.rows.map(p => p.phone);
+      break;
+      
+    case 'specific_patients':
+      if (filters && filters.patientIds) {
+        const specificPatientsSql = `
+          SELECT phone FROM emr.patients 
+          WHERE tenant_id = $1 AND id = ANY($2)
+        `;
+        const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
+        targetNumbers = specificResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'department':
+      if (filters && filters.departmentId) {
+        const deptPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const deptResult = await query(deptPatientsSql, [tenantId, filters.departmentId]);
+        targetNumbers = deptResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'doctor':
+      if (filters && filters.doctorId) {
+        const doctorPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const doctorResult = await query(doctorPatientsSql, [tenantId, filters.doctorId]);
+        targetNumbers = doctorResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    default:
+      if (filters && filters.phoneNumbers) {
+        targetNumbers = filters.phoneNumbers;
+      }
+      break;
+  }
+  
+  // Send SMS to all target numbers
+  for (const phoneNumber of targetNumbers) {
+    await sendExotelSMS({
+      tenantId,
+      toNumber: phoneNumber,
+      messageContent: campaign.message_content || 'Campaign message',
+      messageType: 'promotional',
+      campaignId: campaign.id
+    });
+  }
+  
+  // Update campaign statistics
+  await query(`
+    UPDATE emr.exotel_sms_campaigns 
+    SET total_recipients = $1, updated_at = NOW()
+    WHERE id = $2
+  `, [targetNumbers.length, campaign.id]);
+}
+
+export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
+  const sql = `
+    INSERT INTO emr.opd_bill_items (
+      tenant_id, bill_id, service_type, service_name, service_code, description,
+      quantity, unit_price, discount_amount, tax_amount, total_amount,
+      doctor_id, department_id, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, $11,
+            $12, $13, $14)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, billId, serviceType, serviceName, serviceCode, description,
+    quantity, unitPrice, discountAmount, taxAmount, totalAmount,
+    doctorId, departmentId, createdBy
+  ]);
+  
+  // Update bill totals
+  await query(`SELECT calculate_bill_totals($1)`, [billId]);
+  
+  return result.rows[0];
+}
+
+export async function updateBillStatus(billId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (additionalData.paymentMethod) {
+    fields.push('payment_method');
+    values.push(additionalData.paymentMethod);
+  }
+  
+  if (additionalData.paidAmount) {
+    fields.push('paid_amount');
+    values.push(additionalData.paidAmount);
+  }
+  
+  if (additionalData.paymentDate) {
+    fields.push('payment_date');
+    values.push(additionalData.paymentDate);
+  }
+  
+  if (additionalData.transactionId) {
+    fields.push('transaction_id');
+    values.push(additionalData.transactionId);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.opd_bills 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(billId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getBillingStats(tenantId, filters = {}) {
+  const { departmentId, doctorId, date = new Date().toISOString().split('T')[0] } = filters;
+  
+  const sql = `
+    SELECT 
+      COUNT(*) as total_bills,
+      COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_bills,
+      COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bills,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_bills,
+      SUM(total_amount) as total_revenue,
+      SUM(paid_amount) as total_paid,
+      SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
+      AVG(total_amount) as avg_bill_amount
+    FROM emr.opd_bills
+    WHERE tenant_id = $1 
+      AND bill_date = $2
+      AND ($3::uuid IS NULL OR department_id = $3)
+      AND ($4::uuid IS NULL OR doctor_id = $4)
+  `;
+  
+  const result = await query(sql, [tenantId, date, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getServicePackages(tenantId, filters = {}) {
+  const { isActive = true, departmentId } = filters;
+  
+  let sql = `
+    SELECT 
+      sp.*,
+      d.name as department_name,
+      COUNT(pi.id) as item_count
+    FROM emr.opd_service_packages sp
+    LEFT JOIN emr.departments d ON sp.department_id = d.id
+    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    WHERE sp.tenant_id = $1
+      AND sp.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (departmentId) {
+    sql += ` AND sp.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  sql += ` GROUP BY sp.id, d.name ORDER BY sp.name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+// =====================================================
+// COMMUNICATION SYSTEM
+// =====================================================
+
+export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
+  const sql = `
+    INSERT INTO emr.communication_templates (
+      tenant_id, template_name, template_type, purpose, subject, message_content,
+      variables, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, templateName, templateType, purpose, subject, messageContent,
+    JSON.stringify(variables || []), isActive, isDefault, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getCommunicationTemplates(tenantId, filters = {}) {
+  const { templateType, purpose, isActive = true } = filters;
+  
+  let sql = `
+    SELECT * FROM emr.communication_templates
+    WHERE tenant_id = $1 AND is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (templateType) {
+    sql += ` AND template_type = $${paramIndex++}`;
+    params.push(templateType);
+  }
+  
+  if (purpose) {
+    sql += ` AND purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  sql += ` ORDER BY template_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendCommunication({ tenantId, patientId, communicationType, purpose, messageContent, recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId, templateId, variablesUsed, scheduledFor, isAutomated = false, priority = 1, createdBy }) {
+  const sql = `
+    SELECT create_communication(
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    ) as communication_id
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, communicationType, purpose, messageContent,
+    recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId,
+    templateId, variablesUsed ? JSON.stringify(variablesUsed) : null, scheduledFor, isAutomated, priority, createdBy
+  ]);
+  
+  return result.rows[0].communication_id;
+}
+
+export async function getPatientCommunications(tenantId, filters = {}) {
+  const { patientId, communicationType, purpose, status, date } = filters;
+  
+  let sql = `
+    SELECT 
+      pc.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      ct.template_name,
+      a.start as appointment_time,
+      t.full_token as token_number,
+      b.bill_number
+    FROM emr.patient_communications pc
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
+    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    WHERE pc.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (patientId) {
+    sql += ` AND pc.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  if (communicationType) {
+    sql += ` AND pc.communication_type = $${paramIndex++}`;
+    params.push(communicationType);
+  }
+  
+  if (purpose) {
+    sql += ` AND pc.purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  if (status) {
+    sql += ` AND pc.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (date) {
+    sql += ` AND DATE(pc.created_at) = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  sql += ` ORDER BY pc.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function updateCommunicationStatus(communicationId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (status === 'sent') {
+    fields.push('sent_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'delivered') {
+    fields.push('delivered_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'read') {
+    fields.push('read_at');
+    values.push(new Date());
+  }
+  
+  if (additionalData.externalId) {
+    fields.push('external_id');
+    values.push(additionalData.externalId);
+  }
+  
+  if (additionalData.provider) {
+    fields.push('provider');
+    values.push(additionalData.provider);
+  }
+  
+  if (additionalData.failedReason) {
+    fields.push('failed_reason');
+    values.push(additionalData.failedReason);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.patient_communications 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(communicationId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function scheduleAppointmentReminder({ tenantId, appointmentId, patientId, patientPhone, patientEmail, appointmentTime, doctorName, departmentName }) {
+  const variables = {
+    patient_name: patientId, // Will be replaced with actual patient name
+    appointment_time: appointmentTime,
+    doctor_name: doctorName,
+    department_name: departmentName,
+    hospital_name: 'Hospital' // Get from settings
+  };
+  
+  const messageContent = `Reminder: Your appointment is scheduled for ${appointmentTime} with Dr. ${doctorName} at ${departmentName}. Please arrive 15 minutes early.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'appointment_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    appointmentId,
+    variablesUsed: variables,
+    scheduledFor: new Date(appointmentTime).getTime() - (24 * 60 * 60 * 1000), // 24 hours before
+    isAutomated: true,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendTokenCallNotification({ tenantId, tokenId, patientId, patientPhone, patientEmail, tokenNumber, departmentName, doctorName }) {
+  const variables = {
+    patient_name: patientId,
+    token_number: tokenNumber,
+    department_name: departmentName,
+    doctor_name: doctorName,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Your token ${tokenNumber} has been called. Please proceed to ${departmentName}. Dr. ${doctorName} is ready to see you.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'token_call',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    tokenId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 2,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendBillingReminder({ tenantId, billId, patientId, patientPhone, patientEmail, billNumber, totalAmount, dueDate }) {
+  const variables = {
+    patient_name: patientId,
+    bill_number: billNumber,
+    total_amount: totalAmount,
+    due_date: dueDate,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Reminder: Bill ${billNumber} of amount ${totalAmount} is due on ${dueDate}. Please complete the payment to avoid any inconvenience.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'billing_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    billId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 1,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function updateTokenStatus(tokenId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  // Add timestamp fields based on status
+  if (status === 'called') {
+    fields.push('last_called_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'in_progress') {
+    fields.push('consultation_started_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'completed') {
+    fields.push('consultation_completed_at');
+    values.push(new Date());
+  }
+  
+  // Add called_count increment
+  if (status === 'called') {
+    fields.push('called_count');
+    values.push(`(SELECT COALESCE(called_count, 0) + 1 FROM emr.opd_tokens WHERE id = $1)`);
+  }
+  
+  // Add additional data
+  if (additionalData.doctorId) {
+    fields.push('doctor_id');
+    values.push(additionalData.doctorId);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.opd_tokens 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(tokenId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function callNextToken(tenantId, departmentId, doctorId = null) {
+  const sql = `
+    UPDATE emr.opd_tokens 
+    SET status = 'called',
+        last_called_at = NOW(),
+        called_count = COALESCE(called_count, 0) + 1,
+        updated_at = NOW()
+    WHERE id = (
+      SELECT id FROM emr.opd_tokens 
+      WHERE tenant_id = $1 
+        AND ($2::uuid IS NULL OR department_id = $2)
+        AND ($3::uuid IS NULL OR doctor_id = $3)
+        AND status = 'waiting'
+      ORDER BY 
+        CASE 
+          WHEN priority = 'urgent' THEN 1
+          WHEN priority = 'senior_citizen' THEN 2
+          WHEN priority = 'follow_up' THEN 3
+          ELSE 4
+        END,
+        token_number ASC
+      LIMIT 1
+    )
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [tenantId, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getTokenQueueStats(tenantId, filters = {}) {
+  const { departmentId, doctorId, date = new Date().toISOString().split('T')[0] } = filters;
+  
+  const sql = `
+    SELECT 
+      COUNT(*) as total_tokens,
+      COUNT(CASE WHEN status = 'waiting' THEN 1 END) as waiting,
+      COUNT(CASE WHEN status = 'called' THEN 1 END) as called,
+      COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
+      COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled,
+      COUNT(CASE WHEN status = 'no_show' THEN 1 END) as no_show,
+      AVG(EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60) as avg_consultation_time_minutes
+    FROM emr.opd_tokens
+    WHERE tenant_id = $1 
+      AND DATE(created_at) = $2
+      AND ($3::uuid IS NULL OR department_id = $3)
+      AND ($4::uuid IS NULL OR doctor_id = $4)
+  `;
+  
+  const result = await query(sql, [tenantId, date, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getActiveTokensByDepartment(tenantId) {
+  const sql = `
+    SELECT 
+      d.id as department_id,
+      d.name as department_name,
+      COUNT(CASE WHEN t.status = 'waiting' THEN 1 END) as waiting_count,
+      COUNT(CASE WHEN t.status = 'called' THEN 1 END) as called_count,
+      COUNT(CASE WHEN t.status = 'in_progress' THEN 1 END) as in_progress_count,
+      MAX(t.token_number) as last_token,
+      t.full_token as current_token,
+      t.status as current_token_status
+    FROM emr.departments d
+    LEFT JOIN emr.opd_tokens t ON d.id = t.department_id 
+      AND t.tenant_id = $1 
+      AND DATE(t.created_at) = CURRENT_DATE
+      AND t.status IN ('waiting', 'called', 'in_progress')
+    WHERE d.tenant_id = $1
+    GROUP BY d.id, d.name, t.full_token, t.status
+    ORDER BY d.name
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
+  const sql = `
+    UPDATE emr.opd_tokens 
+    SET vitals_recorded = true,
+        updated_at = NOW()
+    WHERE id = $1 AND tenant_id = $2
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [tokenId, tenantId]);
+  
+  // Create vitals record if needed
+  if (result.rows[0]) {
+    const vitalsSql = `
+      INSERT INTO emr.vitals (
+        tenant_id, patient_id, encounter_id, blood_pressure_systolic,
+        blood_pressure_diastolic, heart_rate, temperature, 
+        oxygen_saturation, weight, height, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING *
+    `;
+    
+    await query(vitalsSql, [
+      tenantId, 
+      result.rows[0].patient_id, 
+      null, // No encounter yet
+      vitalsData.bloodPressureSystolic,
+      vitalsData.bloodPressureDiastolic,
+      vitalsData.heartRate,
+      vitalsData.temperature,
+      vitalsData.oxygenSaturation,
+      vitalsData.weight,
+      vitalsData.height,
+      vitalsData.createdBy
+    ]);
+  }
+  
+  return result.rows[0];
+}
+
+export async function getTokenHistory(tenantId, patientId, limit = 10) {
+  const sql = `
+    SELECT 
+      t.*,
+      d.name as department_name,
+      u.name as doctor_name,
+      EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60 as consultation_duration_minutes
+    FROM emr.opd_tokens t
+    LEFT JOIN emr.departments d ON t.department_id = d.id
+    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    WHERE t.tenant_id = $1 AND t.patient_id = $2
+    ORDER BY t.created_at DESC
+    LIMIT $3
+  `;
+  
+  const result = await query(sql, [tenantId, patientId, limit]);
+  return result.rows;
+}
+
+export async function deleteOPDToken(tokenId, tenantId) {
+  const sql = `
+    DELETE FROM emr.opd_tokens 
+    WHERE id = $1 AND tenant_id = $2
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [tokenId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// OPD BILLING SYSTEM
+// =====================================================
+
+export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
+  // Generate bill number
+  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
+  const billNumberResult = await query(billNumberSql, [tenantId]);
+  const billNumber = billNumberResult.rows[0].bill_number;
+  
+  const sql = `
+    INSERT INTO emr.opd_bills (
+      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
+      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
+      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
+      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
+      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
+      notes, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
+            $6, $7, $8, $9, $10, $11,
+            $12, $13, $14, $15, $16,
+            $17, $18, $19, $20, $21, $22,
+            $23, $24, $25, $26, $27)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, tokenId, appointmentId, billNumber,
+    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
+    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
+    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
+    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
+    notes, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getOPDBills(tenantId, filters = {}) {
+  const { status, departmentId, doctorId, date, patientId } = filters;
+  
+  let sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    WHERE b.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND b.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (departmentId) {
+    sql += ` AND b.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND b.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  if (date) {
+    sql += ` AND b.bill_date = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  if (patientId) {
+    sql += ` AND b.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function getOPDBillById(billId, tenantId) {
+  const sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number,
+      a.start as appointment_time
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    WHERE b.id = $1 AND b.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [billId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// EXOTEL SMS PROVIDER INTEGRATION
+// =====================================================
+
+export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_configurations (
+      tenant_id, account_sid, api_key, api_token, subdomain, from_number,
+      webhook_url, delivery_report_webhook, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, false, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber,
+    webhookUrl, deliveryReportWebhook, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelConfigurations(tenantId, isActive = true) {
+  const sql = `
+    SELECT * FROM emr.exotel_configurations
+    WHERE tenant_id = $1 AND is_active = $2
+    ORDER BY is_default DESC, created_at DESC
+  `;
+  
+  const result = await query(sql, [tenantId, isActive]);
+  return result.rows;
+}
+
+export async function updateExotelConfiguration(configId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_configurations
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(configId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_sms_campaigns (
+      tenant_id, campaign_name, campaign_type, description, template_id,
+      target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
+      status, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, campaignName, campaignType, description, templateId,
+    targetAudience, JSON.stringify(filters), scheduleType, scheduledAt, 
+    recurringPattern ? JSON.stringify(recurringPattern) : null, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getSMSCampaigns(tenantId, filters = {}) {
+  const { status, campaignType, startDate, endDate } = filters;
+  
+  let sql = `
+    SELECT 
+      c.*,
+      ct.template_name,
+      ct.message_content,
+      COUNT(l.id) as sent_count,
+      COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
+      COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
+    FROM emr.exotel_sms_campaigns c
+    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    WHERE c.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND c.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (campaignType) {
+    sql += ` AND c.campaign_type = $${paramIndex++}`;
+    params.push(campaignType);
+  }
+  
+  if (startDate) {
+    sql += ` AND c.scheduled_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND c.scheduled_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  sql += ` GROUP BY c.id, ct.template_name, ct.message_content ORDER BY c.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendExotelSMS({ tenantId, toNumber, messageContent, messageType = 'transactional', priority = 1, campaignId = null, communicationId = null, externalId = null }) {
+  // Get available Exotel number
+  const availableNumberSql = `SELECT get_available_exotel_number($1, $2) as from_number`;
+  const numberResult = await query(availableNumberSql, [tenantId, messageType]);
+  const fromNumber = numberResult.rows[0].from_number;
+  
+  if (!fromNumber) {
+    throw new Error('No available Exotel number found for this message type');
+  }
+  
+  // Get Exotel configuration
+  const configSql = `
+    SELECT account_sid, api_key, api_token, subdomain 
+    FROM emr.exotel_configurations 
+    WHERE tenant_id = $1 AND is_active = true 
+    ORDER BY is_default DESC 
+    LIMIT 1
+  `;
+  const configResult = await query(configSql, [tenantId]);
+  const config = configResult.rows[0];
+  
+  if (!config) {
+    throw new Error('No active Exotel configuration found');
+  }
+  
+  // Create SMS log entry
+  const logSql = `
+    INSERT INTO emr.exotel_sms_logs (
+      tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
+      message_content, message_type, priority, status, external_id, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'queued', $10, NOW())
+    RETURNING *
+  `;
+  
+  const logResult = await query(logSql, [
+    tenantId, campaignId, communicationId, config.account_sid, fromNumber, toNumber,
+    messageContent, messageType, priority, externalId
+  ]);
+  
+  const smsLog = logResult.rows[0];
+  
+  // Update number pool usage
+  await query(`SELECT update_exotel_number_usage($1, $2, 1)`, [tenantId, fromNumber]);
+  
+  // Send SMS via Exotel API
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: config.account_sid,
+      apiKey: config.api_key,
+      apiToken: config.api_token,
+      subdomain: config.subdomain,
+      fromNumber,
+      toNumber,
+      messageContent,
+      priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with Exotel response
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      webhookData: exotelResponse.webhookData
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      const communicationStatus = exotelResponse.status === 'sent' ? 'sent' : 'failed';
+      await updateCommunicationStatus(communicationId, tenantId, communicationStatus, {
+        externalId: exotelResponse.messageSid,
+        provider: 'exotel',
+        failedReason: exotelResponse.errorMessage
+      });
+    }
+    
+    return { success: true, smsLog, exotelResponse };
+  } catch (error) {
+    // Update log with error
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'API_ERROR',
+      errorMessage: error.message
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      await updateCommunicationStatus(communicationId, tenantId, 'failed', {
+        provider: 'exotel',
+        failedReason: error.message
+      });
+    }
+    
+    return { success: false, error: error.message, smsLog };
+  }
+}
+
+export async function sendExotelAPIRequest({ accountSid, apiKey, apiToken, subdomain, fromNumber, toNumber, messageContent, priority, externalId }) {
+  // Exotel SMS API endpoint
+  const apiUrl = `https://${subdomain}.exotel.in/v1/Accounts/${accountSid}/Sms/send`;
+  
+  const authString = Buffer.from(`${accountSid}:${apiToken}`).toString('base64');
+  
+  const payload = {
+    SmsSid: externalId,
+    SenderId: fromNumber,
+    To: toNumber,
+    MessageBody: messageContent,
+    Priority: priority,
+    Type: 'txn', // Transactional SMS
+    DltTemplateId: '1207160012345678901' // Template ID for DLT compliance
+  };
+  
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  const responseData = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(`Exotel API Error: ${responseData.message || 'Unknown error'}`);
+  }
+  
+  return {
+    messageSid: responseData.SmsSid,
+    status: responseData.Status === 'sent' ? 'sent' : 'queued',
+    sentTimestamp: responseData.Date,
+    cost: responseData.Cost || 0,
+    webhookData: responseData
+  };
+}
+
+export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_sms_logs
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(smsLogId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getExotelSMSLogs(tenantId, filters = {}) {
+  const { status, toNumber, fromNumber, startDate, endDate, campaignId, limit = 100 } = filters;
+  
+  let sql = `
+    SELECT 
+      l.*,
+      c.campaign_name,
+      ct.template_name,
+      p.name as patient_name,
+      p.phone as patient_phone
+    FROM emr.exotel_sms_logs l
+    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    WHERE l.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND l.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (toNumber) {
+    sql += ` AND l.to_number = $${paramIndex++}`;
+    params.push(toNumber);
+  }
+  
+  if (fromNumber) {
+    sql += ` AND l.from_number = $${paramIndex++}`;
+    params.push(fromNumber);
+  }
+  
+  if (startDate) {
+    sql += ` AND l.created_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND l.created_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  if (campaignId) {
+    sql += ` AND l.campaign_id = $${paramIndex++}`;
+    params.push(campaignId);
+  }
+  
+  sql += ` ORDER BY l.created_at DESC LIMIT $${paramIndex++}`;
+  params.push(limit);
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_number_pools (
+      tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
+      daily_limit, monthly_limit, priority, is_active, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, poolName, phoneNumber, numberType, departmentId, doctorId,
+    dailyLimit, monthlyLimit, priority, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelNumberPools(tenantId, filters = {}) {
+  const { isActive = true, numberType, departmentId, doctorId } = filters;
+  
+  let sql = `
+    SELECT 
+      np.*,
+      d.name as department_name,
+      u.name as doctor_name,
+      ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
+      ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
+    FROM emr.exotel_number_pools np
+    LEFT JOIN emr.departments d ON np.department_id = d.id
+    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    WHERE np.tenant_id = $1 AND np.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (numberType) {
+    sql += ` AND np.number_type = $${paramIndex++}`;
+    params.push(numberType);
+  }
+  
+  if (departmentId) {
+    sql += ` AND np.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND np.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  sql += ` ORDER BY np.priority ASC, np.pool_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function processExotelWebhook(tenantId, eventData) {
+  const sql = `
+    INSERT INTO emr.exotel_webhook_events (
+      tenant_id, event_type, event_data, message_sid, account_sid, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, eventData.eventType || 'unknown', 
+    JSON.stringify(eventData), 
+    eventData.SmsSid, 
+    eventData.AccountSid
+  ]);
+  
+  const webhookEvent = result.rows[0];
+  
+  // Process delivery reports
+  if (eventData.Status) {
+    await processExotelDeliveryReport(tenantId, eventData);
+  }
+  
+  return webhookEvent;
+}
+
+export async function processExotelDeliveryReport(tenantId, deliveryData) {
+  const { SmsSid, Status, ErrorCode, ErrorMessage, Date, Cost } = deliveryData;
+  
+  // Update SMS log with delivery status
+  const updateData = {
+    status: Status.toLowerCase(),
+    deliveryStatus: Status.toLowerCase(),
+    deliveryTimestamp: Date ? new Date(Date) : null,
+    errorCode: ErrorCode,
+    errorMessage: ErrorMessage,
+    cost: Cost || 0,
+    webhookData: JSON.stringify(deliveryData)
+  };
+  
+  // Find the SMS log entry
+  const findSql = `
+    SELECT id, communication_id, to_number 
+    FROM emr.exotel_sms_logs 
+    WHERE message_sid = $1 AND tenant_id = $2
+  `;
+  
+  const findResult = await query(findSql, [SmsSid, tenantId]);
+  const smsLog = findResult.rows[0];
+  
+  if (smsLog) {
+    await updateExotelSMSLog(smsLog.id, tenantId, updateData);
+    
+    // Update communication status if linked
+    if (smsLog.communication_id) {
+      const communicationStatus = Status.toLowerCase() === 'delivered' ? 'delivered' : 
+                              Status.toLowerCase() === 'failed' ? 'failed' : 'sent';
+      
+      await updateCommunicationStatus(smsLog.communication_id, tenantId, communicationStatus, {
+        externalId: SmsSid,
+        provider: 'exotel',
+        failedReason: ErrorMessage
+      });
+    }
+    
+    // Schedule retry for failed messages
+    if (Status.toLowerCase() === 'failed' && ErrorCode !== '404') {
+      await scheduleSMSRetry(smsLog.id);
+    }
+  }
+}
+
+export async function scheduleSMSRetry(smsLogId) {
+  const sql = `SELECT schedule_sms_retry($1)`;
+  await query(sql, [smsLogId]);
+}
+
+export async function getExotelSMSStats(tenantId, filters = {}) {
+  const { startDate, endDate, messageType, fromNumber } = filters;
+  
+  let sql = `SELECT get_exotel_sms_stats($1, $2, $3)`;
+  const params = [tenantId, startDate, endDate];
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function retryFailedSMS(tenantId, smsLogId) {
+  const sql = `
+    SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
+    FROM emr.exotel_sms_logs l
+    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
+  `;
+  
+  const result = await query(sql, [smsLogId, tenantId]);
+  const smsLog = result.rows[0];
+  
+  if (!smsLog) {
+    throw new Error('SMS log not found or not in failed status');
+  }
+  
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: smsLog.account_sid,
+      apiKey: smsLog.api_key,
+      apiToken: smsLog.api_token,
+      subdomain: smsLog.subdomain,
+      fromNumber: smsLog.from_number,
+      toNumber: smsLog.to_number,
+      messageContent: smsLog.message_content,
+      priority: smsLog.priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with retry result
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: true, exotelResponse };
+  } catch (error) {
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'RETRY_FAILED',
+      errorMessage: error.message,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getPendingRetries(tenantId) {
+  const sql = `
+    SELECT 
+      l.*,
+      EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
+    FROM emr.exotel_sms_logs l
+    WHERE l.tenant_id = $1 
+      AND l.status = 'queued' 
+      AND l.next_retry_at IS NOT NULL 
+      AND l.next_retry_at <= NOW() + INTERVAL '1 hour'
+      AND l.retry_count < l.max_retries
+    ORDER BY l.next_retry_at ASC
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function processScheduledCampaigns(tenantId) {
+  const sql = `
+    SELECT c.* 
+    FROM emr.exotel_sms_campaigns c
+    WHERE c.tenant_id = $1 
+      AND c.status = 'scheduled' 
+      AND c.scheduled_at <= NOW()
+    ORDER BY c.scheduled_at ASC
+  `;
+  
+  const campaigns = await query(sql, [tenantId]);
+  
+  for (const campaign of campaigns) {
+    // Update campaign status to active
+    await query(`
+      UPDATE emr.exotel_sms_campaigns 
+      SET status = 'active', updated_at = NOW()
+      WHERE id = $1
+    `, [campaign.id]);
+    
+    // Process campaign based on target audience
+    await processSMSCampaign(campaign, tenantId);
+  }
+}
+
+export async function processSMSCampaign(campaign, tenantId) {
+  const { targetAudience, filters } = campaign;
+  
+  let targetNumbers = [];
+  
+  switch (targetAudience) {
+    case 'all_patients':
+      const patientsSql = `
+        SELECT DISTINCT phone FROM emr.patients 
+        WHERE tenant_id = $1 AND phone IS NOT NULL
+      `;
+      const patientsResult = await query(patientsSql, [tenantId]);
+      targetNumbers = patientsResult.rows.map(p => p.phone);
+      break;
+      
+    case 'specific_patients':
+      if (filters && filters.patientIds) {
+        const specificPatientsSql = `
+          SELECT phone FROM emr.patients 
+          WHERE tenant_id = $1 AND id = ANY($2)
+        `;
+        const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
+        targetNumbers = specificResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'department':
+      if (filters && filters.departmentId) {
+        const deptPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const deptResult = await query(deptPatientsSql, [tenantId, filters.departmentId]);
+        targetNumbers = deptResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'doctor':
+      if (filters && filters.doctorId) {
+        const doctorPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const doctorResult = await query(doctorPatientsSql, [tenantId, filters.doctorId]);
+        targetNumbers = doctorResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    default:
+      if (filters && filters.phoneNumbers) {
+        targetNumbers = filters.phoneNumbers;
+      }
+      break;
+  }
+  
+  // Send SMS to all target numbers
+  for (const phoneNumber of targetNumbers) {
+    await sendExotelSMS({
+      tenantId,
+      toNumber: phoneNumber,
+      messageContent: campaign.message_content || 'Campaign message',
+      messageType: 'promotional',
+      campaignId: campaign.id
+    });
+  }
+  
+  // Update campaign statistics
+  await query(`
+    UPDATE emr.exotel_sms_campaigns 
+    SET total_recipients = $1, updated_at = NOW()
+    WHERE id = $2
+  `, [targetNumbers.length, campaign.id]);
+}
+
+export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
+  const sql = `
+    INSERT INTO emr.opd_bill_items (
+      tenant_id, bill_id, service_type, service_name, service_code, description,
+      quantity, unit_price, discount_amount, tax_amount, total_amount,
+      doctor_id, department_id, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, $11,
+            $12, $13, $14)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, billId, serviceType, serviceName, serviceCode, description,
+    quantity, unitPrice, discountAmount, taxAmount, totalAmount,
+    doctorId, departmentId, createdBy
+  ]);
+  
+  // Update bill totals
+  await query(`SELECT calculate_bill_totals($1)`, [billId]);
+  
+  return result.rows[0];
+}
+
+export async function updateBillStatus(billId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (additionalData.paymentMethod) {
+    fields.push('payment_method');
+    values.push(additionalData.paymentMethod);
+  }
+  
+  if (additionalData.paidAmount) {
+    fields.push('paid_amount');
+    values.push(additionalData.paidAmount);
+  }
+  
+  if (additionalData.paymentDate) {
+    fields.push('payment_date');
+    values.push(additionalData.paymentDate);
+  }
+  
+  if (additionalData.transactionId) {
+    fields.push('transaction_id');
+    values.push(additionalData.transactionId);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.opd_bills 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(billId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getBillingStats(tenantId, filters = {}) {
+  const { departmentId, doctorId, date = new Date().toISOString().split('T')[0] } = filters;
+  
+  const sql = `
+    SELECT 
+      COUNT(*) as total_bills,
+      COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_bills,
+      COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bills,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_bills,
+      SUM(total_amount) as total_revenue,
+      SUM(paid_amount) as total_paid,
+      SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
+      AVG(total_amount) as avg_bill_amount
+    FROM emr.opd_bills
+    WHERE tenant_id = $1 
+      AND bill_date = $2
+      AND ($3::uuid IS NULL OR department_id = $3)
+      AND ($4::uuid IS NULL OR doctor_id = $4)
+  `;
+  
+  const result = await query(sql, [tenantId, date, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getServicePackages(tenantId, filters = {}) {
+  const { isActive = true, departmentId } = filters;
+  
+  let sql = `
+    SELECT 
+      sp.*,
+      d.name as department_name,
+      COUNT(pi.id) as item_count
+    FROM emr.opd_service_packages sp
+    LEFT JOIN emr.departments d ON sp.department_id = d.id
+    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    WHERE sp.tenant_id = $1
+      AND sp.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (departmentId) {
+    sql += ` AND sp.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  sql += ` GROUP BY sp.id, d.name ORDER BY sp.name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+// =====================================================
+// COMMUNICATION SYSTEM
+// =====================================================
+
+export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
+  const sql = `
+    INSERT INTO emr.communication_templates (
+      tenant_id, template_name, template_type, purpose, subject, message_content,
+      variables, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, templateName, templateType, purpose, subject, messageContent,
+    JSON.stringify(variables || []), isActive, isDefault, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getCommunicationTemplates(tenantId, filters = {}) {
+  const { templateType, purpose, isActive = true } = filters;
+  
+  let sql = `
+    SELECT * FROM emr.communication_templates
+    WHERE tenant_id = $1 AND is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (templateType) {
+    sql += ` AND template_type = $${paramIndex++}`;
+    params.push(templateType);
+  }
+  
+  if (purpose) {
+    sql += ` AND purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  sql += ` ORDER BY template_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendCommunication({ tenantId, patientId, communicationType, purpose, messageContent, recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId, templateId, variablesUsed, scheduledFor, isAutomated = false, priority = 1, createdBy }) {
+  const sql = `
+    SELECT create_communication(
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    ) as communication_id
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, communicationType, purpose, messageContent,
+    recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId,
+    templateId, variablesUsed ? JSON.stringify(variablesUsed) : null, scheduledFor, isAutomated, priority, createdBy
+  ]);
+  
+  return result.rows[0].communication_id;
+}
+
+export async function getPatientCommunications(tenantId, filters = {}) {
+  const { patientId, communicationType, purpose, status, date } = filters;
+  
+  let sql = `
+    SELECT 
+      pc.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      ct.template_name,
+      a.start as appointment_time,
+      t.full_token as token_number,
+      b.bill_number
+    FROM emr.patient_communications pc
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
+    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    WHERE pc.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (patientId) {
+    sql += ` AND pc.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  if (communicationType) {
+    sql += ` AND pc.communication_type = $${paramIndex++}`;
+    params.push(communicationType);
+  }
+  
+  if (purpose) {
+    sql += ` AND pc.purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  if (status) {
+    sql += ` AND pc.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (date) {
+    sql += ` AND DATE(pc.created_at) = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  sql += ` ORDER BY pc.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function updateCommunicationStatus(communicationId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (status === 'sent') {
+    fields.push('sent_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'delivered') {
+    fields.push('delivered_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'read') {
+    fields.push('read_at');
+    values.push(new Date());
+  }
+  
+  if (additionalData.externalId) {
+    fields.push('external_id');
+    values.push(additionalData.externalId);
+  }
+  
+  if (additionalData.provider) {
+    fields.push('provider');
+    values.push(additionalData.provider);
+  }
+  
+  if (additionalData.failedReason) {
+    fields.push('failed_reason');
+    values.push(additionalData.failedReason);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.patient_communications 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(communicationId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function scheduleAppointmentReminder({ tenantId, appointmentId, patientId, patientPhone, patientEmail, appointmentTime, doctorName, departmentName }) {
+  const variables = {
+    patient_name: patientId, // Will be replaced with actual patient name
+    appointment_time: appointmentTime,
+    doctor_name: doctorName,
+    department_name: departmentName,
+    hospital_name: 'Hospital' // Get from settings
+  };
+  
+  const messageContent = `Reminder: Your appointment is scheduled for ${appointmentTime} with Dr. ${doctorName} at ${departmentName}. Please arrive 15 minutes early.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'appointment_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    appointmentId,
+    variablesUsed: variables,
+    scheduledFor: new Date(appointmentTime).getTime() - (24 * 60 * 60 * 1000), // 24 hours before
+    isAutomated: true,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendTokenCallNotification({ tenantId, tokenId, patientId, patientPhone, patientEmail, tokenNumber, departmentName, doctorName }) {
+  const variables = {
+    patient_name: patientId,
+    token_number: tokenNumber,
+    department_name: departmentName,
+    doctor_name: doctorName,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Your token ${tokenNumber} has been called. Please proceed to ${departmentName}. Dr. ${doctorName} is ready to see you.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'token_call',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    tokenId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 2,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendBillingReminder({ tenantId, billId, patientId, patientPhone, patientEmail, billNumber, totalAmount, dueDate }) {
+  const variables = {
+    patient_name: patientId,
+    bill_number: billNumber,
+    total_amount: totalAmount,
+    due_date: dueDate,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Reminder: Bill ${billNumber} of amount ${totalAmount} is due on ${dueDate}. Please complete the payment to avoid any inconvenience.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'billing_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    billId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 1,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function decrementAppointmentCount(availabilityId, tenantId) {
+  const sql = `
+    UPDATE emr.doctor_availability 
+    SET current_appointments = GREATEST(current_appointments - 1, 0),
+        updated_at = NOW()
+    WHERE id = $1 AND tenant_id = $2
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [availabilityId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// OPD TOKEN QUEUE SYSTEM
+// =====================================================
+
+export async function generateOPDToken({ tenantId, patientId, departmentId, doctorId, priority = 'general', visitType = 'new', chiefComplaint, appointmentId, createdBy }) {
+  // Get next token number
+  const nextTokenSql = `
+    SELECT get_next_token_number($1, $2) as token_number
+  `;
+  const tokenResult = await query(nextTokenSql, [tenantId, departmentId]);
+  const tokenNumber = tokenResult.rows[0].token_number;
+  
+  // Create the token
+  const sql = `
+    INSERT INTO emr.opd_tokens (
+      tenant_id, patient_id, token_number, token_prefix, status, priority,
+      department_id, doctor_id, appointment_id, visit_type, chief_complaint, created_by
+    )
+    VALUES ($1, $2, $3, 'OPD', $4, $5, $6, $7, $8, $9, $10, $11)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, tokenNumber, 'waiting', priority,
+    departmentId, doctorId, appointmentId, visitType, chiefComplaint, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getOPDTokens(tenantId, filters = {}) {
+  const { status, departmentId, doctorId, date, priority } = filters;
+  
+  let sql = `
+    SELECT 
+      t.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.age,
+      p.gender,
+      d.name as department_name,
+      u.name as doctor_name,
+      a.start as appointment_time
+    FROM emr.opd_tokens t
+    LEFT JOIN emr.patients p ON t.patient_id = p.id
+    LEFT JOIN emr.departments d ON t.department_id = d.id
+    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    WHERE t.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND t.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (departmentId) {
+    sql += ` AND t.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND t.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  if (date) {
+    sql += ` AND DATE(t.created_at) = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  if (priority) {
+    sql += ` AND t.priority = $${paramIndex++}`;
+    params.push(priority);
+  }
+  
+  sql += ` ORDER BY 
+    CASE 
+      WHEN t.priority = 'urgent' THEN 1
+      WHEN t.priority = 'senior_citizen' THEN 2
+      WHEN t.priority = 'follow_up' THEN 3
+      ELSE 4
+    END,
+    t.token_number ASC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function getOPDTokenById(tokenId, tenantId) {
+  const sql = `
+    SELECT 
+      t.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.age,
+      p.gender,
+      p.blood_group,
+      p.address,
+      d.name as department_name,
+      u.name as doctor_name,
+      a.start as appointment_time
+    FROM emr.opd_tokens t
+    LEFT JOIN emr.patients p ON t.patient_id = p.id
+    LEFT JOIN emr.departments d ON t.department_id = d.id
+    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    WHERE t.id = $1 AND t.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [tokenId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// OPD BILLING SYSTEM
+// =====================================================
+
+export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
+  // Generate bill number
+  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
+  const billNumberResult = await query(billNumberSql, [tenantId]);
+  const billNumber = billNumberResult.rows[0].bill_number;
+  
+  const sql = `
+    INSERT INTO emr.opd_bills (
+      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
+      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
+      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
+      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
+      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
+      notes, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
+            $6, $7, $8, $9, $10, $11,
+            $12, $13, $14, $15, $16,
+            $17, $18, $19, $20, $21, $22,
+            $23, $24, $25, $26, $27)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, tokenId, appointmentId, billNumber,
+    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
+    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
+    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
+    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
+    notes, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getOPDBills(tenantId, filters = {}) {
+  const { status, departmentId, doctorId, date, patientId } = filters;
+  
+  let sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    WHERE b.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND b.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (departmentId) {
+    sql += ` AND b.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND b.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  if (date) {
+    sql += ` AND b.bill_date = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  if (patientId) {
+    sql += ` AND b.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function getOPDBillById(billId, tenantId) {
+  const sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number,
+      a.start as appointment_time
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    WHERE b.id = $1 AND b.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [billId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// EXOTEL SMS PROVIDER INTEGRATION
+// =====================================================
+
+export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_configurations (
+      tenant_id, account_sid, api_key, api_token, subdomain, from_number,
+      webhook_url, delivery_report_webhook, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, false, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber,
+    webhookUrl, deliveryReportWebhook, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelConfigurations(tenantId, isActive = true) {
+  const sql = `
+    SELECT * FROM emr.exotel_configurations
+    WHERE tenant_id = $1 AND is_active = $2
+    ORDER BY is_default DESC, created_at DESC
+  `;
+  
+  const result = await query(sql, [tenantId, isActive]);
+  return result.rows;
+}
+
+export async function updateExotelConfiguration(configId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_configurations
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(configId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_sms_campaigns (
+      tenant_id, campaign_name, campaign_type, description, template_id,
+      target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
+      status, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, campaignName, campaignType, description, templateId,
+    targetAudience, JSON.stringify(filters), scheduleType, scheduledAt, 
+    recurringPattern ? JSON.stringify(recurringPattern) : null, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getSMSCampaigns(tenantId, filters = {}) {
+  const { status, campaignType, startDate, endDate } = filters;
+  
+  let sql = `
+    SELECT 
+      c.*,
+      ct.template_name,
+      ct.message_content,
+      COUNT(l.id) as sent_count,
+      COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
+      COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
+    FROM emr.exotel_sms_campaigns c
+    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    WHERE c.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND c.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (campaignType) {
+    sql += ` AND c.campaign_type = $${paramIndex++}`;
+    params.push(campaignType);
+  }
+  
+  if (startDate) {
+    sql += ` AND c.scheduled_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND c.scheduled_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  sql += ` GROUP BY c.id, ct.template_name, ct.message_content ORDER BY c.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendExotelSMS({ tenantId, toNumber, messageContent, messageType = 'transactional', priority = 1, campaignId = null, communicationId = null, externalId = null }) {
+  // Get available Exotel number
+  const availableNumberSql = `SELECT get_available_exotel_number($1, $2) as from_number`;
+  const numberResult = await query(availableNumberSql, [tenantId, messageType]);
+  const fromNumber = numberResult.rows[0].from_number;
+  
+  if (!fromNumber) {
+    throw new Error('No available Exotel number found for this message type');
+  }
+  
+  // Get Exotel configuration
+  const configSql = `
+    SELECT account_sid, api_key, api_token, subdomain 
+    FROM emr.exotel_configurations 
+    WHERE tenant_id = $1 AND is_active = true 
+    ORDER BY is_default DESC 
+    LIMIT 1
+  `;
+  const configResult = await query(configSql, [tenantId]);
+  const config = configResult.rows[0];
+  
+  if (!config) {
+    throw new Error('No active Exotel configuration found');
+  }
+  
+  // Create SMS log entry
+  const logSql = `
+    INSERT INTO emr.exotel_sms_logs (
+      tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
+      message_content, message_type, priority, status, external_id, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'queued', $10, NOW())
+    RETURNING *
+  `;
+  
+  const logResult = await query(logSql, [
+    tenantId, campaignId, communicationId, config.account_sid, fromNumber, toNumber,
+    messageContent, messageType, priority, externalId
+  ]);
+  
+  const smsLog = logResult.rows[0];
+  
+  // Update number pool usage
+  await query(`SELECT update_exotel_number_usage($1, $2, 1)`, [tenantId, fromNumber]);
+  
+  // Send SMS via Exotel API
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: config.account_sid,
+      apiKey: config.api_key,
+      apiToken: config.api_token,
+      subdomain: config.subdomain,
+      fromNumber,
+      toNumber,
+      messageContent,
+      priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with Exotel response
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      webhookData: exotelResponse.webhookData
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      const communicationStatus = exotelResponse.status === 'sent' ? 'sent' : 'failed';
+      await updateCommunicationStatus(communicationId, tenantId, communicationStatus, {
+        externalId: exotelResponse.messageSid,
+        provider: 'exotel',
+        failedReason: exotelResponse.errorMessage
+      });
+    }
+    
+    return { success: true, smsLog, exotelResponse };
+  } catch (error) {
+    // Update log with error
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'API_ERROR',
+      errorMessage: error.message
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      await updateCommunicationStatus(communicationId, tenantId, 'failed', {
+        provider: 'exotel',
+        failedReason: error.message
+      });
+    }
+    
+    return { success: false, error: error.message, smsLog };
+  }
+}
+
+export async function sendExotelAPIRequest({ accountSid, apiKey, apiToken, subdomain, fromNumber, toNumber, messageContent, priority, externalId }) {
+  // Exotel SMS API endpoint
+  const apiUrl = `https://${subdomain}.exotel.in/v1/Accounts/${accountSid}/Sms/send`;
+  
+  const authString = Buffer.from(`${accountSid}:${apiToken}`).toString('base64');
+  
+  const payload = {
+    SmsSid: externalId,
+    SenderId: fromNumber,
+    To: toNumber,
+    MessageBody: messageContent,
+    Priority: priority,
+    Type: 'txn', // Transactional SMS
+    DltTemplateId: '1207160012345678901' // Template ID for DLT compliance
+  };
+  
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  const responseData = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(`Exotel API Error: ${responseData.message || 'Unknown error'}`);
+  }
+  
+  return {
+    messageSid: responseData.SmsSid,
+    status: responseData.Status === 'sent' ? 'sent' : 'queued',
+    sentTimestamp: responseData.Date,
+    cost: responseData.Cost || 0,
+    webhookData: responseData
+  };
+}
+
+export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_sms_logs
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(smsLogId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getExotelSMSLogs(tenantId, filters = {}) {
+  const { status, toNumber, fromNumber, startDate, endDate, campaignId, limit = 100 } = filters;
+  
+  let sql = `
+    SELECT 
+      l.*,
+      c.campaign_name,
+      ct.template_name,
+      p.name as patient_name,
+      p.phone as patient_phone
+    FROM emr.exotel_sms_logs l
+    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    WHERE l.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND l.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (toNumber) {
+    sql += ` AND l.to_number = $${paramIndex++}`;
+    params.push(toNumber);
+  }
+  
+  if (fromNumber) {
+    sql += ` AND l.from_number = $${paramIndex++}`;
+    params.push(fromNumber);
+  }
+  
+  if (startDate) {
+    sql += ` AND l.created_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND l.created_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  if (campaignId) {
+    sql += ` AND l.campaign_id = $${paramIndex++}`;
+    params.push(campaignId);
+  }
+  
+  sql += ` ORDER BY l.created_at DESC LIMIT $${paramIndex++}`;
+  params.push(limit);
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_number_pools (
+      tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
+      daily_limit, monthly_limit, priority, is_active, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, poolName, phoneNumber, numberType, departmentId, doctorId,
+    dailyLimit, monthlyLimit, priority, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelNumberPools(tenantId, filters = {}) {
+  const { isActive = true, numberType, departmentId, doctorId } = filters;
+  
+  let sql = `
+    SELECT 
+      np.*,
+      d.name as department_name,
+      u.name as doctor_name,
+      ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
+      ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
+    FROM emr.exotel_number_pools np
+    LEFT JOIN emr.departments d ON np.department_id = d.id
+    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    WHERE np.tenant_id = $1 AND np.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (numberType) {
+    sql += ` AND np.number_type = $${paramIndex++}`;
+    params.push(numberType);
+  }
+  
+  if (departmentId) {
+    sql += ` AND np.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND np.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  sql += ` ORDER BY np.priority ASC, np.pool_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function processExotelWebhook(tenantId, eventData) {
+  const sql = `
+    INSERT INTO emr.exotel_webhook_events (
+      tenant_id, event_type, event_data, message_sid, account_sid, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, eventData.eventType || 'unknown', 
+    JSON.stringify(eventData), 
+    eventData.SmsSid, 
+    eventData.AccountSid
+  ]);
+  
+  const webhookEvent = result.rows[0];
+  
+  // Process delivery reports
+  if (eventData.Status) {
+    await processExotelDeliveryReport(tenantId, eventData);
+  }
+  
+  return webhookEvent;
+}
+
+export async function processExotelDeliveryReport(tenantId, deliveryData) {
+  const { SmsSid, Status, ErrorCode, ErrorMessage, Date, Cost } = deliveryData;
+  
+  // Update SMS log with delivery status
+  const updateData = {
+    status: Status.toLowerCase(),
+    deliveryStatus: Status.toLowerCase(),
+    deliveryTimestamp: Date ? new Date(Date) : null,
+    errorCode: ErrorCode,
+    errorMessage: ErrorMessage,
+    cost: Cost || 0,
+    webhookData: JSON.stringify(deliveryData)
+  };
+  
+  // Find the SMS log entry
+  const findSql = `
+    SELECT id, communication_id, to_number 
+    FROM emr.exotel_sms_logs 
+    WHERE message_sid = $1 AND tenant_id = $2
+  `;
+  
+  const findResult = await query(findSql, [SmsSid, tenantId]);
+  const smsLog = findResult.rows[0];
+  
+  if (smsLog) {
+    await updateExotelSMSLog(smsLog.id, tenantId, updateData);
+    
+    // Update communication status if linked
+    if (smsLog.communication_id) {
+      const communicationStatus = Status.toLowerCase() === 'delivered' ? 'delivered' : 
+                              Status.toLowerCase() === 'failed' ? 'failed' : 'sent';
+      
+      await updateCommunicationStatus(smsLog.communication_id, tenantId, communicationStatus, {
+        externalId: SmsSid,
+        provider: 'exotel',
+        failedReason: ErrorMessage
+      });
+    }
+    
+    // Schedule retry for failed messages
+    if (Status.toLowerCase() === 'failed' && ErrorCode !== '404') {
+      await scheduleSMSRetry(smsLog.id);
+    }
+  }
+}
+
+export async function scheduleSMSRetry(smsLogId) {
+  const sql = `SELECT schedule_sms_retry($1)`;
+  await query(sql, [smsLogId]);
+}
+
+export async function getExotelSMSStats(tenantId, filters = {}) {
+  const { startDate, endDate, messageType, fromNumber } = filters;
+  
+  let sql = `SELECT get_exotel_sms_stats($1, $2, $3)`;
+  const params = [tenantId, startDate, endDate];
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function retryFailedSMS(tenantId, smsLogId) {
+  const sql = `
+    SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
+    FROM emr.exotel_sms_logs l
+    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
+  `;
+  
+  const result = await query(sql, [smsLogId, tenantId]);
+  const smsLog = result.rows[0];
+  
+  if (!smsLog) {
+    throw new Error('SMS log not found or not in failed status');
+  }
+  
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: smsLog.account_sid,
+      apiKey: smsLog.api_key,
+      apiToken: smsLog.api_token,
+      subdomain: smsLog.subdomain,
+      fromNumber: smsLog.from_number,
+      toNumber: smsLog.to_number,
+      messageContent: smsLog.message_content,
+      priority: smsLog.priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with retry result
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: true, exotelResponse };
+  } catch (error) {
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'RETRY_FAILED',
+      errorMessage: error.message,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getPendingRetries(tenantId) {
+  const sql = `
+    SELECT 
+      l.*,
+      EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
+    FROM emr.exotel_sms_logs l
+    WHERE l.tenant_id = $1 
+      AND l.status = 'queued' 
+      AND l.next_retry_at IS NOT NULL 
+      AND l.next_retry_at <= NOW() + INTERVAL '1 hour'
+      AND l.retry_count < l.max_retries
+    ORDER BY l.next_retry_at ASC
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function processScheduledCampaigns(tenantId) {
+  const sql = `
+    SELECT c.* 
+    FROM emr.exotel_sms_campaigns c
+    WHERE c.tenant_id = $1 
+      AND c.status = 'scheduled' 
+      AND c.scheduled_at <= NOW()
+    ORDER BY c.scheduled_at ASC
+  `;
+  
+  const campaigns = await query(sql, [tenantId]);
+  
+  for (const campaign of campaigns) {
+    // Update campaign status to active
+    await query(`
+      UPDATE emr.exotel_sms_campaigns 
+      SET status = 'active', updated_at = NOW()
+      WHERE id = $1
+    `, [campaign.id]);
+    
+    // Process campaign based on target audience
+    await processSMSCampaign(campaign, tenantId);
+  }
+}
+
+export async function processSMSCampaign(campaign, tenantId) {
+  const { targetAudience, filters } = campaign;
+  
+  let targetNumbers = [];
+  
+  switch (targetAudience) {
+    case 'all_patients':
+      const patientsSql = `
+        SELECT DISTINCT phone FROM emr.patients 
+        WHERE tenant_id = $1 AND phone IS NOT NULL
+      `;
+      const patientsResult = await query(patientsSql, [tenantId]);
+      targetNumbers = patientsResult.rows.map(p => p.phone);
+      break;
+      
+    case 'specific_patients':
+      if (filters && filters.patientIds) {
+        const specificPatientsSql = `
+          SELECT phone FROM emr.patients 
+          WHERE tenant_id = $1 AND id = ANY($2)
+        `;
+        const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
+        targetNumbers = specificResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'department':
+      if (filters && filters.departmentId) {
+        const deptPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const deptResult = await query(deptPatientsSql, [tenantId, filters.departmentId]);
+        targetNumbers = deptResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'doctor':
+      if (filters && filters.doctorId) {
+        const doctorPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const doctorResult = await query(doctorPatientsSql, [tenantId, filters.doctorId]);
+        targetNumbers = doctorResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    default:
+      if (filters && filters.phoneNumbers) {
+        targetNumbers = filters.phoneNumbers;
+      }
+      break;
+  }
+  
+  // Send SMS to all target numbers
+  for (const phoneNumber of targetNumbers) {
+    await sendExotelSMS({
+      tenantId,
+      toNumber: phoneNumber,
+      messageContent: campaign.message_content || 'Campaign message',
+      messageType: 'promotional',
+      campaignId: campaign.id
+    });
+  }
+  
+  // Update campaign statistics
+  await query(`
+    UPDATE emr.exotel_sms_campaigns 
+    SET total_recipients = $1, updated_at = NOW()
+    WHERE id = $2
+  `, [targetNumbers.length, campaign.id]);
+}
+
+export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
+  const sql = `
+    INSERT INTO emr.opd_bill_items (
+      tenant_id, bill_id, service_type, service_name, service_code, description,
+      quantity, unit_price, discount_amount, tax_amount, total_amount,
+      doctor_id, department_id, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, $11,
+            $12, $13, $14)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, billId, serviceType, serviceName, serviceCode, description,
+    quantity, unitPrice, discountAmount, taxAmount, totalAmount,
+    doctorId, departmentId, createdBy
+  ]);
+  
+  // Update bill totals
+  await query(`SELECT calculate_bill_totals($1)`, [billId]);
+  
+  return result.rows[0];
+}
+
+export async function updateBillStatus(billId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (additionalData.paymentMethod) {
+    fields.push('payment_method');
+    values.push(additionalData.paymentMethod);
+  }
+  
+  if (additionalData.paidAmount) {
+    fields.push('paid_amount');
+    values.push(additionalData.paidAmount);
+  }
+  
+  if (additionalData.paymentDate) {
+    fields.push('payment_date');
+    values.push(additionalData.paymentDate);
+  }
+  
+  if (additionalData.transactionId) {
+    fields.push('transaction_id');
+    values.push(additionalData.transactionId);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.opd_bills 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(billId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getBillingStats(tenantId, filters = {}) {
+  const { departmentId, doctorId, date = new Date().toISOString().split('T')[0] } = filters;
+  
+  const sql = `
+    SELECT 
+      COUNT(*) as total_bills,
+      COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_bills,
+      COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bills,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_bills,
+      SUM(total_amount) as total_revenue,
+      SUM(paid_amount) as total_paid,
+      SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
+      AVG(total_amount) as avg_bill_amount
+    FROM emr.opd_bills
+    WHERE tenant_id = $1 
+      AND bill_date = $2
+      AND ($3::uuid IS NULL OR department_id = $3)
+      AND ($4::uuid IS NULL OR doctor_id = $4)
+  `;
+  
+  const result = await query(sql, [tenantId, date, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getServicePackages(tenantId, filters = {}) {
+  const { isActive = true, departmentId } = filters;
+  
+  let sql = `
+    SELECT 
+      sp.*,
+      d.name as department_name,
+      COUNT(pi.id) as item_count
+    FROM emr.opd_service_packages sp
+    LEFT JOIN emr.departments d ON sp.department_id = d.id
+    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    WHERE sp.tenant_id = $1
+      AND sp.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (departmentId) {
+    sql += ` AND sp.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  sql += ` GROUP BY sp.id, d.name ORDER BY sp.name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+// =====================================================
+// COMMUNICATION SYSTEM
+// =====================================================
+
+export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
+  const sql = `
+    INSERT INTO emr.communication_templates (
+      tenant_id, template_name, template_type, purpose, subject, message_content,
+      variables, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, templateName, templateType, purpose, subject, messageContent,
+    JSON.stringify(variables || []), isActive, isDefault, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getCommunicationTemplates(tenantId, filters = {}) {
+  const { templateType, purpose, isActive = true } = filters;
+  
+  let sql = `
+    SELECT * FROM emr.communication_templates
+    WHERE tenant_id = $1 AND is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (templateType) {
+    sql += ` AND template_type = $${paramIndex++}`;
+    params.push(templateType);
+  }
+  
+  if (purpose) {
+    sql += ` AND purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  sql += ` ORDER BY template_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendCommunication({ tenantId, patientId, communicationType, purpose, messageContent, recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId, templateId, variablesUsed, scheduledFor, isAutomated = false, priority = 1, createdBy }) {
+  const sql = `
+    SELECT create_communication(
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    ) as communication_id
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, communicationType, purpose, messageContent,
+    recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId,
+    templateId, variablesUsed ? JSON.stringify(variablesUsed) : null, scheduledFor, isAutomated, priority, createdBy
+  ]);
+  
+  return result.rows[0].communication_id;
+}
+
+export async function getPatientCommunications(tenantId, filters = {}) {
+  const { patientId, communicationType, purpose, status, date } = filters;
+  
+  let sql = `
+    SELECT 
+      pc.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      ct.template_name,
+      a.start as appointment_time,
+      t.full_token as token_number,
+      b.bill_number
+    FROM emr.patient_communications pc
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
+    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    WHERE pc.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (patientId) {
+    sql += ` AND pc.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  if (communicationType) {
+    sql += ` AND pc.communication_type = $${paramIndex++}`;
+    params.push(communicationType);
+  }
+  
+  if (purpose) {
+    sql += ` AND pc.purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  if (status) {
+    sql += ` AND pc.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (date) {
+    sql += ` AND DATE(pc.created_at) = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  sql += ` ORDER BY pc.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function updateCommunicationStatus(communicationId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (status === 'sent') {
+    fields.push('sent_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'delivered') {
+    fields.push('delivered_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'read') {
+    fields.push('read_at');
+    values.push(new Date());
+  }
+  
+  if (additionalData.externalId) {
+    fields.push('external_id');
+    values.push(additionalData.externalId);
+  }
+  
+  if (additionalData.provider) {
+    fields.push('provider');
+    values.push(additionalData.provider);
+  }
+  
+  if (additionalData.failedReason) {
+    fields.push('failed_reason');
+    values.push(additionalData.failedReason);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.patient_communications 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(communicationId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function scheduleAppointmentReminder({ tenantId, appointmentId, patientId, patientPhone, patientEmail, appointmentTime, doctorName, departmentName }) {
+  const variables = {
+    patient_name: patientId, // Will be replaced with actual patient name
+    appointment_time: appointmentTime,
+    doctor_name: doctorName,
+    department_name: departmentName,
+    hospital_name: 'Hospital' // Get from settings
+  };
+  
+  const messageContent = `Reminder: Your appointment is scheduled for ${appointmentTime} with Dr. ${doctorName} at ${departmentName}. Please arrive 15 minutes early.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'appointment_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    appointmentId,
+    variablesUsed: variables,
+    scheduledFor: new Date(appointmentTime).getTime() - (24 * 60 * 60 * 1000), // 24 hours before
+    isAutomated: true,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendTokenCallNotification({ tenantId, tokenId, patientId, patientPhone, patientEmail, tokenNumber, departmentName, doctorName }) {
+  const variables = {
+    patient_name: patientId,
+    token_number: tokenNumber,
+    department_name: departmentName,
+    doctor_name: doctorName,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Your token ${tokenNumber} has been called. Please proceed to ${departmentName}. Dr. ${doctorName} is ready to see you.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'token_call',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    tokenId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 2,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendBillingReminder({ tenantId, billId, patientId, patientPhone, patientEmail, billNumber, totalAmount, dueDate }) {
+  const variables = {
+    patient_name: patientId,
+    bill_number: billNumber,
+    total_amount: totalAmount,
+    due_date: dueDate,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Reminder: Bill ${billNumber} of amount ${totalAmount} is due on ${dueDate}. Please complete the payment to avoid any inconvenience.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'billing_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    billId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 1,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function updateTokenStatus(tokenId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  // Add timestamp fields based on status
+  if (status === 'called') {
+    fields.push('last_called_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'in_progress') {
+    fields.push('consultation_started_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'completed') {
+    fields.push('consultation_completed_at');
+    values.push(new Date());
+  }
+  
+  // Add called_count increment
+  if (status === 'called') {
+    fields.push('called_count');
+    values.push(`(SELECT COALESCE(called_count, 0) + 1 FROM emr.opd_tokens WHERE id = $1)`);
+  }
+  
+  // Add additional data
+  if (additionalData.doctorId) {
+    fields.push('doctor_id');
+    values.push(additionalData.doctorId);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.opd_tokens 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(tokenId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function callNextToken(tenantId, departmentId, doctorId = null) {
+  const sql = `
+    UPDATE emr.opd_tokens 
+    SET status = 'called',
+        last_called_at = NOW(),
+        called_count = COALESCE(called_count, 0) + 1,
+        updated_at = NOW()
+    WHERE id = (
+      SELECT id FROM emr.opd_tokens 
+      WHERE tenant_id = $1 
+        AND ($2::uuid IS NULL OR department_id = $2)
+        AND ($3::uuid IS NULL OR doctor_id = $3)
+        AND status = 'waiting'
+      ORDER BY 
+        CASE 
+          WHEN priority = 'urgent' THEN 1
+          WHEN priority = 'senior_citizen' THEN 2
+          WHEN priority = 'follow_up' THEN 3
+          ELSE 4
+        END,
+        token_number ASC
+      LIMIT 1
+    )
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [tenantId, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getTokenQueueStats(tenantId, filters = {}) {
+  const { departmentId, doctorId, date = new Date().toISOString().split('T')[0] } = filters;
+  
+  const sql = `
+    SELECT 
+      COUNT(*) as total_tokens,
+      COUNT(CASE WHEN status = 'waiting' THEN 1 END) as waiting,
+      COUNT(CASE WHEN status = 'called' THEN 1 END) as called,
+      COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
+      COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled,
+      COUNT(CASE WHEN status = 'no_show' THEN 1 END) as no_show,
+      AVG(EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60) as avg_consultation_time_minutes
+    FROM emr.opd_tokens
+    WHERE tenant_id = $1 
+      AND DATE(created_at) = $2
+      AND ($3::uuid IS NULL OR department_id = $3)
+      AND ($4::uuid IS NULL OR doctor_id = $4)
+  `;
+  
+  const result = await query(sql, [tenantId, date, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getActiveTokensByDepartment(tenantId) {
+  const sql = `
+    SELECT 
+      d.id as department_id,
+      d.name as department_name,
+      COUNT(CASE WHEN t.status = 'waiting' THEN 1 END) as waiting_count,
+      COUNT(CASE WHEN t.status = 'called' THEN 1 END) as called_count,
+      COUNT(CASE WHEN t.status = 'in_progress' THEN 1 END) as in_progress_count,
+      MAX(t.token_number) as last_token,
+      t.full_token as current_token,
+      t.status as current_token_status
+    FROM emr.departments d
+    LEFT JOIN emr.opd_tokens t ON d.id = t.department_id 
+      AND t.tenant_id = $1 
+      AND DATE(t.created_at) = CURRENT_DATE
+      AND t.status IN ('waiting', 'called', 'in_progress')
+    WHERE d.tenant_id = $1
+    GROUP BY d.id, d.name, t.full_token, t.status
+    ORDER BY d.name
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
+  const sql = `
+    UPDATE emr.opd_tokens 
+    SET vitals_recorded = true,
+        updated_at = NOW()
+    WHERE id = $1 AND tenant_id = $2
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [tokenId, tenantId]);
+  
+  // Create vitals record if needed
+  if (result.rows[0]) {
+    const vitalsSql = `
+      INSERT INTO emr.vitals (
+        tenant_id, patient_id, encounter_id, blood_pressure_systolic,
+        blood_pressure_diastolic, heart_rate, temperature, 
+        oxygen_saturation, weight, height, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING *
+    `;
+    
+    await query(vitalsSql, [
+      tenantId, 
+      result.rows[0].patient_id, 
+      null, // No encounter yet
+      vitalsData.bloodPressureSystolic,
+      vitalsData.bloodPressureDiastolic,
+      vitalsData.heartRate,
+      vitalsData.temperature,
+      vitalsData.oxygenSaturation,
+      vitalsData.weight,
+      vitalsData.height,
+      vitalsData.createdBy
+    ]);
+  }
+  
+  return result.rows[0];
+}
+
+export async function getTokenHistory(tenantId, patientId, limit = 10) {
+  const sql = `
+    SELECT 
+      t.*,
+      d.name as department_name,
+      u.name as doctor_name,
+      EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60 as consultation_duration_minutes
+    FROM emr.opd_tokens t
+    LEFT JOIN emr.departments d ON t.department_id = d.id
+    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    WHERE t.tenant_id = $1 AND t.patient_id = $2
+    ORDER BY t.created_at DESC
+    LIMIT $3
+  `;
+  
+  const result = await query(sql, [tenantId, patientId, limit]);
+  return result.rows;
+}
+
+export async function deleteOPDToken(tokenId, tenantId) {
+  const sql = `
+    DELETE FROM emr.opd_tokens 
+    WHERE id = $1 AND tenant_id = $2
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [tokenId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// OPD BILLING SYSTEM
+// =====================================================
+
+export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
+  // Generate bill number
+  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
+  const billNumberResult = await query(billNumberSql, [tenantId]);
+  const billNumber = billNumberResult.rows[0].bill_number;
+  
+  const sql = `
+    INSERT INTO emr.opd_bills (
+      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
+      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
+      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
+      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
+      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
+      notes, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
+            $6, $7, $8, $9, $10, $11,
+            $12, $13, $14, $15, $16,
+            $17, $18, $19, $20, $21, $22,
+            $23, $24, $25, $26, $27)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, tokenId, appointmentId, billNumber,
+    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
+    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
+    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
+    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
+    notes, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getOPDBills(tenantId, filters = {}) {
+  const { status, departmentId, doctorId, date, patientId } = filters;
+  
+  let sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    WHERE b.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND b.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (departmentId) {
+    sql += ` AND b.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND b.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  if (date) {
+    sql += ` AND b.bill_date = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  if (patientId) {
+    sql += ` AND b.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function getOPDBillById(billId, tenantId) {
+  const sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number,
+      a.start as appointment_time
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    WHERE b.id = $1 AND b.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [billId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// EXOTEL SMS PROVIDER INTEGRATION
+// =====================================================
+
+export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_configurations (
+      tenant_id, account_sid, api_key, api_token, subdomain, from_number,
+      webhook_url, delivery_report_webhook, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, false, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber,
+    webhookUrl, deliveryReportWebhook, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelConfigurations(tenantId, isActive = true) {
+  const sql = `
+    SELECT * FROM emr.exotel_configurations
+    WHERE tenant_id = $1 AND is_active = $2
+    ORDER BY is_default DESC, created_at DESC
+  `;
+  
+  const result = await query(sql, [tenantId, isActive]);
+  return result.rows;
+}
+
+export async function updateExotelConfiguration(configId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_configurations
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(configId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_sms_campaigns (
+      tenant_id, campaign_name, campaign_type, description, template_id,
+      target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
+      status, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, campaignName, campaignType, description, templateId,
+    targetAudience, JSON.stringify(filters), scheduleType, scheduledAt, 
+    recurringPattern ? JSON.stringify(recurringPattern) : null, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getSMSCampaigns(tenantId, filters = {}) {
+  const { status, campaignType, startDate, endDate } = filters;
+  
+  let sql = `
+    SELECT 
+      c.*,
+      ct.template_name,
+      ct.message_content,
+      COUNT(l.id) as sent_count,
+      COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
+      COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
+    FROM emr.exotel_sms_campaigns c
+    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    WHERE c.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND c.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (campaignType) {
+    sql += ` AND c.campaign_type = $${paramIndex++}`;
+    params.push(campaignType);
+  }
+  
+  if (startDate) {
+    sql += ` AND c.scheduled_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND c.scheduled_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  sql += ` GROUP BY c.id, ct.template_name, ct.message_content ORDER BY c.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendExotelSMS({ tenantId, toNumber, messageContent, messageType = 'transactional', priority = 1, campaignId = null, communicationId = null, externalId = null }) {
+  // Get available Exotel number
+  const availableNumberSql = `SELECT get_available_exotel_number($1, $2) as from_number`;
+  const numberResult = await query(availableNumberSql, [tenantId, messageType]);
+  const fromNumber = numberResult.rows[0].from_number;
+  
+  if (!fromNumber) {
+    throw new Error('No available Exotel number found for this message type');
+  }
+  
+  // Get Exotel configuration
+  const configSql = `
+    SELECT account_sid, api_key, api_token, subdomain 
+    FROM emr.exotel_configurations 
+    WHERE tenant_id = $1 AND is_active = true 
+    ORDER BY is_default DESC 
+    LIMIT 1
+  `;
+  const configResult = await query(configSql, [tenantId]);
+  const config = configResult.rows[0];
+  
+  if (!config) {
+    throw new Error('No active Exotel configuration found');
+  }
+  
+  // Create SMS log entry
+  const logSql = `
+    INSERT INTO emr.exotel_sms_logs (
+      tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
+      message_content, message_type, priority, status, external_id, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'queued', $10, NOW())
+    RETURNING *
+  `;
+  
+  const logResult = await query(logSql, [
+    tenantId, campaignId, communicationId, config.account_sid, fromNumber, toNumber,
+    messageContent, messageType, priority, externalId
+  ]);
+  
+  const smsLog = logResult.rows[0];
+  
+  // Update number pool usage
+  await query(`SELECT update_exotel_number_usage($1, $2, 1)`, [tenantId, fromNumber]);
+  
+  // Send SMS via Exotel API
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: config.account_sid,
+      apiKey: config.api_key,
+      apiToken: config.api_token,
+      subdomain: config.subdomain,
+      fromNumber,
+      toNumber,
+      messageContent,
+      priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with Exotel response
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      webhookData: exotelResponse.webhookData
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      const communicationStatus = exotelResponse.status === 'sent' ? 'sent' : 'failed';
+      await updateCommunicationStatus(communicationId, tenantId, communicationStatus, {
+        externalId: exotelResponse.messageSid,
+        provider: 'exotel',
+        failedReason: exotelResponse.errorMessage
+      });
+    }
+    
+    return { success: true, smsLog, exotelResponse };
+  } catch (error) {
+    // Update log with error
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'API_ERROR',
+      errorMessage: error.message
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      await updateCommunicationStatus(communicationId, tenantId, 'failed', {
+        provider: 'exotel',
+        failedReason: error.message
+      });
+    }
+    
+    return { success: false, error: error.message, smsLog };
+  }
+}
+
+export async function sendExotelAPIRequest({ accountSid, apiKey, apiToken, subdomain, fromNumber, toNumber, messageContent, priority, externalId }) {
+  // Exotel SMS API endpoint
+  const apiUrl = `https://${subdomain}.exotel.in/v1/Accounts/${accountSid}/Sms/send`;
+  
+  const authString = Buffer.from(`${accountSid}:${apiToken}`).toString('base64');
+  
+  const payload = {
+    SmsSid: externalId,
+    SenderId: fromNumber,
+    To: toNumber,
+    MessageBody: messageContent,
+    Priority: priority,
+    Type: 'txn', // Transactional SMS
+    DltTemplateId: '1207160012345678901' // Template ID for DLT compliance
+  };
+  
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  const responseData = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(`Exotel API Error: ${responseData.message || 'Unknown error'}`);
+  }
+  
+  return {
+    messageSid: responseData.SmsSid,
+    status: responseData.Status === 'sent' ? 'sent' : 'queued',
+    sentTimestamp: responseData.Date,
+    cost: responseData.Cost || 0,
+    webhookData: responseData
+  };
+}
+
+export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_sms_logs
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(smsLogId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getExotelSMSLogs(tenantId, filters = {}) {
+  const { status, toNumber, fromNumber, startDate, endDate, campaignId, limit = 100 } = filters;
+  
+  let sql = `
+    SELECT 
+      l.*,
+      c.campaign_name,
+      ct.template_name,
+      p.name as patient_name,
+      p.phone as patient_phone
+    FROM emr.exotel_sms_logs l
+    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    WHERE l.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND l.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (toNumber) {
+    sql += ` AND l.to_number = $${paramIndex++}`;
+    params.push(toNumber);
+  }
+  
+  if (fromNumber) {
+    sql += ` AND l.from_number = $${paramIndex++}`;
+    params.push(fromNumber);
+  }
+  
+  if (startDate) {
+    sql += ` AND l.created_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND l.created_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  if (campaignId) {
+    sql += ` AND l.campaign_id = $${paramIndex++}`;
+    params.push(campaignId);
+  }
+  
+  sql += ` ORDER BY l.created_at DESC LIMIT $${paramIndex++}`;
+  params.push(limit);
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_number_pools (
+      tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
+      daily_limit, monthly_limit, priority, is_active, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, poolName, phoneNumber, numberType, departmentId, doctorId,
+    dailyLimit, monthlyLimit, priority, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelNumberPools(tenantId, filters = {}) {
+  const { isActive = true, numberType, departmentId, doctorId } = filters;
+  
+  let sql = `
+    SELECT 
+      np.*,
+      d.name as department_name,
+      u.name as doctor_name,
+      ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
+      ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
+    FROM emr.exotel_number_pools np
+    LEFT JOIN emr.departments d ON np.department_id = d.id
+    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    WHERE np.tenant_id = $1 AND np.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (numberType) {
+    sql += ` AND np.number_type = $${paramIndex++}`;
+    params.push(numberType);
+  }
+  
+  if (departmentId) {
+    sql += ` AND np.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND np.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  sql += ` ORDER BY np.priority ASC, np.pool_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function processExotelWebhook(tenantId, eventData) {
+  const sql = `
+    INSERT INTO emr.exotel_webhook_events (
+      tenant_id, event_type, event_data, message_sid, account_sid, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, eventData.eventType || 'unknown', 
+    JSON.stringify(eventData), 
+    eventData.SmsSid, 
+    eventData.AccountSid
+  ]);
+  
+  const webhookEvent = result.rows[0];
+  
+  // Process delivery reports
+  if (eventData.Status) {
+    await processExotelDeliveryReport(tenantId, eventData);
+  }
+  
+  return webhookEvent;
+}
+
+export async function processExotelDeliveryReport(tenantId, deliveryData) {
+  const { SmsSid, Status, ErrorCode, ErrorMessage, Date, Cost } = deliveryData;
+  
+  // Update SMS log with delivery status
+  const updateData = {
+    status: Status.toLowerCase(),
+    deliveryStatus: Status.toLowerCase(),
+    deliveryTimestamp: Date ? new Date(Date) : null,
+    errorCode: ErrorCode,
+    errorMessage: ErrorMessage,
+    cost: Cost || 0,
+    webhookData: JSON.stringify(deliveryData)
+  };
+  
+  // Find the SMS log entry
+  const findSql = `
+    SELECT id, communication_id, to_number 
+    FROM emr.exotel_sms_logs 
+    WHERE message_sid = $1 AND tenant_id = $2
+  `;
+  
+  const findResult = await query(findSql, [SmsSid, tenantId]);
+  const smsLog = findResult.rows[0];
+  
+  if (smsLog) {
+    await updateExotelSMSLog(smsLog.id, tenantId, updateData);
+    
+    // Update communication status if linked
+    if (smsLog.communication_id) {
+      const communicationStatus = Status.toLowerCase() === 'delivered' ? 'delivered' : 
+                              Status.toLowerCase() === 'failed' ? 'failed' : 'sent';
+      
+      await updateCommunicationStatus(smsLog.communication_id, tenantId, communicationStatus, {
+        externalId: SmsSid,
+        provider: 'exotel',
+        failedReason: ErrorMessage
+      });
+    }
+    
+    // Schedule retry for failed messages
+    if (Status.toLowerCase() === 'failed' && ErrorCode !== '404') {
+      await scheduleSMSRetry(smsLog.id);
+    }
+  }
+}
+
+export async function scheduleSMSRetry(smsLogId) {
+  const sql = `SELECT schedule_sms_retry($1)`;
+  await query(sql, [smsLogId]);
+}
+
+export async function getExotelSMSStats(tenantId, filters = {}) {
+  const { startDate, endDate, messageType, fromNumber } = filters;
+  
+  let sql = `SELECT get_exotel_sms_stats($1, $2, $3)`;
+  const params = [tenantId, startDate, endDate];
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function retryFailedSMS(tenantId, smsLogId) {
+  const sql = `
+    SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
+    FROM emr.exotel_sms_logs l
+    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
+  `;
+  
+  const result = await query(sql, [smsLogId, tenantId]);
+  const smsLog = result.rows[0];
+  
+  if (!smsLog) {
+    throw new Error('SMS log not found or not in failed status');
+  }
+  
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: smsLog.account_sid,
+      apiKey: smsLog.api_key,
+      apiToken: smsLog.api_token,
+      subdomain: smsLog.subdomain,
+      fromNumber: smsLog.from_number,
+      toNumber: smsLog.to_number,
+      messageContent: smsLog.message_content,
+      priority: smsLog.priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with retry result
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: true, exotelResponse };
+  } catch (error) {
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'RETRY_FAILED',
+      errorMessage: error.message,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getPendingRetries(tenantId) {
+  const sql = `
+    SELECT 
+      l.*,
+      EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
+    FROM emr.exotel_sms_logs l
+    WHERE l.tenant_id = $1 
+      AND l.status = 'queued' 
+      AND l.next_retry_at IS NOT NULL 
+      AND l.next_retry_at <= NOW() + INTERVAL '1 hour'
+      AND l.retry_count < l.max_retries
+    ORDER BY l.next_retry_at ASC
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function processScheduledCampaigns(tenantId) {
+  const sql = `
+    SELECT c.* 
+    FROM emr.exotel_sms_campaigns c
+    WHERE c.tenant_id = $1 
+      AND c.status = 'scheduled' 
+      AND c.scheduled_at <= NOW()
+    ORDER BY c.scheduled_at ASC
+  `;
+  
+  const campaigns = await query(sql, [tenantId]);
+  
+  for (const campaign of campaigns) {
+    // Update campaign status to active
+    await query(`
+      UPDATE emr.exotel_sms_campaigns 
+      SET status = 'active', updated_at = NOW()
+      WHERE id = $1
+    `, [campaign.id]);
+    
+    // Process campaign based on target audience
+    await processSMSCampaign(campaign, tenantId);
+  }
+}
+
+export async function processSMSCampaign(campaign, tenantId) {
+  const { targetAudience, filters } = campaign;
+  
+  let targetNumbers = [];
+  
+  switch (targetAudience) {
+    case 'all_patients':
+      const patientsSql = `
+        SELECT DISTINCT phone FROM emr.patients 
+        WHERE tenant_id = $1 AND phone IS NOT NULL
+      `;
+      const patientsResult = await query(patientsSql, [tenantId]);
+      targetNumbers = patientsResult.rows.map(p => p.phone);
+      break;
+      
+    case 'specific_patients':
+      if (filters && filters.patientIds) {
+        const specificPatientsSql = `
+          SELECT phone FROM emr.patients 
+          WHERE tenant_id = $1 AND id = ANY($2)
+        `;
+        const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
+        targetNumbers = specificResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'department':
+      if (filters && filters.departmentId) {
+        const deptPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const deptResult = await query(deptPatientsSql, [tenantId, filters.departmentId]);
+        targetNumbers = deptResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'doctor':
+      if (filters && filters.doctorId) {
+        const doctorPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const doctorResult = await query(doctorPatientsSql, [tenantId, filters.doctorId]);
+        targetNumbers = doctorResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    default:
+      if (filters && filters.phoneNumbers) {
+        targetNumbers = filters.phoneNumbers;
+      }
+      break;
+  }
+  
+  // Send SMS to all target numbers
+  for (const phoneNumber of targetNumbers) {
+    await sendExotelSMS({
+      tenantId,
+      toNumber: phoneNumber,
+      messageContent: campaign.message_content || 'Campaign message',
+      messageType: 'promotional',
+      campaignId: campaign.id
+    });
+  }
+  
+  // Update campaign statistics
+  await query(`
+    UPDATE emr.exotel_sms_campaigns 
+    SET total_recipients = $1, updated_at = NOW()
+    WHERE id = $2
+  `, [targetNumbers.length, campaign.id]);
+}
+
+export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
+  const sql = `
+    INSERT INTO emr.opd_bill_items (
+      tenant_id, bill_id, service_type, service_name, service_code, description,
+      quantity, unit_price, discount_amount, tax_amount, total_amount,
+      doctor_id, department_id, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, $11,
+            $12, $13, $14)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, billId, serviceType, serviceName, serviceCode, description,
+    quantity, unitPrice, discountAmount, taxAmount, totalAmount,
+    doctorId, departmentId, createdBy
+  ]);
+  
+  // Update bill totals
+  await query(`SELECT calculate_bill_totals($1)`, [billId]);
+  
+  return result.rows[0];
+}
+
+export async function updateBillStatus(billId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (additionalData.paymentMethod) {
+    fields.push('payment_method');
+    values.push(additionalData.paymentMethod);
+  }
+  
+  if (additionalData.paidAmount) {
+    fields.push('paid_amount');
+    values.push(additionalData.paidAmount);
+  }
+  
+  if (additionalData.paymentDate) {
+    fields.push('payment_date');
+    values.push(additionalData.paymentDate);
+  }
+  
+  if (additionalData.transactionId) {
+    fields.push('transaction_id');
+    values.push(additionalData.transactionId);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.opd_bills 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(billId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getBillingStats(tenantId, filters = {}) {
+  const { departmentId, doctorId, date = new Date().toISOString().split('T')[0] } = filters;
+  
+  const sql = `
+    SELECT 
+      COUNT(*) as total_bills,
+      COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_bills,
+      COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bills,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_bills,
+      SUM(total_amount) as total_revenue,
+      SUM(paid_amount) as total_paid,
+      SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
+      AVG(total_amount) as avg_bill_amount
+    FROM emr.opd_bills
+    WHERE tenant_id = $1 
+      AND bill_date = $2
+      AND ($3::uuid IS NULL OR department_id = $3)
+      AND ($4::uuid IS NULL OR doctor_id = $4)
+  `;
+  
+  const result = await query(sql, [tenantId, date, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getServicePackages(tenantId, filters = {}) {
+  const { isActive = true, departmentId } = filters;
+  
+  let sql = `
+    SELECT 
+      sp.*,
+      d.name as department_name,
+      COUNT(pi.id) as item_count
+    FROM emr.opd_service_packages sp
+    LEFT JOIN emr.departments d ON sp.department_id = d.id
+    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    WHERE sp.tenant_id = $1
+      AND sp.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (departmentId) {
+    sql += ` AND sp.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  sql += ` GROUP BY sp.id, d.name ORDER BY sp.name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+// =====================================================
+// COMMUNICATION SYSTEM
+// =====================================================
+
+export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
+  const sql = `
+    INSERT INTO emr.communication_templates (
+      tenant_id, template_name, template_type, purpose, subject, message_content,
+      variables, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, templateName, templateType, purpose, subject, messageContent,
+    JSON.stringify(variables || []), isActive, isDefault, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getCommunicationTemplates(tenantId, filters = {}) {
+  const { templateType, purpose, isActive = true } = filters;
+  
+  let sql = `
+    SELECT * FROM emr.communication_templates
+    WHERE tenant_id = $1 AND is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (templateType) {
+    sql += ` AND template_type = $${paramIndex++}`;
+    params.push(templateType);
+  }
+  
+  if (purpose) {
+    sql += ` AND purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  sql += ` ORDER BY template_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendCommunication({ tenantId, patientId, communicationType, purpose, messageContent, recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId, templateId, variablesUsed, scheduledFor, isAutomated = false, priority = 1, createdBy }) {
+  const sql = `
+    SELECT create_communication(
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    ) as communication_id
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, communicationType, purpose, messageContent,
+    recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId,
+    templateId, variablesUsed ? JSON.stringify(variablesUsed) : null, scheduledFor, isAutomated, priority, createdBy
+  ]);
+  
+  return result.rows[0].communication_id;
+}
+
+export async function getPatientCommunications(tenantId, filters = {}) {
+  const { patientId, communicationType, purpose, status, date } = filters;
+  
+  let sql = `
+    SELECT 
+      pc.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      ct.template_name,
+      a.start as appointment_time,
+      t.full_token as token_number,
+      b.bill_number
+    FROM emr.patient_communications pc
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
+    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    WHERE pc.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (patientId) {
+    sql += ` AND pc.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  if (communicationType) {
+    sql += ` AND pc.communication_type = $${paramIndex++}`;
+    params.push(communicationType);
+  }
+  
+  if (purpose) {
+    sql += ` AND pc.purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  if (status) {
+    sql += ` AND pc.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (date) {
+    sql += ` AND DATE(pc.created_at) = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  sql += ` ORDER BY pc.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function updateCommunicationStatus(communicationId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (status === 'sent') {
+    fields.push('sent_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'delivered') {
+    fields.push('delivered_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'read') {
+    fields.push('read_at');
+    values.push(new Date());
+  }
+  
+  if (additionalData.externalId) {
+    fields.push('external_id');
+    values.push(additionalData.externalId);
+  }
+  
+  if (additionalData.provider) {
+    fields.push('provider');
+    values.push(additionalData.provider);
+  }
+  
+  if (additionalData.failedReason) {
+    fields.push('failed_reason');
+    values.push(additionalData.failedReason);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.patient_communications 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(communicationId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function scheduleAppointmentReminder({ tenantId, appointmentId, patientId, patientPhone, patientEmail, appointmentTime, doctorName, departmentName }) {
+  const variables = {
+    patient_name: patientId, // Will be replaced with actual patient name
+    appointment_time: appointmentTime,
+    doctor_name: doctorName,
+    department_name: departmentName,
+    hospital_name: 'Hospital' // Get from settings
+  };
+  
+  const messageContent = `Reminder: Your appointment is scheduled for ${appointmentTime} with Dr. ${doctorName} at ${departmentName}. Please arrive 15 minutes early.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'appointment_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    appointmentId,
+    variablesUsed: variables,
+    scheduledFor: new Date(appointmentTime).getTime() - (24 * 60 * 60 * 1000), // 24 hours before
+    isAutomated: true,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendTokenCallNotification({ tenantId, tokenId, patientId, patientPhone, patientEmail, tokenNumber, departmentName, doctorName }) {
+  const variables = {
+    patient_name: patientId,
+    token_number: tokenNumber,
+    department_name: departmentName,
+    doctor_name: doctorName,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Your token ${tokenNumber} has been called. Please proceed to ${departmentName}. Dr. ${doctorName} is ready to see you.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'token_call',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    tokenId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 2,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendBillingReminder({ tenantId, billId, patientId, patientPhone, patientEmail, billNumber, totalAmount, dueDate }) {
+  const variables = {
+    patient_name: patientId,
+    bill_number: billNumber,
+    total_amount: totalAmount,
+    due_date: dueDate,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Reminder: Bill ${billNumber} of amount ${totalAmount} is due on ${dueDate}. Please complete the payment to avoid any inconvenience.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'billing_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    billId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 1,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function getAvailableSlotsForDoctor(tenantId, doctorId, date) {
+  const sql = `
+    SELECT 
+      id,
+      start_time,
+      end_time,
+      slot_duration_minutes,
+      max_appointments,
+      current_appointments,
+      available_slots
+    FROM emr.doctor_availability 
+    WHERE tenant_id = $1 
+      AND doctor_id = $2 
+      AND date = $3 
+      AND is_available = true 
+      AND status = 'available'
+      AND current_appointments < max_appointments
+    ORDER BY start_time
+  `;
+  
+  const result = await query(sql, [tenantId, doctorId, date]);
+  return result.rows.map(slot => ({
+    ...slot,
+    available_slots: slot.max_appointments - slot.current_appointments
+  }));
+}
+
+export async function getDoctorAvailabilityCalendar(tenantId, doctorId, startDate, endDate) {
+  const sql = `
+    SELECT 
+      date,
+      COUNT(*) as total_slots,
+      COUNT(CASE WHEN current_appointments < max_appointments THEN 1 END) as available_slots,
+      COUNT(CASE WHEN current_appointments >= max_appointments THEN 1 END) as booked_slots,
+      MIN(start_time) as first_slot_time,
+      MAX(end_time) as last_slot_time
+    FROM emr.doctor_availability 
+    WHERE tenant_id = $1 
+      AND ($2::uuid IS NULL OR doctor_id = $2)
+      AND date BETWEEN $3 AND $4
+      AND is_available = true
+    GROUP BY date
+    ORDER BY date
+  `;
+  
+  const result = await query(sql, [tenantId, doctorId, startDate, endDate]);
+  return result.rows;
+}
+
+export async function deleteDoctorAvailability(availabilityId, tenantId) {
+  // Check if there are any appointments booked for this slot
+  const checkSql = `
+    SELECT COUNT(*) as count 
+    FROM emr.appointments a
+    JOIN emr.doctor_availability da ON a.doctor_availability_id = da.id
+    WHERE da.id = $1 AND da.tenant_id = $2
+  `;
+  
+  const checkResult = await query(checkSql, [availabilityId, tenantId]);
+  
+  if (parseInt(checkResult.rows[0].count) > 0) {
+    throw new Error('Cannot delete availability slot with existing appointments');
+  }
+  
+  const sql = `
+    DELETE FROM emr.doctor_availability 
+    WHERE id = $1 AND tenant_id = $2
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [availabilityId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// OPD TOKEN QUEUE SYSTEM
+// =====================================================
+
+export async function generateOPDToken({ tenantId, patientId, departmentId, doctorId, priority = 'general', visitType = 'new', chiefComplaint, appointmentId, createdBy }) {
+  // Get next token number
+  const nextTokenSql = `
+    SELECT get_next_token_number($1, $2) as token_number
+  `;
+  const tokenResult = await query(nextTokenSql, [tenantId, departmentId]);
+  const tokenNumber = tokenResult.rows[0].token_number;
+  
+  // Create the token
+  const sql = `
+    INSERT INTO emr.opd_tokens (
+      tenant_id, patient_id, token_number, token_prefix, status, priority,
+      department_id, doctor_id, appointment_id, visit_type, chief_complaint, created_by
+    )
+    VALUES ($1, $2, $3, 'OPD', $4, $5, $6, $7, $8, $9, $10, $11)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, tokenNumber, 'waiting', priority,
+    departmentId, doctorId, appointmentId, visitType, chiefComplaint, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getOPDTokens(tenantId, filters = {}) {
+  const { status, departmentId, doctorId, date, priority } = filters;
+  
+  let sql = `
+    SELECT 
+      t.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.age,
+      p.gender,
+      d.name as department_name,
+      u.name as doctor_name,
+      a.start as appointment_time
+    FROM emr.opd_tokens t
+    LEFT JOIN emr.patients p ON t.patient_id = p.id
+    LEFT JOIN emr.departments d ON t.department_id = d.id
+    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    WHERE t.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND t.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (departmentId) {
+    sql += ` AND t.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND t.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  if (date) {
+    sql += ` AND DATE(t.created_at) = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  if (priority) {
+    sql += ` AND t.priority = $${paramIndex++}`;
+    params.push(priority);
+  }
+  
+  sql += ` ORDER BY 
+    CASE 
+      WHEN t.priority = 'urgent' THEN 1
+      WHEN t.priority = 'senior_citizen' THEN 2
+      WHEN t.priority = 'follow_up' THEN 3
+      ELSE 4
+    END,
+    t.token_number ASC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function getOPDTokenById(tokenId, tenantId) {
+  const sql = `
+    SELECT 
+      t.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.age,
+      p.gender,
+      p.blood_group,
+      p.address,
+      d.name as department_name,
+      u.name as doctor_name,
+      a.start as appointment_time
+    FROM emr.opd_tokens t
+    LEFT JOIN emr.patients p ON t.patient_id = p.id
+    LEFT JOIN emr.departments d ON t.department_id = d.id
+    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    WHERE t.id = $1 AND t.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [tokenId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// OPD BILLING SYSTEM
+// =====================================================
+
+export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
+  // Generate bill number
+  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
+  const billNumberResult = await query(billNumberSql, [tenantId]);
+  const billNumber = billNumberResult.rows[0].bill_number;
+  
+  const sql = `
+    INSERT INTO emr.opd_bills (
+      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
+      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
+      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
+      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
+      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
+      notes, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
+            $6, $7, $8, $9, $10, $11,
+            $12, $13, $14, $15, $16,
+            $17, $18, $19, $20, $21, $22,
+            $23, $24, $25, $26, $27)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, tokenId, appointmentId, billNumber,
+    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
+    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
+    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
+    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
+    notes, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getOPDBills(tenantId, filters = {}) {
+  const { status, departmentId, doctorId, date, patientId } = filters;
+  
+  let sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    WHERE b.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND b.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (departmentId) {
+    sql += ` AND b.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND b.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  if (date) {
+    sql += ` AND b.bill_date = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  if (patientId) {
+    sql += ` AND b.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function getOPDBillById(billId, tenantId) {
+  const sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number,
+      a.start as appointment_time
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    WHERE b.id = $1 AND b.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [billId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// EXOTEL SMS PROVIDER INTEGRATION
+// =====================================================
+
+export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_configurations (
+      tenant_id, account_sid, api_key, api_token, subdomain, from_number,
+      webhook_url, delivery_report_webhook, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, false, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber,
+    webhookUrl, deliveryReportWebhook, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelConfigurations(tenantId, isActive = true) {
+  const sql = `
+    SELECT * FROM emr.exotel_configurations
+    WHERE tenant_id = $1 AND is_active = $2
+    ORDER BY is_default DESC, created_at DESC
+  `;
+  
+  const result = await query(sql, [tenantId, isActive]);
+  return result.rows;
+}
+
+export async function updateExotelConfiguration(configId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_configurations
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(configId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_sms_campaigns (
+      tenant_id, campaign_name, campaign_type, description, template_id,
+      target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
+      status, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, campaignName, campaignType, description, templateId,
+    targetAudience, JSON.stringify(filters), scheduleType, scheduledAt, 
+    recurringPattern ? JSON.stringify(recurringPattern) : null, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getSMSCampaigns(tenantId, filters = {}) {
+  const { status, campaignType, startDate, endDate } = filters;
+  
+  let sql = `
+    SELECT 
+      c.*,
+      ct.template_name,
+      ct.message_content,
+      COUNT(l.id) as sent_count,
+      COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
+      COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
+    FROM emr.exotel_sms_campaigns c
+    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    WHERE c.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND c.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (campaignType) {
+    sql += ` AND c.campaign_type = $${paramIndex++}`;
+    params.push(campaignType);
+  }
+  
+  if (startDate) {
+    sql += ` AND c.scheduled_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND c.scheduled_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  sql += ` GROUP BY c.id, ct.template_name, ct.message_content ORDER BY c.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendExotelSMS({ tenantId, toNumber, messageContent, messageType = 'transactional', priority = 1, campaignId = null, communicationId = null, externalId = null }) {
+  // Get available Exotel number
+  const availableNumberSql = `SELECT get_available_exotel_number($1, $2) as from_number`;
+  const numberResult = await query(availableNumberSql, [tenantId, messageType]);
+  const fromNumber = numberResult.rows[0].from_number;
+  
+  if (!fromNumber) {
+    throw new Error('No available Exotel number found for this message type');
+  }
+  
+  // Get Exotel configuration
+  const configSql = `
+    SELECT account_sid, api_key, api_token, subdomain 
+    FROM emr.exotel_configurations 
+    WHERE tenant_id = $1 AND is_active = true 
+    ORDER BY is_default DESC 
+    LIMIT 1
+  `;
+  const configResult = await query(configSql, [tenantId]);
+  const config = configResult.rows[0];
+  
+  if (!config) {
+    throw new Error('No active Exotel configuration found');
+  }
+  
+  // Create SMS log entry
+  const logSql = `
+    INSERT INTO emr.exotel_sms_logs (
+      tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
+      message_content, message_type, priority, status, external_id, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'queued', $10, NOW())
+    RETURNING *
+  `;
+  
+  const logResult = await query(logSql, [
+    tenantId, campaignId, communicationId, config.account_sid, fromNumber, toNumber,
+    messageContent, messageType, priority, externalId
+  ]);
+  
+  const smsLog = logResult.rows[0];
+  
+  // Update number pool usage
+  await query(`SELECT update_exotel_number_usage($1, $2, 1)`, [tenantId, fromNumber]);
+  
+  // Send SMS via Exotel API
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: config.account_sid,
+      apiKey: config.api_key,
+      apiToken: config.api_token,
+      subdomain: config.subdomain,
+      fromNumber,
+      toNumber,
+      messageContent,
+      priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with Exotel response
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      webhookData: exotelResponse.webhookData
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      const communicationStatus = exotelResponse.status === 'sent' ? 'sent' : 'failed';
+      await updateCommunicationStatus(communicationId, tenantId, communicationStatus, {
+        externalId: exotelResponse.messageSid,
+        provider: 'exotel',
+        failedReason: exotelResponse.errorMessage
+      });
+    }
+    
+    return { success: true, smsLog, exotelResponse };
+  } catch (error) {
+    // Update log with error
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'API_ERROR',
+      errorMessage: error.message
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      await updateCommunicationStatus(communicationId, tenantId, 'failed', {
+        provider: 'exotel',
+        failedReason: error.message
+      });
+    }
+    
+    return { success: false, error: error.message, smsLog };
+  }
+}
+
+export async function sendExotelAPIRequest({ accountSid, apiKey, apiToken, subdomain, fromNumber, toNumber, messageContent, priority, externalId }) {
+  // Exotel SMS API endpoint
+  const apiUrl = `https://${subdomain}.exotel.in/v1/Accounts/${accountSid}/Sms/send`;
+  
+  const authString = Buffer.from(`${accountSid}:${apiToken}`).toString('base64');
+  
+  const payload = {
+    SmsSid: externalId,
+    SenderId: fromNumber,
+    To: toNumber,
+    MessageBody: messageContent,
+    Priority: priority,
+    Type: 'txn', // Transactional SMS
+    DltTemplateId: '1207160012345678901' // Template ID for DLT compliance
+  };
+  
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  const responseData = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(`Exotel API Error: ${responseData.message || 'Unknown error'}`);
+  }
+  
+  return {
+    messageSid: responseData.SmsSid,
+    status: responseData.Status === 'sent' ? 'sent' : 'queued',
+    sentTimestamp: responseData.Date,
+    cost: responseData.Cost || 0,
+    webhookData: responseData
+  };
+}
+
+export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_sms_logs
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(smsLogId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getExotelSMSLogs(tenantId, filters = {}) {
+  const { status, toNumber, fromNumber, startDate, endDate, campaignId, limit = 100 } = filters;
+  
+  let sql = `
+    SELECT 
+      l.*,
+      c.campaign_name,
+      ct.template_name,
+      p.name as patient_name,
+      p.phone as patient_phone
+    FROM emr.exotel_sms_logs l
+    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    WHERE l.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND l.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (toNumber) {
+    sql += ` AND l.to_number = $${paramIndex++}`;
+    params.push(toNumber);
+  }
+  
+  if (fromNumber) {
+    sql += ` AND l.from_number = $${paramIndex++}`;
+    params.push(fromNumber);
+  }
+  
+  if (startDate) {
+    sql += ` AND l.created_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND l.created_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  if (campaignId) {
+    sql += ` AND l.campaign_id = $${paramIndex++}`;
+    params.push(campaignId);
+  }
+  
+  sql += ` ORDER BY l.created_at DESC LIMIT $${paramIndex++}`;
+  params.push(limit);
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_number_pools (
+      tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
+      daily_limit, monthly_limit, priority, is_active, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, poolName, phoneNumber, numberType, departmentId, doctorId,
+    dailyLimit, monthlyLimit, priority, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelNumberPools(tenantId, filters = {}) {
+  const { isActive = true, numberType, departmentId, doctorId } = filters;
+  
+  let sql = `
+    SELECT 
+      np.*,
+      d.name as department_name,
+      u.name as doctor_name,
+      ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
+      ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
+    FROM emr.exotel_number_pools np
+    LEFT JOIN emr.departments d ON np.department_id = d.id
+    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    WHERE np.tenant_id = $1 AND np.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (numberType) {
+    sql += ` AND np.number_type = $${paramIndex++}`;
+    params.push(numberType);
+  }
+  
+  if (departmentId) {
+    sql += ` AND np.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND np.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  sql += ` ORDER BY np.priority ASC, np.pool_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function processExotelWebhook(tenantId, eventData) {
+  const sql = `
+    INSERT INTO emr.exotel_webhook_events (
+      tenant_id, event_type, event_data, message_sid, account_sid, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, eventData.eventType || 'unknown', 
+    JSON.stringify(eventData), 
+    eventData.SmsSid, 
+    eventData.AccountSid
+  ]);
+  
+  const webhookEvent = result.rows[0];
+  
+  // Process delivery reports
+  if (eventData.Status) {
+    await processExotelDeliveryReport(tenantId, eventData);
+  }
+  
+  return webhookEvent;
+}
+
+export async function processExotelDeliveryReport(tenantId, deliveryData) {
+  const { SmsSid, Status, ErrorCode, ErrorMessage, Date, Cost } = deliveryData;
+  
+  // Update SMS log with delivery status
+  const updateData = {
+    status: Status.toLowerCase(),
+    deliveryStatus: Status.toLowerCase(),
+    deliveryTimestamp: Date ? new Date(Date) : null,
+    errorCode: ErrorCode,
+    errorMessage: ErrorMessage,
+    cost: Cost || 0,
+    webhookData: JSON.stringify(deliveryData)
+  };
+  
+  // Find the SMS log entry
+  const findSql = `
+    SELECT id, communication_id, to_number 
+    FROM emr.exotel_sms_logs 
+    WHERE message_sid = $1 AND tenant_id = $2
+  `;
+  
+  const findResult = await query(findSql, [SmsSid, tenantId]);
+  const smsLog = findResult.rows[0];
+  
+  if (smsLog) {
+    await updateExotelSMSLog(smsLog.id, tenantId, updateData);
+    
+    // Update communication status if linked
+    if (smsLog.communication_id) {
+      const communicationStatus = Status.toLowerCase() === 'delivered' ? 'delivered' : 
+                              Status.toLowerCase() === 'failed' ? 'failed' : 'sent';
+      
+      await updateCommunicationStatus(smsLog.communication_id, tenantId, communicationStatus, {
+        externalId: SmsSid,
+        provider: 'exotel',
+        failedReason: ErrorMessage
+      });
+    }
+    
+    // Schedule retry for failed messages
+    if (Status.toLowerCase() === 'failed' && ErrorCode !== '404') {
+      await scheduleSMSRetry(smsLog.id);
+    }
+  }
+}
+
+export async function scheduleSMSRetry(smsLogId) {
+  const sql = `SELECT schedule_sms_retry($1)`;
+  await query(sql, [smsLogId]);
+}
+
+export async function getExotelSMSStats(tenantId, filters = {}) {
+  const { startDate, endDate, messageType, fromNumber } = filters;
+  
+  let sql = `SELECT get_exotel_sms_stats($1, $2, $3)`;
+  const params = [tenantId, startDate, endDate];
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function retryFailedSMS(tenantId, smsLogId) {
+  const sql = `
+    SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
+    FROM emr.exotel_sms_logs l
+    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
+  `;
+  
+  const result = await query(sql, [smsLogId, tenantId]);
+  const smsLog = result.rows[0];
+  
+  if (!smsLog) {
+    throw new Error('SMS log not found or not in failed status');
+  }
+  
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: smsLog.account_sid,
+      apiKey: smsLog.api_key,
+      apiToken: smsLog.api_token,
+      subdomain: smsLog.subdomain,
+      fromNumber: smsLog.from_number,
+      toNumber: smsLog.to_number,
+      messageContent: smsLog.message_content,
+      priority: smsLog.priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with retry result
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: true, exotelResponse };
+  } catch (error) {
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'RETRY_FAILED',
+      errorMessage: error.message,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getPendingRetries(tenantId) {
+  const sql = `
+    SELECT 
+      l.*,
+      EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
+    FROM emr.exotel_sms_logs l
+    WHERE l.tenant_id = $1 
+      AND l.status = 'queued' 
+      AND l.next_retry_at IS NOT NULL 
+      AND l.next_retry_at <= NOW() + INTERVAL '1 hour'
+      AND l.retry_count < l.max_retries
+    ORDER BY l.next_retry_at ASC
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function processScheduledCampaigns(tenantId) {
+  const sql = `
+    SELECT c.* 
+    FROM emr.exotel_sms_campaigns c
+    WHERE c.tenant_id = $1 
+      AND c.status = 'scheduled' 
+      AND c.scheduled_at <= NOW()
+    ORDER BY c.scheduled_at ASC
+  `;
+  
+  const campaigns = await query(sql, [tenantId]);
+  
+  for (const campaign of campaigns) {
+    // Update campaign status to active
+    await query(`
+      UPDATE emr.exotel_sms_campaigns 
+      SET status = 'active', updated_at = NOW()
+      WHERE id = $1
+    `, [campaign.id]);
+    
+    // Process campaign based on target audience
+    await processSMSCampaign(campaign, tenantId);
+  }
+}
+
+export async function processSMSCampaign(campaign, tenantId) {
+  const { targetAudience, filters } = campaign;
+  
+  let targetNumbers = [];
+  
+  switch (targetAudience) {
+    case 'all_patients':
+      const patientsSql = `
+        SELECT DISTINCT phone FROM emr.patients 
+        WHERE tenant_id = $1 AND phone IS NOT NULL
+      `;
+      const patientsResult = await query(patientsSql, [tenantId]);
+      targetNumbers = patientsResult.rows.map(p => p.phone);
+      break;
+      
+    case 'specific_patients':
+      if (filters && filters.patientIds) {
+        const specificPatientsSql = `
+          SELECT phone FROM emr.patients 
+          WHERE tenant_id = $1 AND id = ANY($2)
+        `;
+        const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
+        targetNumbers = specificResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'department':
+      if (filters && filters.departmentId) {
+        const deptPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const deptResult = await query(deptPatientsSql, [tenantId, filters.departmentId]);
+        targetNumbers = deptResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'doctor':
+      if (filters && filters.doctorId) {
+        const doctorPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const doctorResult = await query(doctorPatientsSql, [tenantId, filters.doctorId]);
+        targetNumbers = doctorResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    default:
+      if (filters && filters.phoneNumbers) {
+        targetNumbers = filters.phoneNumbers;
+      }
+      break;
+  }
+  
+  // Send SMS to all target numbers
+  for (const phoneNumber of targetNumbers) {
+    await sendExotelSMS({
+      tenantId,
+      toNumber: phoneNumber,
+      messageContent: campaign.message_content || 'Campaign message',
+      messageType: 'promotional',
+      campaignId: campaign.id
+    });
+  }
+  
+  // Update campaign statistics
+  await query(`
+    UPDATE emr.exotel_sms_campaigns 
+    SET total_recipients = $1, updated_at = NOW()
+    WHERE id = $2
+  `, [targetNumbers.length, campaign.id]);
+}
+
+export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
+  const sql = `
+    INSERT INTO emr.opd_bill_items (
+      tenant_id, bill_id, service_type, service_name, service_code, description,
+      quantity, unit_price, discount_amount, tax_amount, total_amount,
+      doctor_id, department_id, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, $11,
+            $12, $13, $14)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, billId, serviceType, serviceName, serviceCode, description,
+    quantity, unitPrice, discountAmount, taxAmount, totalAmount,
+    doctorId, departmentId, createdBy
+  ]);
+  
+  // Update bill totals
+  await query(`SELECT calculate_bill_totals($1)`, [billId]);
+  
+  return result.rows[0];
+}
+
+export async function updateBillStatus(billId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (additionalData.paymentMethod) {
+    fields.push('payment_method');
+    values.push(additionalData.paymentMethod);
+  }
+  
+  if (additionalData.paidAmount) {
+    fields.push('paid_amount');
+    values.push(additionalData.paidAmount);
+  }
+  
+  if (additionalData.paymentDate) {
+    fields.push('payment_date');
+    values.push(additionalData.paymentDate);
+  }
+  
+  if (additionalData.transactionId) {
+    fields.push('transaction_id');
+    values.push(additionalData.transactionId);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.opd_bills 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(billId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getBillingStats(tenantId, filters = {}) {
+  const { departmentId, doctorId, date = new Date().toISOString().split('T')[0] } = filters;
+  
+  const sql = `
+    SELECT 
+      COUNT(*) as total_bills,
+      COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_bills,
+      COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bills,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_bills,
+      SUM(total_amount) as total_revenue,
+      SUM(paid_amount) as total_paid,
+      SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
+      AVG(total_amount) as avg_bill_amount
+    FROM emr.opd_bills
+    WHERE tenant_id = $1 
+      AND bill_date = $2
+      AND ($3::uuid IS NULL OR department_id = $3)
+      AND ($4::uuid IS NULL OR doctor_id = $4)
+  `;
+  
+  const result = await query(sql, [tenantId, date, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getServicePackages(tenantId, filters = {}) {
+  const { isActive = true, departmentId } = filters;
+  
+  let sql = `
+    SELECT 
+      sp.*,
+      d.name as department_name,
+      COUNT(pi.id) as item_count
+    FROM emr.opd_service_packages sp
+    LEFT JOIN emr.departments d ON sp.department_id = d.id
+    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    WHERE sp.tenant_id = $1
+      AND sp.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (departmentId) {
+    sql += ` AND sp.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  sql += ` GROUP BY sp.id, d.name ORDER BY sp.name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+// =====================================================
+// COMMUNICATION SYSTEM
+// =====================================================
+
+export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
+  const sql = `
+    INSERT INTO emr.communication_templates (
+      tenant_id, template_name, template_type, purpose, subject, message_content,
+      variables, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, templateName, templateType, purpose, subject, messageContent,
+    JSON.stringify(variables || []), isActive, isDefault, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getCommunicationTemplates(tenantId, filters = {}) {
+  const { templateType, purpose, isActive = true } = filters;
+  
+  let sql = `
+    SELECT * FROM emr.communication_templates
+    WHERE tenant_id = $1 AND is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (templateType) {
+    sql += ` AND template_type = $${paramIndex++}`;
+    params.push(templateType);
+  }
+  
+  if (purpose) {
+    sql += ` AND purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  sql += ` ORDER BY template_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendCommunication({ tenantId, patientId, communicationType, purpose, messageContent, recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId, templateId, variablesUsed, scheduledFor, isAutomated = false, priority = 1, createdBy }) {
+  const sql = `
+    SELECT create_communication(
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    ) as communication_id
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, communicationType, purpose, messageContent,
+    recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId,
+    templateId, variablesUsed ? JSON.stringify(variablesUsed) : null, scheduledFor, isAutomated, priority, createdBy
+  ]);
+  
+  return result.rows[0].communication_id;
+}
+
+export async function getPatientCommunications(tenantId, filters = {}) {
+  const { patientId, communicationType, purpose, status, date } = filters;
+  
+  let sql = `
+    SELECT 
+      pc.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      ct.template_name,
+      a.start as appointment_time,
+      t.full_token as token_number,
+      b.bill_number
+    FROM emr.patient_communications pc
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
+    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    WHERE pc.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (patientId) {
+    sql += ` AND pc.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  if (communicationType) {
+    sql += ` AND pc.communication_type = $${paramIndex++}`;
+    params.push(communicationType);
+  }
+  
+  if (purpose) {
+    sql += ` AND pc.purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  if (status) {
+    sql += ` AND pc.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (date) {
+    sql += ` AND DATE(pc.created_at) = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  sql += ` ORDER BY pc.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function updateCommunicationStatus(communicationId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (status === 'sent') {
+    fields.push('sent_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'delivered') {
+    fields.push('delivered_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'read') {
+    fields.push('read_at');
+    values.push(new Date());
+  }
+  
+  if (additionalData.externalId) {
+    fields.push('external_id');
+    values.push(additionalData.externalId);
+  }
+  
+  if (additionalData.provider) {
+    fields.push('provider');
+    values.push(additionalData.provider);
+  }
+  
+  if (additionalData.failedReason) {
+    fields.push('failed_reason');
+    values.push(additionalData.failedReason);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.patient_communications 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(communicationId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function scheduleAppointmentReminder({ tenantId, appointmentId, patientId, patientPhone, patientEmail, appointmentTime, doctorName, departmentName }) {
+  const variables = {
+    patient_name: patientId, // Will be replaced with actual patient name
+    appointment_time: appointmentTime,
+    doctor_name: doctorName,
+    department_name: departmentName,
+    hospital_name: 'Hospital' // Get from settings
+  };
+  
+  const messageContent = `Reminder: Your appointment is scheduled for ${appointmentTime} with Dr. ${doctorName} at ${departmentName}. Please arrive 15 minutes early.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'appointment_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    appointmentId,
+    variablesUsed: variables,
+    scheduledFor: new Date(appointmentTime).getTime() - (24 * 60 * 60 * 1000), // 24 hours before
+    isAutomated: true,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendTokenCallNotification({ tenantId, tokenId, patientId, patientPhone, patientEmail, tokenNumber, departmentName, doctorName }) {
+  const variables = {
+    patient_name: patientId,
+    token_number: tokenNumber,
+    department_name: departmentName,
+    doctor_name: doctorName,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Your token ${tokenNumber} has been called. Please proceed to ${departmentName}. Dr. ${doctorName} is ready to see you.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'token_call',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    tokenId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 2,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendBillingReminder({ tenantId, billId, patientId, patientPhone, patientEmail, billNumber, totalAmount, dueDate }) {
+  const variables = {
+    patient_name: patientId,
+    bill_number: billNumber,
+    total_amount: totalAmount,
+    due_date: dueDate,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Reminder: Bill ${billNumber} of amount ${totalAmount} is due on ${dueDate}. Please complete the payment to avoid any inconvenience.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'billing_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    billId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 1,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function updateTokenStatus(tokenId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  // Add timestamp fields based on status
+  if (status === 'called') {
+    fields.push('last_called_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'in_progress') {
+    fields.push('consultation_started_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'completed') {
+    fields.push('consultation_completed_at');
+    values.push(new Date());
+  }
+  
+  // Add called_count increment
+  if (status === 'called') {
+    fields.push('called_count');
+    values.push(`(SELECT COALESCE(called_count, 0) + 1 FROM emr.opd_tokens WHERE id = $1)`);
+  }
+  
+  // Add additional data
+  if (additionalData.doctorId) {
+    fields.push('doctor_id');
+    values.push(additionalData.doctorId);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.opd_tokens 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(tokenId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function callNextToken(tenantId, departmentId, doctorId = null) {
+  const sql = `
+    UPDATE emr.opd_tokens 
+    SET status = 'called',
+        last_called_at = NOW(),
+        called_count = COALESCE(called_count, 0) + 1,
+        updated_at = NOW()
+    WHERE id = (
+      SELECT id FROM emr.opd_tokens 
+      WHERE tenant_id = $1 
+        AND ($2::uuid IS NULL OR department_id = $2)
+        AND ($3::uuid IS NULL OR doctor_id = $3)
+        AND status = 'waiting'
+      ORDER BY 
+        CASE 
+          WHEN priority = 'urgent' THEN 1
+          WHEN priority = 'senior_citizen' THEN 2
+          WHEN priority = 'follow_up' THEN 3
+          ELSE 4
+        END,
+        token_number ASC
+      LIMIT 1
+    )
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [tenantId, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getTokenQueueStats(tenantId, filters = {}) {
+  const { departmentId, doctorId, date = new Date().toISOString().split('T')[0] } = filters;
+  
+  const sql = `
+    SELECT 
+      COUNT(*) as total_tokens,
+      COUNT(CASE WHEN status = 'waiting' THEN 1 END) as waiting,
+      COUNT(CASE WHEN status = 'called' THEN 1 END) as called,
+      COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
+      COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled,
+      COUNT(CASE WHEN status = 'no_show' THEN 1 END) as no_show,
+      AVG(EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60) as avg_consultation_time_minutes
+    FROM emr.opd_tokens
+    WHERE tenant_id = $1 
+      AND DATE(created_at) = $2
+      AND ($3::uuid IS NULL OR department_id = $3)
+      AND ($4::uuid IS NULL OR doctor_id = $4)
+  `;
+  
+  const result = await query(sql, [tenantId, date, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getActiveTokensByDepartment(tenantId) {
+  const sql = `
+    SELECT 
+      d.id as department_id,
+      d.name as department_name,
+      COUNT(CASE WHEN t.status = 'waiting' THEN 1 END) as waiting_count,
+      COUNT(CASE WHEN t.status = 'called' THEN 1 END) as called_count,
+      COUNT(CASE WHEN t.status = 'in_progress' THEN 1 END) as in_progress_count,
+      MAX(t.token_number) as last_token,
+      t.full_token as current_token,
+      t.status as current_token_status
+    FROM emr.departments d
+    LEFT JOIN emr.opd_tokens t ON d.id = t.department_id 
+      AND t.tenant_id = $1 
+      AND DATE(t.created_at) = CURRENT_DATE
+      AND t.status IN ('waiting', 'called', 'in_progress')
+    WHERE d.tenant_id = $1
+    GROUP BY d.id, d.name, t.full_token, t.status
+    ORDER BY d.name
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
+  const sql = `
+    UPDATE emr.opd_tokens 
+    SET vitals_recorded = true,
+        updated_at = NOW()
+    WHERE id = $1 AND tenant_id = $2
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [tokenId, tenantId]);
+  
+  // Create vitals record if needed
+  if (result.rows[0]) {
+    const vitalsSql = `
+      INSERT INTO emr.vitals (
+        tenant_id, patient_id, encounter_id, blood_pressure_systolic,
+        blood_pressure_diastolic, heart_rate, temperature, 
+        oxygen_saturation, weight, height, created_by
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      RETURNING *
+    `;
+    
+    await query(vitalsSql, [
+      tenantId, 
+      result.rows[0].patient_id, 
+      null, // No encounter yet
+      vitalsData.bloodPressureSystolic,
+      vitalsData.bloodPressureDiastolic,
+      vitalsData.heartRate,
+      vitalsData.temperature,
+      vitalsData.oxygenSaturation,
+      vitalsData.weight,
+      vitalsData.height,
+      vitalsData.createdBy
+    ]);
+  }
+  
+  return result.rows[0];
+}
+
+export async function getTokenHistory(tenantId, patientId, limit = 10) {
+  const sql = `
+    SELECT 
+      t.*,
+      d.name as department_name,
+      u.name as doctor_name,
+      EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60 as consultation_duration_minutes
+    FROM emr.opd_tokens t
+    LEFT JOIN emr.departments d ON t.department_id = d.id
+    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    WHERE t.tenant_id = $1 AND t.patient_id = $2
+    ORDER BY t.created_at DESC
+    LIMIT $3
+  `;
+  
+  const result = await query(sql, [tenantId, patientId, limit]);
+  return result.rows;
+}
+
+export async function deleteOPDToken(tokenId, tenantId) {
+  const sql = `
+    DELETE FROM emr.opd_tokens 
+    WHERE id = $1 AND tenant_id = $2
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [tokenId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// OPD BILLING SYSTEM
+// =====================================================
+
+export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
+  // Generate bill number
+  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
+  const billNumberResult = await query(billNumberSql, [tenantId]);
+  const billNumber = billNumberResult.rows[0].bill_number;
+  
+  const sql = `
+    INSERT INTO emr.opd_bills (
+      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
+      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
+      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
+      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
+      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
+      notes, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
+            $6, $7, $8, $9, $10, $11,
+            $12, $13, $14, $15, $16,
+            $17, $18, $19, $20, $21, $22,
+            $23, $24, $25, $26, $27)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, tokenId, appointmentId, billNumber,
+    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
+    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
+    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
+    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
+    notes, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getOPDBills(tenantId, filters = {}) {
+  const { status, departmentId, doctorId, date, patientId } = filters;
+  
+  let sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    WHERE b.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND b.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (departmentId) {
+    sql += ` AND b.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND b.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  if (date) {
+    sql += ` AND b.bill_date = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  if (patientId) {
+    sql += ` AND b.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function getOPDBillById(billId, tenantId) {
+  const sql = `
+    SELECT 
+      b.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      d.name as department_name,
+      u.name as doctor_name,
+      t.full_token as token_number,
+      a.start as appointment_time
+    FROM emr.opd_bills b
+    LEFT JOIN emr.patients p ON b.patient_id = p.id
+    LEFT JOIN emr.departments d ON b.department_id = d.id
+    LEFT JOIN emr.users u ON b.doctor_id = u.id
+    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    WHERE b.id = $1 AND b.tenant_id = $2
+  `;
+  
+  const result = await query(sql, [billId, tenantId]);
+  return result.rows[0];
+}
+
+// =====================================================
+// EXOTEL SMS PROVIDER INTEGRATION
+// =====================================================
+
+export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_configurations (
+      tenant_id, account_sid, api_key, api_token, subdomain, from_number,
+      webhook_url, delivery_report_webhook, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, false, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber,
+    webhookUrl, deliveryReportWebhook, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelConfigurations(tenantId, isActive = true) {
+  const sql = `
+    SELECT * FROM emr.exotel_configurations
+    WHERE tenant_id = $1 AND is_active = $2
+    ORDER BY is_default DESC, created_at DESC
+  `;
+  
+  const result = await query(sql, [tenantId, isActive]);
+  return result.rows;
+}
+
+export async function updateExotelConfiguration(configId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_configurations
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(configId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_sms_campaigns (
+      tenant_id, campaign_name, campaign_type, description, template_id,
+      target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
+      status, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, campaignName, campaignType, description, templateId,
+    targetAudience, JSON.stringify(filters), scheduleType, scheduledAt, 
+    recurringPattern ? JSON.stringify(recurringPattern) : null, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getSMSCampaigns(tenantId, filters = {}) {
+  const { status, campaignType, startDate, endDate } = filters;
+  
+  let sql = `
+    SELECT 
+      c.*,
+      ct.template_name,
+      ct.message_content,
+      COUNT(l.id) as sent_count,
+      COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
+      COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
+    FROM emr.exotel_sms_campaigns c
+    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    WHERE c.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND c.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (campaignType) {
+    sql += ` AND c.campaign_type = $${paramIndex++}`;
+    params.push(campaignType);
+  }
+  
+  if (startDate) {
+    sql += ` AND c.scheduled_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND c.scheduled_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  sql += ` GROUP BY c.id, ct.template_name, ct.message_content ORDER BY c.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendExotelSMS({ tenantId, toNumber, messageContent, messageType = 'transactional', priority = 1, campaignId = null, communicationId = null, externalId = null }) {
+  // Get available Exotel number
+  const availableNumberSql = `SELECT get_available_exotel_number($1, $2) as from_number`;
+  const numberResult = await query(availableNumberSql, [tenantId, messageType]);
+  const fromNumber = numberResult.rows[0].from_number;
+  
+  if (!fromNumber) {
+    throw new Error('No available Exotel number found for this message type');
+  }
+  
+  // Get Exotel configuration
+  const configSql = `
+    SELECT account_sid, api_key, api_token, subdomain 
+    FROM emr.exotel_configurations 
+    WHERE tenant_id = $1 AND is_active = true 
+    ORDER BY is_default DESC 
+    LIMIT 1
+  `;
+  const configResult = await query(configSql, [tenantId]);
+  const config = configResult.rows[0];
+  
+  if (!config) {
+    throw new Error('No active Exotel configuration found');
+  }
+  
+  // Create SMS log entry
+  const logSql = `
+    INSERT INTO emr.exotel_sms_logs (
+      tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
+      message_content, message_type, priority, status, external_id, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'queued', $10, NOW())
+    RETURNING *
+  `;
+  
+  const logResult = await query(logSql, [
+    tenantId, campaignId, communicationId, config.account_sid, fromNumber, toNumber,
+    messageContent, messageType, priority, externalId
+  ]);
+  
+  const smsLog = logResult.rows[0];
+  
+  // Update number pool usage
+  await query(`SELECT update_exotel_number_usage($1, $2, 1)`, [tenantId, fromNumber]);
+  
+  // Send SMS via Exotel API
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: config.account_sid,
+      apiKey: config.api_key,
+      apiToken: config.api_token,
+      subdomain: config.subdomain,
+      fromNumber,
+      toNumber,
+      messageContent,
+      priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with Exotel response
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      webhookData: exotelResponse.webhookData
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      const communicationStatus = exotelResponse.status === 'sent' ? 'sent' : 'failed';
+      await updateCommunicationStatus(communicationId, tenantId, communicationStatus, {
+        externalId: exotelResponse.messageSid,
+        provider: 'exotel',
+        failedReason: exotelResponse.errorMessage
+      });
+    }
+    
+    return { success: true, smsLog, exotelResponse };
+  } catch (error) {
+    // Update log with error
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'API_ERROR',
+      errorMessage: error.message
+    });
+    
+    // Update communication status if linked
+    if (communicationId) {
+      await updateCommunicationStatus(communicationId, tenantId, 'failed', {
+        provider: 'exotel',
+        failedReason: error.message
+      });
+    }
+    
+    return { success: false, error: error.message, smsLog };
+  }
+}
+
+export async function sendExotelAPIRequest({ accountSid, apiKey, apiToken, subdomain, fromNumber, toNumber, messageContent, priority, externalId }) {
+  // Exotel SMS API endpoint
+  const apiUrl = `https://${subdomain}.exotel.in/v1/Accounts/${accountSid}/Sms/send`;
+  
+  const authString = Buffer.from(`${accountSid}:${apiToken}`).toString('base64');
+  
+  const payload = {
+    SmsSid: externalId,
+    SenderId: fromNumber,
+    To: toNumber,
+    MessageBody: messageContent,
+    Priority: priority,
+    Type: 'txn', // Transactional SMS
+    DltTemplateId: '1207160012345678901' // Template ID for DLT compliance
+  };
+  
+  const response = await fetch(apiUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${authString}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  const responseData = await response.json();
+  
+  if (!response.ok) {
+    throw new Error(`Exotel API Error: ${responseData.message || 'Unknown error'}`);
+  }
+  
+  return {
+    messageSid: responseData.SmsSid,
+    status: responseData.Status === 'sent' ? 'sent' : 'queued',
+    sentTimestamp: responseData.Date,
+    cost: responseData.Cost || 0,
+    webhookData: responseData
+  };
+}
+
+export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+  
+  Object.keys(updates).forEach(key => {
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(updates[key]);
+  });
+  
+  fields.push('updated_at = NOW()');
+  values.push(new Date());
+  
+  const setClause = fields.join(', ');
+  
+  const sql = `
+    UPDATE emr.exotel_sms_logs
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(smsLogId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getExotelSMSLogs(tenantId, filters = {}) {
+  const { status, toNumber, fromNumber, startDate, endDate, campaignId, limit = 100 } = filters;
+  
+  let sql = `
+    SELECT 
+      l.*,
+      c.campaign_name,
+      ct.template_name,
+      p.name as patient_name,
+      p.phone as patient_phone
+    FROM emr.exotel_sms_logs l
+    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    WHERE l.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (status) {
+    sql += ` AND l.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (toNumber) {
+    sql += ` AND l.to_number = $${paramIndex++}`;
+    params.push(toNumber);
+  }
+  
+  if (fromNumber) {
+    sql += ` AND l.from_number = $${paramIndex++}`;
+    params.push(fromNumber);
+  }
+  
+  if (startDate) {
+    sql += ` AND l.created_at >= $${paramIndex++}`;
+    params.push(startDate);
+  }
+  
+  if (endDate) {
+    sql += ` AND l.created_at <= $${paramIndex++}`;
+    params.push(endDate);
+  }
+  
+  if (campaignId) {
+    sql += ` AND l.campaign_id = $${paramIndex++}`;
+    params.push(campaignId);
+  }
+  
+  sql += ` ORDER BY l.created_at DESC LIMIT $${paramIndex++}`;
+  params.push(limit);
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
+  const sql = `
+    INSERT INTO emr.exotel_number_pools (
+      tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
+      daily_limit, monthly_limit, priority, is_active, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, $9)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, poolName, phoneNumber, numberType, departmentId, doctorId,
+    dailyLimit, monthlyLimit, priority, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getExotelNumberPools(tenantId, filters = {}) {
+  const { isActive = true, numberType, departmentId, doctorId } = filters;
+  
+  let sql = `
+    SELECT 
+      np.*,
+      d.name as department_name,
+      u.name as doctor_name,
+      ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
+      ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
+    FROM emr.exotel_number_pools np
+    LEFT JOIN emr.departments d ON np.department_id = d.id
+    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    WHERE np.tenant_id = $1 AND np.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (numberType) {
+    sql += ` AND np.number_type = $${paramIndex++}`;
+    params.push(numberType);
+  }
+  
+  if (departmentId) {
+    sql += ` AND np.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  if (doctorId) {
+    sql += ` AND np.doctor_id = $${paramIndex++}`;
+    params.push(doctorId);
+  }
+  
+  sql += ` ORDER BY np.priority ASC, np.pool_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function processExotelWebhook(tenantId, eventData) {
+  const sql = `
+    INSERT INTO emr.exotel_webhook_events (
+      tenant_id, event_type, event_data, message_sid, account_sid, created_at
+    )
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, eventData.eventType || 'unknown', 
+    JSON.stringify(eventData), 
+    eventData.SmsSid, 
+    eventData.AccountSid
+  ]);
+  
+  const webhookEvent = result.rows[0];
+  
+  // Process delivery reports
+  if (eventData.Status) {
+    await processExotelDeliveryReport(tenantId, eventData);
+  }
+  
+  return webhookEvent;
+}
+
+export async function processExotelDeliveryReport(tenantId, deliveryData) {
+  const { SmsSid, Status, ErrorCode, ErrorMessage, Date, Cost } = deliveryData;
+  
+  // Update SMS log with delivery status
+  const updateData = {
+    status: Status.toLowerCase(),
+    deliveryStatus: Status.toLowerCase(),
+    deliveryTimestamp: Date ? new Date(Date) : null,
+    errorCode: ErrorCode,
+    errorMessage: ErrorMessage,
+    cost: Cost || 0,
+    webhookData: JSON.stringify(deliveryData)
+  };
+  
+  // Find the SMS log entry
+  const findSql = `
+    SELECT id, communication_id, to_number 
+    FROM emr.exotel_sms_logs 
+    WHERE message_sid = $1 AND tenant_id = $2
+  `;
+  
+  const findResult = await query(findSql, [SmsSid, tenantId]);
+  const smsLog = findResult.rows[0];
+  
+  if (smsLog) {
+    await updateExotelSMSLog(smsLog.id, tenantId, updateData);
+    
+    // Update communication status if linked
+    if (smsLog.communication_id) {
+      const communicationStatus = Status.toLowerCase() === 'delivered' ? 'delivered' : 
+                              Status.toLowerCase() === 'failed' ? 'failed' : 'sent';
+      
+      await updateCommunicationStatus(smsLog.communication_id, tenantId, communicationStatus, {
+        externalId: SmsSid,
+        provider: 'exotel',
+        failedReason: ErrorMessage
+      });
+    }
+    
+    // Schedule retry for failed messages
+    if (Status.toLowerCase() === 'failed' && ErrorCode !== '404') {
+      await scheduleSMSRetry(smsLog.id);
+    }
+  }
+}
+
+export async function scheduleSMSRetry(smsLogId) {
+  const sql = `SELECT schedule_sms_retry($1)`;
+  await query(sql, [smsLogId]);
+}
+
+export async function getExotelSMSStats(tenantId, filters = {}) {
+  const { startDate, endDate, messageType, fromNumber } = filters;
+  
+  let sql = `SELECT get_exotel_sms_stats($1, $2, $3)`;
+  const params = [tenantId, startDate, endDate];
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function retryFailedSMS(tenantId, smsLogId) {
+  const sql = `
+    SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
+    FROM emr.exotel_sms_logs l
+    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
+  `;
+  
+  const result = await query(sql, [smsLogId, tenantId]);
+  const smsLog = result.rows[0];
+  
+  if (!smsLog) {
+    throw new Error('SMS log not found or not in failed status');
+  }
+  
+  try {
+    const exotelResponse = await sendExotelAPIRequest({
+      accountSid: smsLog.account_sid,
+      apiKey: smsLog.api_key,
+      apiToken: smsLog.api_token,
+      subdomain: smsLog.subdomain,
+      fromNumber: smsLog.from_number,
+      toNumber: smsLog.to_number,
+      messageContent: smsLog.message_content,
+      priority: smsLog.priority,
+      externalId: smsLog.id
+    });
+    
+    // Update log with retry result
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: exotelResponse.status || 'sent',
+      messageSid: exotelResponse.messageSid,
+      errorCode: exotelResponse.errorCode,
+      errorMessage: exotelResponse.errorMessage,
+      sentTimestamp: exotelResponse.sentTimestamp,
+      cost: exotelResponse.cost,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: true, exotelResponse };
+  } catch (error) {
+    await updateExotelSMSLog(smsLog.id, tenantId, {
+      status: 'failed',
+      errorCode: 'RETRY_FAILED',
+      errorMessage: error.message,
+      retry_count: smsLog.retry_count + 1
+    });
+    
+    return { success: false, error: error.message };
+  }
+}
+
+export async function getPendingRetries(tenantId) {
+  const sql = `
+    SELECT 
+      l.*,
+      EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
+    FROM emr.exotel_sms_logs l
+    WHERE l.tenant_id = $1 
+      AND l.status = 'queued' 
+      AND l.next_retry_at IS NOT NULL 
+      AND l.next_retry_at <= NOW() + INTERVAL '1 hour'
+      AND l.retry_count < l.max_retries
+    ORDER BY l.next_retry_at ASC
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function processScheduledCampaigns(tenantId) {
+  const sql = `
+    SELECT c.* 
+    FROM emr.exotel_sms_campaigns c
+    WHERE c.tenant_id = $1 
+      AND c.status = 'scheduled' 
+      AND c.scheduled_at <= NOW()
+    ORDER BY c.scheduled_at ASC
+  `;
+  
+  const campaigns = await query(sql, [tenantId]);
+  
+  for (const campaign of campaigns) {
+    // Update campaign status to active
+    await query(`
+      UPDATE emr.exotel_sms_campaigns 
+      SET status = 'active', updated_at = NOW()
+      WHERE id = $1
+    `, [campaign.id]);
+    
+    // Process campaign based on target audience
+    await processSMSCampaign(campaign, tenantId);
+  }
+}
+
+export async function processSMSCampaign(campaign, tenantId) {
+  const { targetAudience, filters } = campaign;
+  
+  let targetNumbers = [];
+  
+  switch (targetAudience) {
+    case 'all_patients':
+      const patientsSql = `
+        SELECT DISTINCT phone FROM emr.patients 
+        WHERE tenant_id = $1 AND phone IS NOT NULL
+      `;
+      const patientsResult = await query(patientsSql, [tenantId]);
+      targetNumbers = patientsResult.rows.map(p => p.phone);
+      break;
+      
+    case 'specific_patients':
+      if (filters && filters.patientIds) {
+        const specificPatientsSql = `
+          SELECT phone FROM emr.patients 
+          WHERE tenant_id = $1 AND id = ANY($2)
+        `;
+        const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
+        targetNumbers = specificResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'department':
+      if (filters && filters.departmentId) {
+        const deptPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const deptResult = await query(deptPatientsSql, [tenantId, filters.departmentId]);
+        targetNumbers = deptResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    case 'doctor':
+      if (filters && filters.doctorId) {
+        const doctorPatientsSql = `
+          SELECT DISTINCT p.phone FROM emr.patients p
+          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
+            AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
+        `;
+        const doctorResult = await query(doctorPatientsSql, [tenantId, filters.doctorId]);
+        targetNumbers = doctorResult.rows.map(p => p.phone);
+      }
+      break;
+      
+    default:
+      if (filters && filters.phoneNumbers) {
+        targetNumbers = filters.phoneNumbers;
+      }
+      break;
+  }
+  
+  // Send SMS to all target numbers
+  for (const phoneNumber of targetNumbers) {
+    await sendExotelSMS({
+      tenantId,
+      toNumber: phoneNumber,
+      messageContent: campaign.message_content || 'Campaign message',
+      messageType: 'promotional',
+      campaignId: campaign.id
+    });
+  }
+  
+  // Update campaign statistics
+  await query(`
+    UPDATE emr.exotel_sms_campaigns 
+    SET total_recipients = $1, updated_at = NOW()
+    WHERE id = $2
+  `, [targetNumbers.length, campaign.id]);
+}
+
+export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
+  const sql = `
+    INSERT INTO emr.opd_bill_items (
+      tenant_id, bill_id, service_type, service_name, service_code, description,
+      quantity, unit_price, discount_amount, tax_amount, total_amount,
+      doctor_id, department_id, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, $11,
+            $12, $13, $14)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, billId, serviceType, serviceName, serviceCode, description,
+    quantity, unitPrice, discountAmount, taxAmount, totalAmount,
+    doctorId, departmentId, createdBy
+  ]);
+  
+  // Update bill totals
+  await query(`SELECT calculate_bill_totals($1)`, [billId]);
+  
+  return result.rows[0];
+}
+
+export async function updateBillStatus(billId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (additionalData.paymentMethod) {
+    fields.push('payment_method');
+    values.push(additionalData.paymentMethod);
+  }
+  
+  if (additionalData.paidAmount) {
+    fields.push('paid_amount');
+    values.push(additionalData.paidAmount);
+  }
+  
+  if (additionalData.paymentDate) {
+    fields.push('payment_date');
+    values.push(additionalData.paymentDate);
+  }
+  
+  if (additionalData.transactionId) {
+    fields.push('transaction_id');
+    values.push(additionalData.transactionId);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.opd_bills 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(billId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getBillingStats(tenantId, filters = {}) {
+  const { departmentId, doctorId, date = new Date().toISOString().split('T')[0] } = filters;
+  
+  const sql = `
+    SELECT 
+      COUNT(*) as total_bills,
+      COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_bills,
+      COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_bills,
+      COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_bills,
+      SUM(total_amount) as total_revenue,
+      SUM(paid_amount) as total_paid,
+      SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
+      AVG(total_amount) as avg_bill_amount
+    FROM emr.opd_bills
+    WHERE tenant_id = $1 
+      AND bill_date = $2
+      AND ($3::uuid IS NULL OR department_id = $3)
+      AND ($4::uuid IS NULL OR doctor_id = $4)
+  `;
+  
+  const result = await query(sql, [tenantId, date, departmentId, doctorId]);
+  return result.rows[0];
+}
+
+export async function getServicePackages(tenantId, filters = {}) {
+  const { isActive = true, departmentId } = filters;
+  
+  let sql = `
+    SELECT 
+      sp.*,
+      d.name as department_name,
+      COUNT(pi.id) as item_count
+    FROM emr.opd_service_packages sp
+    LEFT JOIN emr.departments d ON sp.department_id = d.id
+    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    WHERE sp.tenant_id = $1
+      AND sp.is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (departmentId) {
+    sql += ` AND sp.department_id = $${paramIndex++}`;
+    params.push(departmentId);
+  }
+  
+  sql += ` GROUP BY sp.id, d.name ORDER BY sp.name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+// =====================================================
+// COMMUNICATION SYSTEM
+// =====================================================
+
+export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
+  const sql = `
+    INSERT INTO emr.communication_templates (
+      tenant_id, template_name, template_type, purpose, subject, message_content,
+      variables, is_active, is_default, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, templateName, templateType, purpose, subject, messageContent,
+    JSON.stringify(variables || []), isActive, isDefault, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getCommunicationTemplates(tenantId, filters = {}) {
+  const { templateType, purpose, isActive = true } = filters;
+  
+  let sql = `
+    SELECT * FROM emr.communication_templates
+    WHERE tenant_id = $1 AND is_active = $2
+  `;
+  
+  const params = [tenantId, isActive];
+  let paramIndex = 3;
+  
+  if (templateType) {
+    sql += ` AND template_type = $${paramIndex++}`;
+    params.push(templateType);
+  }
+  
+  if (purpose) {
+    sql += ` AND purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  sql += ` ORDER BY template_name`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function sendCommunication({ tenantId, patientId, communicationType, purpose, messageContent, recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId, templateId, variablesUsed, scheduledFor, isAutomated = false, priority = 1, createdBy }) {
+  const sql = `
+    SELECT create_communication(
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    ) as communication_id
+  `;
+  
+  const result = await query(sql, [
+    tenantId, patientId, communicationType, purpose, messageContent,
+    recipientPhone, recipientEmail, subject, appointmentId, tokenId, billId,
+    templateId, variablesUsed ? JSON.stringify(variablesUsed) : null, scheduledFor, isAutomated, priority, createdBy
+  ]);
+  
+  return result.rows[0].communication_id;
+}
+
+export async function getPatientCommunications(tenantId, filters = {}) {
+  const { patientId, communicationType, purpose, status, date } = filters;
+  
+  let sql = `
+    SELECT 
+      pc.*,
+      p.name as patient_name,
+      p.phone as patient_phone,
+      p.email as patient_email,
+      ct.template_name,
+      a.start as appointment_time,
+      t.full_token as token_number,
+      b.bill_number
+    FROM emr.patient_communications pc
+    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
+    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    WHERE pc.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (patientId) {
+    sql += ` AND pc.patient_id = $${paramIndex++}`;
+    params.push(patientId);
+  }
+  
+  if (communicationType) {
+    sql += ` AND pc.communication_type = $${paramIndex++}`;
+    params.push(communicationType);
+  }
+  
+  if (purpose) {
+    sql += ` AND pc.purpose = $${paramIndex++}`;
+    params.push(purpose);
+  }
+  
+  if (status) {
+    sql += ` AND pc.status = $${paramIndex++}`;
+    params.push(status);
+  }
+  
+  if (date) {
+    sql += ` AND DATE(pc.created_at) = $${paramIndex++}`;
+    params.push(date);
+  }
+  
+  sql += ` ORDER BY pc.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function updateCommunicationStatus(communicationId, tenantId, status, additionalData = {}) {
+  const fields = ['status', 'updated_at'];
+  const values = [status, new Date()];
+  let paramIndex = 3;
+  
+  if (status === 'sent') {
+    fields.push('sent_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'delivered') {
+    fields.push('delivered_at');
+    values.push(new Date());
+  }
+  
+  if (status === 'read') {
+    fields.push('read_at');
+    values.push(new Date());
+  }
+  
+  if (additionalData.externalId) {
+    fields.push('external_id');
+    values.push(additionalData.externalId);
+  }
+  
+  if (additionalData.provider) {
+    fields.push('provider');
+    values.push(additionalData.provider);
+  }
+  
+  if (additionalData.failedReason) {
+    fields.push('failed_reason');
+    values.push(additionalData.failedReason);
+  }
+  
+  const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
+  
+  const sql = `
+    UPDATE emr.patient_communications 
+    SET ${setClause}
+    WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
+    RETURNING *
+  `;
+  
+  values.push(communicationId, tenantId);
+  
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function scheduleAppointmentReminder({ tenantId, appointmentId, patientId, patientPhone, patientEmail, appointmentTime, doctorName, departmentName }) {
+  const variables = {
+    patient_name: patientId, // Will be replaced with actual patient name
+    appointment_time: appointmentTime,
+    doctor_name: doctorName,
+    department_name: departmentName,
+    hospital_name: 'Hospital' // Get from settings
+  };
+  
+  const messageContent = `Reminder: Your appointment is scheduled for ${appointmentTime} with Dr. ${doctorName} at ${departmentName}. Please arrive 15 minutes early.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'appointment_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    appointmentId,
+    variablesUsed: variables,
+    scheduledFor: new Date(appointmentTime).getTime() - (24 * 60 * 60 * 1000), // 24 hours before
+    isAutomated: true,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendTokenCallNotification({ tenantId, tokenId, patientId, patientPhone, patientEmail, tokenNumber, departmentName, doctorName }) {
+  const variables = {
+    patient_name: patientId,
+    token_number: tokenNumber,
+    department_name: departmentName,
+    doctor_name: doctorName,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Your token ${tokenNumber} has been called. Please proceed to ${departmentName}. Dr. ${doctorName} is ready to see you.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'token_call',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    tokenId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 2,
+    createdBy: null
+  });
+  
+  return communicationId;
+}
+
+export async function sendBillingReminder({ tenantId, billId, patientId, patientPhone, patientEmail, billNumber, totalAmount, dueDate }) {
+  const variables = {
+    patient_name: patientId,
+    bill_number: billNumber,
+    total_amount: totalAmount,
+    due_date: dueDate,
+    hospital_name: 'Hospital'
+  };
+  
+  const messageContent = `Reminder: Bill ${billNumber} of amount ${totalAmount} is due on ${dueDate}. Please complete the payment to avoid any inconvenience.`;
+  
+  const communicationId = await sendCommunication({
+    tenantId,
+    patientId,
+    communicationType: 'sms',
+    purpose: 'billing_reminder',
+    messageContent,
+    recipientPhone: patientPhone,
+    recipientEmail: patientEmail,
+    billId,
+    variablesUsed: variables,
+    isAutomated: true,
+    priority: 1,
+    createdBy: null
+  });
+  
+  return communicationId;
 }
 

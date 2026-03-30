@@ -296,7 +296,7 @@ export default function PatientsPage({
                        </div>
                        <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Date of Birth</label>
-                          <input name="dob" type="date" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-xs px-6" required />
+                          <input name="dob" type="date" max={new Date().toISOString().split('T')[0]} className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-xs px-6" required />
                        </div>
                     </div>
 

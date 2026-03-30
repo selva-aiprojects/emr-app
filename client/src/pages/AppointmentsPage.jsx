@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
 import PatientSearch from '../components/PatientSearch.jsx';
 import AppointmentActions from '../components/AppointmentActions.jsx';
+import DoctorAvailabilityCalendar from '../components/DoctorAvailabilityCalendar.jsx';
 import { patientName, userName } from '../utils/format.js';
 import '../styles/critical-care.css';
 import { 
@@ -25,12 +26,14 @@ export default function AppointmentsPage({
 }) {
   const { showToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'walkins'
+  const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'walkins' | 'availability'
   const [isRegistering, setIsRegistering] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState('');
   const [reschedulingAppointment, setReschedulingAppointment] = useState(null);
   const [regFirstName, setRegFirstName] = useState('');
   const [regLastName, setRegLastName] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [showBookingForm, setShowBookingForm] = useState(false);
   const isPatient = activeUser.role === 'Patient';
   const isDoctor = activeUser.role === 'Doctor';
 
@@ -50,7 +53,47 @@ export default function AppointmentsPage({
       }
       showToast({ message: 'Appointment scheduled successfully!', type: 'success', title: 'Appointments' });
     } catch (err) {
-      alert(err.message);
+      showToast({ message: 'Scheduling failed: ' + err.message, type: 'error' });
+    }
+  };
+
+  const handleSlotSelect = (slot) => {
+    if (!selectedPatientId && !isPatient) {
+      showToast({ message: 'Please select a patient first', type: 'error' });
+      return;
+    }
+    
+    setSelectedSlot(slot);
+    setShowBookingForm(true);
+  };
+
+  const handleSlotBooking = async (e) => {
+    e.preventDefault();
+    if (!selectedSlot) return;
+    
+    try {
+      const formData = new FormData(e.target);
+      const appointmentData = {
+        patientId: isPatient ? activeUser.patientId : selectedPatientId,
+        providerId: selectedSlot.doctor_id,
+        start: `${selectedSlot.date}T${selectedSlot.start_time}`,
+        end: `${selectedSlot.date}T${selectedSlot.end_time}`,
+        reason: formData.get('reason'),
+        doctorAvailabilityId: selectedSlot.id
+      };
+      
+      if (isPatient) {
+        await onSelfAppointment({ preventDefault: () => {}, target: new FormData() });
+      } else {
+        await onCreateAppointment({ preventDefault: () => {}, target: new FormData() });
+      }
+      
+      showToast({ message: 'Appointment booked successfully!', type: 'success' });
+      setShowBookingForm(false);
+      setSelectedSlot(null);
+      e.target.reset();
+    } catch (err) {
+      showToast({ message: 'Booking failed: ' + err.message, type: 'error' });
     }
   };
 
@@ -157,6 +200,12 @@ export default function AppointmentsPage({
               <Users className="w-3.5 h-3.5 mr-2" /> Reception Queue
             </button>
           )}
+          <button 
+            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'availability' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+            onClick={() => setActiveTab('availability')}
+          >
+            <Calendar className="w-3.5 h-3.5 mr-2" /> Doctor Availability
+          </button>
         </div>
       </header>
 
@@ -255,7 +304,7 @@ export default function AppointmentsPage({
                     </div>
                     <div className="space-y-2">
                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Date of Birth</label>
-                       <input name="dob" type="date" className="input-field py-4 bg-slate-50 border-none rounded-2xl" required />
+                       <input name="dob" type="date" max={new Date().toISOString().split('T')[0]} className="input-field py-4 bg-slate-50 border-none rounded-2xl" required />
                     </div>
                   </div>
                   <div className="space-y-6">
@@ -285,23 +334,106 @@ export default function AppointmentsPage({
                 </div>
               </form>
             </article>
+          ) : activeTab === 'availability' ? (
+            <article className="clinical-card">
+              <DoctorAvailabilityCalendar
+                tenantId={session?.tenantId}
+                doctors={providers}
+                onSlotSelect={handleSlotSelect}
+              />
+              
+              {/* Slot Booking Modal */}
+              {showBookingForm && selectedSlot && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-xl p-6 max-w-md w-full">
+                    <h3 className="text-lg font-bold text-slate-900 mb-4">Book Appointment Slot</h3>
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm font-medium text-blue-900">
+                        {new Date(selectedSlot.date).toLocaleDateString('en-IN', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        {new Date(`2000-01-01T${selectedSlot.start_time}`).toLocaleTimeString('en-IN', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })} - {new Date(`2000-01-01T${selectedSlot.end_time}`).toLocaleTimeString('en-IN', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        Duration: {selectedSlot.slot_duration_minutes} minutes
+                      </p>
+                    </div>
+                    
+                    {!isPatient && !selectedPatientId && (
+                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm text-amber-800">
+                          Please select a patient first from the Appointments tab
+                        </p>
+                      </div>
+                    )}
+                    
+                    <form onSubmit={handleSlotBooking} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Reason for Visit</label>
+                        <textarea
+                          name="reason"
+                          required
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          rows="3"
+                          placeholder="Please describe the reason for consultation..."
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Confirm Booking
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowBookingForm(false);
+                            setSelectedSlot(null);
+                          }}
+                          className="flex-1 px-4 py-2 bg-slate-300 text-slate-700 rounded-lg hover:bg-slate-400 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </article>
           ) : (
             <article className="clinical-card">
               <header className="mb-10 text-center lg:text-left">
-                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest text-lg">Walk-in Registration</h3>
-                 <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Add Patient to Waiting list</p>
+                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest text-lg">
+                    Walk-in Patient Registration
+                 </h3>
+                 <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                    Immediate Patient Intake System
+                 </p>
               </header>
 
               <form className="space-y-10" onSubmit={handleWalkinSubmit}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                   <div className="space-y-8">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Patient Name</label>
-                      <input name="name" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="Full Patient Name" required />
+                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Patient Name</label>
+                       <input name="name" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800" placeholder="Full Name" required />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Mobile Number</label>
-                      <input name="phone" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="Phone Number" required />
+                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Mobile Number</label>
+                       <input name="phone" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="Phone Number" required />
                     </div>
                   </div>
                   <div className="space-y-2">

@@ -1,3 +1,4 @@
+// Updated: Module titles fixed for better UX
 export const moduleMeta = {
   superadmin: { title: 'Platform Control', subtitle: 'Global Metrics' },
   tenant_management: { title: 'Tenant Onboarding', subtitle: 'Provisioning' },
@@ -5,7 +6,7 @@ export const moduleMeta = {
   financial_control: { title: 'Financial Control', subtitle: 'Offers & Accounts' },
   dashboard: { title: 'Hospital Dashboard', subtitle: 'Operational overview' },
   doctor_workspace: { title: 'Doctor Desk', subtitle: 'Today\'s appointments & patients' },
-  patients: { title: 'OP&IP Registration', subtitle: 'Demographics and clinical folders' },
+  patients: { title: 'Patients', subtitle: 'Demographics and clinical folders' },
   appointments: { title: 'OPD Scheduling', subtitle: 'Doctor bookings & walk-ins' },
   emr: { title: 'Clinical Desk / EMR', subtitle: 'Diagnosis, history & e-Prescription' },
   inpatient: { title: 'IPD / Bed Management', subtitle: 'Admission, Ward & Bed tracker' },
