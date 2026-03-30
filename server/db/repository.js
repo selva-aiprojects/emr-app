@@ -2679,6 +2679,7 @@ export async function createOPDBill({ tenantId, patientId, tokenId, appointmentI
   
   return result.rows[0];
 }
+
 export async function getOPDBills(tenantId, filters = {}) {
   const { status, departmentId, doctorId, date, patientId } = filters;
   
@@ -4008,58 +4009,6 @@ export async function deleteOPDToken(tokenId, tenantId) {
 // Fixed duplicate function issue - createOPDBill now defined only once
 
 
-export async function getOPDBills(tenantId, filters = {}) {
-  const { status, departmentId, doctorId, date, patientId } = filters;
-  
-  let sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    WHERE b.tenant_id = $1
-  `;
-  
-  const params = [tenantId];
-  let paramIndex = 2;
-  
-  if (status) {
-    sql += ` AND b.status = $${paramIndex++}`;
-    params.push(status);
-  }
-  
-  if (departmentId) {
-    sql += ` AND b.department_id = $${paramIndex++}`;
-    params.push(departmentId);
-  }
-  
-  if (doctorId) {
-    sql += ` AND b.doctor_id = $${paramIndex++}`;
-    params.push(doctorId);
-  }
-  
-  if (date) {
-    sql += ` AND b.bill_date = $${paramIndex++}`;
-    params.push(date);
-  }
-  
-  if (patientId) {
-    sql += ` AND b.patient_id = $${paramIndex++}`;
-    params.push(patientId);
-  }
-  
-  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
-  
-  const result = await query(sql, params);
-  return result.rows;
-}
 
 export async function getOPDBillById(billId, tenantId) {
   const sql = `
@@ -5269,58 +5218,6 @@ export async function getOPDTokenById(tokenId, tenantId) {
 // Fixed duplicate function issue - createOPDBill now defined only once
 
 
-export async function getOPDBills(tenantId, filters = {}) {
-  const { status, departmentId, doctorId, date, patientId } = filters;
-  
-  let sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    WHERE b.tenant_id = $1
-  `;
-  
-  const params = [tenantId];
-  let paramIndex = 2;
-  
-  if (status) {
-    sql += ` AND b.status = $${paramIndex++}`;
-    params.push(status);
-  }
-  
-  if (departmentId) {
-    sql += ` AND b.department_id = $${paramIndex++}`;
-    params.push(departmentId);
-  }
-  
-  if (doctorId) {
-    sql += ` AND b.doctor_id = $${paramIndex++}`;
-    params.push(doctorId);
-  }
-  
-  if (date) {
-    sql += ` AND b.bill_date = $${paramIndex++}`;
-    params.push(date);
-  }
-  
-  if (patientId) {
-    sql += ` AND b.patient_id = $${paramIndex++}`;
-    params.push(patientId);
-  }
-  
-  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
-  
-  const result = await query(sql, params);
-  return result.rows;
-}
 
 export async function getOPDBillById(billId, tenantId) {
   const sql = `
@@ -6598,58 +6495,6 @@ export async function deleteOPDToken(tokenId, tenantId) {
 // Fixed duplicate function issue - createOPDBill now defined only once
 
 
-export async function getOPDBills(tenantId, filters = {}) {
-  const { status, departmentId, doctorId, date, patientId } = filters;
-  
-  let sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    WHERE b.tenant_id = $1
-  `;
-  
-  const params = [tenantId];
-  let paramIndex = 2;
-  
-  if (status) {
-    sql += ` AND b.status = $${paramIndex++}`;
-    params.push(status);
-  }
-  
-  if (departmentId) {
-    sql += ` AND b.department_id = $${paramIndex++}`;
-    params.push(departmentId);
-  }
-  
-  if (doctorId) {
-    sql += ` AND b.doctor_id = $${paramIndex++}`;
-    params.push(doctorId);
-  }
-  
-  if (date) {
-    sql += ` AND b.bill_date = $${paramIndex++}`;
-    params.push(date);
-  }
-  
-  if (patientId) {
-    sql += ` AND b.patient_id = $${paramIndex++}`;
-    params.push(patientId);
-  }
-  
-  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
-  
-  const result = await query(sql, params);
-  return result.rows;
-}
 
 export async function getOPDBillById(billId, tenantId) {
   const sql = `
@@ -7920,58 +7765,6 @@ export async function getOPDTokenById(tokenId, tenantId) {
 // Fixed duplicate function issue - createOPDBill now defined only once
 
 
-export async function getOPDBills(tenantId, filters = {}) {
-  const { status, departmentId, doctorId, date, patientId } = filters;
-  
-  let sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    WHERE b.tenant_id = $1
-  `;
-  
-  const params = [tenantId];
-  let paramIndex = 2;
-  
-  if (status) {
-    sql += ` AND b.status = $${paramIndex++}`;
-    params.push(status);
-  }
-  
-  if (departmentId) {
-    sql += ` AND b.department_id = $${paramIndex++}`;
-    params.push(departmentId);
-  }
-  
-  if (doctorId) {
-    sql += ` AND b.doctor_id = $${paramIndex++}`;
-    params.push(doctorId);
-  }
-  
-  if (date) {
-    sql += ` AND b.bill_date = $${paramIndex++}`;
-    params.push(date);
-  }
-  
-  if (patientId) {
-    sql += ` AND b.patient_id = $${paramIndex++}`;
-    params.push(patientId);
-  }
-  
-  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
-  
-  const result = await query(sql, params);
-  return result.rows;
-}
 
 export async function getOPDBillById(billId, tenantId) {
   const sql = `
@@ -9249,58 +9042,6 @@ export async function deleteOPDToken(tokenId, tenantId) {
 // Fixed duplicate function issue - createOPDBill now defined only once
 
 
-export async function getOPDBills(tenantId, filters = {}) {
-  const { status, departmentId, doctorId, date, patientId } = filters;
-  
-  let sql = `
-    SELECT 
-      b.*,
-      p.name as patient_name,
-      p.phone as patient_phone,
-      d.name as department_name,
-      u.name as doctor_name,
-      t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    WHERE b.tenant_id = $1
-  `;
-  
-  const params = [tenantId];
-  let paramIndex = 2;
-  
-  if (status) {
-    sql += ` AND b.status = $${paramIndex++}`;
-    params.push(status);
-  }
-  
-  if (departmentId) {
-    sql += ` AND b.department_id = $${paramIndex++}`;
-    params.push(departmentId);
-  }
-  
-  if (doctorId) {
-    sql += ` AND b.doctor_id = $${paramIndex++}`;
-    params.push(doctorId);
-  }
-  
-  if (date) {
-    sql += ` AND b.bill_date = $${paramIndex++}`;
-    params.push(date);
-  }
-  
-  if (patientId) {
-    sql += ` AND b.patient_id = $${paramIndex++}`;
-    params.push(patientId);
-  }
-  
-  sql += ` ORDER BY b.bill_date DESC, b.bill_time DESC`;
-  
-  const result = await query(sql, params);
-  return result.rows;
-}
 
 export async function getOPDBillById(billId, tenantId) {
   const sql = `
