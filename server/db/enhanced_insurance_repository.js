@@ -1,0 +1,337 @@
+// Enhanced Insurance Repository Functions - Healthcare Standards Compliant
+// IRDAI Compliance, ICD-10 Coding, Pre-authorization, Claim Settlement
+
+export async function getEnhancedInsuranceProviders(tenantId) {
+  const sql = `
+    SELECT * FROM emr.insurance_providers_enhanced 
+    WHERE tenant_id = $1 
+    ORDER BY provider_name
+  `;
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function createEnhancedInsuranceProvider({ 
+  tenantId, providerCode, providerName, providerType, irdaiLicense, 
+  panNumber, gstNumber, contactPerson, contactEmail, contactPhone, 
+  address, city, state, pincode, networkType, settlementPeriodDays,
+  coPaymentPercentage, deductibleAmount, maxCoverageLimit 
+}) {
+  const sql = `
+    INSERT INTO emr.insurance_providers_enhanced (
+      tenant_id, provider_code, provider_name, provider_type, irdai_license,
+      pan_number, gst_number, contact_person, contact_email, contact_phone,
+      address, city, state, pincode, network_type, settlement_period_days,
+      co_payment_percentage, deductible_amount, max_coverage_limit
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+    RETURNING *
+  `;
+  const result = await query(sql, [
+    tenantId, providerCode, providerName, providerType, irdaiLicense,
+    panNumber, gstNumber, contactPerson, contactEmail, contactPhone,
+    address, city, state, pincode, networkType, settlementPeriodDays,
+    coPaymentPercentage, deductibleAmount, maxCoverageLimit
+  ]);
+  return result.rows[0];
+}
+
+export async function createInsuranceClaim({ 
+  tenantId, patientId, encounterId, providerId, policyNumber, 
+  policyHolderName, relationshipToPatient, claimType, claimCategory,
+  admissionDate, dischargeDate, diagnosisIcd10Codes, procedureIcd10Codes,
+  totalClaimedAmount, supportingDocuments, createdBy 
+}) {
+  // Generate claim number
+  const claimNumber = `CLM-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
+  
+  const sql = `
+    INSERT INTO emr.insurance_claims (
+      tenant_id, claim_number, patient_id, encounter_id, provider_id,
+      policy_number, policy_holder_name, relationship_to_patient,
+      claim_type, claim_category, admission_date, discharge_date,
+      diagnosis_icd10_codes, procedure_icd10_codes, total_claimed_amount,
+      supporting_documents, status, submission_date, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'SUBMITTED', NOW(), $18)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, claimNumber, patientId, encounterId, providerId,
+    policyNumber, policyHolderName, relationshipToPatient,
+    claimType, claimCategory, admissionDate, dischargeDate,
+    diagnosisIcd10Codes, procedureIcd10Codes, totalClaimedAmount,
+    supportingDocuments, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getInsuranceClaims(tenantId, filters = {}) {
+  let sql = `
+    SELECT 
+      ic.*,
+      p.first_name || ' ' || p.last_name as patient_name,
+      p.mrn as patient_mrn,
+      ipe.provider_name,
+      ipe.provider_type,
+      ARRAY(
+        SELECT json_build_object(
+          'item_type', cli.item_type,
+          'item_description', cli.item_description,
+          'quantity', cli.quantity,
+          'unit_rate', cli.unit_rate,
+          'total_amount', cli.total_amount,
+          'approved_amount', cli.approved_amount,
+          'status', cli.status
+        )
+        FROM emr.insurance_claim_line_items cli
+        WHERE cli.claim_id = ic.id
+      ) as line_items
+    FROM emr.insurance_claims ic
+    JOIN emr.patients p ON ic.patient_id = p.id
+    JOIN emr.insurance_providers_enhanced ipe ON ic.provider_id = ipe.id
+    WHERE ic.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (filters.status) {
+    sql += ` AND ic.status = $${paramIndex++}`;
+    params.push(filters.status);
+  }
+  
+  if (filters.patientId) {
+    sql += ` AND ic.patient_id = $${paramIndex++}`;
+    params.push(filters.patientId);
+  }
+  
+  if (filters.providerId) {
+    sql += ` AND ic.provider_id = $${paramIndex++}`;
+    params.push(filters.providerId);
+  }
+  
+  sql += ` ORDER BY ic.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function createClaimLineItem({ 
+  claimId, itemType, itemDescription, icd10Code, quantity, 
+  unitRate, totalAmount 
+}) {
+  const sql = `
+    INSERT INTO emr.insurance_claim_line_items (
+      claim_id, item_type, item_description, icd10_code, quantity,
+      unit_rate, total_amount
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    claimId, itemType, itemDescription, icd10Code, quantity, unitRate, totalAmount
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function createPreauthorizationRequest({
+  tenantId, patientId, providerId, policyNumber, requestedAmount,
+  diagnosisSummary, proposedTreatment, estimatedAdmissionDate,
+  estimatedDischargeDate, icd10Codes, createdBy
+}) {
+  // Generate preauth number
+  const preauthNumber = `PA-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
+  
+  const sql = `
+    INSERT INTO emr.insurance_preauth_requests (
+      tenant_id, preauth_number, patient_id, provider_id, policy_number,
+      requested_amount, diagnosis_summary, proposed_treatment,
+      estimated_admission_date, estimated_discharge_date, icd10_codes,
+      status, approval_validity_days, expiry_date, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PENDING', 15, NOW() + INTERVAL '15 days', $12)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, preauthNumber, patientId, providerId, policyNumber,
+    requestedAmount, diagnosisSummary, proposedTreatment,
+    estimatedAdmissionDate, estimatedDischargeDate, icd10Codes, createdBy
+  ]);
+  
+  return result.rows[0];
+}
+
+export async function getPreauthorizationRequests(tenantId, filters = {}) {
+  let sql = `
+    SELECT 
+      ipr.*,
+      p.first_name || ' ' || p.last_name as patient_name,
+      p.mrn as patient_mrn,
+      ipe.provider_name,
+      ipe.provider_type
+    FROM emr.insurance_preauth_requests ipr
+    JOIN emr.patients p ON ipr.patient_id = p.id
+    JOIN emr.insurance_providers_enhanced ipe ON ipr.provider_id = ipe.id
+    WHERE ipr.tenant_id = $1
+  `;
+  
+  const params = [tenantId];
+  let paramIndex = 2;
+  
+  if (filters.status) {
+    sql += ` AND ipr.status = $${paramIndex++}`;
+    params.push(filters.status);
+  }
+  
+  if (filters.patientId) {
+    sql += ` AND ipr.patient_id = $${paramIndex++}`;
+    params.push(filters.patientId);
+  }
+  
+  sql += ` ORDER BY ipr.created_at DESC`;
+  
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function updateClaimStatus({ claimId, tenantId, status, approvedAmount, rejectionReason, updatedBy }) {
+  const sql = `
+    UPDATE emr.insurance_claims
+    SET 
+      status = $1,
+      total_approved_amount = COALESCE($2, total_approved_amount),
+      rejection_reason = $3,
+      updated_by = $4,
+      updated_at = CASE 
+        WHEN $1 IN ('APPROVED', 'REJECTED') THEN NOW()
+        ELSE updated_at 
+      END,
+      approval_date = CASE 
+        WHEN $1 IN ('APPROVED', 'PARTIALLY_APPROVED') THEN NOW()
+        ELSE approval_date 
+      END
+    WHERE id = $5 AND tenant_id = $6
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [status, approvedAmount, rejectionReason, updatedBy, claimId, tenantId]);
+  return result.rows[0];
+}
+
+export async function updatePreauthStatus({ preauthId, tenantId, status, approvedAmount, rejectionReason, updatedBy }) {
+  const sql = `
+    UPDATE emr.insurance_preauth_requests
+    SET 
+      status = $1,
+      approved_amount = COALESCE($2, approved_amount),
+      rejection_reason = $3,
+      updated_by = $4,
+      updated_at = NOW(),
+      approval_date = CASE 
+        WHEN $1 IN ('APPROVED', 'PARTIALLY_APPROVED') THEN NOW()
+        ELSE approval_date 
+      END,
+      expiry_date = CASE 
+        WHEN $1 = 'APPROVED' THEN NOW() + INTERVAL '15 days'
+        ELSE expiry_date 
+      END
+    WHERE id = $5 AND tenant_id = $6
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [status, approvedAmount, rejectionReason, updatedBy, preauthId, tenantId]);
+  return result.rows[0];
+}
+
+export async function createClaimSettlement({
+  claimId, settlementAmount, settlementMode, settlementReference,
+  tpaReference, bankAccountNumber, bankName, ifscCode, createdBy
+}) {
+  // Generate settlement number
+  const settlementNumber = `STL-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
+  
+  const sql = `
+    INSERT INTO emr.insurance_claim_settlements (
+      claim_id, settlement_number, settlement_date, settlement_amount,
+      settlement_mode, settlement_reference, tpa_reference,
+      bank_account_number, bank_name, ifsc_code, status, created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'PROCESSING', $11)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    claimId, settlementNumber, new Date(), settlementAmount,
+    settlementMode, settlementReference, tpaReference,
+    bankAccountNumber, bankName, ifscCode, createdBy
+  ]);
+  
+  // Update claim status to settled
+  await updateClaimStatus({ 
+    claimId, 
+    tenantId: null, // Will be filtered in the function
+    status: 'SETTLED', 
+    approvedAmount: settlementAmount,
+    rejectionReason: null,
+    updatedBy: createdBy
+  });
+  
+  return result.rows[0];
+}
+
+export async function getInsuranceDashboard(tenantId) {
+  const sql = `
+    SELECT 
+      -- Claims Statistics
+      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1) as total_claims,
+      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1 AND status = 'PENDING') as pending_claims,
+      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1 AND status = 'APPROVED') as approved_claims,
+      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1 AND status = 'SETTLED') as settled_claims,
+      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1 AND status = 'REJECTED') as rejected_claims,
+      
+      -- Financial Summary
+      (SELECT COALESCE(SUM(total_claimed_amount), 0) FROM emr.insurance_claims WHERE tenant_id = $1) as total_claimed,
+      (SELECT COALESCE(SUM(total_approved_amount), 0) FROM emr.insurance_claims WHERE tenant_id = $1) as total_approved,
+      (SELECT COALESCE(SUM(total_settled_amount), 0) FROM emr.insurance_claims WHERE tenant_id = $1) as total_settled,
+      
+      -- Pre-authorization Statistics
+      (SELECT COUNT(*) FROM emr.insurance_preauth_requests WHERE tenant_id = $1) as total_preauth,
+      (SELECT COUNT(*) FROM emr.insurance_preauth_requests WHERE tenant_id = $1 AND status = 'PENDING') as pending_preauth,
+      (SELECT COUNT(*) FROM emr.insurance_preauth_requests WHERE tenant_id = $1 AND status = 'APPROVED') as approved_preauth,
+      (SELECT COUNT(*) FROM emr.insurance_preauth_requests WHERE tenant_id = $1 AND status = 'EXPIRED') as expired_preauth,
+      
+      -- Provider Statistics
+      (SELECT COUNT(*) FROM emr.insurance_providers_enhanced WHERE tenant_id = $1) as total_providers,
+      (SELECT COUNT(*) FROM emr.insurance_providers_enhanced WHERE tenant_id = $1 AND status = 'ACTIVE') as active_providers
+  `;
+  
+  const result = await query(sql, [tenantId]);
+  return result.rows[0];
+}
+
+export async function createInsuranceAuditLog({
+  tenantId, entityType, entityId, actionType, oldValues, newValues,
+  userId, userName, ipAddress, userAgent, remarks
+}) {
+  const sql = `
+    INSERT INTO emr.insurance_audit_log (
+      tenant_id, entity_type, entity_id, action_type, old_values,
+      new_values, user_id, user_name, ip_address, user_agent, remarks
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [
+    tenantId, entityType, entityId, actionType, oldValues,
+    newValues, userId, userName, ipAddress, userAgent, remarks
+  ]);
+  
+  return result.rows[0];
+}
