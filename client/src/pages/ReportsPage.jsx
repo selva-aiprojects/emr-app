@@ -6,7 +6,7 @@ import {
   Activity, 
   TrendingUp, 
   Users, 
-  DollarSign, 
+  IndianRupee, 
   FileText, 
   ChevronRight,
   ShieldCheck,

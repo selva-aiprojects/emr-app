@@ -1,5 +1,5 @@
 import React from 'react';
-import { CreditCard, TrendingDown, LayoutDashboard, ChevronRight, Activity, Zap, DollarSign } from 'lucide-react';
+import { CreditCard, TrendingDown, LayoutDashboard, ChevronRight, Activity, Zap, IndianRupee } from 'lucide-react';
 
 export default function CostGovernance({ tenant }) {
   // Simulated tenant-level accounting metrics

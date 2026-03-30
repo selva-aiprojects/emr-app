@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
 import { 
   Building2, Plus, Search, ShieldCheck, ArrowLeft, Send, ExternalLink, Calendar, Hash, User,
-  FileText, Clock, AlertCircle, CheckCircle, XCircle, TrendingUp, Users, DollarSign,
+  FileText, Clock, AlertCircle, CheckCircle, XCircle, TrendingUp, Users, IndianRupee,
   Activity, Filter, Download, Upload, Eye, Edit, Trash2, AlertTriangle
 } from 'lucide-react';
 import { currency } from '../utils/format.js';
@@ -203,7 +203,7 @@ export default function EnhancedInsurancePage({ tenant }) {
           <div className="glass-panel p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                <DollarSign className="w-6 h-6" />
+                <IndianRupee className="w-6 h-6" />
               </div>
               <span className="text-xs font-medium text-slate-500">Revenue</span>
             </div>

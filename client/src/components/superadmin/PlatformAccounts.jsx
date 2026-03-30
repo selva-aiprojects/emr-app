@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, Shield, HardDrive, Cpu, DollarSign, TrendingUp, Users, Activity } from 'lucide-react';
+import { Database, Shield, HardDrive, Cpu, IndianRupee, TrendingUp, Users, Activity } from 'lucide-react';
 
 export default function PlatformAccounts({ tenants = [] }) {
   // Computed infrastructure metrics (Simulated)
@@ -48,9 +48,9 @@ export default function PlatformAccounts({ tenants = [] }) {
         <div className="glass-panel p-6 border-l-4 border-emerald-500 bg-white">
            <div className="flex justify-between items-start mb-4">
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vendor Outflow</span>
-              <DollarSign className="w-4 h-4 text-emerald-500 opacity-50" />
+              <IndianRupee className="w-4 h-4 text-emerald-500 opacity-50" />
            </div>
-           <p className="text-2xl font-black text-slate-900">${stats.vendorSpending.toLocaleString()}</p>
+           <p className="text-2xl font-black text-slate-900">₹{stats.vendorSpending.toLocaleString()}</p>
            <p className="text-[9px] font-bold text-emerald-600 mt-2 uppercase">Billable this period</p>
         </div>
 
@@ -59,7 +59,7 @@ export default function PlatformAccounts({ tenants = [] }) {
               <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operational Cost</span>
               <Activity className="w-4 h-4 text-amber-500 opacity-50" />
            </div>
-           <p className="text-2xl font-black text-slate-900">${stats.operationalCost.toLocaleString()}</p>
+           <p className="text-2xl font-black text-slate-900">₹{stats.operationalCost.toLocaleString()}</p>
            <p className="text-[9px] font-bold text-amber-600 mt-2 uppercase">-4% optimization applied</p>
         </div>
 

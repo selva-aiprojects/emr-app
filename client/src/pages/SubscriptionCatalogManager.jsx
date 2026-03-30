@@ -7,7 +7,7 @@ import {
   Zap, 
   ShieldCheck, 
   Users, 
-  DollarSign, 
+  IndianRupee, 
   Activity, 
   CheckCircle2, 
   XCircle, 
@@ -62,7 +62,7 @@ export default function SubscriptionCatalogManager() {
       name: 'Financial Intelligence',
       description: 'Enterprise-grade billing, institutional treasury oversight, and revenue cycle management',
       category: 'Finance',
-      icon: DollarSign,
+      icon: IndianRupee,
       tier: 'Enterprise'
     }
   ];

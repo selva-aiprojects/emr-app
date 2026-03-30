@@ -302,7 +302,7 @@ export const TopServicesChart = ({ data = [] }) => {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      formatter: '{b}: ${c} ({d}%)',
+      formatter: '{b}: ₹{c} ({d}%)',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
       borderColor: '#e2e8f0', borderWidth: 1,
       textStyle: { color: '#1e293b', fontSize: 11 }
@@ -321,7 +321,7 @@ export const TopServicesChart = ({ data = [] }) => {
       avoidLabelOverlap: true,
       itemStyle: { borderRadius: 8, borderColor: '#fff', borderWidth: 2 },
       label: { show: true, formatter: '{b}: {d}%', fontSize: 10, fontWeight: 600, color: '#64748b' },
-      emphasis: { label: { show: true, fontSize: 12, fontWeight: 'bold', formatter: '{b}\n${c}' } }
+      emphasis: { label: { show: true, fontSize: 12, fontWeight: 'bold', formatter: '{b}\n₹{c}' } }
     }]
   };
   return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
