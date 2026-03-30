@@ -81,7 +81,7 @@ const navIcons = {
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
 const SIDEBAR_GROUPS_DEFAULT = [
   { name: "Hospital Monitoring",  modules: ["dashboard", "reports"] },
-  { name: "Front Office Desk",    modules: ["patients", "appointments", "ambulance"] },
+  { name: "Patient Registration", modules: ["patients", "appointments", "ambulance"] },
   { name: "Clinical Excellence",  modules: ["emr", "lab", "inpatient", "ai_vision", "donor"] },
   { name: "Pharmacy & Stores",    modules: ["pharmacy", "inventory"] },
   { name: "Revenue Cycle",        modules: ["service_catalog", "billing", "accounts_receivable", "insurance", "accounts", "accounts_payable"] },
