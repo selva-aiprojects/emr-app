@@ -2642,6 +2642,7 @@ export async function getOPDTokenById(tokenId, tenantId) {
 // =====================================================
 // OPD BILLING SYSTEM
 // =====================================================
+// Fixed duplicate function issue - createOPDBill now defined only once
 
 export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
   // Generate bill number
@@ -4004,6 +4005,7 @@ export async function deleteOPDToken(tokenId, tenantId) {
 // =====================================================
 // OPD BILLING SYSTEM
 // =====================================================
+// Fixed duplicate function issue - createOPDBill now defined only once
 
 export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
   // Generate bill number
@@ -5298,6 +5300,7 @@ export async function getOPDTokenById(tokenId, tenantId) {
 // =====================================================
 // OPD BILLING SYSTEM
 // =====================================================
+// Fixed duplicate function issue - createOPDBill now defined only once
 
 export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
   // Generate bill number
@@ -6660,6 +6663,7 @@ export async function deleteOPDToken(tokenId, tenantId) {
 // =====================================================
 // OPD BILLING SYSTEM
 // =====================================================
+// Fixed duplicate function issue - createOPDBill now defined only once
 
 export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
   // Generate bill number
@@ -8015,6 +8019,7 @@ export async function getOPDTokenById(tokenId, tenantId) {
 // =====================================================
 // OPD BILLING SYSTEM
 // =====================================================
+// Fixed duplicate function issue - createOPDBill now defined only once
 
 export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
   // Generate bill number
@@ -9377,6 +9382,7 @@ export async function deleteOPDToken(tokenId, tenantId) {
 // =====================================================
 // OPD BILLING SYSTEM
 // =====================================================
+// Fixed duplicate function issue - createOPDBill now defined only once
 
 export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
   // Generate bill number
