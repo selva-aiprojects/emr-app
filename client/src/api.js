@@ -705,6 +705,20 @@ export async function createAmbulance(data) {
   });
 }
 
+export async function dispatchAmbulance(ambulanceId, data) {
+  return await apiRequest('/ambulances/dispatch', {
+    method: 'POST',
+    body: JSON.stringify({ id: ambulanceId, ...data }),
+  });
+}
+
+export async function updateAmbulanceStatus(ambulanceId, status, lat, lng) {
+  return await apiRequest(`/ambulances/${ambulanceId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, lat, lng }),
+  });
+}
+
 // =====================================================
 // BLOOD BANK
 // =====================================================
@@ -811,6 +825,8 @@ const apiClient = {
   // Ambulance
   getAmbulances,
   createAmbulance,
+  dispatchAmbulance,
+  updateAmbulanceStatus,
 
   // Blood Bank
   getBloodUnits,
@@ -885,6 +901,8 @@ apiClient.getBootstrap = getBootstrapData;
 // Ambulance & Blood Bank Hub
 apiClient.getAmbulances = getAmbulances;
 apiClient.createAmbulance = createAmbulance;
+apiClient.dispatchAmbulance = dispatchAmbulance;
+apiClient.updateAmbulanceStatus = updateAmbulanceStatus;
 apiClient.getBloodUnits = getBloodUnits;
 apiClient.createBloodUnit = createBloodUnit;
 apiClient.getBloodRequests = getBloodRequests;

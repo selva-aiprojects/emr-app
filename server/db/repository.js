@@ -2182,13 +2182,13 @@ export async function getAmbulances(tenantId) {
   return result.rows;
 }
 
-export async function createAmbulance({ tenantId, userId, vehicle_number, model, status, current_driver, contact_number }) {
+export async function createAmbulance({ tenantId, userId, vehicle_number, model, status, current_driver, contact_number, lat, lng }) {
   const sql = `
-    INSERT INTO emr.ambulances (tenant_id, vehicle_number, model, status, current_driver, contact_number)
-    VALUES ($1, $2, $3, $4, $5, $6)
+    INSERT INTO emr.ambulances (tenant_id, vehicle_number, model, status, current_driver, contact_number, lat, lng)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
-  const result = await query(sql, [tenantId, vehicle_number, model, status || 'Available', current_driver, contact_number]);
+  const result = await query(sql, [tenantId, vehicle_number, model, status || 'Available', current_driver, contact_number, lat, lng]);
   const ambulance = result.rows[0];
 
   await createAuditLog({
@@ -2203,14 +2203,14 @@ export async function createAmbulance({ tenantId, userId, vehicle_number, model,
   return ambulance;
 }
 
-export async function updateAmbulanceStatus(id, tenantId, status, location) {
+export async function updateAmbulanceStatus(id, tenantId, status, lat, lng) {
   const sql = `
     UPDATE emr.ambulances
-    SET status = $1, last_location = COALESCE($2, last_location), updated_at = NOW()
-    WHERE id = $3 AND tenant_id = $4
+    SET status = $1, lat = COALESCE($2, lat), lng = COALESCE($3, lng), updated_at = NOW()
+    WHERE id = $4 AND tenant_id = $5
     RETURNING *
   `;
-  const result = await query(sql, [status, location, id, tenantId]);
+  const result = await query(sql, [status, lat, lng, id, tenantId]);
   if (result.rows.length === 0) throw new Error('Ambulance not found');
   
   await createAuditLog({
@@ -2218,15 +2218,15 @@ export async function updateAmbulanceStatus(id, tenantId, status, location) {
     action: `ambulance.status.${status}`,
     entityName: 'ambulance',
     entityId: id,
-    details: { location }
+    details: { lat, lng }
   });
   
   return result.rows[0];
 }
 
-export async function dispatchAmbulance({ id, tenantId, userId, incident_location, patient_name, priority }) {
-  // Update status to 'On Mission'
-  const ambulance = await updateAmbulanceStatus(id, tenantId, 'On Mission', incident_location);
+export async function dispatchAmbulance({ id, tenantId, userId, incident_lat, incident_lng, patient_name, priority }) {
+  // Update status to 'On Mission' with location
+  const ambulance = await updateAmbulanceStatus(id, tenantId, 'On Mission', incident_lat, incident_lng);
   
   await createAuditLog({
     tenantId,
@@ -2234,7 +2234,7 @@ export async function dispatchAmbulance({ id, tenantId, userId, incident_locatio
     action: 'ambulance.dispatch',
     entityName: 'ambulance',
     entityId: id,
-    details: { incident_location, patient_name, priority }
+    details: { incident_lat, incident_lng, patient_name, priority }
   });
   
   return ambulance;

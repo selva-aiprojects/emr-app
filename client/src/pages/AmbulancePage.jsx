@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
+import { getAmbulances, createAmbulance, dispatchAmbulance } from '../api.js';
 import { 
   Truck, 
   MapPin, 
@@ -15,12 +16,6 @@ import {
 } from 'lucide-react';
 import '../styles/critical-care.css';
 
-const MOCK_AMBULANCES = [
-  { id: 'AMB-001', plate: 'MH-12-AS-1024', status: 'available', driver: 'Rahul S.', contact: '+91 98822 10293', type: 'Advanced Life Support' },
-  { id: 'AMB-002', plate: 'MH-12-AS-2045', status: 'on-trip', driver: 'Vikram K.', contact: '+91 98822 44556', type: 'Basic Life Support', destination: 'Main Trauma Center' },
-  { id: 'AMB-003', plate: 'MH-12-AS-9921', status: 'maintenance', driver: 'None', contact: 'N/A', type: 'Patient Transport' },
-];
-
 const MOCK_TRIPS = [
   { id: 'TRP-101', patient: 'Deepak Varma', status: 'En Route', ETA: '8 mins', location: 'Swargate Square', ambulance: 'AMB-002' },
 ];
@@ -28,15 +23,72 @@ const MOCK_TRIPS = [
 export default function AmbulancePage({ tenant }) {
   const { showToast } = useToast();
 
-  const [fleet, setFleet] = useState(MOCK_AMBULANCES);
+  const [fleet, setFleet] = useState([]);
   const [trips, setTrips] = useState(MOCK_TRIPS);
   const [activeTab, setActiveTab] = useState('live'); // 'live' | 'fleet'
+  const [loading, setLoading] = useState(true);
+
+  // Fetch ambulances from backend
+  useEffect(() => {
+    const fetchAmbulances = async () => {
+      try {
+        if (tenant?.id) {
+          const data = await getAmbulances(tenant.id);
+          setFleet(data);
+        }
+      } catch (error) {
+        console.error('Error fetching ambulances:', error);
+        showToast('Failed to load ambulance fleet', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAmbulances();
+  }, [tenant?.id, showToast]);
 
   const stats = {
-    available: fleet.filter(a => a.status === 'available').length,
-    active: trips.length,
-    maintenance: fleet.filter(a => a.status === 'maintenance').length
+    available: fleet.filter(a => a.status === 'Available' || a.status === 'available').length,
+    active: fleet.filter(a => a.status === 'On Mission' || a.status === 'on-trip').length,
+    maintenance: fleet.filter(a => a.status === 'maintenance' || a.status === 'Under Maintenance').length
   };
+
+  const handleDispatch = async (ambulanceId) => {
+    try {
+      const ambulance = fleet.find(a => a.vehicle_number === ambulanceId);
+      if (!ambulance) {
+        showToast('Ambulance not found', 'error');
+        return;
+      }
+
+      await dispatchAmbulance(ambulance.id, {
+        incident_lat: 18.5304,
+        incident_lng: 73.8467,
+        patient_name: 'Emergency Patient',
+        priority: 'high'
+      });
+      
+      showToast(`Ambulance ${ambulanceId} dispatched successfully`, 'success');
+      
+      // Refresh the fleet data
+      const data = await getAmbulances(tenant.id);
+      setFleet(data);
+    } catch (error) {
+      console.error('Dispatch error:', error);
+      showToast('Failed to dispatch ambulance', 'error');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="page-shell-premium animate-fade-in flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Truck className="w-12 h-12 text-slate-300 animate-pulse mx-auto mb-4" />
+          <p className="text-slate-500">Loading Emergency Fleet...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-shell-premium animate-fade-in">
@@ -152,8 +204,12 @@ export default function AmbulancePage({ tenant }) {
                       <textarea className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-xs font-black text-white outline-none focus:border-rose-500/50 h-24 resize-none" placeholder="Cardiac distress, trauma, stabilizer needed..."></textarea>
                    </div>
                    <div className="grid grid-cols-2 gap-4">
-                      <button type="button" className="py-4 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-emerald-500 transition-all border-none">
-                         AMB-001 (FAST)
+                      <button 
+                        type="button" 
+                        onClick={() => handleDispatch('AMB-001')}
+                        className="py-4 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-emerald-500 transition-all border-none"
+                      >
+                         {fleet.find(a => a.vehicle_number === 'AMB-001') ? `${fleet.find(a => a.vehicle_number === 'AMB-001').vehicle_number} (FAST)` : 'AMB-001 (FAST)'}
                       </button>
                       <button type="button" className="py-4 bg-white/5 border border-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
                          OTHER UNIT
@@ -212,22 +268,22 @@ export default function AmbulancePage({ tenant }) {
                                  <Truck size={18} />
                               </div>
                               <div>
-                                 <div className="text-sm font-black text-slate-900 uppercase">{unit.plate}</div>
+                                 <div className="text-sm font-black text-slate-900 uppercase">{unit.vehicle_number}</div>
                                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{unit.id}</div>
                               </div>
                            </div>
                         </td>
                         <td>
-                           <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-tighter border border-indigo-100">{unit.type}</span>
+                           <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-tighter border border-indigo-100">{unit.model || 'Standard'}</span>
                         </td>
                         <td>
                            <div className="flex items-center gap-2">
-                              {unit.driver !== 'None' ? (
+                              {unit.current_driver ? (
                                 <>
                                   <User size={12} className="text-slate-400" />
                                   <div>
-                                     <div className="text-[11px] font-black text-slate-700">{unit.driver}</div>
-                                     <div className="text-[9px] text-slate-400 font-black tabular-nums">{unit.contact}</div>
+                                     <div className="text-[11px] font-black text-slate-700">{unit.current_driver}</div>
+                                     <div className="text-[9px] text-slate-400 font-black tabular-nums">{unit.contact_number || 'N/A'}</div>
                                   </div>
                                 </>
                               ) : (
@@ -238,12 +294,13 @@ export default function AmbulancePage({ tenant }) {
                         <td>
                            <div className="flex items-center gap-2">
                               <span className={`w-2 h-2 rounded-full ${
-                                unit.status === 'available' ? 'bg-emerald-500' : 
-                                unit.status === 'on-trip' ? 'bg-rose-500 animate-pulse' : 
-                                'bg-amber-400'
+                                unit.status === 'Available' ? 'bg-emerald-500' : 
+                                unit.status === 'On Mission' ? 'bg-rose-500 animate-pulse' : 
+                                unit.status === 'maintenance' ? 'bg-amber-400' :
+                                'bg-slate-400'
                               }`}></span>
                               <span className="text-[10px] font-black uppercase tracking-widest">
-                                 {unit.status.replace('-', ' ')}
+                                 {unit.status}
                               </span>
                            </div>
                         </td>

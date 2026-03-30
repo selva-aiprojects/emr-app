@@ -2411,8 +2411,8 @@ app.post('/api/ambulances/dispatch', requireTenant, moduleGate('ambulance'), asy
 app.patch('/api/ambulances/:id/status', requireTenant, moduleGate('ambulance'), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, location } = req.body;
-    const updated = await repo.updateAmbulanceStatus(id, req.tenantId, status, location);
+    const { status, lat, lng } = req.body;
+    const updated = await repo.updateAmbulanceStatus(id, req.tenantId, status, lat, lng);
     res.json(updated);
   } catch (error) {
     console.error('Update Status Error:', error);
