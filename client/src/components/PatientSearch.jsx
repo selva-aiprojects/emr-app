@@ -98,9 +98,9 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
             {!selectedPatient && (
                 <div className="flex flex-col gap-3 w-full relative">
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
                         <input
-                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all text-sm bg-white"
+                            className="w-full pl-4 pr-10 py-2 border border-slate-200 rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 outline-none transition-all text-sm bg-white"
                             type="text"
                             placeholder="Search by Name, MRN, or Phone..."
                             value={searchTerm}

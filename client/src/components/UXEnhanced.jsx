@@ -167,7 +167,7 @@ export function SmartSearch({
 
   return (
     <div className={`relative ${className}`} onFocus={() => setIsFocused(true)} onBlur={() => setTimeout(() => setIsFocused(false), 200)}>
-      <Search className="pointer-events-none absolute left-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[var(--text-soft)]" />
+      <Search className="pointer-events-none absolute right-4 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-[var(--text-soft)]" />
       <input
         ref={inputRef}
         type="text"
@@ -180,7 +180,7 @@ export function SmartSearch({
           }
         }}
         placeholder={placeholder}
-        className="h-11 w-full rounded-2xl border border-[var(--border)] bg-gray-50/50 pl-12 pr-4 text-sm text-[var(--text-main)] outline-none transition-all focus:bg-white focus:border-[var(--clinical-blue)]/30 focus:ring-4 focus:ring-[var(--clinical-blue)]/5"
+        className="h-11 w-full rounded-2xl border border-[var(--border)] bg-gray-50/50 pl-4 pr-12 text-sm text-[var(--text-main)] outline-none transition-all focus:bg-white focus:border-[var(--clinical-blue)]/30 focus:ring-4 focus:ring-[var(--clinical-blue)]/5"
       />
       {isFocused && searchResults.length > 0 && (
         <div className="absolute right-0 top-full z-[9999] mt-2 w-full rounded-2xl border border-[var(--border)] bg-white p-2 shadow-2xl animate-fade-in">

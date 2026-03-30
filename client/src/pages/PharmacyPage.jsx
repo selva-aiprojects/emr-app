@@ -217,10 +217,10 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Authorized clinical prescriptions awaiting dispensation</p>
               </div>
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
                   placeholder="Search by patient or medication..." 
-                  className="input-field pl-12 pr-6 py-4 w-full md:w-80 text-sm font-bold bg-white"
+                  className="input-field pl-6 pr-12 py-4 w-full md:w-80 text-sm font-bold bg-white"
                   value={searchValue}
                   onChange={e => setSearchValue(e.target.value)}
                 />

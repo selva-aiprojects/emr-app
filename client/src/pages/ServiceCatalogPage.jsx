@@ -149,11 +149,11 @@ export default function ServiceCatalogPage({ tenant }) {
 
       <div className="flex flex-col md:flex-row gap-6 mb-10">
          <div className="flex-1 relative group">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[var(--clinical-blue)] transition-colors" />
+            <Search className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[var(--clinical-blue)] transition-colors" />
             <input 
               type="text" 
               placeholder="Search service name or institutional code..." 
-              className="input-field pl-16 h-[60px] bg-white border-2 border-slate-50 rounded-2xl shadow-sm focus:shadow-xl transition-all font-black text-slate-800"
+              className="input-field pl-6 pr-16 h-[60px] bg-white border-2 border-slate-50 rounded-2xl shadow-sm focus:shadow-xl transition-all font-black text-slate-800"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />

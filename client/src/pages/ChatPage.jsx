@@ -109,11 +109,11 @@ export default function ChatPage({ activeUser }) {
           </div>
           
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-slate-300 transition-colors" size={14} />
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 group-hover:text-slate-300 transition-colors" size={14} />
             <input 
               type="text" 
               placeholder="Search collab hub..." 
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-9 pr-4 text-xs focus:ring-1 focus:ring-indigo-500 focus:bg-white/10 transition-all outline-none"
+              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-4 pr-9 text-xs focus:ring-1 focus:ring-indigo-500 focus:bg-white/10 transition-all outline-none"
             />
           </div>
         </div>

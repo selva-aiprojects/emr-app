@@ -278,10 +278,10 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-1">Coverage institutions and secure claim endpoints</p>
              </div>
              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
                 <input 
                    placeholder="Search institutional registry..." 
-                   className="input-field pl-12 pr-6 py-4 w-full lg:w-96 text-sm font-bold bg-white" 
+                   className="input-field pl-6 pr-12 py-4 w-full lg:w-96 text-sm font-bold bg-white" 
                    value={searchTerm}
                    onChange={e => setSearchTerm(e.target.value)}
                 />

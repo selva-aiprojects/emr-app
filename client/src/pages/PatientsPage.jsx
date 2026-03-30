@@ -158,11 +158,11 @@ export default function PatientsPage({
         <section className="space-y-8">
           <div className="flex flex-col md:flex-row gap-6 items-stretch">
              <div className="flex-1 relative group">
-                <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[var(--clinical-blue)] transition-colors" />
+                <Search className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[var(--clinical-blue)] transition-colors" />
                 <input 
                   type="text" 
                   placeholder="Search by patient name, MRN, or phone..." 
-                  className="input-field pl-16 py-6 bg-white border-2 border-slate-50 rounded-3xl shadow-sm focus:shadow-xl focus:border-[var(--clinical-blue)]/20 transition-all font-medium text-slate-800 placeholder:text-slate-300 w-full"
+                  className="input-field pl-6 pr-16 py-6 bg-white border-2 border-slate-50 rounded-3xl shadow-sm focus:shadow-xl focus:border-[var(--clinical-blue)]/20 transition-all font-medium text-slate-800 placeholder:text-slate-300 w-full"
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                 />
