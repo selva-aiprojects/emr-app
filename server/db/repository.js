@@ -2644,6 +2644,7 @@ export async function getOPDTokenById(tokenId, tenantId) {
 // =====================================================
 // Fixed duplicate function issue - createOPDBill now defined only once
 
+
 export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
   // Generate bill number
   const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
@@ -2678,7 +2679,6 @@ export async function createOPDBill({ tenantId, patientId, tokenId, appointmentI
   
   return result.rows[0];
 }
-
 export async function getOPDBills(tenantId, filters = {}) {
   const { status, departmentId, doctorId, date, patientId } = filters;
   
@@ -4007,40 +4007,6 @@ export async function deleteOPDToken(tokenId, tenantId) {
 // =====================================================
 // Fixed duplicate function issue - createOPDBill now defined only once
 
-export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
-  // Generate bill number
-  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
-  const billNumberResult = await query(billNumberSql, [tenantId]);
-  const billNumber = billNumberResult.rows[0].bill_number;
-  
-  const sql = `
-    INSERT INTO emr.opd_bills (
-      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
-      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
-      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
-      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
-      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
-      notes, created_by
-    )
-    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
-            $6, $7, $8, $9, $10, $11,
-            $12, $13, $14, $15, $16,
-            $17, $18, $19, $20, $21, $22,
-            $23, $24, $25, $26, $27)
-    RETURNING *
-  `;
-  
-  const result = await query(sql, [
-    tenantId, patientId, tokenId, appointmentId, billNumber,
-    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
-    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
-    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
-    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
-    notes, createdBy
-  ]);
-  
-  return result.rows[0];
-}
 
 export async function getOPDBills(tenantId, filters = {}) {
   const { status, departmentId, doctorId, date, patientId } = filters;
@@ -5302,40 +5268,6 @@ export async function getOPDTokenById(tokenId, tenantId) {
 // =====================================================
 // Fixed duplicate function issue - createOPDBill now defined only once
 
-export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
-  // Generate bill number
-  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
-  const billNumberResult = await query(billNumberSql, [tenantId]);
-  const billNumber = billNumberResult.rows[0].bill_number;
-  
-  const sql = `
-    INSERT INTO emr.opd_bills (
-      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
-      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
-      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
-      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
-      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
-      notes, created_by
-    )
-    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
-            $6, $7, $8, $9, $10, $11,
-            $12, $13, $14, $15, $16,
-            $17, $18, $19, $20, $21, $22,
-            $23, $24, $25, $26, $27)
-    RETURNING *
-  `;
-  
-  const result = await query(sql, [
-    tenantId, patientId, tokenId, appointmentId, billNumber,
-    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
-    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
-    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
-    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
-    notes, createdBy
-  ]);
-  
-  return result.rows[0];
-}
 
 export async function getOPDBills(tenantId, filters = {}) {
   const { status, departmentId, doctorId, date, patientId } = filters;
@@ -6665,40 +6597,6 @@ export async function deleteOPDToken(tokenId, tenantId) {
 // =====================================================
 // Fixed duplicate function issue - createOPDBill now defined only once
 
-export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
-  // Generate bill number
-  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
-  const billNumberResult = await query(billNumberSql, [tenantId]);
-  const billNumber = billNumberResult.rows[0].bill_number;
-  
-  const sql = `
-    INSERT INTO emr.opd_bills (
-      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
-      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
-      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
-      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
-      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
-      notes, created_by
-    )
-    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
-            $6, $7, $8, $9, $10, $11,
-            $12, $13, $14, $15, $16,
-            $17, $18, $19, $20, $21, $22,
-            $23, $24, $25, $26, $27)
-    RETURNING *
-  `;
-  
-  const result = await query(sql, [
-    tenantId, patientId, tokenId, appointmentId, billNumber,
-    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
-    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
-    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
-    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
-    notes, createdBy
-  ]);
-  
-  return result.rows[0];
-}
 
 export async function getOPDBills(tenantId, filters = {}) {
   const { status, departmentId, doctorId, date, patientId } = filters;
@@ -8021,40 +7919,6 @@ export async function getOPDTokenById(tokenId, tenantId) {
 // =====================================================
 // Fixed duplicate function issue - createOPDBill now defined only once
 
-export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
-  // Generate bill number
-  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
-  const billNumberResult = await query(billNumberSql, [tenantId]);
-  const billNumber = billNumberResult.rows[0].bill_number;
-  
-  const sql = `
-    INSERT INTO emr.opd_bills (
-      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
-      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
-      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
-      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
-      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
-      notes, created_by
-    )
-    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
-            $6, $7, $8, $9, $10, $11,
-            $12, $13, $14, $15, $16,
-            $17, $18, $19, $20, $21, $22,
-            $23, $24, $25, $26, $27)
-    RETURNING *
-  `;
-  
-  const result = await query(sql, [
-    tenantId, patientId, tokenId, appointmentId, billNumber,
-    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
-    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
-    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
-    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
-    notes, createdBy
-  ]);
-  
-  return result.rows[0];
-}
 
 export async function getOPDBills(tenantId, filters = {}) {
   const { status, departmentId, doctorId, date, patientId } = filters;
@@ -9384,40 +9248,6 @@ export async function deleteOPDToken(tokenId, tenantId) {
 // =====================================================
 // Fixed duplicate function issue - createOPDBill now defined only once
 
-export async function createOPDBill({ tenantId, patientId, tokenId, appointmentId, patientName, patientAge, patientGender, visitType, departmentId, doctorId, departmentName, doctorName, consultationFee, registrationFee, procedureCharges, labCharges, medicineCharges, otherCharges, discountAmount, discountPercentage, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
-  // Generate bill number
-  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
-  const billNumberResult = await query(billNumberSql, [tenantId]);
-  const billNumber = billNumberResult.rows[0].bill_number;
-  
-  const sql = `
-    INSERT INTO emr.opd_bills (
-      tenant_id, patient_id, token_id, appointment_id, bill_number, bill_date, bill_time,
-      patient_name, patient_age, patient_gender, visit_type, department_id, doctor_id,
-      department_name, doctor_name, consultation_fee, registration_fee, procedure_charges,
-      lab_charges, medicine_charges, other_charges, discount_amount, discount_percentage,
-      tax_amount, total_amount, payment_method, insurance_provider, policy_number,
-      notes, created_by
-    )
-    VALUES ($1, $2, $3, $4, $5, CURRENT_DATE, CURRENT_TIME,
-            $6, $7, $8, $9, $10, $11,
-            $12, $13, $14, $15, $16,
-            $17, $18, $19, $20, $21, $22,
-            $23, $24, $25, $26, $27)
-    RETURNING *
-  `;
-  
-  const result = await query(sql, [
-    tenantId, patientId, tokenId, appointmentId, billNumber,
-    patientName, patientAge, patientGender, visitType, departmentId, doctorId,
-    departmentName, doctorName, consultationFee || 0, registrationFee || 0, procedureCharges || 0,
-    labCharges || 0, medicineCharges || 0, otherCharges || 0, discountAmount || 0, discountPercentage || 0,
-    taxAmount || 0, totalAmount || 0, paymentMethod, insuranceProvider, policyNumber,
-    notes, createdBy
-  ]);
-  
-  return result.rows[0];
-}
 
 export async function getOPDBills(tenantId, filters = {}) {
   const { status, departmentId, doctorId, date, patientId } = filters;
