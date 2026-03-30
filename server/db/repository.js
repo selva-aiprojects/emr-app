@@ -1714,8 +1714,6 @@ export async function getBootstrapData(tenantId, userId) {
     claims
   ] = await Promise.all([
     getUserById(userId),
-    userName: null, // Add missing userName parameter
-    userName: null, // Add missing userName parameter
     // Placeholder for other data to be fetched below
     Promise.resolve([]),
     getAppointments(tenantId),
@@ -2212,7 +2210,6 @@ export async function createAmbulance({ tenantId, userId, vehicle_number, model,
   await createAuditLog({
     tenantId,
     userId,
-    userName: null, // Add missing userName parameter
     userName: null, // Add missing userName parameter
     action: 'ambulance.create',
     entityName: 'ambulance',
