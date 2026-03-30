@@ -1476,7 +1476,7 @@ export function calculatePerformanceScore(weeklyStats) {
   // Performance indicators (0-100 scale)
   const occupancyScore = Math.min(100, (occupiedBeds / totalBeds) * 100);
   const revenueScore = Math.min(100, (totalRevenue / (totalBeds || 1)) * 100);
-  const patientScore = Math.min(100, (patients / (totalPatients || 1)) * 100);
+  const patientScore = Math.min(100, (patients / (patients || 1)) * 100);
   
   // Weighted average score
   const performanceScore = Math.round((occupancyScore + revenueScore + patientScore) / 3);
