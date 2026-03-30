@@ -35,7 +35,7 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       
       // Today's revenue
       query(`
-        SELECT COALESCE(SUM(amount), 0) as total
+        SELECT COALESCE(SUM(total), 0) as total
         FROM emr.invoices 
         WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE AND status = 'paid'
       `, [tenantId]),
@@ -47,18 +47,18 @@ export async function getRealtimeDashboardMetrics(tenantId) {
         WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE
       `, [tenantId]),
       
-      // Today's admissions
+      // Today's admissions (using encounters table)
       query(`
         SELECT COUNT(*) as count
-        FROM emr.admissions 
-        WHERE tenant_id = $1 AND DATE(admission_date) = CURRENT_DATE AND status = 'active'
+        FROM emr.encounters 
+        WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'admission'
       `, [tenantId]),
       
-      // Today's discharges
+      // Today's discharges (using encounters table)
       query(`
         SELECT COUNT(*) as count
-        FROM emr.invoices 
-        WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE AND status = 'unpaid'
+        FROM emr.encounters 
+        WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'discharge'
       `, [tenantId]),
       
       // Occupied beds
@@ -87,27 +87,6 @@ export async function getRealtimeDashboardMetrics(tenantId) {
         SELECT COUNT(*) as count
         FROM emr.service_requests 
         WHERE tenant_id = $1 AND category = 'lab' AND notes::jsonb->>'criticalFlag' = 'true' AND DATE(created_at) >= CURRENT_DATE - INTERVAL '24 hours'
-      `, [tenantId]),
-      
-      // Low stock items
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.pharmacy_inventory_enhanced 
-        WHERE tenant_id = $1 AND current_stock <= minimum_stock_level AND status = 'ACTIVE'
-      `, [tenantId]),
-      
-      // Expiring items
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.pharmacy_inventory_enhanced 
-        WHERE tenant_id = $1 AND expiry_date <= CURRENT_DATE + INTERVAL '30 days' AND status = 'ACTIVE'
-      `, [tenantId]),
-      
-      // Emergency dispensing
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.pharmacy_dispensing_log 
-        WHERE tenant_id = $1 AND DATE(dispensing_date) = CURRENT_DATE AND emergency_dispensing = true
       `, [tenantId])
     ]);
     
