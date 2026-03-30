@@ -3,8 +3,11 @@ import { useToast } from '../hooks/useToast.jsx';
 import { Settings, Palette, Image as ImageIcon, Globe, ShieldCheck, Save, Loader2, CheckCircle, AlertCircle, Building2 } from 'lucide-react';
 import { api } from '../api.js';
 
+// Error boundary wrapper
 export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
   const { showToast } = useToast();
+
+  try {
 
   const [form, setForm] = useState({
     displayName: tenant?.name || '',
@@ -65,9 +68,11 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
         document.documentElement.style.setProperty('--clinical-primary', form.primaryColor);
         document.documentElement.style.setProperty('--medical-navy', form.primaryColor);
       }
-    } catch (err) {
+    } catch (error) {
+      console.error('HospitalSettingsPage error:', error);
+      setError('Failed to update settings');
       setStatus('error');
-      setError(err.message || 'Failed to update settings');
+      showToast({ message: 'Failed to update hospital settings', type: 'error', title: 'Error' });
     } finally {
       setLoading(false);
     }
