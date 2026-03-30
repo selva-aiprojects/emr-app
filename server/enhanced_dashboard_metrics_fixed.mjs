@@ -99,10 +99,7 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       occupiedBeds: occupiedBeds.rows[0]?.count || 0,
       availableBeds: availableBeds.rows[0]?.count || 0,
       totalBeds: totalBeds.rows[0]?.count || 0,
-      criticalLabResults: criticalLabResults.rows[0]?.count || 0,
-      lowStockItems: lowStockItems.rows[0]?.count || 0,
-      expiringItems: expiringItems.rows[0]?.count || 0,
-      emergencyDispensing: emergencyDispensing.rows[0]?.count || 0
+      criticalLabResults: criticalLabResults.rows[0]?.count || 0
     };
     
     console.log('✅ Real-time metrics calculated:', metrics);
