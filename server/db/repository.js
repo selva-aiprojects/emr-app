@@ -1501,3 +1501,71 @@ export function getTrendColor(current, previous) {
   if (change < -0.1) return 'text-red-600';
   return 'text-amber-600';
 }
+
+// =====================================================
+// BOOTSTRAP
+// =====================================================
+
+export async function getBootstrapData(tenantId, userId) {
+  // Parallel fetch for speed
+  const [
+    user,
+    patients,
+    appointments,
+    walkins,
+    encounters,
+    invoices,
+    inventory,
+    employees,
+    employeesLeaves,
+    insuranceProviders,
+    claims
+  ] = await Promise.all([
+    getUserById(userId),
+    // Placeholder for other data to be fetched below
+    Promise.resolve([]),
+    getAppointments(tenantId),
+    getWalkins(tenantId),
+    getEncounters(tenantId),
+    getInvoices(tenantId),
+    getInventoryItems(tenantId),
+    getEmployees(tenantId),
+    getEmployeeLeaves(tenantId),
+    getInsuranceProviders(tenantId),
+    getClaims(tenantId)
+  ]);
+
+  if (!user) throw new Error('User not found');
+
+  // Normalize user role casing for permission matching (e.g., "doctor" -> "Doctor")
+  let userRole = user.role;
+  if (userRole) {
+    userRole = userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase();
+    if (userRole === 'Front office') userRole = 'Front Office';
+    else if (userRole === 'Support staff') userRole = 'Support Staff';
+    else if (userRole === 'Hr') userRole = 'HR';
+    else if (userRole === 'Administrator' || userRole === 'Admin role') userRole = 'Admin';
+  }
+
+  // Also update the role on the user object itself for the frontend
+  user.role = userRole;
+
+  // Securely fetch patients with masking
+  // Only some roles should see patients list at all? 
+  // For now, consistent with PERMISSIONS, we let them fetch but mask.
+  const securePatients = await getPatients(tenantId, userRole);
+
+  return {
+    user,
+    patients: securePatients,
+    appointments,
+    walkins,
+    encounters,
+    invoices,
+    inventory,
+    employees,
+    employeesLeaves,
+    insuranceProviders,
+    claims
+  };
+}
