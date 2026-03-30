@@ -309,4 +309,4 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
   );
 } finally {
     // Component cleanup if needed
-} 
+}
