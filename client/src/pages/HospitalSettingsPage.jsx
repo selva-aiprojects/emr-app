@@ -307,4 +307,6 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
       </div>
     </div>
   );
+} finally {
+    // Component cleanup if needed
 }
