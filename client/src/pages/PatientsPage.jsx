@@ -26,8 +26,8 @@ import { useToast } from '../hooks/useToast.jsx';
 
 export default function PatientsPage({
   activeUser,
-  tenant,
   session,
+  tenant,
   patients: patientsProp,
   setView,
   setActivePatientId,
@@ -224,11 +224,21 @@ export default function PatientsPage({
                               </div>
                               <div>
                                  <div className="text-sm font-black text-slate-900 tracking-tight group-hover:translate-x-1 transition-transform">
-                                   {p.firstName} {p.lastName}
+                                   {p.firstName || p.first_name || p.name || 'Unknown Patient'} {p.lastName || p.last_name || ''}
                                  </div>
                                  <div className="text-meta-sm text-slate-400 mt-1 flex items-center gap-2">
-                                    <ShieldCheck className="w-3 h-3 text-emerald-500" /> MRN: {p.mrn || `MRN-${(p.id || 'X').slice(0, 8).toUpperCase()}`}
-                                 </div>
+                                    <ShieldCheck className="w-3 h-3 text-emerald-500" /> 
+                                    <button 
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setView?.('patient-profile');
+                                        setActivePatientId?.(p.id);
+                                      }}
+                                      className="bg-blue-50 hover:bg-blue-100 text-blue-700 px-2 py-1 rounded-lg text-xs font-black uppercase tracking-wider border border-blue-200 transition-all hover:shadow-md"
+                                    >
+                                      📋 {p.mrn || `MRN-${(p.id || 'X').slice(0, 8).toUpperCase()}`}
+                                    </button>
+                                  </div>
                               </div>
                            </div>
                         </td>

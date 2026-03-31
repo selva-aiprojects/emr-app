@@ -41,6 +41,7 @@ const BedManagementPage = lazy(() => import('./pages/BedManagementPage.jsx'));
 const HospitalSettingsPage = lazy(() => import('./pages/HospitalSettingsPage.jsx'));
 const EmployeeMasterPage = lazy(() => import('./pages/EmployeeMasterPage.jsx'));
 const AdminMastersPage = lazy(() => import('./pages/AdminMastersPage.jsx'));
+const PatientProfilePage = lazy(() => import('./pages/PatientProfilePage.jsx'));
 
 export default function App() {
   const suspenseFallback = (
@@ -544,40 +545,30 @@ export default function App() {
           <PatientsPage
             activeUser={activeUser}
             session={session}
+            tenant={tenant}
             patients={scopedPatients}
-            activePatient={activePatient}
-            activePatientId={activePatientId}
+            setView={setView}
             setActivePatientId={setActivePatientId}
-            onCreatePatient={async (e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
-              await withRefresh(async () => {
-                const newPatient = await api.addPatient({
-                  tenantId: session.tenantId, userId: activeUser.id,
-                  firstName: fd.get('firstName'), lastName: fd.get('lastName'), dob: fd.get('dob'),
-                  gender: fd.get('gender'), phone: fd.get('phone'), email: fd.get('email'),
-                  address: fd.get('address'), bloodGroup: fd.get('bloodGroup'),
-                  emergencyContact: fd.get('emergencyContact'), insurance: fd.get('insurance'),
-                  chronicConditions: fd.get('chronicConditions'), allergies: fd.get('allergies'),
-                  surgeries: fd.get('surgeries'), familyHistory: fd.get('familyHistory')
-                });
-                if (newPatient && newPatient.id) {
-                  setActivePatientId(newPatient.id);
-                  // Add new patient to the patients list
-                  setPatients(prev => [...prev, newPatient]);
-                  setView('emr');
-                }
-              });
+            onCreatePatient={async (data) => {
+              try {
+                await api.createPatient({ ...data, tenantId: tenant?.id || session?.tenantId });
+                await refreshTenantData(tenant?.id || session?.tenantId, activeUser?.id, activeUser?.role, { mode: 'fast' });
+                showToast({ message: 'Patient registered successfully!', type: 'success' });
+              } catch (err) {
+                showToast({ message: 'Registration failed: ' + err.message, type: 'error' });
+              }
             }}
-            onAddClinical={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
-              withRefresh(() => api.addPatientClinical(activePatient.id, {
-                tenantId: session.tenantId, userId: activeUser.id, section: fd.get('section'),
-                payload: { date: new Date().toISOString().slice(0, 10), text: fd.get('text') }
-              }));
-            }}
-            onPrint={printPatientDoc}
+          />
+        )}
+
+        {view === 'patient-profile' && (
+          <PatientProfilePage
+            patientId={activePatientId}
+            activeUser={activeUser}
+            tenant={tenant}
+            session={session}
+            onBack={() => setView('patients')}
+            setView={setView}
           />
         )}
 
