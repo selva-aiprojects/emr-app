@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
- 
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -23,7 +23,7 @@ const app = express();
 const PORT = Number(process.env.PORT || 4000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.get('/api/version', (req, res) => res.json({ version: '1.0.5-FIXED' }));
- 
+
 // Robust check: Render or other environments might call the script in different ways.
 const currentFilePath = fileURLToPath(import.meta.url);
 const isDirectRun =
@@ -77,8 +77,8 @@ async function ensureTenantColumns() {
     // Check if emr.tenants exists
     const tableCheck = await query("SELECT to_regclass('emr.tenants') as exists");
     if (!tableCheck.rows[0].exists) {
-       console.warn('[SCHEMA_FIX] emr.tenants table missing. Attempting to create foundational structure.');
-       await query(`
+      console.warn('[SCHEMA_FIX] emr.tenants table missing. Attempting to create foundational structure.');
+      await query(`
          CREATE TABLE IF NOT EXISTS emr.tenants (
            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
            name text NOT NULL,
@@ -98,8 +98,11 @@ async function ensureTenantColumns() {
     `;
     const res = await query(checkSql);
     const columns = res.rows.map(r => r.column_name);
-    
-    
+    const missing = [];
+    if (!columns.includes('logo_url')) missing.push('ADD COLUMN logo_url TEXT');
+    if (!columns.includes('subscription_tier')) missing.push('ADD COLUMN subscription_tier VARCHAR(32) DEFAULT \'Professional\'');
+    if (!columns.includes('billing_config')) missing.push('ADD COLUMN billing_config JSONB DEFAULT \'{}\'::JSONB');
+
     if (missing.length > 0) {
       console.log(`[SCHEMA_FIX] Adding missing columns to emr.tenants: ${missing.length} columns`);
       await query(`ALTER TABLE emr.tenants ${missing.join(', ')}`);
@@ -203,7 +206,7 @@ app.post('/api/login', async (req, res) => {
         const challengeId = `mfa_${Math.random().toString(36).substr(2, 9)}`;
         // In a real app, send OTP here via notify.sendNotification
         console.log(`[MFA_CHALLENGE] Sending OTP for user ${user.email}`);
-        
+
         return res.json({
           mfaRequired: true,
           challengeId,
@@ -407,7 +410,7 @@ app.get('/api/tenants', async (_req, res) => {
 app.post('/api/login/mfa-verify', async (req, res) => {
   try {
     const { challengeId, otp, email, tenantId } = req.body;
-    
+
     // Demo verification logic: any 6-digit code works for demonstration
     if (!otp || otp.length !== 6) {
       return res.status(400).json({ error: 'Invalid OTP format' });
@@ -483,7 +486,7 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
     // IMPLEMENTED: Default password "Medflow@2026"
     const defaultPassword = "Medflow@2026";
     const passwordHash = await hashPassword(defaultPassword);
-    
+
     const adminLoginEmail = `admin@${subdomain}.com`;
 
     const adminUser = await repo.createUser({
@@ -501,8 +504,8 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
       subdomain,
       { email: adminLoginEmail, password: defaultPassword }
     ).catch(e => {
-        console.error('Email sending failed:', e.message);
-        return { success: false };
+      console.error('Email sending failed:', e.message);
+      return { success: false };
     });
 
     await repo.createAuditLog({
@@ -512,8 +515,8 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
       action: 'tenant.create',
       entityName: 'tenant',
       entityId: tenant.id,
-      details: { 
-        code, 
+      details: {
+        code,
         subscriptionTier: subscriptionTier || 'Basic',
         adminProvisioned: !!adminUser,
         emailStatus: mailResult?.success ? 'sent' : 'failed',
@@ -593,7 +596,7 @@ app.post('/api/admin/tenants/:id/provision-admin', authenticate, requireRole('Su
     // Default password "Medflow@2026" if not provided
     const userPassword = password || "Medflow@2026";
     const passwordHash = await hashPassword(userPassword);
-    
+
     // Check if user already exists
     const existingUser = await repo.getUserByEmail(email, tenantId);
     if (existingUser) {
@@ -638,13 +641,13 @@ app.put('/api/tenants/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     if (!status || !['active', 'suspended'].includes(status)) {
       return res.status(400).json({ error: 'Valid status is required' });
     }
 
     const tenant = await repo.updateTenantStatus(id, status);
-    
+
     if (!tenant) {
       return res.status(404).json({ error: 'Tenant not found' });
     }
@@ -699,8 +702,8 @@ app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
     console.error('[SETTINGS_UPDATE_ERROR] Full Error:', error);
     if (error.code) console.error('[SETTINGS_UPDATE_ERROR] DB Code:', error.code);
     if (error.detail) console.error('[SETTINGS_UPDATE_ERROR] DB Detail:', error.detail);
-    
-    res.status(500).json({ 
+
+    res.status(500).json({
       error: 'Failed to update tenant settings',
       details: error.message,
       code: error.code
@@ -724,9 +727,9 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
-  app.post('/api/users', authenticate, requireTenant, requirePermission('users'), async (req, res) => {
-    try {
-      const { tenantId, name, email, role, patientId, password } = req.body;
+app.post('/api/users', authenticate, requireTenant, requirePermission('users'), async (req, res) => {
+  try {
+    const { tenantId, name, email, role, patientId, password } = req.body;
 
     if (!tenantId || !name || !email || !role) {
       return res.status(400).json({ error: 'tenantId, name, email, and role are required' });
@@ -736,14 +739,14 @@ app.get('/api/users', async (req, res) => {
     const userPassword = password || `${name.split(' ')[0]}@123`;
     const passwordHash = await hashPassword(userPassword);
 
-      const user = await repo.createUser({
-        tenantId,
-        email,
-        passwordHash,
-        name,
-        role,
-        patientId: patientId || null,
-      });
+    const user = await repo.createUser({
+      tenantId,
+      email,
+      passwordHash,
+      name,
+      role,
+      patientId: patientId || null,
+    });
 
     await repo.createAuditLog({
       tenantId,
@@ -1091,7 +1094,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
     const metrics = await getRealtimeDashboardMetrics(tenantId);
 
     // Get additional statistics for enhanced dashboard
-    const [patientStats, appointmentStats, bedOccupancy] = await Promise.all([
+    const [patientStatsResult, appointmentStatsResult, bedOccupancyResult] = await Promise.all([
       query(`
         SELECT 
           COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as new_patients,
@@ -1099,7 +1102,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
         FROM emr.patients 
         WHERE tenant_id = $1
       `, [tenantId]),
-      
+
       query(`
         SELECT 
           COUNT(CASE WHEN status = 'scheduled' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as scheduled_today,
@@ -1109,7 +1112,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
         FROM emr.appointments 
         WHERE tenant_id = $1
       `, [tenantId]),
-      
+
       query(`
         SELECT 
           COUNT(CASE WHEN status = 'occupied' THEN 1 END) as occupied,
@@ -1119,7 +1122,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
       `, [tenantId])
     ]);
 
-    // Get department distribution (grouped by user role as proxy for department)
+    // Get department distribution
     const departmentResult = await query(`
       SELECT role as department, COUNT(*) as count 
       FROM emr.users 
@@ -1129,7 +1132,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
 
     const departmentDistribution = departmentResult.rows.map(row => ({
       label: row.department || 'General',
-      value: row.count
+      value: Number(row.count || 0)
     }));
 
     // Get available doctors
@@ -1139,38 +1142,89 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
       WHERE tenant_id = $1 AND role = 'Doctor'
     `, [tenantId]);
 
-    // Calculate occupancy rate
-    const occupancyRate = metrics.totalBeds > 0 ? Math.round((metrics.occupiedBeds / metrics.totalBeds) * 100) : 0;
+    // Optional enrichments (safe)
+    const [staffStatsResult, masterCountsResult, journeyResult, revenueTrendResult] = await Promise.all([
+      query(`
+        SELECT designation, COUNT(*) as count 
+        FROM emr.employees 
+        WHERE tenant_id = $1 AND designation IS NOT NULL
+        GROUP BY designation
+        ORDER BY count DESC
+      `, [tenantId]).catch(() => ({ rows: [] })),
+
+      query(`
+        SELECT
+          (SELECT COUNT(*) FROM emr.departments WHERE tenant_id = $1) as departments,
+          (SELECT COUNT(*) FROM emr.wards WHERE tenant_id = $1) as wards,
+          (SELECT COUNT(*) FROM emr.beds WHERE tenant_id = $1) as beds,
+          (SELECT COUNT(*) FROM emr.services WHERE tenant_id = $1) as services,
+          (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1) as total_staff
+      `, [tenantId]).catch(() => ({ rows: [{}] })),
+
+      query(`
+        SELECT status, COUNT(*) as count 
+        FROM emr.encounters 
+        WHERE tenant_id = $1
+        GROUP BY status
+      `, [tenantId]).catch(() => ({ rows: [] })),
+
+      query(`
+        SELECT 
+          TO_CHAR(created_at, 'Mon') as label,
+          COALESCE(SUM(total), 0) as value
+        FROM emr.invoices
+        WHERE tenant_id = $1 AND created_at > CURRENT_DATE - INTERVAL '6 months'
+        GROUP BY label, DATE_TRUNC('month', created_at)
+        ORDER BY DATE_TRUNC('month', created_at)
+      `, [tenantId]).catch(() => ({ rows: [] }))
+    ]);
+
+    const patientStats = patientStatsResult.rows[0] || {};
+    const appointmentStats = appointmentStatsResult.rows[0] || {};
+    const bedOccupancy = bedOccupancyResult.rows[0] || {};
+    const doctors = doctorsResult.rows || [];
+
+    const occupancyRate = metrics.totalBeds > 0
+      ? Math.round((metrics.occupiedBeds / metrics.totalBeds) * 100)
+      : 0;
 
     const response = {
       // Real-time metrics
       ...metrics,
-      
+
       // Enhanced statistics
       patientStats: {
-        new_patients: patientStats[0]?.new_patients || 0,
-        returning_patients: patientStats[0]?.returning_patients || 0
+        new_patients: Number(patientStats.new_patients || 0),
+        returning_patients: Number(patientStats.returning_patients || 0)
       },
       appointmentStats: {
-        scheduled_today: appointmentStats[0]?.scheduled_today || 0,
-        completed_today: appointmentStats[0]?.completed_today || 0,
-        cancelled_today: appointmentStats[0]?.cancelled_today || 0,
-        no_show_today: appointmentStats[0]?.no_show_today || 0
+        scheduled_today: Number(appointmentStats.scheduled_today || 0),
+        completed_today: Number(appointmentStats.completed_today || 0),
+        cancelled_today: Number(appointmentStats.cancelled_today || 0),
+        no_show_today: Number(appointmentStats.no_show_today || 0)
       },
       bedOccupancy: {
-        occupied: bedOccupancy[0]?.occupied || 0,
-        available: bedOccupancy[0]?.available || 0,
-        total: metrics.totalBeds,
+        occupied: Number(bedOccupancy.occupied || 0),
+        available: Number(bedOccupancy.available || 0),
+        total: Number(metrics.totalBeds || 0),
         occupancy_rate: occupancyRate
       },
+
       departmentDistribution,
-      doctors: doctorsResult.rows,
-      
+      doctors,
+
+      // Optional extras
+      staffDistribution: staffStatsResult.rows || [],
+      masterCounts: masterCountsResult.rows?.[0] || {},
+      patientJourney: journeyResult.rows || [],
+      revenueTrend: revenueTrendResult.rows || [],
+
       // Additional calculated metrics
       occupancyRate,
-      availabilityRate: metrics.totalBeds > 0 ? Math.round((metrics.availableBeds / metrics.totalBeds) * 100) : 0,
-      
-      // Top diagnoses and services with fallback data
+      availabilityRate: metrics.totalBeds > 0
+        ? Math.round((metrics.availableBeds / metrics.totalBeds) * 100)
+        : 0,
+
       topDiagnoses: [
         { name: 'Essential Hypertension', value: 145 },
         { name: 'Type 2 Diabetes', value: 132 },
@@ -1186,86 +1240,24 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
         { name: 'Surgery', value: 85000 },
         { name: 'Room Charges', value: 54000 }
       ],
-      
-      // Performance indicators
+
       performanceScore: calculatePerformanceScore(metrics),
       utilizationRate: occupancyRate,
-      revenuePerBed: metrics.totalBeds > 0 ? Math.round(metrics.todayRevenue / metrics.totalBeds) : 0
+      revenuePerBed: metrics.totalBeds > 0
+        ? Math.round((metrics.todayRevenue || 0) / metrics.totalBeds)
+        : 0,
+
+      lastUpdated: new Date().toISOString(),
+      timeFilter
     };
 
-    res.json(response);
-
-    // NEW: Staff distribution by designation
-    const staffStatsResult = await query(`
-      SELECT designation, COUNT(*) as count 
-      FROM emr.employees 
-      WHERE tenant_id = $1 AND designation IS NOT NULL
-      GROUP BY designation
-      ORDER BY count DESC
-    `, [tenantId]);
-
-    // NEW: Master Table Integrity Counts
-    const masterCountsResult = await query(`
-      SELECT
-        (SELECT COUNT(*) FROM emr.departments WHERE tenant_id = $1) as departments,
-        (SELECT COUNT(*) FROM emr.wards WHERE tenant_id = $1) as wards,
-        (SELECT COUNT(*) FROM emr.beds WHERE tenant_id = $1) as beds,
-        (SELECT COUNT(*) FROM emr.services WHERE tenant_id = $1) as services,
-        (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1) as total_staff
-      `, [tenantId]);
-
-    // NEW: Patient Journey (Encounter states)
-    const journeyResult = await query(`
-      SELECT status, COUNT(*) as count 
-      FROM emr.encounters 
-      WHERE tenant_id = $1
-      GROUP BY status
-    `, [tenantId]);
-
-    // NEW: 6-month revenue trend
-    const revenueTrendResult = await query(`
-      SELECT 
-        TO_CHAR(created_at, 'Mon') as label,
-        SUM(total) as value
-      FROM emr.invoices
-      WHERE tenant_id = $1 AND created_at > CURRENT_DATE - INTERVAL '6 months'
-      GROUP BY label, DATE_TRUNC('month', created_at)
-      ORDER BY DATE_TRUNC('month', created_at)
-    `, [tenantId]);
-
-    res.json({
-      totalPatients: parseInt(stats.total_patients || 0),
-      totalAppointments: parseInt(stats.total_appointments || 0),
-      totalRevenue: parseFloat(stats.total_revenue || 0),
-      criticalAlerts: parseInt(stats.critical_alerts || 0),
-      admittedToday: parseInt(stats.admitted_today || 0),
-      dischargedToday: parseInt(stats.discharged_today || 0),
-      patientStats: patientStats.rows[0] || {},
-      appointmentStats: appointmentStats.rows[0] || {},
-      bedOccupancy: bedOccupancy.rows[0] || {},
-      departmentDistribution,
-      doctors,
-      lastUpdated: new Date().toISOString()
-    });
+    return res.json(response);
 
   } catch (error) {
     console.error('Error fetching dashboard metrics:', error);
-    res.status(500).json({ error: 'Failed to load dashboard metrics' });
+    return res.status(500).json({ error: 'Failed to load dashboard metrics' });
   }
 });
-
-// Helper function to get department colors
-function getDepartmentColor(department) {
-  const colors = {
-    'Cardiology': '#ef4444',
-    'Neurology': '#3b82f6',
-    'Pediatrics': '#10b981',
-    'Orthopedics': '#f59e0b',
-    'Emergency': '#dc2626',
-    'General': '#6b7280'
-  };
-  return colors[department] || '#6b7280';
-}
 
 // =====================================================
 // CLINICAL AI INTELLIGENCE & SAFETY
@@ -1711,13 +1703,13 @@ app.patch('/api/appointments/:id/reschedule', requireTenant, moduleGate('appoint
 app.get('/api/doctor-availability', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { doctorId, date } = req.query;
-    
+
     const availability = await repo.getDoctorAvailability(
-      req.tenantId, 
-      doctorId || null, 
+      req.tenantId,
+      doctorId || null,
       date || null
     );
-    
+
     res.json(availability);
   } catch (error) {
     console.error('Error fetching doctor availability:', error);
@@ -1729,11 +1721,11 @@ app.get('/api/doctor-availability', requireTenant, requirePermission('appointmen
 app.get('/api/doctor-availability/slots', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { doctorId, date } = req.query;
-    
+
     if (!doctorId || !date) {
       return res.status(400).json({ error: 'doctorId and date are required' });
     }
-    
+
     const slots = await repo.getAvailableSlotsForDoctor(req.tenantId, doctorId, date);
     res.json(slots);
   } catch (error) {
@@ -1746,18 +1738,18 @@ app.get('/api/doctor-availability/slots', requireTenant, requirePermission('appo
 app.get('/api/doctor-availability/calendar', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { doctorId, startDate, endDate } = req.query;
-    
+
     if (!startDate || !endDate) {
       return res.status(400).json({ error: 'startDate and endDate are required' });
     }
-    
+
     const calendar = await repo.getDoctorAvailabilityCalendar(
-      req.tenantId, 
-      doctorId || null, 
-      startDate, 
+      req.tenantId,
+      doctorId || null,
+      startDate,
       endDate
     );
-    
+
     res.json(calendar);
   } catch (error) {
     console.error('Error fetching availability calendar:', error);
@@ -1769,11 +1761,11 @@ app.get('/api/doctor-availability/calendar', requireTenant, requirePermission('a
 app.post('/api/doctor-availability', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { doctorId, date, startTime, endTime, slotDurationMinutes = 15, maxAppointments = 1, notes } = req.body;
-    
+
     if (!doctorId || !date || !startTime || !endTime) {
       return res.status(400).json({ error: 'doctorId, date, startTime, and endTime are required' });
     }
-    
+
     // Generate slots automatically
     const slots = await repo.generateDoctorAvailabilitySlots({
       tenantId: req.tenantId,
@@ -1785,7 +1777,7 @@ app.post('/api/doctor-availability', requireTenant, requirePermission('appointme
       maxAppointmentsPerSlot: maxAppointments,
       createdBy: req.user.id
     });
-    
+
     res.status(201).json(slots);
   } catch (error) {
     console.error('Error creating doctor availability:', error);
@@ -1798,13 +1790,13 @@ app.patch('/api/doctor-availability/:id', requireTenant, requirePermission('appo
   try {
     const { id } = req.params;
     const updates = req.body;
-    
+
     const availability = await repo.updateDoctorAvailabilitySlot(id, req.tenantId, updates);
-    
+
     if (!availability) {
       return res.status(404).json({ error: 'Availability slot not found' });
     }
-    
+
     res.json(availability);
   } catch (error) {
     console.error('Error updating doctor availability:', error);
@@ -1816,13 +1808,13 @@ app.patch('/api/doctor-availability/:id', requireTenant, requirePermission('appo
 app.delete('/api/doctor-availability/:id', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const availability = await repo.deleteDoctorAvailability(id, req.tenantId);
-    
+
     if (!availability) {
       return res.status(404).json({ error: 'Availability slot not found' });
     }
-    
+
     res.json({ message: 'Availability slot deleted successfully' });
   } catch (error) {
     console.error('Error deleting doctor availability:', error);
@@ -1879,7 +1871,7 @@ app.post('/api/opd-tokens', requireTenant, requirePermission('appointments'), mo
 app.get('/api/opd-tokens', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { status, departmentId, doctorId, date, priority } = req.query;
-    
+
     const tokens = await repo.getOPDTokens(req.tenantId, {
       status,
       departmentId,
@@ -1899,9 +1891,9 @@ app.get('/api/opd-tokens', requireTenant, requirePermission('appointments'), mod
 app.get('/api/opd-tokens/:id', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const token = await repo.getOPDTokenById(id, req.tenantId);
-    
+
     if (!token) {
       return res.status(404).json({ error: 'Token not found' });
     }
@@ -1983,7 +1975,7 @@ app.post('/api/opd-tokens/call-next', requireTenant, requirePermission('appointm
 app.get('/api/opd-tokens/stats', requireTenant, requirePermission('appointments'), moduleGate('appointments'), async (req, res) => {
   try {
     const { departmentId, doctorId, date } = req.query;
-    
+
     const stats = await repo.getTokenQueueStats(req.tenantId, {
       departmentId,
       doctorId,
