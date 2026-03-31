@@ -87,7 +87,7 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
   let paramIndex = 1;
 
   if (displayName !== undefined) {
-    updates.push(`display_name = $${paramIndex++}`);
+    updates.push(`name = $${paramIndex++}`);
     values.push(displayName);
   }
   if (theme !== undefined) {
@@ -121,6 +121,8 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
     RETURNING *
   `;
 
+  console.log('[REPO_DEBUG] updateTenantSettings SQL:', sql);
+  console.log('[REPO_DEBUG] updateTenantSettings Values:', values);
   const result = await query(sql, values);
   return result.rows[0];
 }

@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
-
+ 
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
@@ -22,7 +22,8 @@ import { sendTenantWelcomeEmail } from './services/mail.service.js';
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
+app.get('/api/version', (req, res) => res.json({ version: '1.0.5-FIXED' }));
+ 
 // Robust check: Render or other environments might call the script in different ways.
 const currentFilePath = fileURLToPath(import.meta.url);
 const isDirectRun =
@@ -98,11 +99,6 @@ async function ensureTenantColumns() {
     const res = await query(checkSql);
     const columns = res.rows.map(r => r.column_name);
     
-    const missing = [];
-    if (!columns.includes('billing_config')) missing.push('ADD COLUMN billing_config JSONB DEFAULT \'{}\'');
-    if (!columns.includes('logo_url')) missing.push('ADD COLUMN logo_url TEXT');
-    if (!columns.includes('contact_email')) missing.push('ADD COLUMN contact_email TEXT');
-    if (!columns.includes('subscription_tier')) missing.push('ADD COLUMN subscription_tier VARCHAR(50) DEFAULT \'Basic\'');
     
     if (missing.length > 0) {
       console.log(`[SCHEMA_FIX] Adding missing columns to emr.tenants: ${missing.length} columns`);
@@ -167,7 +163,7 @@ app.get('/api/health', async (_req, res) => {
   res.json({
     ok: true,
     service: 'emr-api',
-    version: '2.0.0',
+    version: '2.0.1',
     database: dbStatus ? 'connected' : 'ERROR',
     env: process.env.NODE_ENV,
     now: new Date().toISOString()
@@ -700,8 +696,15 @@ app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
 
     res.json(tenant);
   } catch (error) {
-    console.error('Error updating tenant settings:', error);
-    res.status(500).json({ error: 'Failed to update tenant settings' });
+    console.error('[SETTINGS_UPDATE_ERROR] Full Error:', error);
+    if (error.code) console.error('[SETTINGS_UPDATE_ERROR] DB Code:', error.code);
+    if (error.detail) console.error('[SETTINGS_UPDATE_ERROR] DB Detail:', error.detail);
+    
+    res.status(500).json({ 
+      error: 'Failed to update tenant settings',
+      details: error.message,
+      code: error.code
+    });
   }
 });
 

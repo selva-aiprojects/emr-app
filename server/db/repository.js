@@ -13,6 +13,10 @@ import * as exotelService from './exotel.service.js';
 import * as encounterService from './encounter.service.js';
 import * as opdService from './opd.service.js';
 import * as prescriptionService from './prescription.service.js';
+import * as userService from './user.service.js';
+import * as utilityService from './utility.service.js';
+import * as bootstrapService from './bootstrap.service.js';
+
 
 // Re-export all functions for backward compatibility
 export * from './tenant.service.js';
@@ -25,3 +29,5 @@ export * from './opd.service.js';
 export * from './utility.service.js';
 export * from './bootstrap.service.js';
 export * from './prescription.service.js';
+export * from './user.service.js';
+

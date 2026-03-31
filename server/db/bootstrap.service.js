@@ -10,7 +10,16 @@ import { query } from './connection.js';
 // =====================================================
 
 export async function getBootstrapData(tenantId, userId) {
-  // Parallel fetch for speed
+  // Parallel fetch for speed with gracefull error handling for missing tables
+  const runSafeQuery = async (sql, params = []) => {
+    try {
+      return await query(sql, params);
+    } catch (e) {
+      console.warn(`[BOOTSTRAP_SAFE_QUERY] Failed: ${sql.substring(0, 50)}... Error: ${e.message}`);
+      return { rows: [] }; // Return empty rows if table/query fails
+    }
+  };
+
   const [
     userResult,
     patientsResult,
@@ -23,47 +32,51 @@ export async function getBootstrapData(tenantId, userId) {
     insuranceProvidersResult,
     claimsResult,
   ] = await Promise.all([
-    query('SELECT * FROM emr.users WHERE id = $1', [userId]),
-    query(
+    runSafeQuery('SELECT * FROM emr.users WHERE id = $1', [userId]),
+    runSafeQuery(
       'SELECT * FROM emr.patients WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100',
       [tenantId]
     ),
-    query(
+    runSafeQuery(
       'SELECT * FROM emr.walkins WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
-    query(
+    runSafeQuery(
       'SELECT * FROM emr.encounters WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
-    query(
+    runSafeQuery(
       'SELECT * FROM emr.invoices WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
-    query(
-      'SELECT * FROM emr.inventory WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+    runSafeQuery(
+      'SELECT * FROM emr.inventory_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
-    query(
+    runSafeQuery(
       'SELECT * FROM emr.employees WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
-    query(
+    runSafeQuery(
       'SELECT * FROM emr.employee_leaves WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
-    query(
+    runSafeQuery(
       'SELECT * FROM emr.insurance_providers WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
-    query(
+    runSafeQuery(
       'SELECT * FROM emr.claims WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
   ]);
 
   const user = userResult.rows[0];
-  if (!user) throw new Error('User not found');
+  if (!user) {
+    // If user is not found, it might be a session mismatch after a db reset
+    console.error(`[BOOTSTRAP_ERROR] User ${userId} not found in database.`);
+    throw new Error('User session invalid. Please re-login.');
+  }
 
   // Normalize user role casing for permission matching
   let userRole = user.role;
