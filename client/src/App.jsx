@@ -12,6 +12,8 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
 const DoctorWorkspacePage = lazy(() => import('./pages/DoctorWorkspacePage.jsx'));
 const PatientsPage = lazy(() => import('./pages/PatientsPage.jsx'));
 const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage.jsx'));
+const FindDoctorPage = lazy(() => import('./pages/FindDoctorPage.jsx'));
+const DoctorAvailabilityPage = lazy(() => import('./pages/DoctorAvailabilityPage.jsx'));
 const EmrPage = lazy(() => import('./pages/EmrPage.jsx'));
 const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const InsurancePage = lazy(() => import('./pages/InsurancePage.jsx'));
@@ -24,6 +26,8 @@ const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'));
 const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
 const UsersPage = lazy(() => import('./pages/UsersPage.jsx'));
 const LabPage = lazy(() => import('./pages/LabPage.jsx'));
+const LabAvailabilityPage = lazy(() => import('./pages/LabAvailabilityPage.jsx'));
+const LabTestsPage = lazy(() => import('./pages/LabTestsPage.jsx'));
 const SupportPage = lazy(() => import('./pages/SupportPage.jsx'));
 const CommunicationPage = lazy(() => import('./pages/CommunicationPage.jsx'));
 const DocumentVaultPage = lazy(() => import('./pages/DocumentVaultPage.jsx'));
@@ -35,6 +39,7 @@ const ChatPage = lazy(() => import('./pages/ChatPage.jsx'));
 const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage.jsx'));
 const BedManagementPage = lazy(() => import('./pages/BedManagementPage.jsx'));
 const HospitalSettingsPage = lazy(() => import('./pages/HospitalSettingsPage.jsx'));
+const EmployeeMasterPage = lazy(() => import('./pages/EmployeeMasterPage.jsx'));
 const AdminMastersPage = lazy(() => import('./pages/AdminMastersPage.jsx'));
 
 export default function App() {
@@ -643,6 +648,49 @@ export default function App() {
           />
         )}
 
+        {view === 'find_doctor' && (
+          <FindDoctorPage
+            activeUser={activeUser}
+            session={session}
+            providers={providers}
+            patients={scopedPatients}
+            onCreateAppointment={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addAppointment({
+                tenantId: session.tenantId, userId: activeUser.id,
+                patientId: fd.get('patientId'), providerId: fd.get('providerId'),
+                start: fd.get('start'), end: fd.get('end'), reason: fd.get('reason')
+              }));
+            }}
+            onSelfAppointment={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              withRefresh(() => api.addSelfAppointment({
+                tenantId: session.tenantId, userId: activeUser.id, patientId: activeUser.patientId,
+                providerId: fd.get('providerId'), start: fd.get('start'), end: fd.get('end'), reason: fd.get('reason')
+              }));
+            }}
+          />
+        )}
+
+        {view === 'doctor_availability' && (
+          <DoctorAvailabilityPage
+            selectedDoctor={null}
+            activeUser={activeUser}
+            session={session}
+            patients={scopedPatients}
+            onBookAppointment={(appointmentData) => {
+              withRefresh(() => api.addAppointment({
+                tenantId: session.tenantId, userId: activeUser.id,
+                patientId: appointmentData.patientId, providerId: appointmentData.providerId,
+                start: appointmentData.start, end: appointmentData.end, reason: appointmentData.reason
+              }));
+            }}
+            onBack={() => setView('find_doctor')}
+          />
+        )}
+
         {view === 'emr' && (
             <EmrPage
               tenant={tenant}
@@ -843,8 +891,32 @@ export default function App() {
           />
         )}
 
-        {view === 'support' && <SupportPage tenant={tenant} activeUser={activeUser} />}
-
+        {view === 'lab' && <LabPage tenant={tenant} activeUser={activeUser} />}
+        
+        {view === 'lab_availability' && <LabAvailabilityPage 
+            tenant={tenant} 
+            activeUser={activeUser}
+            patients={scopedPatients}
+            onBookAppointment={(appointmentData) => {
+              withRefresh(() => api.addAppointment({
+                tenantId: session.tenantId, 
+                userId: activeUser.id,
+                patientId: appointmentData.patientId,
+                labId: appointmentData.labId,
+                testType: appointmentData.testType,
+                date: appointmentData.date,
+                startTime: appointmentData.startTime,
+                endTime: appointmentData.endTime,
+                reason: appointmentData.reason,
+                urgent: appointmentData.urgent,
+                fasting: appointmentData.fasting,
+                price: appointmentData.price
+              }));
+            }}
+          />}
+        
+        {view === 'lab_tests' && <LabTestsPage tenant={tenant} activeUser={activeUser} />}
+        
         {view === 'communication' && (
           <CommunicationPage
             activeUser={activeUser}
@@ -892,6 +964,8 @@ export default function App() {
         )}
         
         {view === 'departments' && <DepartmentsPage tenant={tenant} />}
+        
+        {view === 'employee_master' && <EmployeeMasterPage tenant={tenant} />}
         
         {view === 'bed_management' && <BedManagementPage tenant={tenant} />}
 

@@ -12,7 +12,8 @@ import {
   Layers,
   Settings,
   ChevronRight,
-  Database
+  Database,
+  Users
 } from 'lucide-react';
 import '../styles/critical-care.css';
 
@@ -20,6 +21,15 @@ export default function AdminMastersPage({ tenant, onViewChange }) {
   const { showToast } = useToast();
 
   const masterModules = [
+    {
+      id: 'employee_master',
+      name: 'Employee Master',
+      description: 'Staff profiles, doctor credentials, and professional qualifications.',
+      icon: Users,
+      color: 'blue',
+      count: 'Human Resources',
+      path: 'employee_master'
+    },
     {
       id: 'departments',
       name: 'Department Shards',

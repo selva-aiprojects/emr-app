@@ -178,12 +178,12 @@ export default function PatientsPage({
                <table className="premium-table">
                   <thead>
                     <tr>
-                      <th className="tracking-widest">Patient Name</th>
-                      <th className="tracking-widest">Date of Birth</th>
+                      <th className="tracking-widest">Patient Profile</th>
+                      <th className="tracking-widest">Clinical Details</th>
                       {activeUser?.role === 'Superadmin' && <th className="tracking-widest">Facility</th>}
-                      <th className="tracking-widest">MRN</th>
+                      <th className="tracking-widest">Contact</th>
                       <th className="tracking-widest">Status</th>
-                      <th className="tracking-widest text-right">Actions</th>
+                      <th className="tracking-widest text-right">Quick Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -203,7 +203,11 @@ export default function PatientsPage({
                            />
                          </td>
                        </tr>
-                    ) : filtered.map((p, idx) => (
+                    ) : filtered.map((p, idx) => {
+                      const patientAge = p.dob ? Math.floor((new Date() - new Date(p.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
+                      const patientInitials = `${(p.firstName || '').charAt(0)}${(p.lastName || '').charAt(0)}`.toUpperCase();
+                      
+                      return (
                       <tr
                         key={p.id || idx}
                         className="group hover:bg-slate-50/80 transition-all cursor-pointer animate-fade-in"
@@ -215,36 +219,89 @@ export default function PatientsPage({
                       >
                         <td className="!py-6">
                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center font-black text-slate-400 group-hover:bg-[var(--accent-soft)] group-hover:text-[var(--clinical-blue)] transition-all">
-                                 {p.firstName?.charAt(0)}{p.lastName?.charAt(0)}
+                              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white flex items-center justify-center font-black text-lg shadow-lg">
+                                {patientInitials || '?'}
                               </div>
                               <div>
-                                 <div className="text-sm font-black text-slate-900 tracking-tight group-hover:translate-x-1 transition-transform">{p.firstName} {p.lastName}</div>
+                                 <div className="text-sm font-black text-slate-900 tracking-tight group-hover:translate-x-1 transition-transform">
+                                   {p.firstName} {p.lastName}
+                                 </div>
                                  <div className="text-meta-sm text-slate-400 mt-1 flex items-center gap-2">
-                                    <ShieldCheck className="w-3 h-3 text-emerald-500" /> Active Profile
+                                    <ShieldCheck className="w-3 h-3 text-emerald-500" /> MRN: {p.mrn || `MRN-${(p.id || 'X').slice(0, 8).toUpperCase()}`}
                                  </div>
                               </div>
                            </div>
                         </td>
-                        <td><div className="text-meta-info text-slate-500 tabular-nums">{p.dob ? new Date(p.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}</div></td>
+                        <td>
+                           <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                 <span className="text-meta-info text-slate-600 font-medium">
+                                   {p.dob ? new Date(p.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                 </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                 <Users className="w-3.5 h-3.5 text-slate-400" />
+                                 <span className="text-meta-sm text-slate-500">
+                                   {patientAge ? `${patientAge} years` : 'Age unknown'} • {p.gender || 'Not specified'}
+                                 </span>
+                              </div>
+                           </div>
+                        </td>
                         {activeUser?.role === 'Superadmin' && (
                            <td><span className="text-[10px] font-black uppercase text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100">{p.tenant_name || 'System'}</span></td>
                         )}
-                        <td><code className="text-meta-sm text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">{p.mrn || `MRN-${(p.id || 'X').slice(0, 8).toUpperCase()}`}</code></td>
                         <td>
-                           <div className="flex gap-2">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shadow-lg shadow-emerald-500/50"></span>
-                            <div className="text-meta-sm text-emerald-700">Active Patient</div>
+                           <div className="space-y-1">
+                              {p.phone && (
+                                 <div className="flex items-center gap-2 text-meta-sm text-slate-600">
+                                    <div className="w-5 h-5 rounded-lg bg-slate-100 flex items-center justify-center">
+                                       <svg className="w-3 h-3 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
+                                          <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+                                       </svg>
+                                    </div>
+                                    {p.phone}
+                                 </div>
+                              )}
+                              {p.email && (
+                                 <div className="flex items-center gap-2 text-meta-sm text-slate-500">
+                                    <div className="w-5 h-5 rounded-lg bg-slate-100 flex items-center justify-center">
+                                       <svg className="w-3 h-3 text-slate-500" fill="currentColor" viewBox="0 0 20 20">
+                                          <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                                          <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                                       </svg>
+                                    </div>
+                                    {p.email}
+                                 </div>
+                              )}
+                           </div>
+                        </td>
+                        <td>
+                           <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50 animate-pulse"></div>
+                                 <span className="text-[10px] font-black uppercase text-emerald-700">Active</span>
+                              </div>
                            </div>
                         </td>
                         <td className="text-right">
                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                              <button className="p-2.5 bg-white text-slate-400 hover:text-slate-900 rounded-xl border border-slate-100 shadow-sm transition-all"><FileText className="w-4 h-4" /></button>
-                              <button className="p-2.5 bg-[var(--medical-navy)] text-white hover:bg-[var(--clinical-accent)] rounded-xl shadow-md transition-all"><ChevronRight className="w-4 h-4" /></button>
+                              <button 
+                                 className="p-2.5 bg-white text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl border border-slate-100 shadow-sm transition-all group"
+                                 title="View Clinical Records"
+                              >
+                                 <FileText className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                              </button>
+                              <button 
+                                 className="p-2.5 bg-[var(--medical-navy)] text-white hover:bg-[var(--clinical-accent)] rounded-xl shadow-md transition-all group"
+                                 title="Open Patient Chart"
+                              >
+                                 <ChevronRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                              </button>
                            </div>
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                </table>
              </div>

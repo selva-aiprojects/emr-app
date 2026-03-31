@@ -8,6 +8,9 @@ export const moduleMeta = {
   doctor_workspace: { title: 'Doctor Desk', subtitle: 'Today\'s appointments & patients' },
   patients: { title: 'Patients', subtitle: 'Demographics and clinical folders' },
   appointments: { title: 'Appointments', subtitle: 'Doctor bookings & walk-ins' },
+  find_doctor: { title: 'Find a Doctor', subtitle: 'Browse and book doctors' },
+  doctor_availability: { title: 'Doctor Availability', subtitle: 'Check availability and book slots' },
+  lab_availability: { title: 'Laboratory / Diagnostics', subtitle: 'Book laboratory tests and view results' },
   emr: { title: 'Clinical Desk / EMR', subtitle: 'Diagnosis, history & e-Prescription' },
   inpatient: { title: 'IPD / Bed Management', subtitle: 'Admission, Ward & Bed tracker' },
   pharmacy: { title: 'Pharmacy / Drug Dispensing', subtitle: 'Prescription fulfillment' },
@@ -41,13 +44,13 @@ export const moduleMeta = {
 
 export const fallbackPermissions = {
   Superadmin: ['superadmin', 'tenant_management', 'user_provisioning', 'financial_control', 'dashboard', 'admin', 'reports', 'support'],
-  Admin: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'lab', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings', 'admin_masters'],
-  Doctor: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'reports', 'lab', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
-  Nurse: ['dashboard', 'appointments', 'patients', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],
-  Lab: ['dashboard', 'patients', 'lab', 'reports', 'communication', 'documents'],
+  Admin: ['dashboard', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings', 'admin_masters'],
+  Doctor: ['dashboard', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'emr', 'inpatient', 'reports', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
+  Nurse: ['dashboard', 'find_doctor', 'doctor_availability', 'patients', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],
+  Lab: ['dashboard', 'patients', 'reports', 'communication', 'documents'],
   Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports', 'communication', 'documents'],
   'Support Staff': ['dashboard', 'inventory', 'support', 'communication'],
-  'Front Office': ['dashboard', 'appointments', 'patients', 'billing', 'inpatient', 'communication', 'documents', 'ambulance'],
+  'Front Office': ['dashboard', 'patients', 'billing', 'inpatient', 'communication', 'documents', 'ambulance'],
   Billing: ['dashboard', 'billing', 'accounts_receivable', 'accounts', 'insurance', 'reports', 'service_catalog'],
   Insurance: ['dashboard', 'insurance', 'reports'],
   HR: ['dashboard', 'employees', 'employee_master', 'attendance', 'payroll', 'reports', 'communication', 'documents'],
@@ -55,5 +58,5 @@ export const fallbackPermissions = {
   Management: ['dashboard', 'reports', 'employees', 'billing', 'accounts', 'insurance', 'inpatient', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision'],
   Inventory: ['dashboard', 'inventory', 'pharmacy', 'reports'],
   Auditor: ['dashboard', 'reports'],
-  Patient: ['dashboard', 'appointments', 'patients']
+  Patient: ['dashboard', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients']
 };
