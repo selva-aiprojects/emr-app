@@ -3,7 +3,7 @@
 Last updated: 2026-03-31
 
 ## 1. System Overview
-The Medflow EMR is a multi-tenant SaaS platform optimized for healthcare clinical workflows. It utilizes a layered architecture consisting of a React-based SPA frontend, an Express-based REST API backend, and a PostgreSQL database layer with microservices for specialized healthcare functions.
+The Medflow EMR is a multi-tenant SaaS platform optimized for healthcare clinical workflows. It utilizes a layered architecture consisting of a React-based SPA frontend, an Express-based REST API backend, PostgreSQL database with **Prisma ORM**, and **Render cloud deployment** for scalability.
 
 ## 2. Low-Level Architecture Details
 
@@ -80,65 +80,110 @@ const allowedViews = useMemo(() => {
 }, [permissions, userRole, tenant]);
 ```
 
-### 2.2 Backend Microservices Architecture
+### 2.2 Backend Architecture with Prisma ORM
 
-#### **Service Decomposition**
+#### **Prisma Service Layer**
+```javascript
+// server/lib/prisma.js - Type-safe database access
+class PrismaService {
+  constructor() {
+    this.prisma = new PrismaClient({
+      adapter: new PrismaPg(),
+      log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error']
+    });
+  }
+
+  // Tenant-aware queries with automatic isolation
+  getTenantScopedPrisma(tenantId) {
+    return {
+      patient: {
+        findMany: (args) => this.prisma.patient.findMany({ 
+          ...args, 
+          where: { ...args.where, tenantId } 
+        }),
+        create: (args) => this.prisma.patient.create({ 
+          ...args, 
+          data: { ...args.data, tenantId } 
+        }),
+        // ... other operations with automatic tenant scoping
+      }
+    };
+  }
+}
 ```
-Main API Server (Port 3000)
-├── Core Application Logic
-├── Authentication Middleware
-├── Tenant Resolution
-└── Request Routing
 
-├── FHIR Service (Separate Process)
-│   ├── FHIR Resource Endpoints
-│   ├── Healthcare Data Standards
-│   └── Interoperability Layer
+#### **Database Schema with Prisma**
+```prisma
+// Multi-tenant schema with type safety
+model Patient {
+  id          String    @id @default(cuid())
+  tenantId    String    // Automatic tenant isolation
+  mrn         String    // Medical Record Number
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime?
+  gender      String?
+  phone       String?
+  email       String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-├── Pharmacy Service (Separate Process)
-│   ├── Medication Management
-│   ├── Inventory Tracking
-│   └── Prescription Processing
+  // Relations with automatic loading
+  appointments      Appointment[]
+  encounters         Encounter[]
+  medicalHistory     MedicalHistory[]
+  medications        Medication[]
+  diagnostics        Diagnostic[]
+  vitals             Vital[]
+  billing            Invoice[]
 
-└── Additional Services
-    ├── Billing Service
-    ├── Laboratory Service
-    └── Inpatient Management
+  @@unique([tenantId, mrn])
+  @@map("patients")
+}
 ```
 
-#### **Database Schema Architecture**
-```sql
--- Multi-tenant schema pattern
-CREATE TABLE patients (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES tenants(id),
-    first_name VARCHAR(100) NOT NULL,
-    last_name VARCHAR(100) NOT NULL,
-    mrn VARCHAR(50) NOT NULL,
-    -- Clinical fields
-    date_of_birth DATE,
-    gender VARCHAR(20),
-    phone VARCHAR(20),
-    email VARCHAR(100),
-    -- Audit fields
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    -- Row-level security
-    CONSTRAINT patient_tenant_check CHECK (tenant_id IS NOT NULL)
-);
+#### **Controller Pattern with Type Safety**
+```javascript
+// server/controllers/patient.controller.js
+class PatientController {
+  async getPatients(req, res) {
+    try {
+      const { tenantId } = req.user;
+      const { limit = 50, offset = 0, search } = req.query;
 
--- FHIR-compliant tables
-CREATE TABLE fhir_patients (
-    id UUID PRIMARY KEY,
-    tenant_id UUID NOT NULL,
-    resource JSONB NOT NULL, -- FHIR Patient resource
-    last_updated TIMESTAMP DEFAULT NOW()
-);
+      const db = prismaService.getTenantScopedPrisma(tenantId);
+      
+      // Type-safe queries with automatic tenant filtering
+      const patients = await db.patient.findMany({
+        where: search ? {
+          OR: [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { mrn: { contains: search, mode: 'insensitive' } }
+          ]
+        } : {},
+        include: {
+          appointments: true,
+          medicalHistory: true,
+          _count: true
+        },
+        orderBy: { lastName: 'asc' },
+        take: parseInt(limit),
+        skip: parseInt(offset)
+      });
+
+      res.json({ patients });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch patients' });
+    }
+  }
+}
 ```
 
 ### 2.3 Data Flow Architecture
 
-#### **Request Lifecycle**
+#### **Request Lifecycle with Prisma**
 ```
 1. User Action (Click MRN button)
    ↓
@@ -156,65 +201,32 @@ CREATE TABLE fhir_patients (
    ↓
 6. API Client Makes HTTP Requests
    ↓
-7. Backend Service Processes Requests
+7. Backend Controller Processes Request
    ↓
-8. Database Queries Execute
+8. Prisma Service Executes Type-Safe Query
    ↓
-9. Response Returns to Frontend
+9. PostgreSQL Database Executes Query
    ↓
-10. Component State Updates
+10. Response Returns with Typed Data
    ↓
-11. UI Re-renders with New Data
-```
-
-#### **Error Handling & Fallback Strategy**
-```javascript
-const loadPatientData = async () => {
-  setLoading(true);
-  try {
-    // Primary data source
-    const patientResponse = await api.get(`/patients/${patientId}`);
-    setPatient(patientResponse.data);
-  } catch (error) {
-    // Fallback data for graceful degradation
-    console.error('Error loading patient info:', error);
-    setPatient({
-      id: patientId,
-      firstName: 'John',
-      lastName: 'Doe',
-      mrn: `MRN-${patientId.slice(0, 8).toUpperCase()}`,
-      dateOfBirth: '1980-01-01',
-      gender: 'Male',
-      phone: '+1-555-0123',
-      email: 'john.doe@example.com'
-    });
-  }
-  
-  // Similar pattern for all data endpoints
-  try {
-    const historyResponse = await api.get(`/patients/${patientId}/medical-history`);
-    setMedicalHistory(historyResponse.data || []);
-  } catch (error) {
-    setMedicalHistory([
-      { condition: 'Hypertension', description: 'Chronic condition', date: '2023-01-15' },
-      { condition: 'Type 2 Diabetes', description: 'Managed condition', date: '2023-03-20' }
-    ]);
-  }
-};
+11. Component State Updates
+   ↓
+12. UI Re-renders with Type-Safe Data
 ```
 
 ### 2.4 Security Architecture
 
 #### **Multi-Tenant Data Isolation**
 ```javascript
-// Tenant-aware API calls
-const tenantId = tenant?.id || session?.tenantId;
-const data = await api.getPatients(tenantId, { limit: 50 });
+// Automatic tenant enforcement through Prisma
+const db = prismaService.getTenantScopedPrisma(tenantId);
+// All queries automatically include: WHERE tenantId = ?
 
-// Backend middleware for tenant enforcement
+// Backend middleware for tenant resolution
 app.use('/api/patients', (req, res, next) => {
-  const tenantId = req.user.tenantId;
-  req.query.tenant_id = tenantId; // Force tenant scope
+  const tenantId = req.user?.tenantId;
+  if (!tenantId) return res.status(403).json({ error: 'Tenant required' });
+  req.tenantId = tenantId;
   next();
 });
 ```
@@ -226,24 +238,76 @@ const login = async (credentials) => {
   const response = await api.login(credentials);
   const { token, user, tenant } = response.data;
   
-  // Store session securely
   localStorage.setItem('auth_token', token);
-  localStorage.setItem('user', JSON.stringify(user));
-  localStorage.setItem('tenant', JSON.stringify(tenant));
-  
   setSession({ user, tenant });
 };
 
-// Backend token validation
+// Backend token validation with type safety
 const authenticateToken = (req, res, next) => {
   const token = req.header('Authorization')?.replace('Bearer ', '');
   
   try {
-    const decoded = jwt.verify(token, process.env.JWT_PUBLIC_KEY);
-    req.user = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded; // Type-safe user object
     next();
   } catch (error) {
     res.status(401).json({ error: 'Invalid token' });
+  }
+};
+```
+
+### 2.5 Render Deployment Architecture
+
+#### **Service Configuration**
+```yaml
+# render-production.yaml
+services:
+  - type: pserv
+    name: emr-database
+    databaseName: emr
+    
+  - type: redis
+    name: emr-redis
+    
+  - type: web
+    name: emr-application
+    runtime: node
+    nodeVersion: 20
+    buildCommand: cd client && npm install && npm run build && cd .. && npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: emr-database
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: emr-redis
+          property: connectionString
+```
+
+#### **Production Configuration**
+```javascript
+// server/config/production.js
+export const config = {
+  port: process.env.PORT || 10000,
+  database: {
+    url: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production',
+    pool: {
+      min: 2,
+      max: 10,
+      idleTimeoutMillis: 30000,
+    }
+  },
+  redis: {
+    url: process.env.REDIS_URL,
+    ttl: 3600,
+  },
+  jwt: {
+    secret: process.env.JWT_SECRET,
+    expiresIn: '7d',
   }
 };
 ```
@@ -684,30 +748,52 @@ CREATE TABLE patients_2025 PARTITION OF patients_partitioned
 
 ## 9. Technology Stack Matrix
 
-### 3.1 Frontend (The Clinical Interface)
-- **Framework**: **ReactJS (React 18)** with Vite for high-performance HMR.
+### 9.1 Frontend (The Clinical Interface)
+- **Framework**: **ReactJS (React 19)** with Vite for high-performance HMR.
 - **Architectural Pattern**: Single Page Application (SPA) with component-based architecture.
 - **State Management**: Centralized application state in `App.jsx` using React Hooks for cross-module consistency.
 - **Design System**: **Critical Care Design System**—a custom-built Vanilla CSS architecture focused on cognitive ergonomics and zero-runtime overhead.
 - **Visualization**: **Apache ECharts** for high-density clinical and fiscal analytics.
 - **Icons**: **Lucide-React** for premium, healthcare-standard UI across all modules.
 
-### 3.2 Backend (The Governance Layer)
+### 9.2 Backend (The Governance Layer)
 - **Runtime**: **Node.js 20+** with Express.js framework.
 - **API Architecture**: RESTful API pattern for predictable client-server communication.
+- **ORM**: **Prisma 7.6.0** with PostgreSQL adapter for type-safe database operations.
 - **Middleware Pattern**: Modular pipeline architecture (Express Middleware) for request authentication, tenant resolving, permission validation, and feature gating.
 - **Security**: **JWT (RS256)** authentication for stateless, tenant-scoped identity management.
 - **AI Intelligence**: **Google Gemini-1.5-Flash** integrated for generative clinical summarization and decision support.
+- **Session Management**: **Redis** for distributed session storage and caching.
 
-### 3.3 Data Layer (The Institutional Persistence)
+### 9.3 Data Layer (The Institutional Persistence)
 - **Database**: **PostgreSQL** relational database for ACID-compliant clinical and financial records.
-- **Isolation Strategy**: Single-schema multi-tenancy with `tenant_id` scoping at the query level (Row-Level Security pattern equivalent).
-- **Connection Strategy**: Pool-driven PostgreSQL client for optimized resource lifecycle.
+- **ORM**: **Prisma Client** for type-safe database access with automatic tenant isolation.
+- **Schema Management**: **Prisma Migrate** for version-controlled database schema changes.
+- **Isolation Strategy**: Single-schema multi-tenancy with automatic `tenant_id` scoping through Prisma service layer.
+- **Connection Strategy**: Prisma connection pooling with PostgreSQL adapter for optimized resource lifecycle.
 
-### 3.4 Infrastructure & Operations
-- **Deployment**: Container-first architecture for elastic scalability.
+### 9.4 Infrastructure & Operations
+- **Deployment**: **Render Cloud Platform** for managed deployment with auto-scaling.
+- **Database Service**: **Render PostgreSQL** with automated backups and scaling.
+- **Caching**: **Render Redis** for session storage and performance optimization.
 - **Observability**: Real-time KPI aggregation nodes for system health monitoring.
-- **Modernization Stack**: Integrated **Global Toast Notification** system and **Cost Governance Dashboard**.
+- **CI/CD**: **Render Webhooks** for automated deployment on git push.
+- **Security**: **Helmet**, **Rate Limiting**, and **CORS** middleware for production security.
+
+### 9.5 Development & Build Tools
+- **Build Tool**: **Vite 7.3.1** for fast development and optimized production builds.
+- **Package Manager**: **npm** with production dependency optimization.
+- **Code Quality**: **ESLint** and **Prettier** for consistent code formatting.
+- **Type Safety**: **Prisma** generates TypeScript types for database models.
+- **Testing**: **Playwright** for end-to-end testing and integration tests.
+
+### 9.6 Performance & Scalability
+- **Frontend**: Code splitting with lazy loading for optimal bundle sizes.
+- **Backend**: Prisma query optimization and connection pooling.
+- **Database**: PostgreSQL indexing and query optimization.
+- **Caching**: Redis-based caching for frequently accessed data.
+- **Scaling**: Render auto-scaling with configurable instance limits.
+- **CDN**: Render static asset serving for frontend builds.
 
 ## 4. Multi-Tenant Financial Sharding
 - **Offer Engine**: Dynamic tier pricing and discount provisioning logic mapped per tenant.

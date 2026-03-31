@@ -1,6 +1,8 @@
 # Comprehensive Requirement Specification Document (SRS)
 ## Project: Multi-Tenant Enterprise EMR System (MedFlow)
 
+Last updated: 2026-03-31
+
 ---
 
 ## 1. Introduction
@@ -8,15 +10,15 @@
 The purpose of this document is to define the functional and non-functional requirements for the MedFlow implementation. The system is designed as a **Multi-Tenant Electronic Medical Records (EMR)** platform to serve multiple healthcare facilities (hospitals, clinics) from a single deployment instance.
 
 ### 1.2 Scope
-The system encompasses the full patient journey from registration and appointment scheduling to clinical consultation, medication dispensing, inpatient bed tracking, billing/settlement, insurance, accounts payable, and analytics. It supports role-based access for hospital, operations, governance, and platform users.
+The system encompasses the full patient journey from registration and appointment scheduling to clinical consultation, medication dispensing, inpatient bed tracking, billing/settlement, insurance, accounts payable, and analytics. It supports role-based access for hospital, operations, governance, and platform users. The system is built with **Prisma ORM** for type-safe database operations and **Render cloud deployment** for scalability.
 
 ---
 
 ## 2. Functional Requirements
 
 ### 2.1 Multi-Tenancy & Authentication
-- **REQ-AUTH-01**: **Tenant Isolation**. Data for each tenant (hospital) must be strictly isolated. Users from Tenant A must never access Tenant B's data.
-- **REQ-AUTH-02**: **Identity Management**. The system must support secure login using Email/Password with JWT-based session management.
+- **REQ-AUTH-01**: **Tenant Isolation**. Data for each tenant (hospital) must be strictly isolated using Prisma's automatic tenant scoping. Users from Tenant A must never access Tenant B's data.
+- **REQ-AUTH-02**: **Identity Management**. The system must support secure login using Email/Password with JWT-based session management and Redis session storage.
 - **REQ-AUTH-04**: **Multi-Factor Authentication (MFA)**. The system must support a two-step verification handshake (2FA) for high-privilege roles or enabled accounts to prevent unauthorized access.
 - **REQ-AUTH-03**: **Role-Based Access Control (RBAC)**.
   - **Superadmin**: Platform-wide oversight, tenant creation, platform reports.
@@ -38,15 +40,15 @@ The system encompasses the full patient journey from registration and appointmen
   - **Patient**: Restricted personal appointment and profile scope.
 
 ### 2.2 Patient Management (MPI)
-- **REQ-PAT-01**: **Registration**. Capture demographics (Name, DOB, Gender, Contact, Address) and generate a unique Medical Record Number (MRN).
-- **REQ-PAT-02**: **Search**. Advanced search by Name, MRN, Phone, Visit Date, and Status.
-- **REQ-PAT-03**: **Longitudinal Record**. Display a consolidated view of a patient's entire clinical history (visits, diagnoses, medications) in a chronological timeline.
-- **REQ-PAT-04**: **Clinical Journaling**. Allow authorized roles to append notes and diagnostics to patient records.
+- **REQ-PAT-01**: **Registration**. Capture demographics (Name, DOB, Gender, Contact, Address) and generate a unique Medical Record Number (MRN) using Prisma's auto-generation capabilities.
+- **REQ-PAT-02**: **Search**. Advanced search by Name, MRN, Phone, Visit Date, and Status with Prisma's optimized queries.
+- **REQ-PAT-03**: **Longitudinal Record**. Display a consolidated view of a patient's entire clinical history (visits, diagnoses, medications) in a chronological timeline using Prisma relations.
+- **REQ-PAT-04**: **Clinical Journaling**. Allow authorized roles to append notes and diagnostics to patient records with type-safe operations.
 - **REQ-PAT-05**: **Record Output**. Enable printing/export of patient clinical summaries.
 - **REQ-PAT-06**: **Digital Health ID (ABHA)**. Automatically generate and manage unique, mock Government Health IDs (ABHA) for clinical compliance in relevant regions.
 
 ### 2.3 Appointments & Scheduling
-- **REQ-APT-01**: **Booking**. Support scheduling for future dates and time slots.
+- **REQ-APT-01**: **Booking**. Support scheduling for future dates and time slots with Prisma's transaction support.
 - **REQ-APT-02**: **Walk-ins**. Fast-track registration for immediate consultations.
 - **REQ-APT-03**: **Status Workflow**. Track appointment lifecycles: `Requested` -> `Scheduled` -> `Checked In` -> `Completed` / `Cancelled` / `No Show`.
 - **REQ-APT-04**: **Queue Management**. Real-time visibility of waiting patients for doctors.
