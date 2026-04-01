@@ -1,0 +1,83 @@
+# Northflank Deployment Configuration
+# EMR Application with PostgreSQL and Redis
+
+version: "1"
+
+services:
+  # Backend API Service
+  - name: emr-backend
+    type: container
+    image:
+      dockerfile: ./Dockerfile
+      context: .
+    ports:
+      - name: http
+        port: 4000
+        protocol: TCP
+    environment:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        value: ${nf_postgres_connection_string}
+      - key: REDIS_URL
+        value: ${nf_redis_connection_string}
+      - key: JWT_SECRET
+        value: ${JWT_SECRET}
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        value: ${nf_domain}
+    resources:
+      cpu: 0.25
+      memory: 512Mi
+    replicas: 1
+    healthCheck:
+      http:
+        path: /api/health
+        port: 4000
+        interval: 30
+        timeout: 5
+        retries: 3
+
+  # Frontend Static Site
+  - name: emr-frontend
+    type: static
+    build:
+      context: ./client
+      command: npm run build
+    sourceDir: ./client/dist
+    routes:
+      - path: /*
+        directory: /
+        spa: true
+
+addons:
+  # PostgreSQL Database
+  - name: emr-postgres
+    type: postgres
+    version: "14"
+    plan: free
+    environment:
+      - key: POSTGRES_DB
+        value: emr
+      - key: POSTGRES_USER
+        value: emr_user
+      - key: POSTGRES_PASSWORD
+        value: ${nf_postgres_password}
+
+  # Redis Cache
+  - name: emr-redis
+    type: redis
+    version: "7"
+    plan: free
+    environment:
+      - key: REDIS_PASSWORD
+        value: ${nf_redis_password}
+
+# Environment Variables (set in Northflank dashboard)
+variables:
+  JWT_SECRET: "your-super-secret-jwt-key-here"
+  nf_postgres_password: "secure-postgres-password"
+  nf_redis_password: "secure-redis-password"

@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Tenant {
+  id               String        @id @default(cuid())
+  name             String
+  email            String?       @unique
+  phone            String?
+  address          String?
+  subscriptionTier String        @default("Free")
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  appointments     Appointment[]
+  departments      Department[]
+  employees        Employee[]
+  encounters       Encounter[]
+  inventory        Inventory[]
+  invoices         Invoice[]
+  patients         Patient[]
+  users            User[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  tenantId     String
+  email        String        @unique
+  password     String
+  firstName    String
+  lastName     String
+  role         String
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  encounters   Encounter[]
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("users")
+}
+
+model Patient {
+  id             String           @id @default(cuid())
+  tenantId       String
+  mrn            String
+  firstName      String
+  lastName       String
+  dateOfBirth    DateTime?
+  gender         String?
+  phone          String?
+  email          String?
+  address        Json?
+  bloodType      String?
+  allergies      Json?
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  appointments   Appointment[]
+  diagnostics    Diagnostic[]
+  encounters     Encounter[]
+  billing        Invoice[]
+  medicalHistory MedicalHistory[]
+  medications    Medication[]
+  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  vitals         Vital[]
+
+  @@unique([tenantId, mrn])
+  @@map("patients")
+}
+
+model Appointment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  patientId       String
+  doctorId        String?
+  appointmentDate DateTime
+  duration        Int
+  status          String   @default("Scheduled")
+  type            String
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  doctor          User?    @relation(fields: [doctorId], references: [id])
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("appointments")
+}
+
+model Encounter {
+  id             String   @id @default(cuid())
+  tenantId       String
+  patientId      String
+  doctorId       String?
+  encounterDate  DateTime
+  type           String
+  status         String   @default("Active")
+  chiefComplaint String?
+  diagnosis      Json?
+  treatment      Json?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  doctor         User?    @relation(fields: [doctorId], references: [id])
+  patient        Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("encounters")
+}
+
+model MedicalHistory {
+  id          String    @id @default(cuid())
+  patientId   String
+  condition   String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  patient     Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("medical_history")
+}
+
+model Medication {
+  id           String    @id @default(cuid())
+  patientId    String
+  name         String
+  dosage       String
+  frequency    String
+  startDate    DateTime
+  endDate      DateTime?
+  status       String    @default("Active")
+  prescribedBy String?
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  patient      Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("medications")
+}
+
+model Diagnostic {
+  id          String   @id @default(cuid())
+  patientId   String
+  testType    String
+  testResult  Json?
+  status      String   @default("Pending")
+  performedBy String?
+  testDate    DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("diagnostics")
+}
+
+model Vital {
+  id               String   @id @default(cuid())
+  patientId        String
+  bloodPressure    Json?
+  heartRate        Int?
+  temperature      Float?
+  weight           Float?
+  height           Float?
+  bmi              Float?
+  oxygenSaturation Int?
+  recordedAt       DateTime @default(now())
+  recordedBy       String?
+  createdAt        DateTime @default(now())
+  patient          Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("vitals")
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  tenantId      String
+  patientId     String
+  invoiceNumber String    @unique
+  amount        Decimal
+  status        String    @default("Pending")
+  dueDate       DateTime
+  paidDate      DateTime?
+  items         Json?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+model Inventory {
+  id         String    @id @default(cuid())
+  tenantId   String
+  name       String
+  category   String
+  quantity   Int
+  unit       String
+  minStock   Int
+  price      Decimal
+  supplier   String?
+  expiryDate DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("inventory")
+}
+
+model Employee {
+  id         String   @id @default(cuid())
+  tenantId   String
+  firstName  String
+  lastName   String
+  email      String   @unique
+  phone      String?
+  role       String
+  department String?
+  joinDate   DateTime
+  salary     Decimal?
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("employees")
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  headOfDept  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("departments")
+}
+
+model FHIRResource {
+  id           String   @id @default(cuid())
+  resourceType String
+  resourceId   String
+  resourceData Json
+  lastUpdated  DateTime @default(now())
+  tenantId     String
+
+  @@map("fhir_resources")
+}
