@@ -33,8 +33,8 @@ export default function CostGovernance({ tenant }) {
             <div className="space-y-2">
                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Monthly Spend Pool</span>
                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-slate-900 tabular-nums">${financialData.currentUsage}</span>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">/ ${financialData.monthlyBurn}</span>
+                  <span className="text-2xl font-black text-slate-900 tabular-nums">₹{financialData.currentUsage}</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">/ ₹{financialData.monthlyBurn}</span>
                </div>
                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-2">
                   <div className="bg-slate-900 h-full rounded-full" style={{ width: `${(financialData.currentUsage / financialData.monthlyBurn) * 100}%` }}></div>
@@ -43,13 +43,13 @@ export default function CostGovernance({ tenant }) {
 
             <div className="space-y-1">
                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Active Vendor Leases</span>
-               <div className="text-lg font-black text-slate-800 tabular-nums">${financialData.vendorSpend}</div>
+               <div className="text-lg font-black text-slate-800 tabular-nums">₹{financialData.vendorSpend}</div>
                <div className="text-[9px] font-bold text-slate-400 uppercase">Cloud & Storage Shards</div>
             </div>
 
             <div className="space-y-1">
                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Operational Overhead</span>
-               <div className="text-lg font-black text-slate-800 tabular-nums">${financialData.opsCost}</div>
+               <div className="text-lg font-black text-slate-800 tabular-nums">₹{financialData.opsCost}</div>
                <div className="text-[9px] font-bold text-slate-400 uppercase">Admin & Support Slices</div>
             </div>
 

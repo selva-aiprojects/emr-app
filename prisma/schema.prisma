@@ -19,6 +19,7 @@ model Tenant {
   updatedAt        DateTime      @updatedAt
   appointments     Appointment[]
   departments      Department[]
+  services         Service[]
   employees        Employee[]
   encounters       Encounter[]
   inventory        Inventory[]
@@ -250,6 +251,24 @@ model Department {
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("departments")
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  code        String?
+  category    String
+  baseRate    Decimal  @db.Decimal(10, 2)
+  taxPercent  Decimal? @db.Decimal(5, 2) @default(0)
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@map("services")
 }
 
 model FHIRResource {

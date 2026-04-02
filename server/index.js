@@ -2729,7 +2729,8 @@ app.post('/api/beds', requireTenant, requirePermission('admin'), async (req, res
 
 app.get('/api/services', requireTenant, async (req, res) => {
   try {
-    const services = await repo.getServices(req.tenantId);
+    const { getServices } = await import('./services/service.service.js');
+    const services = await getServices(req.tenantId);
     res.json(services);
   } catch (error) {
     console.error('Error fetching services:', error);
@@ -2739,7 +2740,8 @@ app.get('/api/services', requireTenant, async (req, res) => {
 
 app.post('/api/services', requireTenant, requirePermission('admin'), async (req, res) => {
   try {
-    const service = await repo.createService({ ...req.body, tenantId: req.tenantId });
+    const { createService } = await import('./services/service.service.js');
+    const service = await createService(req.tenantId, req.body);
     res.status(201).json(service);
   } catch (error) {
     console.error('Error creating service:', error);

@@ -14,7 +14,7 @@ import {
   User,
   ShieldCheck,
   Building2,
-  DollarSign,
+  IndianRupee,
   Award
 } from 'lucide-react';
 import '../styles/critical-care.css';
@@ -406,7 +406,7 @@ export default function EmployeeMasterPage({ tenant }) {
                             <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Location</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <DollarSign className="w-4 h-4 text-blue-600" />
+                            <IndianRupee className="w-4 h-4 text-blue-600" />
                             <span className="text-sm font-bold text-slate-700">₹{employee.credentials.consultationFee}</span>
                             <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Consultation Fee</span>
                           </div>

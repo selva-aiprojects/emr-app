@@ -34,7 +34,6 @@ import {
   Filter,
   BarChart3,
   Package,
-  DollarSign,
   Database,
   UserCircle,
   Building2,
