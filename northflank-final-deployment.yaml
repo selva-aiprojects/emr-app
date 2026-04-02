@@ -1,0 +1,115 @@
+# Northflank Final Deployment Configuration
+# EMR Application with Supabase PostgreSQL and Northflank Redis
+
+version: "1"
+
+services:
+  # Backend API Service
+  - name: emr-backend
+    type: container
+    image:
+      dockerfile: ./Dockerfile
+      context: .
+    ports:
+      - name: http
+        port: 4000
+        protocol: TCP
+    environment:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      # Supabase Database Configuration
+      - key: DATABASE_URL
+        value: postgres://postgres:hms-app%402020@vfmnjnwcorlqwxqdklfi.supabase.co:6543/postgres?pgbouncer=true&connect_timeout=30
+      - key: SUPABASE_URL
+        value: https://vfmnjnwcorlqwxqdklfi.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: your-supabase-anon-key
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        value: your-supabase-service-role-key
+      # Northflank Redis Configuration
+      - key: REDIS_URL
+        value: ${nf_redis_connection_string}
+      # Application Configuration
+      - key: JWT_SECRET
+        value: ${JWT_SECRET}
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        value: ${nf_domain}
+      # Prisma Configuration
+      - key: PRISMA_SCHEMA_ENGINE_BINARY_PATH
+        value: ./node_modules/.prisma/bin/schema-engine
+    resources:
+      cpu: 0.25
+      memory: 512Mi
+    replicas: 1
+    healthCheck:
+      http:
+        path: /api/health
+        port: 4000
+        interval: 30
+        timeout: 5
+        retries: 3
+    buildCommand: |
+      npm ci --only=production && \
+      cd client && npm ci --only=production && \
+      npm run build && \
+      cd .. && \
+      npx prisma generate
+
+  # Frontend Static Site
+  - name: emr-frontend
+    type: static
+    build:
+      context: ./client
+      command: npm ci --only=production && npm run build
+    sourceDir: ./client/dist
+    routes:
+      - path: /*
+        directory: /
+        spa: true
+    environment:
+      - key: VITE_API_URL
+        value: ${nf_domain}
+      - key: VITE_SUPABASE_URL
+        value: https://vfmnjnwcorlqwxqdklfi.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: your-supabase-anon-key
+
+# Only Redis Add-on (PostgreSQL is handled by Supabase)
+addons:
+  # Redis Cache (Northflank)
+  - name: emr-redis
+    type: redis
+    version: "7"
+    plan: free
+    environment:
+      - key: REDIS_PASSWORD
+        value: ${nf_redis_password}
+
+# Environment Variables (set in Northflank dashboard)
+variables:
+  # Supabase Configuration (get from Supabase dashboard)
+  supabase_database_url: "postgres://postgres:hms-app%402020@vfmnjnwcorlqwxqdklfi.supabase.co:6543/postgres?pgbouncer=true&connect_timeout=30"
+  supabase_url: "https://vfmnjnwcorlqwxqdklfi.supabase.co"
+  supabase_anon_key: "your-supabase-anon-key"
+  supabase_service_role_key: "your-supabase-service-role-key"
+  
+  # Application Secrets
+  JWT_SECRET: "your-super-secret-jwt-key-change-this"
+  
+  # Northflank Configuration
+  nf_redis_password: "secure-redis-password"
+
+# Deployment Hooks
+deployment:
+  preDeploy:
+    - name: generate-prisma-client
+      command: npx prisma generate
+  postDeploy:
+    - name: run-migrations
+      command: npx prisma migrate deploy
+    - name: seed-database
+      command: npm run seed:e2e && npm run seed:services

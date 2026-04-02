@@ -44,7 +44,7 @@ export async function getAppointments(tenantId, filters = {}) {
   }
   
   if (date) {
-    sql += ` AND DATE(a.start) = $${paramIndex++}`;
+    sql += ` AND DATE(a.start_time) = $${paramIndex++}`;
     params.push(date);
   }
   
@@ -53,7 +53,7 @@ export async function getAppointments(tenantId, filters = {}) {
     params.push(patientId);
   }
   
-  sql += ` ORDER BY a.start DESC`;
+  sql += ` ORDER BY a.start_time DESC`;
   
   const result = await query(sql, params);
   return result.rows;
@@ -61,7 +61,7 @@ export async function getAppointments(tenantId, filters = {}) {
 
 export async function createAppointment({ tenantId, patientId, doctorId, departmentId, start, end, type, notes, status = 'scheduled' }) {
   const sql = `
-    INSERT INTO emr.appointments (tenant_id, patient_id, doctor_id, department_id, start, end, type, status, notes)
+    INSERT INTO emr.appointments (tenant_id, patient_id, doctor_id, department_id, start_time, end_time, type, status, notes)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
@@ -89,13 +89,13 @@ export async function getAvailableSlots(tenantId, doctorId, date) {
   const sql = `
     SELECT 
       COUNT(*) as booked_count,
-      EXTRACT(HOUR FROM start) as hour_slot
+      EXTRACT(HOUR FROM start_time) as hour_slot
     FROM emr.appointments 
     WHERE tenant_id = $1 
       AND doctor_id = $2 
-      AND DATE(start) = $3 
+      AND DATE(start_time) = $3 
       AND status != 'cancelled'
-    GROUP BY EXTRACT(HOUR FROM start)
+    GROUP BY EXTRACT(HOUR FROM start_time)
     HAVING COUNT(*) < 4
     ORDER BY hour_slot
   `;
@@ -112,8 +112,8 @@ export async function bookAppointment({ tenantId, patientId, doctorId, departmen
     WHERE tenant_id = $1 
       AND doctor_id = $2 
       AND (
-        (start <= $3 AND end > $3) OR 
-        (start < $4 AND end >= $4)
+        (start_time <= $3 AND end_time > $3) OR 
+        (start_time < $4 AND end_time >= $4)
       )
       AND status != 'cancelled'
   `;
