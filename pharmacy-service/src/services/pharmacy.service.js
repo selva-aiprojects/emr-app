@@ -654,11 +654,11 @@ export class PharmacyInventoryService {
         WHERE (dm.tenant_id = $1 OR dm.tenant_id IS NULL)
           AND db.status = 'active'
           AND db.quantity_remaining > 0
-          AND db.expiry_date BETWEEN CURRENT_DATE AND (CURRENT_DATE + INTERVAL '${daysThreshold} days')
+          AND db.expiry_date BETWEEN CURRENT_DATE AND (CURRENT_DATE + ($2 || ' days')::interval)
         ORDER BY db.expiry_date ASC
       `;
 
-      const result = await client.query(sql, [tenantId]);
+      const result = await client.query(sql, [tenantId, daysThreshold]);
 
       return result.rows.map(row => ({
         drugId: row.drug_id,
@@ -798,6 +798,48 @@ export class DrugMasterService {
         brandNames: drug.brand_names,
         availableBatches: drug.available_batches.filter(id => id !== null)
       }));
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Find generic substitutes for a given drug
+   */
+  async getGenericSubstitutes(drugId, tenantId) {
+    const client = await pool.connect();
+    try {
+      // 1. Get the generic name and strength of the target drug
+      const drugSql = `SELECT generic_name, strength FROM emr.drug_master WHERE drug_id = $1`;
+      const drugRes = await client.query(drugSql, [drugId]);
+
+      if (drugRes.rows.length === 0) return [];
+
+      const { generic_name, strength } = drugRes.rows[0];
+
+      // 2. Find all other drugs with the same generic name and strength
+      const substSql = `
+        SELECT 
+          dm.drug_id as id,
+          dm.generic_name,
+          dm.brand_names,
+          dm.strength,
+          dm.dosage_form,
+          dm.manufacturer,
+          COALESCE(SUM(db.quantity_remaining), 0) as total_stock
+        FROM emr.drug_master dm
+        LEFT JOIN emr.drug_batches db ON dm.drug_id = db.drug_id 
+          AND db.status = 'active' AND db.quantity_remaining > 0
+        WHERE dm.generic_name = $1 
+          AND dm.strength = $2
+          AND dm.drug_id != $3
+          AND (dm.tenant_id = $4 OR dm.tenant_id IS NULL)
+        GROUP BY dm.drug_id
+        ORDER BY total_stock DESC
+      `;
+
+      const result = await client.query(substSql, [generic_name, strength, drugId, tenantId]);
+      return result.rows;
     } finally {
       client.release();
     }

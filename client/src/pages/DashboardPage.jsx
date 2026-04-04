@@ -165,24 +165,14 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         doctors: data.doctors || [],
         visits: data.visits || {},
         requests: data.requests || {},
-        topDiagnoses: data.topDiagnoses && data.topDiagnoses.length > 0 ? data.topDiagnoses : [
-          { name: 'Essential Hypertension', value: 145 },
-          { name: 'Type 2 Diabetes', value: 132 },
-          { name: 'Acute Pharyngitis', value: 98 },
-          { name: 'Osteoarthritis', value: 84 },
-          { name: 'Asthma exacerbation', value: 67 }
-        ],
-        topServices: data.topServices && data.topServices.length > 0 ? data.topServices : [
-          { name: 'Consultations', value: 45000 },
-          { name: 'Laboratory', value: 32000 },
-          { name: 'Pharmacy', value: 28000 },
-          { name: 'Radiology', value: 15000 },
-          { name: 'Surgery', value: 85000 },
-          { name: 'Room Charges', value: 54000 }
-        ],
+        topDiagnoses: data.topDiagnoses || [],
+        topServices: data.topServices || [],
         staffStats: data.staffStats || [],
         patientJourney: data.patientJourney || [],
-        masterStats: data.masterStats || {}
+        masterStats: data.masterStats || {},
+        bloodBank: data.bloodBank || { value: 0, label: 'Units' },
+        labProgress: data.labProgress || { value: 0, label: '%' },
+        fleetStatus: data.fleetStatus || { available: 0, total: 0 }
       });
 
       // Set report data for charts - use real historical data
@@ -420,9 +410,11 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
               <Droplet className="w-6 h-6 text-red-600" />
             </div>
           </div>
-          <p className="metric-value">42 Units</p>
+          <p className="metric-value">{realtimeMetrics.bloodBank?.value || 0} {realtimeMetrics.bloodBank?.label || 'Units'}</p>
           <p className="metric-label">Blood Bank Stock</p>
-          <span className="text-xs text-red-600 font-medium font-bold">Safe Levels</span>
+          <span className="text-xs text-red-600 font-medium font-bold">
+            {(realtimeMetrics.bloodBank?.value || 0) < 10 ? 'Urgent Restock' : 'Safe Levels'}
+          </span>
         </div>
 
         <div className="dashboard-card metric-card">
@@ -431,9 +423,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
               <FlaskConical className="w-6 h-6 text-purple-600" />
             </div>
           </div>
-          <p className="metric-value">86%</p>
+          <p className="metric-value">{realtimeMetrics.labProgress?.value || 0}%</p>
           <p className="metric-label">Lab Progress</p>
-          <span className="text-xs text-purple-600 font-medium font-bold">14 pending</span>
+          <span className="text-xs text-purple-600 font-medium font-bold">{realtimeMetrics.labProgress?.pending || 0} pending</span>
         </div>
 
         <div className="dashboard-card metric-card">
@@ -442,9 +434,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
               <Truck className="w-6 h-6 text-emerald-600" />
             </div>
           </div>
-          <p className="metric-value">2 / 3</p>
+          <p className="metric-value">{realtimeMetrics.fleetStatus?.available || 0} / {realtimeMetrics.fleetStatus?.total || 0}</p>
           <p className="metric-label">Fleet Available</p>
-          <span className="text-xs text-emerald-600 font-medium font-bold">1 En Route</span>
+          <span className="text-xs text-emerald-600 font-medium font-bold">{realtimeMetrics.fleetStatus?.active || 0} En Route</span>
         </div>
       </div>
 
@@ -717,31 +709,21 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">OPD Visits</p>
-                  <p className="text-xs text-gray-600">Outpatient department</p>
+                  <p className="text-sm font-medium text-gray-900">Total Visits</p>
+                  <p className="text-xs text-gray-600">All departments</p>
                 </div>
               </div>
-              <span className="text-sm text-gray-600 font-medium">42</span>
+              <span className="text-sm text-gray-600 font-medium">{realtimeMetrics.totalAppointments || 0}</span>
             </div>
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Emergency</p>
-                  <p className="text-xs text-gray-600">Emergency cases</p>
+                  <p className="text-sm font-medium text-gray-900">New Patients</p>
+                  <p className="text-xs text-gray-600">First time registrations</p>
                 </div>
               </div>
-              <span className="text-sm text-gray-600 font-medium">8</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Follow-up</p>
-                  <p className="text-xs text-gray-600">Regular checkups</p>
-                </div>
-              </div>
-              <span className="text-sm text-gray-600 font-medium">18</span>
+              <span className="text-sm text-gray-600 font-medium">{realtimeMetrics.patientStats?.new_patients || 0}</span>
             </div>
           </div>
         </div>
@@ -749,52 +731,30 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         {/* Doctors Available */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Doctors Available</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Workforce Status</h3>
             <div className="bg-green-100 rounded-lg p-3">
               <HeartPulse className="w-6 h-6 text-green-600" />
             </div>
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Dr. Sarah Johnson</p>
-                  <p className="text-xs text-gray-600">Cardiology</p>
+          <div className="space-y-4 max-h-[200px] overflow-y-auto pr-2">
+            {realtimeMetrics.doctors?.length > 0 ? (
+              realtimeMetrics.doctors.map((doctor, idx) => (
+                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{doctor.name}</p>
+                      <p className="text-xs text-gray-600">{doctor.specialization || 'Staff'}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs text-green-600 font-medium">Online</span>
                 </div>
+              ))
+            ) : (
+              <div className="text-center py-6 text-slate-400 italic text-xs">
+                No active staff records found for this facility.
               </div>
-              <span className="text-xs text-green-600 font-medium">Available</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Dr. Michael Chen</p>
-                  <p className="text-xs text-gray-600">Neurology</p>
-                </div>
-              </div>
-              <span className="text-xs text-blue-600 font-medium">In Surgery</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Dr. Emily Davis</p>
-                  <p className="text-xs text-gray-600">Pediatrics</p>
-                </div>
-              </div>
-              <span className="text-xs text-green-600 font-medium">Available</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Dr. James Wilson</p>
-                  <p className="text-xs text-gray-600">Orthopedics</p>
-                </div>
-              </div>
-              <span className="text-xs text-orange-600 font-medium">Busy</span>
-            </div>
+            )}
           </div>
         </div>
       </div>

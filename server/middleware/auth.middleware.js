@@ -68,6 +68,7 @@ export async function authenticate(req, res, next) {
     else if (userRole === 'Support staff') finalRole = 'Support Staff';
     else if (userRole === 'Hr') finalRole = 'HR';
     else if (userRole === 'Administrator' || userRole === 'Admin role') finalRole = 'Admin';
+    else if (userRole === 'Supervisor' || userRole === 'Supervisor role') finalRole = 'Supervisor';
 
     // Attach user info to request object
     req.user = {
@@ -185,6 +186,7 @@ const PERMISSIONS = {
   // New Roles
   Insurance: ['dashboard', 'insurance', 'reports'],
   Management: ['dashboard', 'reports', 'users', 'billing', 'accounts', 'insurance', 'inventory'],
+  Supervisor: ['dashboard', 'reports', 'users', 'billing', 'accounts', 'insurance', 'inventory', 'patients', 'appointments'],
   HR: ['dashboard', 'employees', 'reports', 'users', 'communication', 'documents'],
   Operations: ['dashboard', 'reports', 'inventory', 'users', 'billing'],
   Auditor: ['dashboard', 'reports'],

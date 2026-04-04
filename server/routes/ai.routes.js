@@ -1,5 +1,5 @@
 import express from 'express';
-import { generatePatientSummary, suggestTreatmentPlan, generateDischargeSummary } from '../services/ai.service.js';
+import { generatePatientSummary, suggestTreatmentPlan, generateDischargeSummary, analyzeMedicalImage } from '../services/ai.service.js';
 import * as repo from '../db/repository.js';
 import { requireTenant, requireRole } from '../middleware/auth.middleware.js';
 
@@ -65,6 +65,30 @@ router.post('/discharge-summary', requireTenant, async (req, res) => {
   } catch (error) {
     console.error('AI discharge summary error:', error);
     res.status(500).json({ error: 'Failed to generate discharge summary' });
+  }
+});
+
+// Analyze a medical image or document scan
+router.post('/analyze-image', requireTenant, async (req, res) => {
+  try {
+    const { documentId, imageUrl } = req.body;
+    if (!documentId) return res.status(400).json({ error: 'documentId is required' });
+
+    const analysis = await analyzeMedicalImage(req.tenantId, documentId, imageUrl);
+    
+    await repo.createAuditLog({
+      tenantId: req.tenantId,
+      userId: req.user.id,
+      userName: req.user.name,
+      action: 'ai.analyze_image',
+      entityName: 'document',
+      entityId: documentId,
+    });
+
+    res.json({ analysis });
+  } catch (error) {
+    console.error('AI scan error:', error);
+    res.status(500).json({ error: 'Failed to analyze clinical document' });
   }
 });
 

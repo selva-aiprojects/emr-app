@@ -12,8 +12,8 @@ import { query } from './connection.js';
 export async function getEncounters(tenantId) {
   const sql = `
     SELECT e.*, p.first_name, p.last_name, u.name as provider_name
-    FROM emr.encounters e
-    LEFT JOIN emr.patients p ON e.patient_id = p.id
+    FROM encounters e
+    LEFT JOIN patients p ON e.patient_id = p.id
     LEFT JOIN emr.users u ON e.provider_id = u.id
     WHERE e.tenant_id = $1
     ORDER BY e.created_at DESC
@@ -38,7 +38,7 @@ export async function createEncounter({
   notes,
 }) {
   const sql = `
-    INSERT INTO emr.encounters (
+    INSERT INTO encounters (
       tenant_id,
       patient_id,
       provider_id,
@@ -74,7 +74,7 @@ export async function dischargePatient({
   followUpDate,
 }) {
   const sql = `
-    UPDATE emr.encounters 
+    UPDATE encounters 
     SET
       status = 'discharged',
       discharge_type = $1,
@@ -105,8 +105,8 @@ export async function getEncounterById(encounterId, tenantId) {
       p.first_name || ' ' || p.last_name as patient_name,
       p.phone as patient_phone,
       u.name as provider_name
-    FROM emr.encounters e
-    LEFT JOIN emr.patients p ON e.patient_id = p.id
+    FROM encounters e
+    LEFT JOIN patients p ON e.patient_id = p.id
     LEFT JOIN emr.users u ON e.provider_id = u.id
     WHERE e.id = $1 AND e.tenant_id = $2
   `;

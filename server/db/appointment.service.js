@@ -18,9 +18,9 @@ export async function getAppointments(tenantId, filters = {}) {
       p.phone as patient_phone,
       d.name as department_name,
       u.name as doctor_name
-    FROM emr.appointments a
-    LEFT JOIN emr.patients p ON a.patient_id = p.id
-    LEFT JOIN emr.departments d ON a.department_id = d.id
+    FROM appointments a
+    LEFT JOIN patients p ON a.patient_id = p.id
+    LEFT JOIN departments d ON a.department_id = d.id
     LEFT JOIN emr.users u ON a.doctor_id = u.id
     WHERE a.tenant_id = $1
   `;
@@ -61,7 +61,7 @@ export async function getAppointments(tenantId, filters = {}) {
 
 export async function createAppointment({ tenantId, patientId, doctorId, departmentId, start, end, type, notes, status = 'scheduled' }) {
   const sql = `
-    INSERT INTO emr.appointments (tenant_id, patient_id, doctor_id, department_id, start_time, end_time, type, status, notes)
+    INSERT INTO appointments (tenant_id, patient_id, doctor_id, department_id, start_time, end_time, type, status, notes)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
@@ -75,7 +75,7 @@ export async function createAppointment({ tenantId, patientId, doctorId, departm
 
 export async function updateAppointmentStatus(appointmentId, tenantId, status) {
   const sql = `
-    UPDATE emr.appointments 
+    UPDATE appointments 
     SET status = $1, updated_at = NOW() 
     WHERE id = $2 AND tenant_id = $3
     RETURNING *
@@ -90,7 +90,7 @@ export async function getAvailableSlots(tenantId, doctorId, date) {
     SELECT 
       COUNT(*) as booked_count,
       EXTRACT(HOUR FROM start_time) as hour_slot
-    FROM emr.appointments 
+    FROM appointments 
     WHERE tenant_id = $1 
       AND doctor_id = $2 
       AND DATE(start_time) = $3 
@@ -108,7 +108,7 @@ export async function bookAppointment({ tenantId, patientId, doctorId, departmen
   // Check for conflicts
   const conflictSql = `
     SELECT COUNT(*) as conflict_count
-    FROM emr.appointments 
+    FROM appointments 
     WHERE tenant_id = $1 
       AND doctor_id = $2 
       AND (

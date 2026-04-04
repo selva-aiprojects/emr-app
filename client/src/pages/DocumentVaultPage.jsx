@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
-import { Archive, FileText, Trash2, Upload } from 'lucide-react';
+import { Archive, FileText, Trash2, Upload, Sparkles, Bot, Loader2, X } from 'lucide-react';
 import { EmptyState } from '../components/ui/index.jsx';
+import { getAIImageAnalysis } from '../ai-api.js';
 
 const CATEGORY_OPTIONS = [
   'lab_report',
@@ -22,6 +23,22 @@ export default function DocumentVaultPage({ activeUser, documents = [], patients
   const [showUpload, setShowUpload] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [analysis, setAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const handleAnalyzeImage = async (docId, storageKey) => {
+    setIsAnalyzing(true);
+    setAnalysis(null);
+    try {
+      const resp = await getAIImageAnalysis(docId, storageKey);
+      setAnalysis({ docId, text: resp.analysis });
+    } catch (err) {
+      console.error('AI Scan Error:', err);
+      showToast({ message: 'Failed to analyze clinical document.', type: 'error' });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const filteredDocuments = useMemo(() => {
     return documents.filter((doc) => {
@@ -158,39 +175,81 @@ export default function DocumentVaultPage({ activeUser, documents = [], patients
         ) : (
           <div className="divide-y divide-slate-100">
             {filteredDocuments.map((doc) => (
-              <div key={doc.id} className="p-4 flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-slate-500" />
-                    <h3 className="font-bold text-slate-900">{doc.title}</h3>
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase bg-slate-100 text-slate-600">
-                      {doc.category}
-                    </span>
-                    {doc.is_deleted && (
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase bg-rose-100 text-rose-700">
-                        Deleted
+              <div key={doc.id} className="p-4 flex flex-col gap-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-slate-500" />
+                      <h3 className="font-bold text-slate-900">{doc.title}</h3>
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase bg-slate-100 text-slate-600">
+                        {doc.category}
                       </span>
+                      {doc.is_deleted && (
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold uppercase bg-rose-100 text-rose-700">
+                          Deleted
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-slate-600 mt-1">{doc.file_name || doc.fileName}</p>
+                    <p className="text-xs text-slate-400 mt-1">
+                      {doc.patient_name ? `Patient: ${doc.patient_name} • ` : ''}Uploaded {new Date(doc.created_at).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {canManageDocs(activeUser?.role) && !doc.is_deleted && (
+                      <button
+                        type="button"
+                        onClick={() => handleAnalyzeImage(doc.id, doc.storage_key || doc.storageKey)}
+                        disabled={isAnalyzing}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1.5 transition disabled:opacity-50"
+                      >
+                        {isAnalyzing && analysis?.docId === doc.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-3.5 h-3.5" />
+                        )}
+                        AI Scan
+                      </button>
+                    )}
+                    {canManageDocs(activeUser?.role) && (
+                      <button
+                        type="button"
+                        className={`text-xs font-bold inline-flex items-center gap-1 ${
+                          doc.is_deleted ? 'text-emerald-600 hover:text-emerald-700' : 'text-rose-600 hover:text-rose-700'
+                        }`}
+                        onClick={async () => {
+                          await onSetDocumentDeleted(doc.id, !doc.is_deleted);
+                          showToast({ message: doc.is_deleted ? 'Document restored.' : 'Document archived.', type: 'success', title: 'Documents' });
+                        }}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {doc.is_deleted ? 'Restore' : 'Soft Delete'}
+                      </button>
                     )}
                   </div>
-                  <p className="text-sm text-slate-600 mt-1">{doc.file_name || doc.fileName}</p>
-                  <p className="text-xs text-slate-400 mt-1">
-                    {doc.patient_name ? `Patient: ${doc.patient_name} • ` : ''}Uploaded {new Date(doc.created_at).toLocaleString('en-IN')}
-                  </p>
                 </div>
-                {canManageDocs(activeUser?.role) && (
-                  <button
-                    type="button"
-                    className={`text-xs font-bold inline-flex items-center gap-1 ${
-                      doc.is_deleted ? 'text-emerald-600 hover:text-emerald-700' : 'text-rose-600 hover:text-rose-700'
-                    }`}
-                    onClick={async () => {
-                      await onSetDocumentDeleted(doc.id, !doc.is_deleted);
-                      showToast({ message: doc.is_deleted ? 'Document restored.' : 'Document archived.', type: 'success', title: 'Documents' });
-                    }}
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    {doc.is_deleted ? 'Restore' : 'Soft Delete'}
-                  </button>
+
+                {analysis && analysis.docId === doc.id && (
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-6 animate-fade-in relative">
+                    <button 
+                      onClick={() => setAnalysis(null)}
+                      className="absolute top-4 right-4 text-indigo-300 hover:text-indigo-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-10 h-10 bg-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg shadow-indigo-200">
+                        <Bot className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h4 className="text-[10px] font-black uppercase text-indigo-600 tracking-[0.2em]">Clinical Vision Findings</h4>
+                        <p className="text-[9px] font-bold text-indigo-400 uppercase mt-0.5 tracking-wider">Document AI Interpreter</p>
+                      </div>
+                    </div>
+                    <div className="text-sm leading-relaxed text-indigo-900/80 whitespace-pre-wrap font-medium border-l-4 border-indigo-200 pl-6 py-2">
+                      {analysis.text}
+                    </div>
+                  </div>
                 )}
               </div>
             ))}

@@ -41,3 +41,10 @@ export async function getAIDischargeSummary(encounterId) {
     body: JSON.stringify({ encounterId }),
   });
 }
+
+export async function getAIImageAnalysis(documentId, imageUrl = null) {
+  return await aiRequest('/analyze-image', {
+    method: 'POST',
+    body: JSON.stringify({ documentId, imageUrl }),
+  });
+}

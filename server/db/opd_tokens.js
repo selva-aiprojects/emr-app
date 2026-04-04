@@ -3,9 +3,9 @@
 // =====================================================
 
 export async function generateOPDToken({ tenantId, patientId, departmentId, doctorId, priority = 'general', visitType = 'new', chiefComplaint, appointmentId, createdBy }) {
-  // Get next token number
+  // Get next token number from emr schema
   const nextTokenSql = `
-    SELECT get_next_token_number($1, $2) as token_number
+    SELECT emr.get_next_token_number($1, $2) as token_number
   `;
   const tokenResult = await query(nextTokenSql, [tenantId, departmentId]);
   const tokenNumber = tokenResult.rows[0].token_number;

@@ -200,47 +200,47 @@ export const getPharmacyQueue = async (req, res) => {
   const client = await pool.connect();
 
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.tenantId || req.headers['x-tenant-id'];
+    if (!tenantId) {
+      console.error('[PHARMACY_QUEUE_ERROR] No tenant context identified');
+    }
 
     const sql = `
       SELECT 
-       p.id as prescription_id,
+        p.id as prescription_id,
         p.prescription_number,
-       p.patient_id,
-       pt.first_name as patient_first_name,
-       pt.last_name as patient_last_name,
+        p.tenant_id as db_tenant_id,
+        p.patient_id,
+        pt.first_name as patient_first_name,
+        pt.last_name as patient_last_name,
         p.provider_id,
-       u.name as provider_name,
+        u.name as provider_name,
         p.encounter_id,
-       p.status as prescription_status,
+        p.status as prescription_status,
         p.priority,
-       p.created_at,
-        json_agg(
-          json_build_object(
-            'item_id', pi.item_id,
-            'drug_id', pi.drug_id,
-            'generic_name', dm.generic_name,
-            'strength', dm.strength,
-            'dosage_form', dm.dosage_form,
-            'dose', pi.dose,
-            'frequency', pi.frequency,
-            'route', pi.route,
-            'quantity_prescribed', pi.quantity_prescribed,
-            'quantity_dispensed', pi.quantity_dispensed,
-            'instructions', pi.instructions,
-            'status', pi.status,
-            'sequence', pi.sequence
-          )
-        ) as items
+        p.created_at,
+        pi.item_id,
+        pi.drug_id,
+        dm.generic_name,
+        dm.brand_names[1] as brand_name,
+        dm.strength,
+        dm.dosage_form,
+        pi.dose,
+        pi.dose_unit,
+        pi.frequency,
+        pi.route,
+        pi.quantity_prescribed,
+        pi.quantity_dispensed,
+        pi.instructions,
+        pi.status as item_status,
+        pi.sequence,
+        pi.substitution_allowed
       FROM emr.prescriptions p
-      JOIN emr.patients pt ON p.patient_id= pt.id
-      LEFT JOIN emr.users u ON p.provider_id = u.id
-      JOIN emr.prescription_items pi ON p.id = pi.prescription_id
-      JOIN emr.drug_master dm ON pi.drug_id= dm.drug_id
-      WHERE p.tenant_id= $1
-        AND p.status IN ('active', 'pending')
-        AND pi.status IN ('pending', 'active')
-      GROUP BY p.id, pt.first_name, pt.last_name, u.name
+      LEFT JOIN emr.patients pt ON p.patient_id::text = pt.id::text
+      LEFT JOIN emr.users u ON p.provider_id::text = u.id::text
+      LEFT JOIN emr.prescription_items pi ON p.id::text = pi.prescription_id::text AND pi.status = 'pending'
+      LEFT JOIN emr.drug_master dm ON pi.drug_id::text = dm.drug_id::text
+      WHERE p.tenant_id::text = $1::text
       ORDER BY 
         CASE p.priority
           WHEN 'stat' THEN 1
@@ -248,7 +248,7 @@ export const getPharmacyQueue = async (req, res) => {
           WHEN 'asap' THEN 3
           ELSE 4
         END,
-       p.created_at ASC
+        p.created_at DESC
     `;
 
     const result = await client.query(sql, [tenantId]);
@@ -277,7 +277,7 @@ export const dispenseMedication = async (req, res) => {
   try {
     const { prescriptionItemId, drugId, quantity } = req.body;
     const pharmacistId = req.user?.id;
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.tenantId;
 
     if (!prescriptionItemId || !drugId || !quantity) {
       return res.status(400).json({
@@ -394,6 +394,29 @@ export const getDrugDetails = async (req, res) => {
   }
 };
 
+/**
+ * Get generic substitutes for a drug
+ */
+export const getGenericSubstitutes = async (req, res) => {
+  try {
+    const drugId = req.params.id;
+    const tenantId = req.tenantId || req.query.tenantId;
+
+    const substitutes = await drugService.getGenericSubstitutes(drugId, tenantId);
+
+    res.json({
+      success: true,
+      data: substitutes
+    });
+  } catch (error) {
+    console.error('Get generic substitutes error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
 // =====================================================
 // INVENTORY ALERTS
 // =====================================================
@@ -403,7 +426,7 @@ export const getDrugDetails = async (req, res) => {
  */
 export const getLowStockAlerts = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.tenantId;
 
     const alerts = await inventoryService.getLowStockAlerts(tenantId);
 
@@ -425,7 +448,7 @@ export const getLowStockAlerts = async (req, res) => {
  */
 export const getExpiringStockAlerts = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.tenantId;
     const daysThreshold = parseInt(req.query.days) || 90;
 
     const alerts = await inventoryService.getExpiringStockAlerts(tenantId, daysThreshold);
@@ -448,7 +471,7 @@ export const getExpiringStockAlerts = async (req, res) => {
  */
 export const addVendor = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.tenantId;
     const vendor = await inventoryService.addVendor({ ...req.body, tenantId });
     res.status(201).json({ success: true, data: vendor });
   } catch (error) {
@@ -461,7 +484,7 @@ export const addVendor = async (req, res) => {
  */
 export const getVendors = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.tenantId;
     const vendors = await inventoryService.getVendors(tenantId);
     res.json({ success: true, data: vendors });
   } catch (error) {
@@ -474,7 +497,7 @@ export const getVendors = async (req, res) => {
  */
 export const getPurchaseOrders = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.tenantId;
     const pos = await inventoryService.getPurchaseOrders(tenantId);
     res.json({ success: true, data: pos });
   } catch (error) {
@@ -487,7 +510,7 @@ export const getPurchaseOrders = async (req, res) => {
  */
 export const createPurchaseOrder = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.tenantId;
     const po = await inventoryService.createPurchaseOrder({ ...req.body, tenantId, createdBy: req.user?.id });
     res.status(201).json({ success: true, data: po });
   } catch (error) {
@@ -500,7 +523,7 @@ export const createPurchaseOrder = async (req, res) => {
  */
 export const importStock = async (req, res) => {
   try {
-    const tenantId = req.headers['x-tenant-id'];
+    const tenantId = req.tenantId;
     const { items } = req.body;
     const result = await inventoryService.importStockFromCSV(tenantId, req.user?.id, items);
     res.json({ success: true, data: result });

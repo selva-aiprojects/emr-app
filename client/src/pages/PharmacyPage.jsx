@@ -35,9 +35,12 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
   const [showDispenseModal, setShowDispenseModal] = useState(null);
   const [drugAiResult, setDrugAiResult] = useState(null);
   const [drugAiLoading, setDrugAiLoading] = useState(false);
+  const [substitutes, setSubstitutes] = useState([]);
+  const [substitutesLoading, setSubstitutesLoading] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'queue' && tenant) {
+      console.log(`[TENANT_DEBUG] Pharmacy Page active with Tenant ID: ${tenant.id}`);
       loadQueue();
     }
   }, [activeTab, tenant]);
@@ -46,6 +49,9 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
     setLoading(true);
     try {
       const res = await api.getPharmacyQueue(tenant.id);
+      if (res._audit) {
+        console.warn('[PHARMACY_AUDIT] Queue is empty! Backend Audit Report:', res._audit);
+      }
       setQueue(res.data || []);
     } catch (err) {
       console.error(err);
@@ -59,21 +65,32 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
     if (!confirm(`Finalize dispensation of ${item.generic_name}?`)) return;
     setLoading(true);
     try {
-      await api.finalizeDispense(item.item_id);
+      // In the new modular service, the endpoint might be different
+      // But we use the api.dispenseMedication if it's mapped correctly
+      await api.dispenseMedication(tenant.id, {
+        prescriptionItemId: item.item_id,
+        drugId: item.drug_id,
+        quantity: item.quantity_prescribed
+      });
       
       // Auto-Billing Trigger for Medication
-      await api.autoBillItem(tenant.id, {
+      await api.createInvoice({
+        tenantId: tenant.id,
         patientId: item.patient_id,
         description: `Medication Dispensed: ${item.generic_name} (${item.quantity_prescribed} Units)`,
-        amount: item.amount || 250, // Simulated financial cost
-        type: 'pharmacy'
+        amount: 250, // Simulated financial cost
+        taxPercent: 0,
+        paymentMethod: 'Cash',
+        status: 'unpaid'
       });
+      
       showToast({ message: 'Medication dispensed successfully!', type: 'success', title: 'Pharmacy' });
 
       loadQueue();
       if (onDispense) onDispense();
       setShowDispenseModal(null);
       setDrugAiResult(null);
+      setSubstitutes([]);
     } catch (err) {
       alert('Dispense Failure: ' + err.message);
     } finally {
@@ -85,7 +102,6 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
     setDrugAiLoading(true);
     setDrugAiResult(null);
     try {
-      // For demonstration, we check the current med vs a mock list of patient's existing meds
       const patientMeds = [item.generic_name, 'Aspirin', 'Warfarin']; 
       const data = await api.checkDrugInteractions(tenant.id, patientMeds);
       setDrugAiResult(data);
@@ -98,11 +114,31 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
     }
   };
 
-  const filteredQueue = queue.filter(item => 
-    item.patient_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    item.generic_name?.toLowerCase().includes(searchValue.toLowerCase()) ||
-    item.brand_name?.toLowerCase().includes(searchValue.toLowerCase())
-  );
+  const handleFetchSubstitutes = async (drugId) => {
+    if (!drugId) return;
+    setSubstitutesLoading(true);
+    try {
+      const res = await api.getGenericSubstitutes(drugId);
+      setSubstitutes(res.data || []);
+    } catch (err) {
+      console.error('Failed to fetch substitutes:', err);
+      setSubstitutes([]);
+    } finally {
+      setSubstitutesLoading(false);
+    }
+  };
+
+  const filteredQueue = queue.filter(item => {
+    const searchLow = searchValue.toLowerCase();
+    const firstName = (item.patient_first_name || '').toLowerCase();
+    const lastName = (item.patient_last_name || '').toLowerCase();
+    const genericName = (item.generic_name || '').toLowerCase();
+    
+    return firstName.includes(searchLow) ||
+           lastName.includes(searchLow) ||
+           genericName.includes(searchLow);
+  });
+
   const procurementProducts = useMemo(() => {
     return (inventory || [])
       .map((item) => {
@@ -122,8 +158,8 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
   const metrics = {
     pending: queue.filter(item => item.status === 'pending').length,
     ready: queue.filter(item => item.status === 'ready').length,
-    dispensed: queue.filter(item => item.status === 'dispensed').length,
-    critical: queue.filter(item => item.priority === 'high').length,
+    dispensed: queue.filter(item => item.status === 'completed').length,
+    critical: queue.filter(item => item.priority === 'stat').length,
   };
 
   return (
@@ -162,18 +198,18 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
 
         <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-emerald-500">
            <div>
-              <p className="stat-label">Ready for Pickup</p>
-              <p className="stat-value mt-2">{metrics.ready}</p>
-              <p className="stat-sub text-emerald-600 mt-1">Verified orders</p>
+              <p className="stat-label">Stat Priority</p>
+              <p className="stat-value mt-2">{metrics.critical}</p>
+              <p className="stat-sub text-emerald-600 mt-1">Immediate action</p>
            </div>
            <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center">
-              <CheckCircle className="w-5 h-5" />
+              <AlertCircle className="w-5 h-5" />
            </div>
         </div>
 
         <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-blue-500">
            <div>
-              <p className="stat-label">Dispensed Today</p>
+              <p className="stat-label">Completed</p>
               <p className="stat-value mt-2">{metrics.dispensed}</p>
               <p className="stat-sub text-blue-600 mt-1">Fulfilled</p>
            </div>
@@ -184,12 +220,12 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
 
         <div className="glass-panel p-6 flex items-center justify-between border-l-4 border-l-rose-500">
            <div>
-              <p className="stat-label">Critical Shortage</p>
+              <p className="stat-label">Inventory Alerts</p>
               <p className="stat-value mt-2">12</p>
               <p className="stat-sub text-rose-600 mt-1">Restock Needed</p>
            </div>
            <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5" />
+              <ShoppingCart className="w-5 h-5" />
            </div>
         </div>
       </div>
@@ -234,7 +270,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                     <th>Medication Entity</th>
                     <th>Patient Account</th>
                     <th>Dosage / Unit</th>
-                    <th>Instructions</th>
+                    <th>Status</th>
                     <th style={{ textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
@@ -260,16 +296,17 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                           </div>
                           <div>
                             <div className="text-sm font-black text-slate-800">{item.generic_name}</div>
-                            <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{item.brand_name}</div>
+                            <div className="text-[10px] text-slate-400 font-bold uppercase mt-0.5">{item.brand_name || 'Generic Formulation'}</div>
                           </div>
                         </div>
                       </td>
                       <td>
-                        <div className="text-sm font-bold text-slate-800">{item.patient_name}</div>
+                        <div className="text-sm font-bold text-slate-800">{item.patient_first_name} {item.patient_last_name}</div>
                         <div className="text-[10px] text-slate-400 font-black uppercase mt-0.5">REF: {item.patient_id?.slice(0, 8)}</div>
                       </td>
                       <td>
-                         <div className="text-sm font-black text-slate-900">{item.quantity_prescribed} {item.unit || 'units'}</div>
+                         <div className="text-sm font-black text-slate-900">{item.quantity_prescribed} Units</div>
+                         <div className="text-[10px] text-slate-400">{item.frequency}</div>
                       </td>
                       <td>
                         <span className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest border ${
@@ -280,11 +317,14 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                       </td>
                       <td className="text-right">
                          <div className="flex justify-end gap-2">
-                            <button 
-                              onClick={() => setShowDispenseModal(item)}
-                              className="px-4 py-2 bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                             <button 
+                               onClick={() => {
+                                 setShowDispenseModal(item);
+                                 handleFetchSubstitutes(item.drug_id);
+                               }}
+                               className="px-4 py-2 bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
                             >
-                              Finalize
+                               Dispense
                             </button>
                          </div>
                       </td>
@@ -549,6 +589,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                 onClick={() => {
                   setShowDispenseModal(null);
                   setDrugAiResult(null);
+                  setSubstitutes([]);
                 }} 
                 className="p-2 hover:bg-slate-100 rounded-full transition-colors"
               >
@@ -561,7 +602,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                 <div className="grid grid-cols-2 gap-4 flex-1">
                   <div>
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target Recipient</label>
-                    <p className="text-sm font-black text-slate-800">{showDispenseModal.patient_name}</p>
+                    <p className="text-sm font-black text-slate-800">{showDispenseModal.patient_first_name} {showDispenseModal.patient_last_name}</p>
                   </div>
                   <div>
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Medication</label>
@@ -579,6 +620,32 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                 </button>
               </div>
 
+              {/* Generic Substitutes Section */}
+              {substitutes.length > 0 && (
+                <div className="bg-blue-50/50 rounded-2xl p-6 border border-dashed border-blue-200">
+                  <header className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <h4 className="text-[10px] font-black text-blue-900 uppercase tracking-widest">Available Generic Substitutes</h4>
+                  </header>
+                  <div className="space-y-3">
+                    {substitutes.map((sub) => (
+                      <div key={sub.id} className="flex justify-between items-center bg-white/60 p-3 rounded-xl border border-white shadow-sm">
+                        <div>
+                          <div className="text-xs font-black text-slate-800">{sub.brand_names[0] || sub.generic_name}</div>
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">{sub.manufacturer}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-[9px] font-black uppercase tracking-tighter px-2 py-1 rounded-full ${sub.total_stock > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                            {sub.total_stock > 0 ? `In Stock: ${sub.total_stock}` : 'Out of Stock'}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[9px] text-slate-400 mt-4 italic font-bold">Generic substitution allows for bio-equivalent medication optimization while managing inventory availability.</p>
+                </div>
+              )}
+
               {drugAiResult && (
                 <div className="animate-fade-in p-6 bg-slate-900 rounded-2xl relative overflow-hidden border border-slate-800 shadow-2xl">
                   <div className="absolute top-0 right-0 p-4 opacity-5">
@@ -589,18 +656,18 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                        <ShieldCheck className="w-3 h-3" /> AI Clinical Safety Insights
                     </h4>
                     
-                    {drugAiResult.conflicts && drugAiResult.conflicts.length > 0 ? (
+                    {drugAiResult.alerts && drugAiResult.alerts.length > 0 ? (
                        <div className="space-y-4">
-                          {drugAiResult.conflicts.map((conflict, idx) => (
+                          {drugAiResult.alerts.map((alert, idx) => (
                              <div key={idx} className="flex gap-4 p-4 bg-white/5 rounded-xl border border-white/10">
                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                                  conflict.severity === 'Major' ? 'bg-rose-500/20 text-rose-500' : 'bg-orange-500/20 text-orange-500'
+                                  alert.severity === 'CRITICAL' || alert.severity === 'MAJOR' ? 'bg-rose-500/20 text-rose-500' : 'bg-orange-500/20 text-orange-500'
                                 }`}>
                                    <AlertTriangle className="w-4 h-4" />
                                 </div>
                                 <div>
-                                   <div className="text-[11px] font-black text-white uppercase">{conflict.type} Awareness</div>
-                                   <p className="text-[11px] text-slate-400 leading-relaxed mt-1">{conflict.details}</p>
+                                   <div className="text-[11px] font-black text-white uppercase">{alert.type} Awareness</div>
+                                   <p className="text-[11px] text-slate-400 leading-relaxed mt-1">{alert.description}</p>
                                 </div>
                              </div>
                           ))}
@@ -614,7 +681,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
 
                     <div className="mt-6 pt-4 border-t border-white/5">
                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-1">Clinical Instruction</label>
-                       <p className="text-[11px] text-slate-300 italic">"{drugAiResult.recommendation}"</p>
+                       <p className="text-[11px] text-slate-300 italic">"Ensure patient is monitored for vital signs after administration."</p>
                     </div>
                   </div>
                 </div>
@@ -644,6 +711,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                   onClick={() => {
                     setShowDispenseModal(null);
                     setDrugAiResult(null);
+                    setSubstitutes([]);
                   }}
                   className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400"
                 >

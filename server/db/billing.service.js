@@ -17,8 +17,8 @@ export async function getInvoices(tenantId, filters = {}) {
       i.*, p.first_name || ' ' || p.last_name as patient_name,
       p.phone as patient_phone,
       u.name as doctor_name
-    FROM emr.invoices i
-    LEFT JOIN emr.patients p ON i.patient_id = p.id
+    FROM invoices i
+    LEFT JOIN patients p ON i.patient_id = p.id
     LEFT JOIN emr.users u ON i.doctor_id = u.id
     WHERE i.tenant_id = $1
   `;
@@ -63,14 +63,14 @@ export async function getInvoices(tenantId, filters = {}) {
 }
 
 export async function createInvoice({ tenantId, patientId, doctorId, items, subtotal, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
-  // Generate invoice number
-  const invoiceNumberSql = `SELECT get_next_invoice_number($1) as invoice_number`;
+  // Generate invoice number correctly from emr schema
+  const invoiceNumberSql = `SELECT emr.get_next_invoice_number($1) as invoice_number`;
   const invoiceNumberResult = await query(invoiceNumberSql, [tenantId]);
   const invoiceNumber = invoiceNumberResult.rows[0].invoice_number;
   
   const sql = `
-    INSERT INTO emr.invoices (
-      tenant_id, patient_id, doctor_id, invoice_number, items, subtotal, tax_amount, total_amount, payment_method, insurance_provider, policy_number, notes, status, created_by
+    INSERT INTO invoices (
+      tenant_id, patient_id, doctor_id, invoice_number, items, subtotal, tax, total, payment_method, insurance_provider, policy_number, notes, status, created_by
     )
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'draft', $12)
     RETURNING *
@@ -100,7 +100,7 @@ export async function updateInvoiceStatus(invoiceId, tenantId, status, additiona
   const setValues = values.join(', ');
   
   const sql = `
-    UPDATE emr.invoices
+    UPDATE invoices
     SET ${setClause}
     WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex++}
     RETURNING *
@@ -112,8 +112,8 @@ export async function updateInvoiceStatus(invoiceId, tenantId, status, additiona
 
 export async function payInvoice({ tenantId, invoiceId, paymentMethod, paymentAmount, transactionId, notes, paidBy }) {
   const sql = `
-    UPDATE emr.invoices 
-    SET status = 'paid', payment_method = $1, payment_amount = $2, transaction_id = $3, payment_date = NOW(), payment_notes = $4, paid_by = $5, updated_at = NOW()
+    UPDATE invoices 
+    SET status = 'paid', payment_method = $1, paid = $2, transaction_id = $3, payment_date = NOW(), payment_notes = $4, paid_by = $5, updated_at = NOW()
     WHERE id = $6 AND tenant_id = $7
     RETURNING *
   `;
@@ -128,8 +128,8 @@ export async function getInvoiceById(invoiceId, tenantId) {
       i.*, p.first_name || ' ' || p.last_name as patient_name,
       p.phone as patient_phone,
       u.name as doctor_name
-    FROM emr.invoices i
-    LEFT JOIN emr.patients p ON i.patient_id = p.id
+    FROM invoices i
+    LEFT JOIN patients p ON i.patient_id = p.id
     LEFT JOIN emr.users u ON i.doctor_id = u.id
     WHERE i.id = $1 AND i.tenant_id = $2
   `;

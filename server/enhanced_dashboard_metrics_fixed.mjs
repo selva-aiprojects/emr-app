@@ -22,74 +22,59 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       availableBeds,
       totalBeds,
       criticalLabResults,
-      lowStockItems,
-      expiringItems,
-      emergencyDispensing
+      bloodUnits,
+      labPending,
+      totalLabToday,
+      ambulancesTotal,
+      ambulancesAvailable
     ] = await Promise.all([
-      // Today's appointments
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.appointments 
-        WHERE tenant_id = $1 AND DATE(scheduled_start) = CURRENT_DATE
-      `, [tenantId]),
+      // Today's appointments (scheduled_start)
+      query(`SELECT COUNT(*) as count FROM appointments WHERE tenant_id = $1 AND DATE(scheduled_start) = CURRENT_DATE`, [tenantId]),
       
       // Today's revenue
-      query(`
-        SELECT COALESCE(SUM(total), 0) as total
-        FROM emr.invoices 
-        WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE AND status = 'paid'
-      `, [tenantId]),
+      query(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE AND status = 'paid'`, [tenantId]),
       
       // Today's patients
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.patients 
-        WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE
-      `, [tenantId]),
+      query(`SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE`, [tenantId]),
       
       // Today's admissions (using encounters table)
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.encounters 
-        WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'admission'
-      `, [tenantId]),
+      query(`SELECT COUNT(*) as count FROM encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'admission'`, [tenantId]),
       
       // Today's discharges (using encounters table)
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.encounters 
-        WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'discharge'
-      `, [tenantId]),
+      query(`SELECT COUNT(*) as count FROM encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'discharge'`, [tenantId]),
       
       // Occupied beds
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.beds 
-        WHERE tenant_id = $1 AND status = 'occupied'
-      `, [tenantId]),
+      query(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1 AND status = 'occupied'`, [tenantId]),
       
       // Available beds
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.beds 
-        WHERE tenant_id = $1 AND status != 'occupied'
-      `, [tenantId]),
+      query(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1 AND status != 'occupied'`, [tenantId]),
       
       // Total beds
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.beds 
-        WHERE tenant_id = $1
-      `, [tenantId]),
+      query(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1`, [tenantId]),
       
       // Critical lab results
-      query(`
-        SELECT COUNT(*) as count
-        FROM emr.service_requests 
-        WHERE tenant_id = $1 AND category = 'lab' AND notes::jsonb->>'criticalFlag' = 'true' AND DATE(created_at) >= CURRENT_DATE - INTERVAL '24 hours'
-      `, [tenantId])
+      query(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND (notes::jsonb->>'criticalFlag' = 'true' OR notes LIKE '%critical%') AND DATE(created_at) >= CURRENT_DATE - INTERVAL '24 hours'`, [tenantId]),
+
+      // Blood Bank Units
+      query(`SELECT COUNT(*) as count FROM blood_units WHERE tenant_id = $1`, [tenantId]),
+
+      // Lab Progress (Pending)
+      query(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND status = 'pending'`, [tenantId]),
+
+      // Lab Progress (Total Today)
+      query(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND DATE(created_at) = CURRENT_DATE`, [tenantId]),
+
+      // Fleet Total
+      query(`SELECT COUNT(*) as count FROM ambulances WHERE tenant_id = $1`, [tenantId]),
+
+      // Fleet Available
+      query(`SELECT COUNT(*) as count FROM ambulances WHERE tenant_id = $1 AND (status = 'available' OR status = 'ONLINE')`, [tenantId])
     ]);
     
+    const labsTotal = parseInt(totalLabToday.rows[0]?.count || 0);
+    const labsPending = parseInt(labPending.rows[0]?.count || 0);
+    const labValue = labsTotal === 0 ? 0 : Math.round(((labsTotal - labsPending) / labsTotal) * 100);
+
     const metrics = {
       todayAppointments: todayAppointments.rows[0]?.count || 0,
       todayRevenue: parseFloat(todayRevenue.rows[0]?.total || 0),
@@ -99,7 +84,14 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       occupiedBeds: occupiedBeds.rows[0]?.count || 0,
       availableBeds: availableBeds.rows[0]?.count || 0,
       totalBeds: totalBeds.rows[0]?.count || 0,
-      criticalLabResults: criticalLabResults.rows[0]?.count || 0
+      criticalLabResults: criticalLabResults.rows[0]?.count || 0,
+      bloodBank: { value: parseInt(bloodUnits.rows[0]?.count || 0), label: 'Units' },
+      labProgress: { value: labValue, pending: labsPending },
+      fleetStatus: { 
+        available: parseInt(ambulancesAvailable.rows[0]?.count || 0), 
+        total: parseInt(ambulancesTotal.rows[0]?.count || 0), 
+        active: Math.max(0, parseInt(ambulancesTotal.rows[0]?.count || 0) - parseInt(ambulancesAvailable.rows[0]?.count || 0)) 
+      }
     };
     
     console.log('✅ Real-time metrics calculated:', metrics);
@@ -117,7 +109,7 @@ export async function getOccupancyRate(tenantId) {
       SELECT 
         COUNT(CASE WHEN status = 'occupied' THEN 1 ELSE 0 END) * 100.0 / 
         COUNT(*) * 100.0
-      FROM emr.beds 
+      FROM beds 
       WHERE tenant_id = $1
     `);
     
@@ -131,7 +123,7 @@ export async function getOccupancyRate(tenantId) {
 export async function getAvailableBeds(tenantId) {
   try {
     const result = await query(`
-      SELECT COUNT(*) FROM emr.beds 
+      SELECT COUNT(*) FROM beds 
       WHERE tenant_id = $1 AND status != 'occupied'
     `);
     
@@ -145,7 +137,7 @@ export async function getAvailableBeds(tenantId) {
 export async function getTotalBeds(tenantId) {
   try {
     const result = await query(`
-      SELECT COUNT(*) FROM emr.beds 
+      SELECT COUNT(*) FROM beds 
       WHERE tenant_id = $1
     `);
     
@@ -159,7 +151,7 @@ export async function getTotalBeds(tenantId) {
 export async function getCriticalLabResults(tenantId) {
   try {
     const result = await query(`
-      SELECT COUNT(*) FROM emr.service_requests 
+      SELECT COUNT(*) FROM service_requests 
       WHERE tenant_id = $1 AND category = 'lab' AND notes::jsonb->>'criticalFlag' = 'true'
       AND DATE(created_at) >= CURRENT_DATE - INTERVAL '24 hours'
     `);
@@ -174,7 +166,7 @@ export async function getCriticalLabResults(tenantId) {
 export async function getLowStockItems(tenantId) {
   try {
     const result = await query(`
-      SELECT COUNT(*) FROM emr.pharmacy_inventory_enhanced 
+      SELECT COUNT(*) FROM pharmacy_inventory_enhanced 
       WHERE tenant_id = $1 AND current_stock <= minimum_stock_level AND status = 'ACTIVE'
     `);
     
@@ -188,7 +180,7 @@ export async function getLowStockItems(tenantId) {
 export async function getExpiringItems(tenantId) {
   try {
     const result = await query(`
-      SELECT COUNT(*) FROM emr.pharmacy_inventory_enhanced 
+      SELECT COUNT(*) FROM pharmacy_inventory_enhanced 
       WHERE tenant_id = $1 AND expiry_date <= CURRENT_DATE + INTERVAL '30 days' AND status = 'ACTIVE'
     `);
     
@@ -202,7 +194,7 @@ export async function getExpiringItems(tenantId) {
 export async function getEmergencyDispensing(tenantId) {
   try {
     const result = await query(`
-      SELECT COUNT(*) FROM emr.pharmacy_dispensing_log 
+      SELECT COUNT(*) FROM pharmacy_dispensing_log 
       WHERE tenant_id = $1 AND emergency_dispensing = true
       AND DATE(dispensing_date) = CURRENT_DATE
     `);
@@ -218,7 +210,7 @@ export async function getTodayAppointments(tenantId) {
   try {
     const today = new Date().toISOString().split('T')[0];
     const result = await query(`
-      SELECT COUNT(*) FROM emr.appointments 
+      SELECT COUNT(*) FROM appointments 
       WHERE tenant_id = $1 AND DATE(scheduled_start) = CURRENT_DATE
     `);
     
@@ -234,7 +226,7 @@ export async function getTodayRevenue(tenantId) {
     const today = new Date().toISOString().split('T')[0];
     const result = await query(`
       SELECT COALESCE(SUM(amount), 0) as total
-      FROM emr.invoices 
+      FROM invoices 
       WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE AND status = 'paid'
     `);
     
@@ -249,7 +241,7 @@ export async function getTodayPatients(tenantId) {
   try {
     const today = new Date().toISOString().split('T')[0];
     const result = await query(`
-      SELECT COUNT(*) FROM emr.patients 
+      SELECT COUNT(*) FROM patients 
       WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE
     `);
     
@@ -264,7 +256,7 @@ export async function getTodayAdmissions(tenantId) {
   try {
     const today = new Date().toISOString().split('T')[0];
     const result = await query(`
-      SELECT COUNT(*) FROM emr.admissions 
+      SELECT COUNT(*) FROM admissions 
       WHERE tenant_id = $1 AND DATE(admission_date) = CURRENT_DATE AND status = 'active'
     `);
     
@@ -279,7 +271,7 @@ export async function getTodayDischarges(tenantId) {
   try {
     const today = new Date().toISOString().split('T')[0];
     const result = await query(`
-      SELECT COUNT(*) FROM emr.invoices 
+      SELECT COUNT(*) FROM invoices 
       WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE AND status = 'unpaid'
     `);
     

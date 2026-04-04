@@ -189,12 +189,51 @@ export async function getTenantByCode(code) {
   return result.rows[0];
 }
 
-export async function createTenant({ name, code, subdomain, contactEmail, theme, features }) {
-  const sql = `
-    INSERT INTO emr.tenants (name, code, subdomain, contact_email, theme, features, status)
-    VALUES ($1, $2, $3, $4, $5, $6, 'active')
-    RETURNING *
-  `;
   const result = await query(sql, [name, code, subdomain, contactEmail, theme, JSON.stringify(features)]);
   return result.rows[0];
+}
+
+/**
+ * Automates the creation of an isolated clinical schema for a new tenant.
+ * Clones all clinical table structures from the foundational 'emr' schema.
+ */
+export async function provisionTenantSchema(tenantId, schemaName) {
+  const log = [`🚀 Provisioning schema [${schemaName}] for tenant [${tenantId}]`];
+  
+  try {
+    // 1. Create the schema
+    await query(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`);
+    log.push(`✅ Created schema: ${schemaName}`);
+
+    // 2. Identify clinical tables to clone
+    const tableRes = await query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'emr' AND table_type = 'BASE TABLE'
+    `);
+    
+    // Core master tables that stay in 'emr' Control Plane
+    const controlPlaneTables = [
+      'tenants', 'users', 'audit_logs', 'tenant_resources', 
+      'tenant_features', 'global_kill_switches', 'tenant_feature_status',
+      'mrn_sequences', 'invoice_sequences', 'roles', 'role_permissions'
+    ];
+    
+    const candidates = tableRes.rows
+      .map(r => r.table_name)
+      .filter(t => !controlPlaneTables.includes(t));
+
+    // 3. Clone table structures
+    for (const table of candidates) {
+      // Use INCLUDING ALL to copy indexes, constraints, and defaults
+      await query(`CREATE TABLE IF NOT EXISTS ${schemaName}.${table} (LIKE emr.${table} INCLUDING ALL)`);
+      log.push(`   📦 Cloned clinical table: ${table}`);
+    }
+
+    log.push(`✨ Schema provisioning complete for ${schemaName}`);
+    return { success: true, log };
+  } catch (err) {
+    console.error(`[PROVISIONING_ERROR] Failed for ${schemaName}:`, err.message);
+    return { success: false, error: err.message, log };
+  }
 }

@@ -127,7 +127,9 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
   const [safetyData, setSafetyData] = useState({ safetyCheck: null, overrideSafety: false });
   const [showDocForm, setShowDocForm] = useState(false);
   const [aiSummary, setAiSummary] = useState(null);
+  const [aiTreatment, setAiTreatment] = useState(null);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [isGeneratingTreatment, setIsGeneratingTreatment] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
   const [lastSaved, setLastSaved] = useState(null);
   const itemsPerPage = 10;
@@ -141,6 +143,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
     const p = patients.find(p => p.id === selectedPatientId);
     if (p) {
       setAiSummary(null);
+      setAiTreatment(null);
     }
     return p;
   }, [patients, selectedPatientId]);
@@ -180,6 +183,33 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
       setAiSummary('Failed to generate clinical overview. AI Assistant failed to respond.');
     } finally {
       setIsGeneratingAI(false);
+    }
+  };
+
+  const handleGenerateAITreatment = async (e) => {
+    const form = e.target.closest('form');
+    const complaint = form.querySelector('[name="complaint"]').value;
+    const diagnosis = form.querySelector('[name="diagnosis"]').value;
+    
+    if (!complaint || !diagnosis) {
+      showToast({ message: 'Diagnosis and Complaint are required for AI suggestions.', type: 'error' });
+      return;
+    }
+
+    setIsGeneratingTreatment(true);
+    setAiTreatment(null);
+    try {
+      const resp = await getAITreatmentSuggestion({
+        complaint,
+        diagnosis,
+        history: selectedPatient.medicalHistory?.chronicConditions || 'None'
+      });
+      setAiTreatment(resp.suggestion);
+    } catch (err) {
+      console.error('AI Treatment Error:', err);
+      showToast({ message: 'Failed to generate AI treatment suggestion.', type: 'error' });
+    } finally {
+      setIsGeneratingTreatment(false);
     }
   };
 
@@ -532,10 +562,42 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                     <input name="complaint" required placeholder="Subjective reasoning..." className="input-field py-5 bg-slate-50 border-none rounded-xl" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Clinical Diagnosis</label>
+                    <div className="flex justify-between">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Clinical Diagnosis</label>
+                      <button 
+                        type="button" 
+                        onClick={handleGenerateAITreatment}
+                        disabled={isGeneratingTreatment}
+                        className="text-[9px] font-black uppercase text-indigo-500 hover:text-indigo-700 flex items-center gap-1 transition-colors"
+                      >
+                         {isGeneratingTreatment ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                         Suggest AI Plan
+                      </button>
+                    </div>
                     <input name="diagnosis" required placeholder="Professional assessment..." className="input-field py-5 bg-slate-50 border-none rounded-xl" />
                   </div>
                 </div>
+
+                {aiTreatment && (
+                  <div className="p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100 animate-fade-in relative">
+                    <button onClick={() => setAiTreatment(null)} className="absolute top-4 right-4 text-indigo-300 hover:text-indigo-500">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-3 mb-4">
+                       <Bot className="text-indigo-500 w-5 h-5" />
+                       <div>
+                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-500">Generative Treatment Trajectory</h4>
+                         <p className="text-[9px] text-indigo-400 font-bold uppercase mt-1">Experimental Clinical Wisdom Shard</p>
+                       </div>
+                    </div>
+                    <div className="text-sm leading-relaxed text-indigo-900/80 whitespace-pre-wrap font-medium border-l-4 border-indigo-200 pl-6 py-2">
+                       {aiTreatment}
+                    </div>
+                    <div className="mt-4 flex items-center gap-2 text-[9px] text-indigo-400 font-bold italic">
+                       <AlertCircle className="w-3 h-3" /> Verify all AI outputs against official medical protocols and pharmacopeia.
+                    </div>
+                  </div>
+                )}
 
                 {canPrescribe ? (
                 <div className="space-y-6">

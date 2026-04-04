@@ -17,12 +17,104 @@ import * as notify from './services/notification.service.js';
 import pharmacyRoutes from '../pharmacy-service/src/routes/pharmacy.routes.js';
 import aiRoutes from './routes/ai.routes.js';
 import { sendTenantWelcomeEmail } from './services/mail.service.js';
+import { runAutoMigration } from './auto_migrate.js';
 
 
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.get('/api/version', (req, res) => res.json({ version: '1.0.5-FIXED' }));
+app.get('/api/version', (req, res) => res.json({ version: '1.0.6-ISOLATED' }));
+
+app.get('/api/admin/audit-nah', async (req, res) => {
+  try {
+    const { query } = await import('./db/connection.js');
+    const nah = await query('SELECT count(*) FROM nah.patients');
+    const ehs = await query('SELECT count(*) FROM ehs.patients');
+    const emr = await query('SELECT count(*) FROM emr.patients');
+    
+    let legacyNahCount = 'N/A';
+    try {
+      const leg = await query('SELECT count(*) FROM tenant_nah.patients');
+      legacyNahCount = leg.rows[0].count;
+    } catch(e) {}
+
+    const users = await query("SELECT email, name, role FROM emr.users WHERE tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'");
+
+    res.json({
+      nah_patients: nah.rows[0].count,
+      ehs_patients: ehs.rows[0].count,
+      emr_patients: emr.rows[0].count,
+      legacy_nah_patients: legacyNahCount,
+      nah_users: users.rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/admin/force-nah-migration', async (req, res) => {
+  const log = [];
+  try {
+    const { query } = await import('./db/connection.js');
+    log.push('🚀 [FORCE_MIGRATION] Starting Zero-Failure Move...');
+
+    const toKeep = [
+      { id: 'f998a8f5-95b9-4fd7-a583-63cf574d65ed', code: 'nah' },
+      { id: '45cfe286-5469-457a-88b3-e998f4cdc7c6', code: 'ehs' }
+    ];
+
+    // 1. Clean Slate
+    for (const t of toKeep) {
+      await query(`DROP SCHEMA IF EXISTS ${t.code} CASCADE`);
+      await query(`CREATE SCHEMA ${t.code}`);
+      log.push(`🧹 [FORCE_MIGRATION] Cleaned and created schema: ${t.code}`);
+    }
+
+    // 2. Audit Control Plane
+    const tableRes = await query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'emr' AND table_type = 'BASE TABLE'");
+    const emrTables = tableRes.rows.map(r => r.table_name);
+    const exclude = ['tenants', 'users', 'audit_logs', 'tenant_resources', 'tenant_features', 'global_kill_switches', 'tenant_feature_status'];
+    const candidates = emrTables.filter(t => !exclude.includes(t));
+
+    for (const tenant of toKeep) {
+      log.push(`📦 [FORCE_MIGRATION] Processing ${tenant.code}...`);
+      
+      for (const t of candidates) {
+        try {
+          // Check for tenant_id column
+          const colCheck = await query(`
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_schema = 'emr' AND table_name = $1 AND column_name = 'tenant_id'
+          `, [t]);
+          const hasTenantId = colCheck.rows.length > 0;
+
+          // Create table
+          await query(`CREATE TABLE IF NOT EXISTS ${tenant.code}.${t} (LIKE emr.${t} INCLUDING ALL)`);
+          
+          let moveRes;
+          if (hasTenantId) {
+            moveRes = await query(`INSERT INTO ${tenant.code}.${t} SELECT * FROM emr.${t} WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [tenant.id]);
+          } else {
+            moveRes = await query(`INSERT INTO ${tenant.code}.${t} SELECT * FROM emr.${t} ON CONFLICT DO NOTHING`);
+          }
+          
+          if (moveRes.rowCount > 0) log.push(`   ✅ Migrated ${moveRes.rowCount} rows for ${t}`);
+        } catch (tableErr) {
+          log.push(`   ❌ Skip ${t}: ${tableErr.message}`);
+        }
+      }
+    }
+
+    // 3. Final Tenant Cleanup
+    const keepIds = toKeep.map(t => t.id);
+    const delRes = await query('DELETE FROM emr.tenants WHERE id NOT IN ($1, $2)', keepIds);
+    log.push(`✅ [FORCE_MIGRATION] Cleanup: Deleted ${delRes.rowCount} redundant tenants.`);
+
+    res.send(`<h1>Migration Successful</h1><pre>${log.join('\n')}</pre><p><a href="/">Go to Dashboard</a></p>`);
+  } catch (error) {
+    res.status(500).send(`<h1>Migration Failed</h1><pre>${log.join('\n')}\n❌ ERROR: ${error.message}</pre>`);
+  }
+});
 
 // Robust check: Render or other environments might call the script in different ways.
 const currentFilePath = fileURLToPath(import.meta.url);
@@ -45,7 +137,7 @@ app.use((req, res, next) => {
 });
 
 // Test database connection on startup
-testConnection();
+await testConnection();
 
 async function verifyFeatureFlagSchema() {
   try {
@@ -72,6 +164,8 @@ async function verifyFeatureFlagSchema() {
 }
 
 verifyFeatureFlagSchema();
+runAutoMigration();
+
 async function ensureTenantColumns() {
   try {
     // Check if emr.tenants exists
@@ -476,7 +570,11 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
     // 1. Create the tenant record
     const tenant = await repo.createTenant({ name, code, subdomain, contactEmail, theme });
 
-    // 2. Apply subscription tier if provided
+    // 2. Automate Schema Provisioning (Isolated clinical data plane)
+    const provisioningResult = await repo.provisionTenantSchema(tenant.id, code.toLowerCase());
+    console.log(`[PROVISIONING] Result for ${code}:`, provisioningResult.success ? 'SUCCESS' : 'FAILED');
+
+    // 3. Apply subscription tier if provided
     if (subscriptionTier && ['Free', 'Basic', 'Professional', 'Enterprise'].includes(subscriptionTier)) {
       await repo.setTenantTier(tenant.id, subscriptionTier);
       tenant.subscription_tier = subscriptionTier;
@@ -517,6 +615,9 @@ app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
       entityId: tenant.id,
       details: {
         code,
+        schemaName: code.toLowerCase(),
+        provisioningStatus: provisioningResult.success ? 'success' : 'failed',
+        provisioningLog: provisioningResult.log,
         subscriptionTier: subscriptionTier || 'Basic',
         adminProvisioned: !!adminUser,
         emailStatus: mailResult?.success ? 'sent' : 'failed',
@@ -1085,7 +1186,7 @@ import { getRealtimeDashboardMetrics } from './enhanced_dashboard_metrics_fixed.
 // DASHBOARD METRICS
 // =====================================================
 
-app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'), async (req, res) => {
+app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission('dashboard'), async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { timeFilter = 'daily' } = req.query;
@@ -1093,13 +1194,24 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
     // Get real-time metrics from enhanced dashboard module
     const metrics = await getRealtimeDashboardMetrics(tenantId);
 
+    // Get true totals (unfiltered by date)
+    const [trueTotalPatients, trueTotalAppointments, trueTotalRevenue] = await Promise.all([
+      query('SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1', [tenantId]),
+      query('SELECT COUNT(*) as count FROM appointments WHERE tenant_id = $1', [tenantId]),
+      query('SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND status = \'paid\'', [tenantId])
+    ]);
+
+    const totalPatients = parseInt(trueTotalPatients.rows[0]?.count || 0);
+    const totalAppointments = parseInt(trueTotalAppointments.rows[0]?.count || 0);
+    const totalRevenue = parseFloat(trueTotalRevenue.rows[0]?.total || 0);
+
     // Get additional statistics for enhanced dashboard
     const [patientStatsResult, appointmentStatsResult, bedOccupancyResult] = await Promise.all([
       query(`
         SELECT 
           COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as new_patients,
           COUNT(CASE WHEN created_at < CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as returning_patients
-        FROM emr.patients 
+        FROM patients 
         WHERE tenant_id = $1
       `, [tenantId]),
 
@@ -1109,7 +1221,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
           COUNT(CASE WHEN status = 'completed' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as completed_today,
           COUNT(CASE WHEN status = 'cancelled' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as cancelled_today,
           COUNT(CASE WHEN status = 'no-show' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as no_show_today
-        FROM emr.appointments 
+        FROM appointments 
         WHERE tenant_id = $1
       `, [tenantId]),
 
@@ -1117,7 +1229,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
         SELECT 
           COUNT(CASE WHEN status = 'occupied' THEN 1 END) as occupied,
           COUNT(CASE WHEN status = 'available' THEN 1 END) as available
-        FROM emr.beds 
+        FROM beds 
         WHERE tenant_id = $1
       `, [tenantId])
     ]);
@@ -1146,7 +1258,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
     const [staffStatsResult, masterCountsResult, journeyResult, revenueTrendResult] = await Promise.all([
       query(`
         SELECT designation, COUNT(*) as count 
-        FROM emr.employees 
+        FROM employees 
         WHERE tenant_id = $1 AND designation IS NOT NULL
         GROUP BY designation
         ORDER BY count DESC
@@ -1154,16 +1266,16 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
 
       query(`
         SELECT
-          (SELECT COUNT(*) FROM emr.departments WHERE tenant_id = $1) as departments,
-          (SELECT COUNT(*) FROM emr.wards WHERE tenant_id = $1) as wards,
-          (SELECT COUNT(*) FROM emr.beds WHERE tenant_id = $1) as beds,
-          (SELECT COUNT(*) FROM emr.services WHERE tenant_id = $1) as services,
+          (SELECT COUNT(*) FROM departments WHERE tenant_id = $1) as departments,
+          (SELECT COUNT(*) FROM wards WHERE tenant_id = $1) as wards,
+          (SELECT COUNT(*) FROM beds WHERE tenant_id = $1) as beds,
+          (SELECT COUNT(*) FROM services WHERE tenant_id = $1) as services,
           (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1) as total_staff
       `, [tenantId]).catch(() => ({ rows: [{}] })),
 
       query(`
         SELECT status, COUNT(*) as count 
-        FROM emr.encounters 
+        FROM encounters 
         WHERE tenant_id = $1
         GROUP BY status
       `, [tenantId]).catch(() => ({ rows: [] })),
@@ -1172,7 +1284,7 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
         SELECT 
           TO_CHAR(created_at, 'Mon') as label,
           COALESCE(SUM(total), 0) as value
-        FROM emr.invoices
+        FROM invoices
         WHERE tenant_id = $1 AND created_at > CURRENT_DATE - INTERVAL '6 months'
         GROUP BY label, DATE_TRUNC('month', created_at)
         ORDER BY DATE_TRUNC('month', created_at)
@@ -1191,6 +1303,9 @@ app.get('/api/dashboard/metrics', requireTenant, requirePermission('dashboard'),
     const response = {
       // Real-time metrics
       ...metrics,
+      totalPatients,
+      totalAppointments,
+      totalRevenue,
 
       // Enhanced statistics
       patientStats: {
@@ -1349,7 +1464,7 @@ app.patch('/api/patients/:id/clinical', requireTenant, restrictPatientAccess, mo
   }
 });
 
-app.get('/api/patients', requireTenant, moduleGate('patients'), async (req, res) => {
+app.get('/api/patients', authenticate, requireTenant, moduleGate('patients'), async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
@@ -1363,7 +1478,7 @@ app.get('/api/patients', requireTenant, moduleGate('patients'), async (req, res)
   }
 });
 
-app.get('/api/appointments', requireTenant, moduleGate('appointments'), async (req, res) => {
+app.get('/api/appointments', authenticate, requireTenant, moduleGate('appointments'), async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 100;
     const offset = parseInt(req.query.offset) || 0;
@@ -1375,7 +1490,7 @@ app.get('/api/appointments', requireTenant, moduleGate('appointments'), async (r
   }
 });
 
-app.get('/api/patients/search', requireTenant, moduleGate('patients'), async (req, res) => {
+app.get('/api/patients/search', authenticate, requireTenant, moduleGate('patients'), async (req, res) => {
   try {
     const { text, date, type, status, includeArchived } = req.query;
     console.log('Patient search:', { text, date, type, status, includeArchived });
@@ -1388,7 +1503,7 @@ app.get('/api/patients/search', requireTenant, moduleGate('patients'), async (re
   }
 });
 
-app.get('/api/patients/:id', requireTenant, moduleGate('patients'), async (req, res) => {
+app.get('/api/patients/:id', authenticate, requireTenant, moduleGate('patients'), async (req, res) => {
   try {
     const { id } = req.params;
     const patient = await repo.getPatientById(id, req.tenantId, req.user.role);
@@ -1402,7 +1517,7 @@ app.get('/api/patients/:id', requireTenant, moduleGate('patients'), async (req, 
   }
 });
 
-app.get('/api/patients/:id/print/:docType', requireTenant, restrictPatientAccess, moduleGate('patients'), async (req, res) => {
+app.get('/api/patients/:id/print/:docType', authenticate, requireTenant, restrictPatientAccess, moduleGate('patients'), async (req, res) => {
   try {
     const { id, docType } = req.params;
 
@@ -1450,7 +1565,7 @@ app.get('/api/patients/:id/print/:docType', requireTenant, restrictPatientAccess
   }
 });
 
-app.post('/api/patients', requireTenant, requirePermission('patients'), moduleGate('patients'), async (req, res) => {
+app.post('/api/patients', authenticate, requireTenant, requirePermission('patients'), moduleGate('patients'), async (req, res) => {
   try {
     const { firstName, lastName, dob, gender, phone, email, address, bloodGroup, emergencyContact, insurance, medicalHistory } = req.body;
 
@@ -3146,6 +3261,139 @@ app.use((err, _req, res, _next) => {
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined,
   });
+});
+
+
+// Temporary administrative endpoint for multi-schema migration
+app.post('/api/admin/migrate-multi-schema', async (req, res) => {
+  try {
+    const CLINICAL_TABLES = [
+      'patients', 'appointments', 'encounters', 'clinical_records',
+      'billing', 'invoices', 'accounts_receivable', 'accounts_payable',
+      'expenses', 'revenue', 'inventory', 'services', 'departments',
+      'employees', 'salary', 'attendance', 'payroll', 'fhir_resources'
+    ];
+
+    const pool = await import('./db/connection.js').then(m => m.default);
+    const client = await pool.connect();
+
+    try {
+      // 1. Get all tenants
+      const tenantsResult = await client.query('SELECT id, name, code FROM emr.tenants');
+      const tenants = tenantsResult.rows;
+      const logs = [];
+
+      for (const tenant of tenants) {
+        const sanitizedId = tenant.id.replace(/-/g, '');
+        const schemaName = `tenant_${sanitizedId.substring(0, 16)}`;
+        logs.push(`Processing tenant: ${tenant.name} (${tenant.code}) -> Schema: ${schemaName}`);
+
+        // 2. Create schema
+        await client.query(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`);
+
+        // 3. Replicate tables and migrate data
+        for (const table of CLINICAL_TABLES) {
+          try {
+            // Check if table exists in emr schema
+            const tableExists = await client.query(
+              "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = $1)",
+              [table]
+            );
+
+            if (!tableExists.rows[0].exists) continue;
+
+            // Create table in new schema by copying structure
+            await client.query(`CREATE TABLE IF NOT EXISTS ${schemaName}.${table} (LIKE emr.${table} INCLUDING ALL)`);
+            
+            // Move data
+            const moveResult = await client.query(`
+              INSERT INTO ${schemaName}.${table} 
+              SELECT * FROM emr.${table} 
+              WHERE tenant_id = $1
+              ON CONFLICT DO NOTHING
+            `, [tenant.id]);
+
+            logs.push(`   - Migrated ${moveResult.rowCount} rows to ${schemaName}.${table}`);
+          } catch (err) {
+            logs.push(`   - Error migrating table ${table}: ${err.message}`);
+          }
+        }
+      }
+
+      return res.json({ success: true, logs });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Migration endpoint error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+// Force Multi-Tenancy Isolation and Cleanup
+app.get('/force-isolate', async (req, res) => {
+  const log = [];
+  const toKeep = [
+    { id: 'f998a8f5-95b9-4fd7-a583-63cf574d65ed', code: 'nah' },
+    { id: '45cfe286-5469-457a-88b3-e998f4cdc7c6', code: 'ehs' }
+  ];
+  const tables = ['patients', 'appointments', 'encounters', 'clinical_records', 'billing', 'invoices', 'inventory', 'services', 'departments', 'employees', 'salary', 'attendance', 'payroll'];
+
+  try {
+    const { query } = await import('./db/connection.js');
+    log.push('🚀 Started Force Isolation...');
+
+    // 1. Create Resource Monitor table
+    await query(`CREATE TABLE IF NOT EXISTS emr.tenant_resources (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE, UNIQUE(tenant_id))`);
+    log.push('✅ Created/Verified emr.tenant_resources');
+
+    // 2. Perform Migration for NAH and EHS
+    for (const tenant of toKeep) {
+      const schemaName = `tenant_${tenant.code.toLowerCase()}`;
+      await query(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`);
+      log.push(`📦 Created schema: ${schemaName}`);
+
+      for (const table of tables) {
+        await query(`CREATE TABLE IF NOT EXISTS ${schemaName}.${table} (LIKE emr.${table} INCLUDING ALL)`);
+        const moveRes = await query(`
+          WITH deleted AS (DELETE FROM emr.${table} WHERE tenant_id = $1 RETURNING *)
+          INSERT INTO ${schemaName}.${table} SELECT * FROM deleted ON CONFLICT DO NOTHING
+        `, [tenant.id]);
+        if (moveRes.rowCount > 0) log.push(`   - Migrated ${moveRes.rowCount} rows for ${table} in ${schemaName}`);
+      }
+    }
+
+    // 3. Cleanup redundant tenants
+    const keepIds = toKeep.map(t => t.id);
+    const deleteRes = await query('DELETE FROM emr.tenants WHERE id NOT IN ($1, $2)', keepIds);
+    log.push(`✅ Deleted ${deleteRes.rowCount} redundant tenants from emr.tenants`);
+
+    res.send(`<h1>Isolation Success</h1><pre>${log.join('\n')}</pre><p><a href="/api/tenants">View Final Tenants</a></p>`);
+  } catch (error) {
+    log.push(`❌ CRITICAL ERROR: ${error.message}`);
+    res.status(500).send(`<h1>Isolation Failed</h1><pre>${log.join('\n')}</pre>`);
+  }
+});
+
+
+// Debug endpoint for migration status
+app.get('/api/admin/debug-migration', async (req, res) => {
+  try {
+    const { query } = await import('./db/connection.js');
+    const tenantCount = await query('SELECT COUNT(*) FROM emr.tenants');
+    const resourceTable = await query("SELECT to_regclass('emr.tenant_resources') as exists");
+    
+    res.json({
+      timestamp: new Date().toISOString(),
+      tenantCount: tenantCount.rows[0].count,
+      hasResourceTable: !!resourceTable.rows[0].exists,
+      systemMessage: 'Migration check complete.'
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 export { app };

@@ -527,6 +527,10 @@ export async function getDrugDetails(id) {
   return await apiRequest(`/pharmacy/v1/drugs/${id}`);
 }
 
+export async function getGenericSubstitutes(id) {
+  return await apiRequest(`/pharmacy/v1/drugs/${id}/substitutes`);
+}
+
 // Alerts
 export async function getLowStockAlerts(tenantId) {
   return await apiRequest('/pharmacy/v1/alerts/low-stock', {
@@ -873,6 +877,7 @@ apiClient.getPharmacyQueue = getPharmacyQueue;
 apiClient.dispenseMedication = dispenseMedication;
 apiClient.searchDrugs = searchDrugs;
 apiClient.getDrugDetails = getDrugDetails;
+apiClient.getGenericSubstitutes = getGenericSubstitutes;
 apiClient.getLowStockAlerts = getLowStockAlerts;
 apiClient.getExpiringStockAlerts = getExpiringStockAlerts;
 apiClient.getPharmacyVendors = getPharmacyVendors;

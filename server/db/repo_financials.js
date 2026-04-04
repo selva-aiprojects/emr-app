@@ -59,7 +59,7 @@ export async function getFinancialSummary(tenantId, month) {
 
     // 2. Expenses
     const expenseSql = `
-    SELECT category, COALESCE(SUM(amount), 0) as total_amount 
+    SELECT category, COALESCE(SUM(amount), 0) as total 
     FROM emr.expenses 
     WHERE tenant_id = $1 
     AND DATE_TRUNC('month', date) = $2::timestamp 
@@ -81,7 +81,7 @@ export async function getFinancialSummary(tenantId, month) {
         month,
         income: parseFloat(incomeRes.rows[0]?.total_income || 0),
         expenses: expenseRes.rows.reduce((acc, row) => {
-            acc[row.category] = parseFloat(row.total_amount);
+            acc[row.category] = parseFloat(row.total);
             return acc;
         }, {}),
         projectedSalaries: parseFloat(salaryRes.rows[0]?.total_salaries || 0)

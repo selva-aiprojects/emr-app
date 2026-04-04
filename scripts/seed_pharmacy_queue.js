@@ -22,8 +22,18 @@ async function seed() {
         console.log(`EHS Tenant ID: ${tenantId}`);
 
         // 2. Get a few patients for EHS
-        const patientRes = await client.query("SELECT id, first_name, last_name FROM emr.patients WHERE tenant_id = $1 LIMIT 3", [tenantId]);
-        if (patientRes.rows.length === 0) throw new Error("No patients found for EHS");
+        let patientRes = await client.query("SELECT id, first_name, last_name FROM emr.patients WHERE tenant_id = $1 LIMIT 3", [tenantId]);
+        if (patientRes.rows.length === 0) {
+            console.log("No patients found for EHS. Creating test patients...");
+            await client.query(`
+                INSERT INTO emr.patients (tenant_id, first_name, last_name, mrn, gender, date_of_birth)
+                VALUES 
+                ($1, 'Alice', 'Wonder', 'EHS-P-001', 'Female', '1990-01-01'),
+                ($1, 'Bob', 'Builder', 'EHS-P-002', 'Male', '1985-05-15'),
+                ($1, 'Charlie', 'Brown', 'EHS-P-003', 'Male', '1992-11-20')
+            `, [tenantId]);
+            patientRes = await client.query("SELECT id, first_name, last_name FROM emr.patients WHERE tenant_id = $1 LIMIT 3", [tenantId]);
+        }
         const patients = patientRes.rows;
         console.log(`Found ${patients.length} patients for EHS`);
 
@@ -73,6 +83,13 @@ async function seed() {
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9)`,
                     [pxId, drug.drug_id, j + 1, 1, 'tablet', 'BID', 'Oral', 10, `Seed item ${j + 1} for ${patient.first_name}`]
                 );
+
+                // IMPORTANT: Seed drug batches so substitution lookup finds them (requires quantity_remaining > 0)
+                await client.query(`
+                    INSERT INTO emr.drug_batches (drug_id, batch_number, quantity_received, quantity_remaining, expiry_date, status)
+                    SELECT $1::uuid, $2::varchar, $3::numeric, $4::numeric, $5::date, 'active'
+                    WHERE NOT EXISTS (SELECT 1 FROM emr.drug_batches WHERE drug_id = $1::uuid AND batch_number = $2::varchar)
+                `, [drug.drug_id, `B-${drug.drug_id.slice(0, 8)}`, 500, 500, '2027-12-31']);
             }
 
             console.log(`✅ Created prescription ${rxNo} for ${patient.first_name} ${patient.last_name}`);

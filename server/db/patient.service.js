@@ -14,7 +14,7 @@ export async function getPatients(tenantId, userRole = null, limit = 50, offset 
     SELECT 
       p.id, p.first_name, p.last_name, p.dob, p.gender, p.phone, p.email, p.address, p.city, p.state, p.country, p.postal_code, p.mrn, p.blood_group, p.allergies, p.emergency_contact_name, p.emergency_contact_phone, p.emergency_contact_relationship, p.insurance_provider, p.insurance_policy_number, p.created_at, p.updated_at, p.is_archived,
       u.name as primary_doctor_name
-    FROM emr.patients p
+    FROM patients p
     LEFT JOIN emr.users u ON p.primary_doctor_id = u.id
     WHERE p.tenant_id = $1
   `;
@@ -50,7 +50,7 @@ export async function searchPatients(tenantId, searchTerm, filters = {}) {
     SELECT 
       p.id, p.first_name, p.last_name, p.dob, p.gender, p.phone, p.email, p.address, p.city, p.state, p.country, p.postal_code, p.mrn, p.blood_group, p.allergies, p.emergency_contact_name, p.emergency_contact_phone, p.emergency_contact_relationship, p.insurance_provider, p.insurance_policy_number, p.created_at, p.updated_at, p.is_archived,
       u.name as primary_doctor_name
-    FROM emr.patients p
+    FROM patients p
     LEFT JOIN emr.users u ON p.primary_doctor_id = u.id
     WHERE p.tenant_id = $1
   `;
@@ -107,7 +107,7 @@ export async function getPatientById(id, tenantId, userRole = null) {
   let sql = `
     SELECT 
       p.*, u.name as primary_doctor_name
-    FROM emr.patients p
+    FROM patients p
     LEFT JOIN emr.users u ON p.primary_doctor_id = u.id
     WHERE p.id = $1 AND p.tenant_id = $2
   `;
@@ -129,7 +129,7 @@ export async function getPatientById(id, tenantId, userRole = null) {
 
 export async function createPatient({ tenantId, firstName, lastName, dob, gender, phone, email, address, city, state, country, postalCode, bloodGroup, allergies, emergencyContactName, emergencyContactPhone, emergencyContactRelationship, insuranceProvider, insurancePolicyNumber, primaryDoctorId }) {
   const sql = `
-    INSERT INTO emr.patients (
+    INSERT INTO patients (
       tenant_id, first_name, last_name, dob, gender, phone, email, address, city, state, country, postal_code, blood_group, allergies, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, insurance_provider, insurance_policy_number, primary_doctor_id, mrn, created_at
     )
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
@@ -140,12 +140,12 @@ export async function createPatient({ tenantId, firstName, lastName, dob, gender
     tenantId, firstName, lastName, dob, gender, phone, email, address, city, state, country, postalCode, bloodGroup, allergies, emergencyContactName, emergencyContactPhone, emergencyContactRelationship, insuranceProvider, insurancePolicyNumber, primaryDoctorId
   ]);
 
-  // Generate MRN
-  const mrnResult = await query('SELECT get_next_mrn($1) as mrn', [tenantId]);
+  // Generate MRN correctly from emr schema (function is global)
+  const mrnResult = await query('SELECT emr.get_next_mrn($1) as mrn', [tenantId]);
   const mrn = mrnResult.rows[0].mrn;
 
   // Update patient with MRN
-  await query('UPDATE emr.patients SET mrn = $1 WHERE id = $2', [mrn, result.rows[0].id]);
+  await query('UPDATE patients SET mrn = $1 WHERE id = $2', [mrn, result.rows[0].id]);
 
   return { ...result.rows[0], mrn };
 }
@@ -164,7 +164,7 @@ export async function updatePatient({ tenantId, id, updates }) {
   values.push(id);
 
   const sql = `
-    UPDATE emr.patients 
+    UPDATE patients 
     SET ${fields.join(', ')}
     WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex++}
     RETURNING *
@@ -176,7 +176,7 @@ export async function updatePatient({ tenantId, id, updates }) {
 
 export async function addClinicalRecord({ tenantId, patientId, userId, recordType, diagnosis, treatment, notes, attachments }) {
   const sql = `
-    INSERT INTO emr.clinical_records (
+    INSERT INTO clinical_records (
       tenant_id, patient_id, created_by, record_type, diagnosis, treatment, notes, attachments
     )
     VALUES ($1, $2, $3, $4, $5, $6, $7)

@@ -57,9 +57,8 @@ export async function getEnhancedPharmacyInventory(tenantId, filters = {}) {
     }
   }
   
-  if (filters.expiringWithin) {
-    sql += ` AND pie.expiry_date <= CURRENT_DATE + INTERVAL '${filters.expiringWithin} days'`;
-  }
+    sql += ` AND pie.expiry_date <= CURRENT_DATE + ($${paramIndex} || ' days')::interval`;
+    params.push(filters.expiringWithin);
   
   sql += ` ORDER BY dm.generic_name, pie.batch_number`;
   
@@ -420,15 +419,15 @@ export async function getExpiringDrugs(tenantId, days = 30) {
         WHEN pie.expiry_date <= CURRENT_DATE + INTERVAL '30 days' THEN 'WARNING'
         ELSE 'NORMAL'
       END as expiry_status,
-      DATEDIFF(pie.expiry_date, CURRENT_DATE) as days_to_expiry
+      (pie.expiry_date::date - CURRENT_DATE)::integer as days_to_expiry
     FROM emr.pharmacy_inventory_enhanced pie
     JOIN emr.drug_master dm ON pie.drug_id = dm.id
     WHERE pie.tenant_id = $1 AND pie.status = 'ACTIVE' 
-      AND pie.expiry_date <= CURRENT_DATE + INTERVAL '${days} days'
+      AND pie.expiry_date <= CURRENT_DATE + ($2 || ' days')::interval
     ORDER BY pie.expiry_date ASC
   `;
   
-  const result = await query(sql, [tenantId]);
+  const result = await query(sql, [tenantId, days]);
   return result.rows;
 }
 

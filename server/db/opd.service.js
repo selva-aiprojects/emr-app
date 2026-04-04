@@ -147,8 +147,8 @@ export async function createOPDBill({
   notes,
   createdBy,
 }) {
-  // Generate bill number
-  const billNumberSql = `SELECT get_next_bill_number($1) as bill_number`;
+  // Generate bill number correctly from emr schema
+  const billNumberSql = `SELECT emr.get_next_bill_number($1) as bill_number`;
   const billNumberResult = await query(billNumberSql, [tenantId]);
   const billNumber = billNumberResult.rows[0].bill_number;
 
@@ -385,8 +385,8 @@ export async function addBillItem({
     createdBy,
   ]);
 
-  // Update bill totals
-  await query(`SELECT calculate_bill_totals($1)`, [billId]);
+  // Update bill totals correctly from emr schema
+  await query(`SELECT emr.calculate_bill_totals($1)`, [billId]);
 
   return result.rows[0];
 }

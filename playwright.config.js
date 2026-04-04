@@ -9,7 +9,7 @@ export default defineConfig({
     workers: process.env.CI ? 1 : undefined,
     reporter: 'list',
     use: {
-        baseURL: process.env.UI_BASE_URL || 'http://localhost:5178', // UI Base URL
+        baseURL: process.env.UI_BASE_URL || 'http://localhost:5175', // UI Base URL
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
     },
