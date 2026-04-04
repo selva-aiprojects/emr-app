@@ -33,6 +33,8 @@ import {
   Droplet,
   Building2,
   Database,
+  Megaphone,
+  CreditCard,
 } from "lucide-react";
 
 import { ActionMenu, NotificationSystem, SmartSearch } from "./UXEnhanced.jsx";
@@ -81,6 +83,8 @@ const navIcons = {
   bed_management: Bed,
   hospital_settings: Settings,
   admin_masters: Database,
+  subscription_mgmt: CreditCard,
+  ad_manager: Megaphone,
 };
 
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
@@ -111,11 +115,10 @@ function getSidebarGroups(role) {
   if (r === "doctor") return SIDEBAR_GROUPS_DOCTOR;
   if (r === "superadmin") {
     return [
-      { name: "Global Governance", modules: ["superadmin"] },
-      { name: "Tenant Management", modules: ["tenant_management"] },
-      { name: "User Provisioning", modules: ["user_provisioning"] },
-      { name: "Financial Control", modules: ["financial_control"] },
-      ...SIDEBAR_GROUPS_DEFAULT,
+      { name: "Platform Hub", modules: ["superadmin", "infra_health", "ad_manager"] },
+      { name: "SaaS Infrastructure", modules: ["tenant_provision", "subscription_mgmt", "financial_control"] },
+      { name: "Global Identity", modules: ["user_provision", "password_reset"] },
+      { name: "Ops Support", modules: ["support", "reports"] },
     ];
   }
   return SIDEBAR_GROUPS_DEFAULT;

@@ -12,8 +12,8 @@ export async function runAutoMigration() {
     // 1. Create Resource Monitor table in Control Plane
     await query(`
       CREATE TABLE IF NOT EXISTS emr.tenant_resources (
-          id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-          tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          tenant_id UUID NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
           cpu_cores_limit DECIMAL(4,2) DEFAULT 1.0,
           ram_gb_limit INTEGER DEFAULT 2,
           storage_gb_limit INTEGER DEFAULT 10,
@@ -37,14 +37,16 @@ export async function runAutoMigration() {
 
     // 3. Process the two target tenants
     const CLINICAL_TABLES = [
-      'patients', 'appointments', 'encounters', 'clinical_records', 
-      'billing', 'invoices', 'inventory', 'services', 
-      'departments', 'employees', 'salary', 'attendance', 
-      'payroll', 'fhir_resources'
+      'clinical_records', 'prescriptions', 'procedures', 'observations', 
+      'diagnostic_reports', 'conditions', 'service_requests', 'frontdesk_visits', 
+      'claims', 'documents', 'blood_requests', 'invoices', 
+      'appointments', 'encounters', 'patients', 'inventory_items', 
+      'salary_structures', 'payroll_items', 'attendance', 'payroll_runs', 
+      'employees', 'departments', 'services'
     ];
 
     for (const tenant of toKeep) {
-      const schemaName = `tenant_${tenant.code.toLowerCase()}`;
+      const schemaName = tenant.code.toLowerCase();
       console.log(`📦 [STARTUP] Provisioning schema for ${tenant.code}: ${schemaName}...`);
       
       // Create schema

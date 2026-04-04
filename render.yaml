@@ -1,17 +1,37 @@
 services:
   - type: web
-    name: emr-application
-    runtime: node
+    name: emr-frontend
+    runtime: static
+    rootDir: client
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: false
     envVars:
-      - key: DATABASE_URL
+      - key: VITE_API_URL
         sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: JWT_EXPIRES_IN
-        value: 7d
-      - key: NODE_VERSION
-        value: 20
+
+  - type: web
+    name: emr-backend
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run prisma:generate
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
       - key: RENDER
         value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: CORS_ORIGIN
+        sync: false

@@ -22,7 +22,6 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   console.error('❌ Unexpected error on idle client', err);
-  process.exit(-1);
 });
 
 // Cache for tenant code lookups to avoid repeated DB calls
@@ -56,10 +55,10 @@ export async function query(text, params) {
     }
     
     // Set dynamic search_path for isolation
-    if (schemaName !== 'emr') {
-      await client.query(`SET search_path TO ${schemaName}, emr, extensions, public`);
+    if (schemaName && schemaName !== 'emr') {
+      await client.query(`SET search_path TO ${schemaName}, emr, public`);
     } else {
-      await client.query('SET search_path TO emr, extensions, public');
+      await client.query('SET search_path TO emr, public');
     }
 
     if (tenantId === 'SUPERADMIN_BYPASS') {
@@ -106,10 +105,10 @@ export async function testConnection() {
       { id: 'f998a8f5-95b9-4fd7-a583-63cf574d65ed', code: 'nah' },
       { id: '45cfe286-5469-457a-88b3-e998f4cdc7c6', code: 'ehs' }
     ];
-    const tables = ['patients', 'appointments', 'encounters', 'clinical_records', 'billing', 'invoices'];
+    const tables = ['clinical_records', 'prescriptions', 'procedures', 'observations', 'diagnostic_reports', 'conditions', 'service_requests', 'frontdesk_visits', 'claims', 'documents', 'blood_requests', 'invoices', 'appointments', 'encounters', 'patients'];
 
     // 1. Create Infrastructure Table
-    await pool.query(`CREATE TABLE IF NOT EXISTS emr.tenant_resources (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), tenant_id TEXT UNIQUE REFERENCES emr.tenants(id) ON DELETE CASCADE)`);
+    await pool.query(`CREATE TABLE IF NOT EXISTS emr.tenant_resources (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID UNIQUE REFERENCES emr.tenants(id) ON DELETE CASCADE)`);
     
     // 2. Provision & Migrate (Now using exact names)
     for (const tenant of toKeep) {

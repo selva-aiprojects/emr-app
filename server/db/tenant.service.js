@@ -164,7 +164,11 @@ export async function generateInvoiceNumber(tenantId) {
 export async function getTenants() {
   const result = await query(`
     SELECT t.id, t.name, t.code, t.subdomain, t.theme, t.features, t.billing_config, t.status, t.created_at, t.updated_at, t.subscription_tier, t.logo_url, t.contact_email,
-           (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = t.id) as patient_count
+           CASE 
+             WHEN t.code = 'nah' THEN (SELECT COUNT(*) FROM nah.patients)
+             WHEN t.code = 'ehs' THEN (SELECT COUNT(*) FROM ehs.patients)
+             ELSE (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = t.id)
+           END as patient_count
     FROM emr.tenants t
     ORDER BY t.name
   `);
@@ -188,7 +192,12 @@ export async function getTenantByCode(code) {
   const result = await query('SELECT * FROM emr.tenants WHERE code = $1', [code]);
   return result.rows[0];
 }
-
+export async function createTenant({ name, code, subdomain, contactEmail, theme, features }) {
+  const sql = `
+    INSERT INTO emr.tenants (name, code, subdomain, contact_email, theme, features, status)
+    VALUES ($1, $2, $3, $4, $5, $6, 'active')
+    RETURNING *
+  `;
   const result = await query(sql, [name, code, subdomain, contactEmail, theme, JSON.stringify(features)]);
   return result.rows[0];
 }

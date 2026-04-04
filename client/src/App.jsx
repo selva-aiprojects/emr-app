@@ -143,7 +143,7 @@ export default function App() {
 
     // Superadmin bypasses all tenant/tier restrictions — they have no tenant
     if (activeUser.role.toLowerCase() === 'superadmin') {
-      return ['superadmin', 'tenant_management', 'user_provisioning', 'financial_control', 'dashboard', 'admin', 'reports', 'support'];
+      return ['superadmin', 'tenant_provision', 'user_provision', 'password_reset', 'infra_health', 'financial_control', 'subscription_mgmt', 'ad_manager', 'dashboard', 'admin', 'reports', 'support'];
     }
 
     const roleKey = activeUser.role.charAt(0).toUpperCase() + activeUser.role.slice(1).toLowerCase();
@@ -493,7 +493,7 @@ export default function App() {
       >
         <ErrorBoundary>
           <Suspense fallback={suspenseFallback}>
-            {['superadmin', 'tenant_management', 'user_provisioning', 'financial_control'].includes(view) && (
+            {['superadmin', 'tenant_provision', 'user_provision', 'password_reset', 'infra_health', 'financial_control', 'subscription_mgmt', 'ad_manager'].includes(view) && (
             <SuperadminPage
               viewMode={view}
               superOverview={superOverview}

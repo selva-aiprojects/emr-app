@@ -1,0 +1,80 @@
+import dotenv from 'dotenv';
+dotenv.config();
+import pg from 'pg';
+
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+async function repair() {
+  console.log('🚀 [SUPPORT_BRIDGE_REPAIR] Synchronizing Tickets & Management Schema...');
+  
+  try {
+    // 1. Wipe old mapping to ensure fresh start
+    await pool.query(`
+      DROP TABLE IF EXISTS emr.management_system_logs CASCADE;
+      DROP TABLE IF EXISTS emr.management_tenants CASCADE;
+      DROP TABLE IF EXISTS emr.management_subscriptions CASCADE;
+    `);
+
+    // 2. Create foundational structure with STRICT Prisma 7 naming
+    await pool.query(`
+      CREATE SCHEMA IF NOT EXISTS emr;
+      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+      CREATE TABLE emr.management_subscriptions (
+        "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        "tier" VARCHAR(50) NOT NULL DEFAULT 'Enterprise',
+        "plan_name" TEXT NOT NULL DEFAULT 'Enterprise Plan',
+        "limit_users" INTEGER NOT NULL DEFAULT 100,
+        "is_active" BOOLEAN NOT NULL DEFAULT true
+      );
+
+      CREATE TABLE emr.management_tenants (
+        "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        "name" TEXT NOT NULL,
+        "code" VARCHAR(32) UNIQUE NOT NULL,
+        "subdomain" VARCHAR(128) UNIQUE NOT NULL,
+        "schema_name" VARCHAR(64) UNIQUE NOT NULL,
+        "status" VARCHAR(16) NOT NULL DEFAULT 'active',
+        "subscription_id" UUID REFERENCES emr.management_subscriptions(id) ON DELETE SET NULL,
+        "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE emr.management_system_logs (
+        "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        "event" TEXT NOT NULL,
+        "details" JSONB,
+        "tenant_id" UUID REFERENCES emr.management_tenants(id) ON DELETE SET NULL,
+        "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // 3. Migrate data back with UUID stability
+    console.log('🔄 Mapping 2 existing tenants to the new Management Plane...');
+    await pool.query(`
+      INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status)
+      SELECT id, name, code, subdomain, COALESCE(schema_name, LOWER(code)), status
+      FROM emr.tenants
+      ON CONFLICT DO NOTHING;
+    `);
+
+    // 4. Seed a "Ticket" to confirm the bridge works
+    console.log('🎫 Seeding initial Support Ticket for dashboard validation...');
+    await pool.query(`
+      INSERT INTO emr.management_system_logs (event, details)
+      VALUES ('TICKET_CREATED', '{"subject": "Initial Platform Migration", "priority": "normal", "requester": "System Admin"}');
+    `);
+
+    console.log('✨ [REPAIR_COMPLETE] Support Bridge is ready.');
+
+  } catch (err) {
+    console.error('❌ [REPAIR_ERROR]:', err.message);
+  } finally {
+    await pool.end();
+  }
+}
+
+repair();
