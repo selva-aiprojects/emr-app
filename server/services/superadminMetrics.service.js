@@ -250,9 +250,24 @@ BEGIN
       AND lower(COALESCE(role, '')) = 'doctor';
   END IF;
 
+  IF doctors_count = 0 THEN
+    SELECT COUNT(*)
+      INTO doctors_count
+    FROM emr.employees
+    WHERE tenant_id = target_tenant_id
+      AND lower(COALESCE(designation, '')) = 'doctor';
+  END IF;
+
   IF has_patients THEN
     EXECUTE format('SELECT COUNT(*) FROM %I.patients', effective_schema)
       INTO patients_count;
+  END IF;
+
+  IF patients_count = 0 THEN
+    SELECT COUNT(*)
+      INTO patients_count
+    FROM emr.patients
+    WHERE tenant_id = target_tenant_id;
   END IF;
 
   IF has_beds THEN
@@ -271,6 +286,14 @@ BEGIN
     END IF;
   END IF;
 
+  IF available_beds = 0 THEN
+    SELECT COUNT(*)
+      INTO available_beds
+    FROM emr.beds
+    WHERE tenant_id = target_tenant_id
+      AND lower(COALESCE(status, '')) IN ('available', 'vacant', 'ready');
+  END IF;
+
   IF has_ambulances THEN
     IF has_ambulance_status THEN
       EXECUTE format(
@@ -287,6 +310,14 @@ BEGIN
     END IF;
   END IF;
 
+  IF available_ambulances = 0 THEN
+    SELECT COUNT(*)
+      INTO available_ambulances
+    FROM emr.ambulances
+    WHERE tenant_id = target_tenant_id
+      AND lower(COALESCE(status, '')) IN ('available', 'idle', 'ready');
+  END IF;
+
   IF has_insurance_providers THEN
     IF has_insurance_status THEN
       EXECUTE format(
@@ -300,6 +331,14 @@ BEGIN
       EXECUTE format('SELECT COUNT(*) FROM %I.insurance_providers', effective_schema)
         INTO insurance_capacity;
     END IF;
+  END IF;
+
+  IF insurance_capacity = 0 THEN
+    SELECT COUNT(*)
+      INTO insurance_capacity
+    FROM emr.insurance_providers
+    WHERE tenant_id = target_tenant_id
+      AND lower(COALESCE(status, '')) IN ('active', 'enabled');
   END IF;
 
   INSERT INTO public.management_tenant_metrics (
@@ -372,6 +411,35 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION public.management_metrics_trigger_shared()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  affected_tenant_id uuid;
+BEGIN
+  affected_tenant_id := COALESCE(NEW.tenant_id, OLD.tenant_id);
+
+  IF affected_tenant_id IS NOT NULL THEN
+    PERFORM public.refresh_management_tenant_metrics(affected_tenant_id, NULL);
+  ELSE
+    PERFORM public.refresh_management_dashboard_summary();
+  END IF;
+
+  RETURN NULL;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.management_summary_trigger()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  PERFORM public.refresh_management_dashboard_summary();
+  RETURN NULL;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.install_tenant_metrics_sync(target_schema text, target_tenant_id uuid)
 RETURNS void
 LANGUAGE plpgsql
@@ -412,9 +480,90 @@ BEGIN
   PERFORM public.refresh_management_tenant_metrics(target_tenant_id, target_schema);
 END;
 $$;
+
+DROP TRIGGER IF EXISTS trg_management_metrics_users_shared ON emr.users;
+CREATE TRIGGER trg_management_metrics_users_shared
+  AFTER INSERT OR UPDATE OR DELETE
+  ON emr.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.management_metrics_trigger_shared();
+
+DROP TRIGGER IF EXISTS trg_management_metrics_employees_shared ON emr.employees;
+CREATE TRIGGER trg_management_metrics_employees_shared
+  AFTER INSERT OR UPDATE OR DELETE
+  ON emr.employees
+  FOR EACH ROW
+  EXECUTE FUNCTION public.management_metrics_trigger_shared();
+
+DROP TRIGGER IF EXISTS trg_management_metrics_patients_shared ON emr.patients;
+CREATE TRIGGER trg_management_metrics_patients_shared
+  AFTER INSERT OR UPDATE OR DELETE
+  ON emr.patients
+  FOR EACH ROW
+  EXECUTE FUNCTION public.management_metrics_trigger_shared();
+
+DROP TRIGGER IF EXISTS trg_management_metrics_beds_shared ON emr.beds;
+CREATE TRIGGER trg_management_metrics_beds_shared
+  AFTER INSERT OR UPDATE OR DELETE
+  ON emr.beds
+  FOR EACH ROW
+  EXECUTE FUNCTION public.management_metrics_trigger_shared();
+
+DROP TRIGGER IF EXISTS trg_management_metrics_ambulances_shared ON emr.ambulances;
+CREATE TRIGGER trg_management_metrics_ambulances_shared
+  AFTER INSERT OR UPDATE OR DELETE
+  ON emr.ambulances
+  FOR EACH ROW
+  EXECUTE FUNCTION public.management_metrics_trigger_shared();
+
+DROP TRIGGER IF EXISTS trg_management_metrics_insurance_shared ON emr.insurance_providers;
+CREATE TRIGGER trg_management_metrics_insurance_shared
+  AFTER INSERT OR UPDATE OR DELETE
+  ON emr.insurance_providers
+  FOR EACH ROW
+  EXECUTE FUNCTION public.management_metrics_trigger_shared();
+
+DROP TRIGGER IF EXISTS trg_management_summary_support_tickets ON emr.support_tickets;
+CREATE TRIGGER trg_management_summary_support_tickets
+  AFTER INSERT OR UPDATE OR DELETE
+  ON emr.support_tickets
+  FOR EACH ROW
+  EXECUTE FUNCTION public.management_summary_trigger();
 `;
 
 let infrastructureReady = false;
+
+async function syncManagementTenantsFromLegacy() {
+  await pool.query(`
+    INSERT INTO public.management_tenants (
+      id,
+      name,
+      code,
+      subdomain,
+      schema_name,
+      status,
+      created_at,
+      updated_at
+    )
+    SELECT
+      t.id,
+      t.name,
+      t.code,
+      t.subdomain,
+      COALESCE(NULLIF(t.schema_name, ''), t.code),
+      COALESCE(NULLIF(t.status, ''), 'active'),
+      COALESCE(t.created_at, NOW()),
+      NOW()
+    FROM emr.tenants t
+    ON CONFLICT (id) DO UPDATE
+    SET name = EXCLUDED.name,
+        code = EXCLUDED.code,
+        subdomain = EXCLUDED.subdomain,
+        schema_name = EXCLUDED.schema_name,
+        status = EXCLUDED.status,
+        updated_at = NOW()
+  `);
+}
 
 export async function ensureManagementPlaneInfrastructure() {
   if (infrastructureReady) {
@@ -422,6 +571,7 @@ export async function ensureManagementPlaneInfrastructure() {
   }
 
   await pool.query(MANAGEMENT_PLANE_SQL);
+  await syncManagementTenantsFromLegacy();
   await pool.query(`SELECT public.refresh_all_management_tenant_metrics()`);
   infrastructureReady = true;
 }
@@ -444,6 +594,8 @@ export async function refreshTenantMetrics(tenantId, schemaName = null) {
 
 export async function getSuperadminOverview() {
   await ensureManagementPlaneInfrastructure();
+  await syncManagementTenantsFromLegacy();
+  await pool.query(`SELECT public.refresh_all_management_tenant_metrics()`);
 
   const { rows: summaryRows } = await pool.query(`
     SELECT *

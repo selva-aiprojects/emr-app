@@ -498,6 +498,7 @@ export default function App() {
               viewMode={view}
               superOverview={superOverview}
               tenants={tenants}
+              users={users}
               onCreateTenant={(data) => withRefresh(() => api.createTenant(data))}
               onCreateUser={(tenantId, data) => withRefresh(() => api.provisionTenantAdmin(tenantId, data))}
               tickets={tickets}
