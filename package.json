@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#management": "./node_modules/@generated/management/index.js",
+    "#tenant": "./node_modules/@generated/tenant/index.js"
+  },
   "scripts": {
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "node --watch server/index.js",
@@ -28,9 +32,13 @@
     "northflank:migrate": "npx prisma migrate deploy",
     "northflank:seed": "npm run seed:e2e",
     "seed:services": "node scripts/seed_services.mjs",
-    "prisma:generate": "npx prisma generate",
+    "prisma:generate": "npm run prisma:generate:all",
+    "prisma:generate:management": "npx prisma generate --schema=./prisma/management.prisma",
+    "prisma:generate:tenant": "npx prisma generate --schema=./prisma/tenant.prisma",
+    "prisma:generate:all": "npm run prisma:generate:management && npm run prisma:generate:tenant && npx prisma generate --schema=./prisma/schema.prisma",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:migrate:deploy": "npx prisma migrate deploy",
+    "prisma:migrate:tenant:deploy": "npx prisma migrate deploy --schema=./prisma/tenant.prisma",
     "prisma:studio": "npx prisma studio"
   },
   "dependencies": {

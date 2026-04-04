@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function InfraUsage({ cpu = 0, memory = 0, disk = 0, network = 0 }) {
+export default function InfraUsage({ cpu = 0, memory = 0, disk = 0, network = 0, bedsAvailable = 0, ambulancesAvailable = 0, insuranceCapacity = 0, status = 'unknown' }) {
   return (
     <article className="clinical-card">
       <div className="p-6 border-b border-slate-50">
@@ -54,8 +54,20 @@ export default function InfraUsage({ cpu = 0, memory = 0, disk = 0, network = 0 
             <div className="text-sm font-bold text-slate-900">{network} Gbps</div>
           </div>
           <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
-            <div className="text-[9px] font-black text-emerald-600 uppercase mb-1">Uptime</div>
-            <div className="text-sm font-bold text-emerald-700">99.99%</div>
+            <div className="text-[9px] font-black text-emerald-600 uppercase mb-1">Platform State</div>
+            <div className="text-sm font-bold text-emerald-700 capitalize">{status}</div>
+          </div>
+          <div className="p-3 bg-white rounded-xl border border-slate-100">
+            <div className="text-[9px] font-black text-slate-400 uppercase mb-1">Beds Free</div>
+            <div className="text-sm font-bold text-slate-900">{bedsAvailable}</div>
+          </div>
+          <div className="p-3 bg-white rounded-xl border border-slate-100">
+            <div className="text-[9px] font-black text-slate-400 uppercase mb-1">Ambulances Ready</div>
+            <div className="text-sm font-bold text-slate-900">{ambulancesAvailable}</div>
+          </div>
+          <div className="p-3 bg-white rounded-xl border border-slate-100 col-span-2">
+            <div className="text-[9px] font-black text-slate-400 uppercase mb-1">Insurance Capacity</div>
+            <div className="text-sm font-bold text-slate-900">{insuranceCapacity}</div>
           </div>
         </div>
       </div>

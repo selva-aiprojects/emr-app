@@ -16,13 +16,18 @@ import * as ai from './services/ai.service.js';
 import * as notify from './services/notification.service.js';
 import pharmacyRoutes from '../pharmacy-service/src/routes/pharmacy.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import superadminRoutes from './routes/superadmin.routes.js';
 import { sendTenantWelcomeEmail } from './services/mail.service.js';
 import { runAutoMigration } from './auto_migrate.js';
+import { ensureManagementPlaneInfrastructure } from './services/superadminMetrics.service.js';
 
 
 const app = express();
 const PORT = Number(process.env.PORT || 4000);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// Routes
+app.use('/api/superadmin', superadminRoutes);
 app.get('/api/version', (req, res) => res.json({ version: '1.0.6-ISOLATED' }));
 
 app.get('/api/admin/audit-nah', async (req, res) => {
@@ -163,8 +168,7 @@ async function verifyFeatureFlagSchema() {
   }
 }
 
-verifyFeatureFlagSchema();
-runAutoMigration();
+// Startup handled in global initialization block below
 
 async function ensureTenantColumns() {
   try {
@@ -246,9 +250,15 @@ async function ensureNAHTier() {
 
 // Global initialization
 (async () => {
-  await verifyFeatureFlagSchema();
-  await ensureTenantColumns();
-  await ensureNAHTier();
+  try {
+    await verifyFeatureFlagSchema();
+    await runAutoMigration();
+    await ensureManagementPlaneInfrastructure();
+    await ensureTenantColumns();
+    await ensureNAHTier();
+  } catch (err) {
+    console.error('❌ [STARTUP_ERROR] Initialization failed:', err.message);
+  }
 })();
 
 // =====================================================
@@ -493,8 +503,12 @@ app.get('/api/tenants', async (_req, res) => {
     }
     res.json(tenants);
   } catch (error) {
-    console.error('Error fetching tenants:', error);
-    res.status(500).json({ error: 'Failed to fetch tenants' });
+    console.error('❌ [FATAL_TENANT_LOAD_ERROR]:', {
+      message: error.message,
+      stack: error.stack,
+      hint: 'Check if emr schema or tenants table was affected by recent migrations'
+    });
+    res.status(500).json({ error: 'Failed to fetch tenants: ' + error.message });
   }
 });
 
@@ -3339,14 +3353,14 @@ app.get('/force-isolate', async (req, res) => {
     { id: 'f998a8f5-95b9-4fd7-a583-63cf574d65ed', code: 'nah' },
     { id: '45cfe286-5469-457a-88b3-e998f4cdc7c6', code: 'ehs' }
   ];
-  const tables = ['patients', 'appointments', 'encounters', 'clinical_records', 'billing', 'invoices', 'inventory', 'services', 'departments', 'employees', 'salary', 'attendance', 'payroll'];
+  const tables = ['clinical_records', 'prescriptions', 'procedures', 'observations', 'diagnostic_reports', 'conditions', 'service_requests', 'frontdesk_visits', 'claims', 'documents', 'blood_requests', 'invoices', 'appointments', 'encounters', 'patients', 'inventory_items', 'salary_structures', 'payroll_items', 'attendance', 'payroll_runs', 'employees', 'departments', 'services'];
 
   try {
     const { query } = await import('./db/connection.js');
     log.push('🚀 Started Force Isolation...');
 
     // 1. Create Resource Monitor table
-    await query(`CREATE TABLE IF NOT EXISTS emr.tenant_resources (id UUID PRIMARY KEY DEFAULT uuid_generate_v4(), tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE, UNIQUE(tenant_id))`);
+    await query(`CREATE TABLE IF NOT EXISTS emr.tenant_resources (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE, UNIQUE(tenant_id))`);
     log.push('✅ Created/Verified emr.tenant_resources');
 
     // 2. Perform Migration for NAH and EHS

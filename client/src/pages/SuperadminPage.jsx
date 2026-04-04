@@ -10,14 +10,19 @@ import InfraUsage from '../components/superadmin/InfraUsage.jsx';
 
 function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTenant, onCreateUser, issues = [], tickets = [], infra = {} }) {
   const superOverview = propOverview || {};
-  // Example: issues, tickets, infra would be fetched or passed as props in a real app
 
-  // Dashboard metrics
   const metrics = {
     tenants: superOverview?.totals?.tenants ?? 0,
-    users: superOverview?.totals?.users ?? 0,
-    issues: issues.length,
-    tickets: tickets.length,
+    doctors: superOverview?.totals?.doctors ?? 0,
+    patients: superOverview?.totals?.patients ?? 0,
+    tickets: superOverview?.totals?.openTickets ?? tickets.length,
+  };
+
+  const infraMetrics = {
+    ...(superOverview?.infra || infra || {}),
+    bedsAvailable: superOverview?.totals?.bedsAvailable ?? 0,
+    ambulancesAvailable: superOverview?.totals?.ambulancesAvailable ?? 0,
+    insuranceCapacity: superOverview?.totals?.insuranceCapacity ?? 0,
   };
 
   return (
@@ -30,7 +35,7 @@ function SuperadminPage({ superOverview: propOverview, tenants = [], onCreateTen
           <IssuesTable issues={issues} />
         </div>
         <div className="lg:col-span-1 space-y-8">
-          <InfraUsage {...infra} />
+          <InfraUsage {...infraMetrics} />
           <TicketStatus tickets={tickets} />
         </div>
       </div>
