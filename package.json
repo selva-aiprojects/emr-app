@@ -8,11 +8,13 @@
     "#tenant": "./node_modules/@generated/tenant/index.js"
   },
   "scripts": {
+    "postinstall": "npm run prisma:generate",
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "node --watch server/index.js",
     "dev:client": "vite client --port 5175",
     "build": "cd client && npm install && cd .. && vite build client --config client/vite.config.js",
     "preview": "vite preview client --config client/vite.config.js",
+    "prestart": "npm run prisma:generate",
     "start": "node server/index.js",
     "seed:nah": "node server/seed_nah_data.js",
     "seed:e2e": "node tests/setup_demo_tiers.js && node scripts/seed_e2e_users.js",
