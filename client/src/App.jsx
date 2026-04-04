@@ -499,13 +499,7 @@ export default function App() {
               superOverview={superOverview}
               tenants={tenants}
               onCreateTenant={(data) => withRefresh(() => api.createTenant(data))}
-              onCreateUser={(e) => {
-                e.preventDefault();
-                const fd = new FormData(e.target);
-                withRefresh(() => api.createUser({
-                  tenantId: fd.get('tenantId'), name: fd.get('name'), email: fd.get('email'), role: fd.get('role')
-                }));
-              }}
+              onCreateUser={(tenantId, data) => withRefresh(() => api.provisionTenantAdmin(tenantId, data))}
               tickets={tickets}
               onResolveTicket={async (id) => {
                  await withRefresh(() => api.updateSupportStatus(id, 'resolved'));
