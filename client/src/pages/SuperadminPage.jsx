@@ -240,12 +240,16 @@ function SuperadminPage({
   const overviewDoctors = overviewTenantMetrics.reduce((sum, tenant) => sum + Number(tenant.doctors || 0), 0);
   const overviewPatients = overviewTenantMetrics.reduce((sum, tenant) => sum + Number(tenant.patients || tenant.patient_count || 0), 0);
   const fallbackDoctorsFromUsers = users.filter((user) => String(user.role || '').toLowerCase() === 'doctor').length;
+  const fallbackDoctorsFromTenants = tenants.reduce((sum, tenant) => sum + Number(tenant.doctors_count || tenant.doctors || 0), 0);
   const fallbackPatientsFromTenants = tenants.reduce((sum, tenant) => sum + Number(tenant.patient_count || 0), 0);
-  const fallbackDoctors = overviewDoctors || fallbackDoctorsFromUsers;
+  const fallbackDoctors = overviewDoctors || fallbackDoctorsFromTenants || fallbackDoctorsFromUsers;
   const fallbackPatients = overviewPatients || fallbackPatientsFromTenants;
-  const fallbackBeds = overviewTenantMetrics.reduce((sum, tenant) => sum + Number(tenant.bedsAvailable || 0), 0);
-  const fallbackAmbulances = overviewTenantMetrics.reduce((sum, tenant) => sum + Number(tenant.ambulancesAvailable || 0), 0);
-  const fallbackInsurance = overviewTenantMetrics.reduce((sum, tenant) => sum + Number(tenant.insuranceCapacity || 0), 0);
+  const fallbackBeds = overviewTenantMetrics.reduce((sum, tenant) => sum + Number(tenant.bedsAvailable || 0), 0)
+    || tenants.reduce((sum, tenant) => sum + Number(tenant.beds_available || tenant.bedsAvailable || 0), 0);
+  const fallbackAmbulances = overviewTenantMetrics.reduce((sum, tenant) => sum + Number(tenant.ambulancesAvailable || 0), 0)
+    || tenants.reduce((sum, tenant) => sum + Number(tenant.ambulances_available || tenant.ambulancesAvailable || 0), 0);
+  const fallbackInsurance = overviewTenantMetrics.reduce((sum, tenant) => sum + Number(tenant.insuranceCapacity || 0), 0)
+    || tenants.reduce((sum, tenant) => sum + Number(tenant.insurance_capacity || tenant.insuranceCapacity || 0), 0);
 
   const metrics = {
     tenants: superOverview?.totals?.tenants || fallbackTenantCount,
@@ -450,6 +454,7 @@ function SuperadminPage({
 }
 
 export default SuperadminPage;
+
 
 
 
