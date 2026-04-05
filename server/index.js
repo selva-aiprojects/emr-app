@@ -1251,9 +1251,10 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
     // Get department distribution
     const departmentResult = await query(`
       SELECT role as department, COUNT(*) as count 
-      FROM emr.users 
-      WHERE tenant_id = $1 AND role IN ('Doctor', 'Nurse', 'Lab', 'Pharmacist')
+      FROM users 
+      WHERE tenant_id = $1 AND role IS NOT NULL
       GROUP BY role
+      ORDER BY count DESC, role
     `, [tenantId]);
 
     const departmentDistribution = departmentResult.rows.map(row => ({
@@ -1263,13 +1264,36 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
 
     // Get available doctors
     const doctorsResult = await query(`
-      SELECT id, name, role, is_active 
-      FROM emr.users 
-      WHERE tenant_id = $1 AND role = 'Doctor'
+      SELECT
+        u.id,
+        u.name,
+        u.role,
+        u.is_active,
+        COUNT(a.id) as consultations,
+        COALESCE(
+          ROUND(AVG(EXTRACT(EPOCH FROM (a.scheduled_end - a.scheduled_start)) / 60))
+            FILTER (WHERE a.status = 'completed' AND a.scheduled_end IS NOT NULL),
+          0
+        ) as avg_time,
+        0 as satisfaction
+      FROM users u
+      LEFT JOIN appointments a ON a.provider_id = u.id AND a.tenant_id = u.tenant_id
+      WHERE u.tenant_id = $1 AND lower(COALESCE(u.role, '')) = 'doctor'
+      GROUP BY u.id, u.name, u.role, u.is_active
+      ORDER BY consultations DESC, u.name
     `, [tenantId]);
 
     // Optional enrichments (safe)
-    const [staffStatsResult, masterCountsResult, journeyResult, revenueTrendResult] = await Promise.all([
+    const [
+      staffStatsResult,
+      masterCountsResult,
+      journeyResult,
+      revenueTrendResult,
+      patientTrendResult,
+      noShowTrendResult,
+      topDiagnosesResult,
+      topServicesResult
+    ] = await Promise.all([
       query(`
         SELECT designation, COUNT(*) as count 
         FROM employees 
@@ -1284,7 +1308,7 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
           (SELECT COUNT(*) FROM wards WHERE tenant_id = $1) as wards,
           (SELECT COUNT(*) FROM beds WHERE tenant_id = $1) as beds,
           (SELECT COUNT(*) FROM services WHERE tenant_id = $1) as services,
-          (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1) as total_staff
+          (SELECT COUNT(*) FROM users WHERE tenant_id = $1) as total_staff
       `, [tenantId]).catch(() => ({ rows: [{}] })),
 
       query(`
@@ -1295,20 +1319,147 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
       `, [tenantId]).catch(() => ({ rows: [] })),
 
       query(`
-        SELECT 
-          TO_CHAR(created_at, 'Mon') as label,
-          COALESCE(SUM(total), 0) as value
-        FROM invoices
-        WHERE tenant_id = $1 AND created_at > CURRENT_DATE - INTERVAL '6 months'
-        GROUP BY label, DATE_TRUNC('month', created_at)
-        ORDER BY DATE_TRUNC('month', created_at)
+        WITH months AS (
+          SELECT generate_series(
+            date_trunc('month', CURRENT_DATE) - INTERVAL '5 months',
+            date_trunc('month', CURRENT_DATE),
+            INTERVAL '1 month'
+          ) AS month_start
+        )
+        SELECT
+          TO_CHAR(months.month_start, 'Mon') as label,
+          COALESCE(SUM(i.total), 0) as value
+        FROM months
+        LEFT JOIN invoices i
+          ON date_trunc('month', i.created_at) = months.month_start
+         AND i.tenant_id = $1
+         AND i.status = 'paid'
+        GROUP BY months.month_start
+        ORDER BY months.month_start
       `, [tenantId]).catch(() => ({ rows: [] }))
+      ,
+
+      query(`
+        WITH months AS (
+          SELECT generate_series(
+            date_trunc('month', CURRENT_DATE) - INTERVAL '5 months',
+            date_trunc('month', CURRENT_DATE),
+            INTERVAL '1 month'
+          ) AS month_start
+        ),
+        new_patients AS (
+          SELECT date_trunc('month', created_at) AS month_start, COUNT(*)::int AS count
+          FROM patients
+          WHERE tenant_id = $1
+          GROUP BY 1
+        ),
+        returning_patients AS (
+          SELECT date_trunc('month', visit_date) AS month_start, COUNT(DISTINCT patient_id)::int AS count
+          FROM encounters
+          WHERE tenant_id = $1 AND patient_id IS NOT NULL
+          GROUP BY 1
+        )
+        SELECT
+          TO_CHAR(months.month_start, 'Mon') as label,
+          COALESCE(new_patients.count, 0) as value1,
+          GREATEST(COALESCE(returning_patients.count, 0) - COALESCE(new_patients.count, 0), 0) as value2
+        FROM months
+        LEFT JOIN new_patients ON new_patients.month_start = months.month_start
+        LEFT JOIN returning_patients ON returning_patients.month_start = months.month_start
+        ORDER BY months.month_start
+      `, [tenantId]).catch(() => ({ rows: [] })),
+
+      query(`
+        WITH days AS (
+          SELECT generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') AS day_start
+        )
+        SELECT
+          TO_CHAR(days.day_start, 'DD Mon') as label,
+          COUNT(a.id) FILTER (WHERE lower(COALESCE(a.status, '')) = 'no-show')::int as "noShow",
+          COALESCE(
+            ROUND(
+              (
+                COUNT(a.id) FILTER (WHERE lower(COALESCE(a.status, '')) = 'no-show')::numeric
+                / NULLIF(COUNT(a.id), 0)
+              ) * 100,
+              1
+            ),
+            0
+          ) as rate
+        FROM days
+        LEFT JOIN appointments a
+          ON DATE(a.scheduled_start) = DATE(days.day_start)
+         AND a.tenant_id = $1
+        GROUP BY days.day_start
+        ORDER BY days.day_start
+      `, [tenantId]).catch(() => ({ rows: [] })),
+
+      query(`
+        SELECT
+          diagnosis as name,
+          COUNT(*)::int as value
+        FROM encounters
+        WHERE tenant_id = $1
+          AND diagnosis IS NOT NULL
+          AND BTRIM(diagnosis) <> ''
+        GROUP BY diagnosis
+        ORDER BY value DESC, diagnosis
+        LIMIT 10
+      `, [tenantId]).catch(() => ({ rows: [] })),
+
+      query(`
+        SELECT
+          display_name as name,
+          COUNT(*)::int as value
+        FROM service_requests
+        WHERE tenant_id = $1
+          AND display_name IS NOT NULL
+          AND BTRIM(display_name) <> ''
+        GROUP BY display_name
+        ORDER BY value DESC, display_name
+        LIMIT 8
+      `, [tenantId]).catch(async () => {
+        try {
+          return await query(`
+            SELECT
+              description as name,
+              COALESCE(SUM(total), 0)::int as value
+            FROM invoices
+            WHERE tenant_id = $1
+              AND description IS NOT NULL
+              AND BTRIM(description) <> ''
+            GROUP BY description
+            ORDER BY value DESC, description
+            LIMIT 8
+          `, [tenantId]);
+        } catch {
+          return { rows: [] };
+        }
+      })
     ]);
 
     const patientStats = patientStatsResult.rows[0] || {};
     const appointmentStats = appointmentStatsResult.rows[0] || {};
     const bedOccupancy = bedOccupancyResult.rows[0] || {};
-    const doctors = doctorsResult.rows || [];
+    const doctors = (doctorsResult.rows || []).map((doctor) => ({
+      ...doctor,
+      consultations: Number(doctor.consultations || 0),
+      avgTime: Number(doctor.avg_time || 0),
+      satisfaction: Number(doctor.satisfaction || 0)
+    }));
+    const staffStats = (staffStatsResult.rows || []).length > 0
+      ? staffStatsResult.rows
+      : departmentResult.rows.map((row) => ({
+          designation: row.department,
+          count: Number(row.count || 0)
+        }));
+    const masterStats = {
+      departments: Number(masterCountsResult.rows?.[0]?.departments || 0),
+      wards: Number(masterCountsResult.rows?.[0]?.wards || 0),
+      beds: Number(masterCountsResult.rows?.[0]?.beds || 0),
+      services: Number(masterCountsResult.rows?.[0]?.services || 0),
+      total_staff: Number(masterCountsResult.rows?.[0]?.total_staff || 0)
+    };
 
     const occupancyRate = metrics.totalBeds > 0
       ? Math.round((metrics.occupiedBeds / metrics.totalBeds) * 100)
@@ -1320,11 +1471,14 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
       totalPatients,
       totalAppointments,
       totalRevenue,
+      criticalAlerts: Number(metrics.criticalLabResults || 0),
 
       // Enhanced statistics
       patientStats: {
         new_patients: Number(patientStats.new_patients || 0),
-        returning_patients: Number(patientStats.returning_patients || 0)
+        returning_patients: Number(patientStats.returning_patients || 0),
+        admitted_today: Number(metrics.todayAdmissions || 0),
+        discharged_today: Number(metrics.todayDischarges || 0)
       },
       appointmentStats: {
         scheduled_today: Number(appointmentStats.scheduled_today || 0),
@@ -1343,32 +1497,22 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
       doctors,
 
       // Optional extras
-      staffDistribution: staffStatsResult.rows || [],
-      masterCounts: masterCountsResult.rows?.[0] || {},
+      staffStats,
+      staffDistribution: staffStats,
+      masterStats,
+      masterCounts: masterStats,
       patientJourney: journeyResult.rows || [],
       revenueTrend: revenueTrendResult.rows || [],
+      patientTrend: patientTrendResult.rows || [],
+      noShowTrend: noShowTrendResult.rows || [],
+      topDiagnoses: topDiagnosesResult.rows || [],
+      topServices: topServicesResult.rows || [],
 
       // Additional calculated metrics
       occupancyRate,
       availabilityRate: metrics.totalBeds > 0
         ? Math.round((metrics.availableBeds / metrics.totalBeds) * 100)
         : 0,
-
-      topDiagnoses: [
-        { name: 'Essential Hypertension', value: 145 },
-        { name: 'Type 2 Diabetes', value: 132 },
-        { name: 'Acute Pharyngitis', value: 98 },
-        { name: 'Osteoarthritis', value: 84 },
-        { name: 'Asthma exacerbation', value: 67 }
-      ],
-      topServices: [
-        { name: 'Consultations', value: 45000 },
-        { name: 'Laboratory', value: 32000 },
-        { name: 'Pharmacy', value: 28000 },
-        { name: 'Radiology', value: 15000 },
-        { name: 'Surgery', value: 85000 },
-        { name: 'Room Charges', value: 54000 }
-      ],
 
       performanceScore: calculatePerformanceScore(metrics),
       utilizationRate: occupancyRate,

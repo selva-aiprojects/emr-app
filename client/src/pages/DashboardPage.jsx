@@ -113,7 +113,8 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
     topServices: [],
     staffStats: [],
     patientJourney: [],
-    masterStats: {}
+    masterStats: {},
+    noShowTrend: []
   });
 
   // Get current view title
@@ -167,9 +168,10 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         requests: data.requests || {},
         topDiagnoses: data.topDiagnoses || [],
         topServices: data.topServices || [],
-        staffStats: data.staffStats || [],
+        staffStats: data.staffStats || data.staffDistribution || [],
         patientJourney: data.patientJourney || [],
-        masterStats: data.masterStats || {},
+        masterStats: data.masterStats || data.masterCounts || {},
+        noShowTrend: data.noShowTrend || [],
         bloodBank: data.bloodBank || { value: 0, label: 'Units' },
         labProgress: data.labProgress || { value: 0, label: '%' },
         fleetStatus: data.fleetStatus || { available: 0, total: 0 }
@@ -177,12 +179,8 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
 
       // Set report data for charts - use real historical data
       setReportData({
-        patientData: data.patientTrend && data.patientTrend.length > 0 ? data.patientTrend : [
-          { label: 'Mon', value1: data.patientStats?.new_patients || 0, value2: data.patientStats?.returning_patients || 0 }
-        ],
-        financialData: data.revenueTrend && data.revenueTrend.length > 0 ? data.revenueTrend : [
-          { label: 'Current', value: data.totalRevenue || 0 }
-        ],
+        patientData: data.patientTrend || [],
+        financialData: data.revenueTrend || [],
         departmentDistribution: data.departmentDistribution || [],
         appointmentStatus: [
           { label: 'Scheduled', value: data.appointmentStats?.scheduled_today || 0 },
@@ -574,7 +572,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
               <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-100 rounded-full px-3 py-1">Risk Metric</span>
            </div>
            <div className="h-[270px]">
-              <NoShowRateChart />
+              <NoShowRateChart data={realtimeMetrics.noShowTrend || []} />
            </div>
         </div>
 

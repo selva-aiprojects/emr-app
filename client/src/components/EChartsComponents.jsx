@@ -19,17 +19,29 @@ const HEALTHCARE_COLORS = {
   grid: '#f1f5f9'
 };
 
+const buildEmptyStateOption = (message = 'No live data yet') => ({
+  backgroundColor: 'transparent',
+  title: {
+    text: message,
+    left: 'center',
+    top: 'middle',
+    textStyle: {
+      color: HEALTHCARE_COLORS.mutedText,
+      fontSize: 13,
+      fontWeight: 600
+    }
+  },
+  xAxis: { show: false },
+  yAxis: { show: false },
+  series: []
+});
+
 // Apache ECharts - Patient Overview Chart (Line Chart)
 export const PatientOverviewChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data : [
-    { label: 'Mon', value1: 45, value2: 32 },
-    { label: 'Tue', value1: 52, value2: 38 },
-    { label: 'Wed', value1: 48, value2: 41 },
-    { label: 'Thu', value1: 58, value2: 45 },
-    { label: 'Fri', value1: 62, value2: 48 },
-    { label: 'Sat', value1: 41, value2: 28 },
-    { label: 'Sun', value1: 38, value2: 25 }
-  ];
+  const chartData = Array.isArray(data) ? data : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No patient trend available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     color: [HEALTHCARE_COLORS.primary, HEALTHCARE_COLORS.accent],
@@ -91,14 +103,10 @@ export const PatientOverviewChart = ({ data = [] }) => {
 
 // Apache ECharts - Revenue Trend Chart (Bar Chart)
 export const RevenueTrendChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data : [
-    { label: 'Jan', value: 15000 },
-    { label: 'Feb', value: 17000 },
-    { label: 'Mar', value: 16000 },
-    { label: 'Apr', value: 18000 },
-    { label: 'May', value: 17000 },
-    { label: 'Jun', value: 17000 }
-  ];
+  const chartData = Array.isArray(data) ? data : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No revenue trend available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     color: [HEALTHCARE_COLORS.info],
@@ -137,13 +145,10 @@ export const RevenueTrendChart = ({ data = [] }) => {
 
 // Apache ECharts - Department Distribution Chart (Pie Chart)
 export const DepartmentDistributionChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data.map(d => ({ name: d.label || d.name, value: d.value })) : [
-    { value: 28, name: 'Cardiology' },
-    { value: 22, name: 'Orthopedics' },
-    { value: 18, name: 'Neurology' },
-    { value: 15, name: 'General' },
-    { value: 17, name: 'Emergency' }
-  ];
+  const chartData = Array.isArray(data) ? data.map(d => ({ name: d.label || d.name, value: d.value })) : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No department mix available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const colors = [HEALTHCARE_COLORS.primary, HEALTHCARE_COLORS.secondary, HEALTHCARE_COLORS.accent, HEALTHCARE_COLORS.warning, HEALTHCARE_COLORS.info];
 
@@ -180,12 +185,10 @@ export const DepartmentDistributionChart = ({ data = [] }) => {
 
 // Apache ECharts - Appointment Status Chart (Horizontal Bar)
 export const AppointmentStatusChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data.map(d => ({ name: d.label || d.name, value: d.value })) : [
-    { name: 'Scheduled', value: 45 },
-    { name: 'Completed', value: 32 },
-    { name: 'Cancelled', value: 8 },
-    { name: 'No-Show', value: 5 }
-  ];
+  const chartData = Array.isArray(data) ? data.map(d => ({ name: d.label || d.name, value: d.value })) : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No appointment data available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     color: [HEALTHCARE_COLORS.success, HEALTHCARE_COLORS.info, HEALTHCARE_COLORS.warning, HEALTHCARE_COLORS.danger],
@@ -223,10 +226,10 @@ export const AppointmentStatusChart = ({ data = [] }) => {
 
 // Apache ECharts - Bed Occupancy Chart (Pie/Doughnut)
 export const BedOccupancyChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data.map(d => ({ name: d.label || d.name, value: d.value })) : [
-    { value: 65, name: 'Occupied' },
-    { value: 35, name: 'Available' }
-  ];
+  const chartData = Array.isArray(data) ? data.map(d => ({ name: d.label || d.name, value: d.value })) : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No bed inventory available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     color: [HEALTHCARE_COLORS.danger, HEALTHCARE_COLORS.success],
@@ -258,13 +261,10 @@ export const BedOccupancyChart = ({ data = [] }) => {
 
 // Apache ECharts - Top Diagnoses Chart (Horizontal Bar)
 export const TopDiagnosesChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data : [
-    { name: 'Hypertension', value: 124 },
-    { name: 'Diabetes Type 2', value: 98 },
-    { name: 'Acute Bronchitis', value: 87 },
-    { name: 'Osteoarthritis', value: 65 },
-    { name: 'UTI', value: 54 }
-  ];
+  const chartData = Array.isArray(data) ? data : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No diagnosis data available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     color: ['#8b5cf6'],
@@ -289,13 +289,10 @@ export const TopDiagnosesChart = ({ data = [] }) => {
 
 // Apache ECharts - Top Revenue Services Chart (Pie/Doughnut)
 export const TopServicesChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data : [
-    { value: 45000, name: 'OPD Consultation' },
-    { value: 32000, name: 'Laboratory' },
-    { value: 28000, name: 'Pharmacy' },
-    { value: 22000, name: 'Radiology' },
-    { value: 18000, name: 'Surgeries' }
-  ];
+  const chartData = Array.isArray(data) ? data : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No service mix available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     color: ['#0f766e', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b'],
@@ -329,13 +326,10 @@ export const TopServicesChart = ({ data = [] }) => {
 
 // Apache ECharts - Staff Distribution Chart
 export const StaffDistributionChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data.map(d => ({ name: d.designation, value: parseInt(d.count) })) : [
-    { name: 'Doctors', value: 12 },
-    { name: 'Nurses', value: 24 },
-    { name: 'Lab Technicians', value: 8 },
-    { name: 'Administrators', value: 5 },
-    { name: 'Pharmacists', value: 6 }
-  ];
+  const chartData = Array.isArray(data) ? data.map(d => ({ name: d.designation || d.name, value: parseInt(d.count || d.value || 0, 10) })) : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No staff distribution available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     color: ['#0f766e', '#0ea5e9', '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#3b82f6', '#f59e0b', '#10b981'],
@@ -359,16 +353,13 @@ export const StaffDistributionChart = ({ data = [] }) => {
 
 // Apache ECharts - Patient Journey Chart (Horizontal Bar / Funnel)
 export const PatientJourneyChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data.map(d => ({
+  const chartData = Array.isArray(data) ? data.map(d => ({
     name: d.status.charAt(0).toUpperCase() + d.status.slice(1),
     value: parseInt(d.count)
-  })) : [
-    { value: 100, name: 'Registered' },
-    { value: 80, name: 'Triaged' },
-    { value: 60, name: 'Consultation' },
-    { value: 40, name: 'Pharmacy/Lab' },
-    { value: 30, name: 'Settled' }
-  ];
+  })) : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No patient journey available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     color: ['#10b981'],
@@ -400,15 +391,10 @@ export const PatientJourneyChart = ({ data = [] }) => {
 
 // Apache ECharts - No-Show Rate Analysis (Line + Bar combo)
 export const NoShowRateChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data : [
-    { label: 'Mon', noShow: 3, rate: 7.1 },
-    { label: 'Tue', noShow: 5, rate: 9.3 },
-    { label: 'Wed', noShow: 2, rate: 4.2 },
-    { label: 'Thu', noShow: 6, rate: 10.0 },
-    { label: 'Fri', noShow: 4, rate: 7.3 },
-    { label: 'Sat', noShow: 1, rate: 3.6 },
-    { label: 'Sun', noShow: 0, rate: 0.0 },
-  ];
+  const chartData = Array.isArray(data) ? data : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No no-show trend available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     backgroundColor: 'transparent',
@@ -472,13 +458,10 @@ export const NoShowRateChart = ({ data = [] }) => {
 
 // Apache ECharts - Doctor Performance Chart (Multi-metric horizontal bar)
 export const DoctorPerformanceChart = ({ data = [] }) => {
-  const chartData = data.length > 0 ? data : [
-    { name: 'Dr. Arjun Kumar', consultations: 42, avgTime: 18, satisfaction: 92 },
-    { name: 'Dr. Priya Nair', consultations: 37, avgTime: 22, satisfaction: 88 },
-    { name: 'Dr. Meera Singh', consultations: 29, avgTime: 15, satisfaction: 95 },
-    { name: 'Dr. Rajan Pillai', consultations: 51, avgTime: 12, satisfaction: 80 },
-    { name: 'Dr. Suresh Babu', consultations: 24, avgTime: 25, satisfaction: 91 },
-  ];
+  const chartData = Array.isArray(data) ? data : [];
+  if (chartData.length === 0) {
+    return <ReactEcharts option={buildEmptyStateOption('No doctor performance data available')} style={{ height: '100%', width: '100%' }} />;
+  }
 
   const option = {
     backgroundColor: 'transparent',
