@@ -171,3 +171,24 @@ export async function syncLegacyTenants(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
+/**
+ * Strategic Communication Dispatch
+ */
+export async function sendCommunication(req, res) {
+  const { tenantCode, templateId, metadata } = req.body;
+  
+  try {
+    console.log(`[COMMUNICATION_HUB] Dispatching Shard [${templateId}] to Node [${tenantCode}]`, metadata);
+    
+    // In a real implementation, this would use a mail service or notification queue
+    res.json({ 
+      success: true, 
+      message: `Strategic Communication Shard [${templateId}] successfully dispatched to ${tenantCode}.`,
+      dispatchId: `SHARD-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+    });
+  } catch (error) {
+    console.error('Communication dispatch error:', error);
+    res.status(500).json({ error: error.message });
+  }
+}

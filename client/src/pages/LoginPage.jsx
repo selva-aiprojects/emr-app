@@ -1,6 +1,19 @@
 import { useMemo, useState } from 'react';
 import { BRAND } from '../config/branding.js';
-import { AlertCircle, ArrowRight, Activity, Database, Mail, Lock, ChevronRight, HeartPulse } from 'lucide-react';
+import { 
+  AlertCircle, 
+  ArrowRight, 
+  Activity, 
+  Database, 
+  Mail, 
+  Lock, 
+  ChevronRight, 
+  HeartPulse, 
+  ShieldCheck, 
+  Zap, 
+  Globe,
+  Plus
+} from 'lucide-react';
 
 export default function LoginPage({ onLogin, tenants, loading: propLoading, error: propError }) {
   const [credentials, setCredentials] = useState({
@@ -67,196 +80,169 @@ export default function LoginPage({ onLogin, tenants, loading: propLoading, erro
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 flex items-center justify-center px-4 py-4 overflow-auto">
-      <div className="w-full max-w-6xl bg-white/80 backdrop-blur-xl shadow-2xl rounded-3xl overflow-hidden border border-white/20 shadow-blue-500/10 grid grid-cols-1 lg:grid-cols-5 max-h-[90vh] lg:max-h-none">
-        {/* Left Panel - Hero Section */}
-        <div className="lg:col-span-3 hidden lg:flex flex-col justify-between p-6 lg:p-8 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, #1e293b 0%, #334155 25%, #475569 50%, #334155 75%, #1e293b 100%)' }}>
+    <div className="min-h-screen bg-[#0f172a] flex items-center justify-center p-4 lg:p-8 relative overflow-hidden font-sans">
+      {/* Immersive Background Shards */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600/20 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-emerald-600/10 blur-[120px] rounded-full animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-blue-600/5 blur-[150px] rounded-full" />
+        {/* Animated Grid lines */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+      </div>
 
+      <div className="w-full max-w-6xl z-10 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden rounded-[40px] shadow-2xl shadow-indigo-500/10 border border-white/5 bg-slate-900/40 backdrop-blur-3xl h-full lg:h-[800px]">
+        
+        {/* Left Side: Brand & Visuals */}
+        <div className="lg:col-span-7 p-8 lg:p-16 flex flex-col justify-between relative overflow-hidden group">
           <div className="relative z-10">
-            <img 
-              src="/healthezee-logo.png" 
-              alt="Healthezee Logo" 
-              className="h-16 lg:h-20 w-auto object-contain drop-shadow-2xl" 
-            />
+             <div className="flex items-center gap-3 mb-12">
+               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-600/30">
+                 <ShieldCheck className="text-white" size={24} />
+               </div>
+               <span className="text-xl font-black text-white tracking-tighter uppercase">{BRAND.name}</span>
+             </div>
+
+             <div className="space-y-8">
+               <h1 className="text-5xl lg:text-7xl font-black text-white leading-[0.9] tracking-tighter">
+                PRECISION<br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-emerald-400 to-blue-500">OPERATIONS</span><br/>
+                MATRIX.
+               </h1>
+               <p className="text-lg text-slate-400 max-w-md font-medium leading-relaxed">
+                Connect to the unified management plane for next-generation clinical workflows and platform governance.
+               </p>
+             </div>
           </div>
 
-          <div className="relative z-10 space-y-4 lg:space-y-6">
-            <div className="space-y-2 lg:space-y-4">
-              <h1 className="text-3xl lg:text-6xl font-black leading-tight tracking-tighter" style={{ color: '#ffffff', textShadow: '0 4px 12px rgba(0,0,0,0.4)', fontFamily: '"Outfit", sans-serif' }}>
-                Next-Gen<br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">Healthcare</span><br/>
-                Platform
-              </h1>
-              <p className="text-sm lg:text-base leading-relaxed text-slate-200 max-w-md">
-                Empowering healthcare providers with intelligent EMR solutions for precision care delivery and operational excellence.
-              </p>
-            </div>
-            
-            <div className="flex items-center gap-3 lg:gap-4">
-              <div className="flex -space-x-1 lg:-space-x-2">
-                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 border-2 border-white/30 flex items-center justify-center shadow-lg shadow-blue-500/25">
-                  <HeartPulse className="w-5 h-5 lg:w-6 lg:h-6 text-white drop-shadow-sm" />
-                </div>
-                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 border-2 border-white/30 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-                  <Activity className="w-5 h-5 lg:w-6 lg:h-6 text-white drop-shadow-sm" />
-                </div>
-                <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-rose-500 border-2 border-white/30 flex items-center justify-center shadow-lg shadow-purple-500/25">
-                  <Database className="w-5 h-5 lg:w-6 lg:h-6 text-white drop-shadow-sm" />
-                </div>
-              </div>
-              <div>
-                <div className="text-white font-bold text-xs lg:text-sm">Enterprise-Grade Security</div>
-                <div className="text-slate-300 text-xs lg:text-xs">HIPAA Compliant • SOC 2 Certified</div>
-              </div>
-            </div>
+          <div className="relative z-10 grid grid-cols-3 gap-6 pt-12">
+             {[
+               { icon: Activity, label: 'Real-time Sync', color: 'emerald' },
+               { icon: Zap, label: 'High Velocity', color: 'indigo' },
+               { icon: Globe, label: 'Cloud Native', color: 'blue' }
+             ].map((feature, i) => (
+               <div key={i} className="flex flex-col gap-3">
+                 <div className={`w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-${feature.color}-400 border border-white/5 shadow-inner`}>
+                   <feature.icon size={20} />
+                 </div>
+                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{feature.label}</span>
+               </div>
+             ))}
           </div>
 
-          {/* Background Pattern */}
-          <div className="absolute inset-0">
-            <div className="absolute top-6 lg:top-10 left-6 lg:left-10 w-20 lg:w-32 h-20 lg:h-32 rounded-full bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-purple-400/10 blur-sm"></div>
-            <div className="absolute bottom-6 lg:bottom-10 right-6 lg:right-10 w-32 lg:w-48 h-32 lg:h-48 rounded-full bg-gradient-to-tr from-purple-400/15 via-pink-400/10 to-rose-400/5 blur-md"></div>
-            <div className="absolute top-1/2 left-1/2 w-48 lg:w-64 h-40 lg:h-64 rounded-full bg-gradient-to-bl from-indigo-400/10 via-blue-400/5 to-cyan-400/3 blur-lg -translate-x-1/2 -translate-y-1/2"></div>
-            <div className="hidden lg:block absolute top-20 right-20 w-16 h-16 rounded-full bg-gradient-to-br from-cyan-400/15 via-teal-400/10 to-emerald-400/5 blur-sm"></div>
-            <div className="hidden lg:block absolute bottom-20 left-20 w-20 lg:w-24 h-16 lg:h-24 rounded-full bg-gradient-to-tr from-rose-400/10 via-pink-400/8 to-purple-400/5 blur-md"></div>
-          </div>
+          {/* Decorative Floating Card */}
+          <div className="absolute top-1/4 right-0 translate-x-1/2 w-80 h-80 bg-gradient-to-br from-indigo-500/10 to-transparent blur-3xl rounded-full" />
         </div>
 
-        {/* Right Panel - Form Section */}
-        <div className="lg:col-span-2 p-4 lg:p-6 lg:p-8 flex flex-col justify-center bg-white max-h-[90vh] lg:max-h-none overflow-y-auto">
-          <div className="lg:hidden flex items-center justify-center mb-6">
-            <img 
-              src="/healthezee-logo.png" 
-              alt="Healthezee Logo" 
-              className="h-12 w-auto object-contain" 
-            />
-          </div>
+        {/* Right Side: Form */}
+        <div className="lg:col-span-5 bg-white p-8 lg:p-16 flex flex-col justify-center relative">
+          <div className="max-w-md w-full mx-auto space-y-10">
+             <div className="text-center lg:text-left">
+               <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none mb-3">Initialize.<br/>Session()</h2>
+               <p className="text-sm text-slate-500 font-medium">Verify your administrative identity to proceed.</p>
+             </div>
 
-          <div className="space-y-4 lg:space-y-6">
-            <div className="text-center">
-              <h2 className="text-2xl lg:text-3xl font-black text-slate-900 mb-2">Welcome Back</h2>
-              <p className="text-sm lg:text-base text-slate-600">Sign in to access your healthcare workspace</p>
-            </div>
+             <form onSubmit={handleSubmit} className="space-y-6">
+               <div className="space-y-2">
+                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Infrastructure Node</label>
+                 <div className="relative group">
+                   <select
+                    name="tenantId"
+                    className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-12 text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all appearance-none cursor-pointer"
+                    value={credentials.tenantId}
+                    onChange={(e) => setCredentials(prev => ({ ...prev, tenantId: e.target.value }))}
+                   >
+                     <option value="">Select Hospital Node...</option>
+                     <option value="superadmin">PLATFORM_ROOT_ADMIN</option>
+                     {tenantOptions.map((tenant) => (
+                      <option key={tenant.id} value={tenant.code || tenant.id}>
+                        {tenant.name}
+                      </option>
+                    ))}
+                   </select>
+                   <Database className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
+                   <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 rotate-90" size={16} />
+                 </div>
+               </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-5">
-            <div className="space-y-2">
-              <label className="text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-slate-500">Facility</label>
-              <div className="relative">
-                <select
-                  name="tenantId"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 lg:px-4 lg:py-4 lg:pl-12 text-sm font-semibold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all appearance-none"
-                  value={credentials.tenantId}
-                  onChange={(e) => setCredentials(prev => ({ ...prev, tenantId: e.target.value }))}
+               <div className="space-y-2">
+                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Admin Identity</label>
+                 <div className="relative group">
+                   <input
+                    type="email"
+                    placeholder="admin.id@healthezee.core"
+                    className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-12 text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all"
+                    value={credentials.email}
+                    onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
+                    required
+                   />
+                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
+                 </div>
+               </div>
+
+               <div className="space-y-2">
+                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Secure Key</label>
+                 <div className="relative group">
+                   <input
+                    type="password"
+                    placeholder="••••••••••••"
+                    className="w-full h-14 bg-slate-50 border border-slate-100 rounded-2xl px-12 text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all"
+                    value={credentials.password}
+                    onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+                    required
+                   />
+                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-600 transition-colors" size={20} />
+                 </div>
+               </div>
+
+               {error && (
+                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 flex gap-3 animate-shake">
+                  <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+                  <p className="text-[10px] font-black text-rose-600 uppercase tracking-tight leading-tight">{error}</p>
+                </div>
+               )}
+
+               <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-slate-900 text-white rounded-2xl py-5 text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl shadow-indigo-900/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 overflow-hidden relative group"
+               >
+                 <span className="relative z-10 flex items-center gap-2">
+                   {isLoading ? 'Decrypting Access Shard...' : 'Authenticate Protocol'}
+                   {!isLoading && <ArrowRight size={16} />}
+                 </span>
+                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-blue-600 translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-500" />
+               </button>
+             </form>
+
+             <div className="pt-6">
+                <button 
+                  onClick={() => setShowDemoCredentials(!showDemoCredentials)}
+                  className="w-full py-4 border border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 hover:text-indigo-600 transition-all flex items-center justify-center gap-2"
                 >
-                  <option value="">Select facility...</option>
-                  <option value="superadmin">Platform Governance Center</option>
-                  {tenantOptions.map((tenant) => (
-                    <option key={tenant.id} value={tenant.code || tenant.id}>
-                      {tenant.name}
-                    </option>
-                  ))}
-                </select>
-                <Database className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
-                <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-200 rotate-90 pointer-events-none" />
-              </div>
-            </div>
+                  <Plus size={12} /> Fast Identity Select
+                </button>
 
-            <div className="space-y-2">
-              <label className="text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-slate-500">Email Address</label>
-              <div className="relative">
-                <input
-                  type="email"
-                  placeholder="name@facility.org"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 lg:px-4 lg:py-4 lg:pl-12 text-sm font-semibold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-                  value={credentials.email}
-                  onChange={(e) => setCredentials(prev => ({ ...prev, email: e.target.value }))}
-                  required
-                />
-                <Mail className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
+                {showDemoCredentials && (
+                  <div className="mt-4 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
+                    {Object.entries(demoCredentials).map(([key, demo]) => (
+                      <button
+                        key={key}
+                        onClick={() => setDemoCreds(key, demo)}
+                        className="bg-slate-50 hover:bg-white border border-slate-100 p-4 rounded-xl text-left transition-all hover:shadow-lg group shadow-sm"
+                      >
+                        <p className="text-[9px] font-black text-slate-900 uppercase leading-none mb-1 group-hover:text-indigo-600">{demo.label}</p>
+                        <p className="text-[8px] text-slate-400 truncate">{demo.email}</p>
+                      </button>
+                    ))}
+                  </div>
+                )}
+             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] lg:text-[11px] font-black uppercase tracking-widest text-slate-500">Password</label>
-              <div className="relative">
-                <input
-                  type="password"
-                  placeholder="Enter your secure password"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 lg:px-4 lg:py-4 lg:pl-12 text-sm font-semibold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 outline-none transition-all"
-                  value={credentials.password}
-                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                  required
-                />
-                <Lock className="absolute left-3 lg:left-4 top-1/2 -translate-y-1/2 w-4 h-4 lg:w-5 lg:h-5 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex gap-3 animate-in fade-in slide-in-from-top-2">
-                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-                <p className="text-xs font-bold text-red-600">{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-xl py-3 lg:py-4 font-black uppercase tracking-widest text-[10px] lg:text-[11px] shadow-xl hover:shadow-2xl hover:shadow-slate-200 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-              ) : (
-                <>
-                  Sign in to Workspace
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 pt-4 border-t border-slate-100">
-            <button
-              onClick={() => setShowDemoCredentials(!showDemoCredentials)}
-              className="w-full flex items-center justify-between group py-2"
-            >
-              <div className="text-left">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-indigo-500 transition-colors">Demo Environment</div>
-                <div className="text-xs font-bold text-slate-600">Quick-fill demo identity</div>
-              </div>
-              <div className={`w-8 h-8 lg:w-8 lg:h-8 rounded-lg bg-slate-50 flex items-center justify-center transition-all ${showDemoCredentials ? 'rotate-90 text-indigo-600 bg-indigo-50' : 'text-slate-400'}`}>
-                <ChevronRight className="w-4 h-4" />
-              </div>
-            </button>
-
-            {showDemoCredentials && (
-              <div className="mt-4 space-y-2 animate-in fade-in slide-in-from-bottom-2">
-                {Object.entries(demoCredentials).map(([key, demo]) => (
-                  <button
-                    key={key}
-                    onClick={() => setDemoCreds(key, demo)}
-                    className="w-full p-3 lg:p-4 bg-slate-50 hover:bg-white border border-slate-200 rounded-xl flex items-center justify-between transition-all hover:shadow-md hover:border-slate-300 group"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-xl bg-white shadow-sm flex items-center justify-center border border-slate-100 group-hover:border-indigo-100">
-                        <Activity className="w-4 h-4 text-slate-600 group-hover:text-indigo-600" />
-                      </div>
-                      <div className="text-left">
-                        <div className="text-[10px] lg:text-[11px] font-black text-slate-900">{demo.label}</div>
-                        <div className="text-[10px] text-slate-400 font-medium">{demo.email}</div>
-                      </div>
-                    </div>
-                    <div className="text-[10px] font-black text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity uppercase">Select</div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Copyright Notice */}
-          <div className="mt-8 pt-4 border-t border-slate-100">
-            <p className="text-center text-xs text-slate-400">
-              © 2026 Healthezee EMR. All rights reserved.
-            </p>
-          </div>
+             <div className="text-center pt-8">
+               <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
+                 © 2026 {BRAND.name} CORE. AP-SOUTH-1. SHARD_4
+               </p>
+             </div>
           </div>
         </div>
       </div>

@@ -7,7 +7,8 @@ import {
   provisionTenantUser, 
   globalPasswordReset, 
   createNewTenant,
-  syncLegacyTenants
+  syncLegacyTenants,
+  sendCommunication
 } from '../controllers/superadmin.controller.js';
 
 const router = express.Router();
@@ -51,5 +52,10 @@ router.post('/users/provision', provisionTenantUser);
  * Universal Global Password Reset
  */
 router.post('/users/reset-password', globalPasswordReset);
+
+/**
+ * Strategic Communication Dispatch
+ */
+router.post('/communication/send', sendCommunication);
 
 export default router;

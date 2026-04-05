@@ -7,7 +7,7 @@ import AppLayout from './components/AppLayout.jsx';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import Chatbot from './components/Chatbot.jsx';
-const SuperadminPage = lazy(() => import('./pages/SuperadminPage.jsx'));
+const EnhancedSuperadminPage = lazy(() => import('./pages/EnhancedSuperadminPage.jsx'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
 const DoctorWorkspacePage = lazy(() => import('./pages/DoctorWorkspacePage.jsx'));
 const PatientsPage = lazy(() => import('./pages/PatientsPage.jsx'));
@@ -24,6 +24,7 @@ const EmployeesPage = lazy(() => import('./pages/EmployeesPage.jsx'));
 const AccountsPage = lazy(() => import('./pages/AccountsPage.jsx'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'));
 const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
+const RedesignedLoginPage = lazy(() => import('./pages/RedesignedLoginPage.jsx'));
 const UsersPage = lazy(() => import('./pages/UsersPage.jsx'));
 const LabPage = lazy(() => import('./pages/LabPage.jsx'));
 const LabAvailabilityPage = lazy(() => import('./pages/LabAvailabilityPage.jsx'));
@@ -91,7 +92,7 @@ export default function App() {
   const { showToast } = useToast();
 
 
-  console.log('DEBUG: SuperadminPage render', { superOverview, tenantsLength: tenants?.length });
+  console.log('DEBUG: EnhancedSuperadminPage render', { superOverview, tenantsLength: tenants?.length });
   const [error, setError] = useState('');
 
   const tenant = useMemo(() => tenants.find((t) => t.id === session?.tenantId), [tenants, session]);
@@ -143,7 +144,7 @@ export default function App() {
 
     // Superadmin bypasses all tenant/tier restrictions — they have no tenant
     if (activeUser.role.toLowerCase() === 'superadmin') {
-      return ['superadmin', 'tenant_provision', 'user_provision', 'password_reset', 'infra_health', 'financial_control', 'subscription_mgmt', 'ad_manager', 'dashboard', 'admin', 'reports', 'support'];
+      return ['superadmin', 'tenant_management', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'reports', 'support', 'admin'];
     }
 
     const roleKey = activeUser.role.charAt(0).toUpperCase() + activeUser.role.slice(1).toLowerCase();
@@ -466,7 +467,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <LoginPage tenants={tenants} onLogin={handleLogin} loading={loading} error={error} />;
+    return <RedesignedLoginPage tenants={tenants} onLogin={handleLogin} loading={loading} error={error} />;
   }
 
   // Calculate metrics safely
@@ -493,9 +494,11 @@ export default function App() {
       >
         <ErrorBoundary>
           <Suspense fallback={suspenseFallback}>
-            {['superadmin', 'tenant_provision', 'user_provision', 'password_reset', 'infra_health', 'financial_control', 'subscription_mgmt', 'ad_manager'].includes(view) && (
-            <SuperadminPage
-              viewMode={view}
+            {['superadmin', 'tenant_management', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'support', 'reports', 'admin'].includes(view) && (
+            <EnhancedSuperadminPage
+              view={view}
+              tenant={tenant}
+              userRole={activeUser?.role}
               superOverview={superOverview}
               tenants={tenants}
               users={users}

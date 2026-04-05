@@ -50,7 +50,7 @@ const navIcons = {
   doctor_workspace: HeartPulse,
   users: UserCircle,
   tenants: Grid2X2,
-  support: Bell,
+  support: Settings,
   patients: Users,
   appointments: Calendar,
   find_doctor: Stethoscope,
@@ -65,7 +65,7 @@ const navIcons = {
   accounts: FileText,
   reports: Activity,
   lab_availability: TestTube,
-  admin: Settings,
+  admin: Database,
   lab: FlaskConical,
   communication: Bell,
   documents: FileText,
@@ -84,7 +84,7 @@ const navIcons = {
   hospital_settings: Settings,
   admin_masters: Database,
   subscription_mgmt: CreditCard,
-  ad_manager: Megaphone,
+  ad_manager: Zap,
 };
 
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
@@ -115,10 +115,12 @@ function getSidebarGroups(role) {
   if (r === "doctor") return SIDEBAR_GROUPS_DOCTOR;
   if (r === "superadmin") {
     return [
-      { name: "Platform Hub", modules: ["superadmin", "infra_health", "ad_manager"] },
-      { name: "SaaS Infrastructure", modules: ["tenant_provision", "subscription_mgmt", "financial_control"] },
-      { name: "Global Identity", modules: ["user_provision", "password_reset"] },
-      { name: "Ops Support", modules: ["support", "reports"] },
+      { name: "Intelligence", modules: ["superadmin"] },
+      { name: "Commercials", modules: ["subscription_mgmt"] },
+      { name: "Nodes Control", modules: ["tenant_management"] },
+      { name: "Cloud & Ops", modules: ["infra_health"] },
+      { name: "Ledger", modules: ["financial_control"] },
+      { name: "Outreach", modules: ["communication"] },
     ];
   }
   return SIDEBAR_GROUPS_DEFAULT;

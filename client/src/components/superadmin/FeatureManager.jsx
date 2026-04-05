@@ -173,37 +173,68 @@ export default function FeatureManager({ tenant, onClose, onRefresh }) {
             </div>
           </section>
 
-          {/* GRANULAR OVERRIDES */}
+          {/* GRANULAR CAPABILITY MATRIX - REDESIGNED TO HORIZONTAL GRID */}
           <section className="mb-10">
-            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-               <Zap className="w-3 h-3" /> Granular Capability Overrides
-            </h4>
-            <div className="space-y-2">
+            <header className="flex items-center justify-between mb-6">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                 <Zap className="w-3.5 h-3.5 text-amber-500" /> Platform Infrastructure Shards
+              </h4>
+              <div className="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black uppercase text-slate-500 tracking-widest border border-slate-200">
+                {Object.keys(flags).length} Active Shards
+              </div>
+            </header>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {Object.entries(flags).sort().map(([flag, info]) => (
-                <div key={flag} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between group hover:border-slate-300 transition-all">
-                  <div>
-                    <div className="text-[11px] font-black text-slate-900">{featureLabels[flag] || flag}</div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${info.effective_enabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}`}>
-                        {info.enabled ? 'Authorized' : 'Restricted'}
-                      </span>
-                      {info.killSwitchActive && (
-                        <span className="text-[8px] font-black uppercase bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full flex items-center gap-1">
-                           <AlertTriangle className="w-2 h-2" /> Global Killswitch
+                <div 
+                  key={flag} 
+                  className={`
+                    px-5 py-4 rounded-[24px] border transition-all duration-300 group relative flex flex-col justify-between h-[110px]
+                    ${info.enabled 
+                      ? 'bg-white border-emerald-100 shadow-sm hover:shadow-md hover:border-emerald-200' 
+                      : 'bg-slate-50/50 border-slate-100 hover:border-slate-200'}
+                  `}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="min-w-0">
+                      <div className={`text-[12px] font-black tracking-tight truncate leading-tight ${info.enabled ? 'text-slate-900' : 'text-slate-500'}`}>
+                        {featureLabels[flag] || flag.replace('permission-', '').replace('-access', '').replace(/_/g, ' ').toUpperCase()}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-tighter ${info.effective_enabled ? (info.enabled ? 'bg-emerald-500/10 text-emerald-600' : 'bg-indigo-500/10 text-indigo-600') : 'bg-slate-200 text-slate-500'}`}>
+                          {info.enabled ? 'Authorized' : 'Cascaded'}
                         </span>
-                      )}
-                      {info.customEnabled !== null && (
-                        <span className="text-[8px] font-black uppercase bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full italic">Manual Override</span>
-                      )}
+                        {info.killSwitchActive && (
+                          <span className="text-[8px] font-black uppercase bg-red-100 text-red-600 px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse">
+                             <AlertTriangle className="w-2.5 h-2.5" /> Killswitch
+                          </span>
+                        )}
+                        {info.customEnabled !== null && (
+                          <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" title="Manual Override Active" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => toggleFeature(flag, info.enabled)}
-                    disabled={updating === flag || info.killSwitchActive}
-                    className={`w-10 h-5 rounded-full relative transition-all ${info.enabled ? 'bg-emerald-500' : 'bg-slate-300'} ${info.killSwitchActive ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                  >
-                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow-sm ${info.enabled ? 'right-0.5' : 'left-0.5'}`} />
-                  </button>
+
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className="text-[9px] font-medium text-slate-400 truncate pr-4">
+                      {info.enabled ? 'Active on node' : 'Restricted state'}
+                    </div>
+                    <button
+                      onClick={() => toggleFeature(flag, info.enabled)}
+                      disabled={updating === flag || info.killSwitchActive}
+                      className={`
+                        w-12 h-6 rounded-full relative transition-all duration-500 group-hover:scale-105
+                        ${info.enabled ? 'bg-emerald-500 shadow-lg shadow-emerald-500/20' : 'bg-slate-300 shadow-inner'} 
+                        ${info.killSwitchActive ? 'opacity-30 cursor-not-allowed grayscale' : 'cursor-pointer'}
+                      `}
+                    >
+                      <div className={`
+                        absolute top-1 w-4 h-4 bg-white rounded-full transition-all duration-300 shadow-sm
+                        ${info.enabled ? 'right-1' : 'left-1'}
+                      `} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

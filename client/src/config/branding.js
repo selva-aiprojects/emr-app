@@ -11,7 +11,7 @@ export const BRAND = {
   slogan: 'Healthezee: Care Made Easy',
   
   meta: {
-    title: 'Healthezee EMR - Modern Healthcare Management',
+    title: 'Healthezee - Modern Healthcare Management',
     description: 'Enterprise-grade, HL7/FHIR compliant electronic medical record system for modern healthcare facilities.',
     keywords: 'EMR, EHR, Healthcare, Hospital Management, HL7, FHIR, Clinical Intelligence, Healthezee'
   },

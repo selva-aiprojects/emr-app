@@ -1,13 +1,15 @@
 // Updated: Module titles fixed for better UX
 export const moduleMeta = {
-  superadmin: { title: 'Ops Command', subtitle: 'Global Metrics' },
-  tenant_provision: { title: 'Tenant Provision', subtitle: 'Infrastructure Onboarding' },
-  user_provision: { title: 'User Provision', subtitle: 'Identity Access' },
-  password_reset: { title: 'Password Reset', subtitle: 'Credential Recovery' },
-  infra_health: { title: 'Infra Health', subtitle: 'System Performance' },
-  financial_control: { title: 'Financial Control', subtitle: 'Platform Revenue' },
-  subscription_mgmt: { title: 'SaaS Plans', subtitle: 'Subscription Tiers' },
-  ad_manager: { title: 'Growth Ads', subtitle: 'Platform Promotions' },
+  superadmin: { title: 'Global Dashboard', subtitle: 'Numerical Performance' },
+  tenant_management: { title: 'Tenant Management', subtitle: 'Nodes & Identity Control' },
+  infra_health: { title: 'Infrastructure Mgmt', subtitle: 'Resource Consumption' },
+  financial_control: { title: 'Financial Governance', subtitle: 'Receivables & Payables' },
+  subscription_mgmt: { title: 'Subscription Mgmt', subtitle: 'Feature Sharding' },
+  communication: { title: 'Communication Hub', subtitle: 'Email Protocol Dispatch' },
+  tenant_provision: { title: 'Legacy Provision', subtitle: 'Archive' },
+  user_provision: { title: 'Legacy Identity', subtitle: 'Archive' },
+  password_reset: { title: 'Legacy Reset', subtitle: 'Archive' },
+  ad_manager: { title: 'Legacy Ads', subtitle: 'Archive' },
   dashboard: { title: 'Hospital Dashboard', subtitle: 'Operational overview' },
   doctor_workspace: { title: 'Doctor Desk', subtitle: 'Today\'s appointments & patients' },
   patients: { title: 'Patients', subtitle: 'Demographics and clinical folders' },
@@ -48,7 +50,7 @@ export const moduleMeta = {
 };
 
 export const fallbackPermissions = {
-  Superadmin: ['superadmin', 'tenant_provision', 'user_provision', 'password_reset', 'infra_health', 'financial_control', 'subscription_mgmt', 'ad_manager', 'dashboard', 'admin', 'reports', 'support'],
+  Superadmin: ['superadmin', 'tenant_management', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'reports', 'support', 'admin'],
   Admin: ['dashboard', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings', 'admin_masters'],
   Doctor: ['dashboard', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'reports', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Nurse: ['dashboard', 'find_doctor', 'doctor_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],
