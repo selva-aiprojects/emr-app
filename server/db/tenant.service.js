@@ -165,8 +165,8 @@ export async function getTenants() {
   const result = await query(`
     SELECT t.id, t.name, t.code, t.subdomain, t.theme, t.features, t.billing_config, t.status, t.created_at, t.updated_at, t.subscription_tier, t.logo_url, t.contact_email,
            CASE 
-             WHEN t.code = 'nah' THEN (SELECT COUNT(*) FROM nah.patients)
-             WHEN t.code = 'ehs' THEN (SELECT COUNT(*) FROM ehs.patients)
+             WHEN lower(t.code) = 'nah' THEN (SELECT COUNT(*) FROM nah.patients)
+             WHEN lower(t.code) = 'ehs' THEN (SELECT COUNT(*) FROM ehs.patients)
              ELSE (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = t.id)
            END as patient_count
     FROM emr.tenants t

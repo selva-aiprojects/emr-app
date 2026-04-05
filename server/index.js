@@ -1184,7 +1184,7 @@ app.get('/api/reports/summary/:id', authenticate, requireTenant, async (req, res
 // SUPERADMIN
 // =====================================================
 
-app.get('/api/superadmin/overview', requireRole('Superadmin'), async (_req, res) => {
+app.get('/api/superadmin/overview', authenticate, requireRole('Superadmin'), async (_req, res) => {
   try {
     const overview = await repo.getSuperadminOverview();
     res.json(overview);
