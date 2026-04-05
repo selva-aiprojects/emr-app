@@ -7,12 +7,12 @@ export const BRAND = {
   name: 'Healthezee',
   version: 'v2.0.4 Enterprise',
   engine: 'Healthezee AI Clinical Engine',
-  tagline: 'Smart Healthcare Operations Simplified',
-  slogan: 'Healthezee: Care Made Easy',
+  tagline: 'Healthcare Operations Redefined',
+  slogan: 'Healthezee: Precision Care Simplified',
   
   meta: {
-    title: 'Healthezee - Modern Healthcare Management',
-    description: 'Enterprise-grade, HL7/FHIR compliant electronic medical record system for modern healthcare facilities.',
+    title: 'Healthezee - Precision Healthcare Management',
+    description: 'Enterprise-grade, HL7/FHIR compliant electronic medical record system powered by Healthezee AI.',
     keywords: 'EMR, EHR, Healthcare, Hospital Management, HL7, FHIR, Clinical Intelligence, Healthezee'
   },
 

@@ -74,9 +74,24 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
                <p className="text-xs text-slate-500 font-medium mt-1">Real-time numerical breakup of individual hospital node activities</p>
             </div>
             <div className="flex gap-3">
-               <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 text-[10px] font-black uppercase text-indigo-600">
-                  <Activity size={12} /> Sync Active
-               </div>
+               <button 
+                  onClick={async () => {
+                     try {
+                        const response = await fetch('/api/superadmin/sync-metrics', {
+                           method: 'POST',
+                           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                        });
+                        if (response.ok) {
+                           window.location.reload();
+                        }
+                     } catch (e) {
+                        console.error('Sync failed', e);
+                     }
+                  }} 
+                  className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 text-[10px] font-black uppercase text-indigo-600 hover:bg-slate-50 transition-colors"
+               >
+                  <Activity size={12} className="animate-pulse" /> Sync Active
+               </button>
                <button className="px-5 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-colors">Export Ledger</button>
             </div>
          </header>

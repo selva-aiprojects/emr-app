@@ -81,21 +81,22 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
 
   return (
     <div className="redesigned-login-container">
-      {/* Left Panel - Branding */}
-      <div className="login-left-panel">
-        <div >
+      <div className="unified-login-card">
+        {/* Left Panel - Branding */}
+        <div className="login-left-panel">
+        <div className="branding-content">
           {/* Logo Section */}
-            <div>
-              <img src="/healthezee-logo.png" alt="Healthezee"  />
-          </div>
+          <img src="/healthezee-logo.png" alt="Healthezee" className="w-32 h-auto mb-10 object-contain drop-shadow-2xl" />
 
           {/* Hero Content */}
           <div className="hero-content">
             <h2 className="hero-title">
-              NextGen AI-Powerd <br></br>Hospital Management System
+              Precision <br />
+              <span className="text-emerald-300">Healthcare</span> <br />
+              <span className="text-indigo-300">Dynamics</span>
             </h2>
-            <p className="hero-description">
-              Empowering healthcare providers with intelligent Hospital Management solutions for precision care delivery and operational excellence.
+            <p className="hero-description text-slate-300 font-medium">
+              Enterprise intelligence for clinical performance and unified hospital governance.
             </p>
           </div>
 
@@ -155,21 +156,12 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
         </div>
       </div>
 
-      {/* Right Panel - Login Form */}
       <div className="login-right-panel">
         <div className="form-container">
-          {/* Mobile Logo (hidden on desktop) */}
-          <div className="mobile-logo">
-            <div className="logo-image mobile">
-              <img src="/healthezee-logo.png" alt="Healthezee Logo" className="logo-img mobile" />
-            </div>
-            <h1 className="mobile-title">{BRAND.name}</h1>
-          </div>
-
           {/* Form Header */}
           <div className="form-header">
-            <h2 className="form-title">Welcome Back</h2>
-            <p className="form-subtitle">Sign in to access your healthcare workspace</p>
+            <h2 className="form-title">Platform Gateway</h2>
+            <p className="form-subtitle text-slate-400">Authenticate your secure identity to access clinical operations.</p>
           </div>
 
           {/* Quick Access Cards */}
@@ -305,6 +297,7 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
             <p className="footer-text">
               © {new Date().getFullYear()} {BRAND.name}. Secure healthcare platform.
             </p>
+            </div>
           </div>
         </div>
       </div>

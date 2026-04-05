@@ -56,14 +56,14 @@ export default function EnhancedSuperadminPage({
         </section>
 
         {/* Live Metrics Floor (Fixed at bottom of page) */}
-        <footer className="h-10 bg-slate-900 flex items-center px-8 text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] justify-between z-30 shrink-0">
+        <footer className="h-10 bg-slate-900 flex items-center px-8 text-[9px] font-black text-slate-200 uppercase tracking-[0.2em] justify-between z-30 shrink-0">
            <div className="flex gap-6">
               <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Platform Logic Active</span>
-              <span className="flex items-center gap-2 text-indigo-400"><Server size={10} /> Cluster Shard: AP-SOUTH-1</span>
+              <span className="flex items-center gap-2 text-indigo-300"><Server size={10} /> Cluster Shard: AP-SOUTH-1</span>
            </div>
            <div className="flex gap-4">
-              <span>{new Date().toLocaleTimeString()}</span>
-              <span className="text-slate-600">v4.5.1-CORE</span>
+              <span className="text-slate-100">{new Date().toLocaleTimeString()}</span>
+              <span className="text-slate-500">v4.5.1-CORE</span>
            </div>
         </footer>
       </main>

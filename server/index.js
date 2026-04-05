@@ -30,28 +30,36 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use('/api/superadmin', superadminRoutes);
 app.get('/api/version', (req, res) => res.json({ version: '1.0.6-ISOLATED' }));
 
-app.get('/api/admin/audit-nah', async (req, res) => {
+app.get('/api/admin/audit-all-shards', async (req, res) => {
   try {
     const { query } = await import('./db/connection.js');
-    const nah = await query('SELECT count(*) FROM nah.patients');
-    const ehs = await query('SELECT count(*) FROM ehs.patients');
-    const emr = await query('SELECT count(*) FROM emr.patients');
+    const logs = [];
     
-    let legacyNahCount = 'N/A';
+    // Check known schemas
+    const schemas = ['emr', 'nah', 'ehs', 'tenant_nah', 'tenant_ehs'];
+    const results = {};
+    
+    for (const sc of schemas) {
+      try {
+        const pRes = await query(`SELECT count(*) FROM ${sc}.patients`);
+        results[`${sc}_patients`] = pRes.rows[0].count;
+      } catch(e) { results[`${sc}_patients`] = 'N/A'; }
+      
+      try {
+        const uRes = await query(`SELECT count(*) FROM ${sc}.users`);
+        results[`${sc}_users`] = uRes.rows[0].count;
+      } catch(e) { results[`${sc}_users`] = 'N/A'; }
+    }
+
+    // Check Management Plane
     try {
-      const leg = await query('SELECT count(*) FROM tenant_nah.patients');
-      legacyNahCount = leg.rows[0].count;
-    } catch(e) {}
+      const mtRes = await query('SELECT count(*) FROM public.management_tenants');
+      results.management_tenants = mtRes.rows[0].count;
+      const msRes = await query('SELECT count(*) FROM public.management_dashboard_summary WHERE summary_key = \'global\'');
+      results.management_summary = msRes.rows;
+    } catch(e) { results.management_plane_error = e.message; }
 
-    const users = await query("SELECT email, name, role FROM emr.users WHERE tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'");
-
-    res.json({
-      nah_patients: nah.rows[0].count,
-      ehs_patients: ehs.rows[0].count,
-      emr_patients: emr.rows[0].count,
-      legacy_nah_patients: legacyNahCount,
-      nah_users: users.rows
-    });
+    res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -253,9 +261,10 @@ async function ensureNAHTier() {
   try {
     await verifyFeatureFlagSchema();
     await runAutoMigration();
-    await ensureManagementPlaneInfrastructure();
     await ensureTenantColumns();
     await ensureNAHTier();
+    // CRITICAL: Management plane sync must run AFTER all emr.tenants fixes to pick up final IDs
+    await ensureManagementPlaneInfrastructure();
   } catch (err) {
     console.error('❌ [STARTUP_ERROR] Initialization failed:', err.message);
   }
@@ -1013,46 +1022,27 @@ app.post('/api/admin/kill-switches', authenticate, requireRole('Superadmin'), as
 // Subscription Catalog Management
 app.get('/api/admin/subscription-catalog', requireRole('Superadmin'), async (req, res) => {
   try {
-    const catalog = [
-      {
-        id: 'basic',
-        name: 'Basic',
-        displayName: 'Basic Plan',
-        description: 'Essential EMR functionality for small practices',
-        price: '$99/month',
-        features: ['permission-core_engine-access'],
-        color: '#6b7280',
-        icon: '🩺',
-        popular: false,
-        tier: 'Basic'
-      },
-      {
-        id: 'professional',
-        name: 'Professional',
-        displayName: 'Professional Plan',
-        description: 'Enhanced EMR with customer support features',
-        price: '$299/month',
-        features: ['permission-core_engine-access', 'permission-customer_support-access'],
-        color: '#3b82f6',
-        icon: '⭐',
-        popular: true,
-        tier: 'Professional'
-      },
-      {
-        id: 'enterprise',
-        name: 'Enterprise',
-        displayName: 'Enterprise Plan',
-        description: 'Complete EMR solution with all advanced features',
-        price: '$599/month',
-        features: ['permission-core_engine-access', 'permission-customer_support-access', 'permission-hr_payroll-access', 'permission-accounts-access'],
-        color: '#10b981',
-        icon: '🏢',
-        popular: false,
-        tier: 'Enterprise'
-      }
-    ];
+    const { rows: catalog } = await query('SELECT * FROM public.management_subscriptions WHERE is_active = true ORDER BY created_at');
+    
+    // Map database fields to frontend expected ones
+    const mappedCatalog = catalog.map(plan => ({
+      id: plan.tier,
+      name: plan.plan_name,
+      displayName: plan.plan_name,
+      description: `Support tier for ${plan.tier} node deployments`,
+      price: plan.price,
+      features: Array.isArray(plan.features) ? plan.features : [],
+      color: plan.tier === 'free' ? '#6b7280' : 
+             plan.tier === 'basic' ? '#6366f1' : 
+             plan.tier === 'professional' ? '#10b981' : '#f43f5e',
+      icon: plan.tier === 'free' ? '🩺' : 
+            plan.tier === 'basic' ? '⭐' : 
+            plan.tier === 'professional' ? 'Zap' : 'Rocket',
+      tier: plan.tier,
+      limit_users: plan.limit_users
+    }));
 
-    res.json(catalog);
+    res.json(mappedCatalog);
   } catch (error) {
     console.error('Error fetching subscription catalog:', error);
     res.status(500).json({ error: 'Failed to fetch subscription catalog' });
@@ -1063,18 +1053,28 @@ app.post('/api/admin/subscription-catalog', requireRole('Superadmin'), async (re
   try {
     const { subscription } = req.body;
 
-    if (!subscription || !subscription.id) {
-      return res.status(400).json({ error: 'Subscription data is required' });
+    if (!subscription || !subscription.tier) {
+      return res.status(400).json({ error: 'Subscription tier is required' });
     }
 
-    // In a real implementation, this would save to database
-    console.log('Saving subscription:', subscription);
-
-    // Simulate saving
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const { query } = await import('./db/connection.js');
+    await query(`
+      INSERT INTO public.management_subscriptions (tier, plan_name, price, features, updated_at)
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (id) DO UPDATE SET 
+        plan_name = EXCLUDED.plan_name,
+        price = EXCLUDED.price,
+        features = EXCLUDED.features,
+        updated_at = NOW()
+    `, [
+      subscription.tier || subscription.id,
+      subscription.name || subscription.displayName,
+      subscription.price,
+      JSON.stringify(subscription.features || [])
+    ]);
 
     res.json({
-      message: 'Subscription saved successfully',
+      message: 'Subscription shard updated successfully',
       subscription
     });
   } catch (error) {
@@ -1191,6 +1191,18 @@ app.get('/api/superadmin/overview', authenticate, requireRole('Superadmin'), asy
   } catch (error) {
     console.error('Error fetching superadmin overview:', error);
     res.status(500).json({ error: 'Failed to fetch overview' });
+  }
+});
+
+app.post('/api/superadmin/sync-metrics', authenticate, requireRole('Superadmin'), async (_req, res) => {
+  try {
+    const { ensureManagementPlaneInfrastructure } = await import('./services/superadminMetrics.service.js');
+    await ensureManagementPlaneInfrastructure();
+    await query('SELECT emr.refresh_all_management_tenant_metrics()');
+    const overview = await repo.getSuperadminOverview();
+    res.json({ success: true, overview });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
