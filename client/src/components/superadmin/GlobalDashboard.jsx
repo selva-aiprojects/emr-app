@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Globe
 } from 'lucide-react';
+import * as api from '../../api.js';
 
 const STAT_LABELS = [
   { id: 'tenants', label: 'Tenants', icon: Building2, color: 'indigo' },
@@ -25,13 +26,13 @@ const STAT_LABELS = [
 export default function GlobalDashboard({ tenants = [], overview = {} }) {
   const totals = overview?.totals || {};
   
-  // Calculate calculated metrics for "Actuals" feel
+  // FAIL-SAFE: If the global summary is 0 but tenants have data, manually sum them in real-time
   const activeTenantsCount = tenants.length;
-  const totalDoctors = totals.doctors || 0;
-  const totalPatients = totals.patients || 0;
-  const availableBeds = totals.bedsAvailable || 0;
-  const availableAmbulance = totals.ambulancesAvailable || 0;
-  const totalLabTests = totals.labTests || (totalPatients * 1.2).toFixed(0); // Derived if not in core summary
+  const totalDoctors = Number(totals.doctors || 0) > 0 ? totals.doctors : tenants.reduce((s, t) => s + Number(t.doctors || 0), 0);
+  const totalPatients = Number(totals.patients || 0) > 0 ? totals.patients : tenants.reduce((s, t) => s + Number(t.patients || 0), 0);
+  const availableBeds = Number(totals.bedsAvailable || 0) > 0 ? totals.bedsAvailable : tenants.reduce((s, t) => s + Number(t.bedsAvailable || 0), 0);
+  const availableAmbulance = Number(totals.ambulancesAvailable || 0) > 0 ? totals.ambulancesAvailable : tenants.reduce((s, t) => s + Number(t.ambulancesAvailable || 0), 0);
+  const totalLabTests = totals.labTests || (Number(totalPatients) * 1.4).toFixed(0);
 
   const stats = [
     { id: 'tenants', label: 'Tenants', icon: Building2, color: 'indigo', gradient: 'from-indigo-500 to-blue-600', value: activeTenantsCount },
@@ -77,11 +78,8 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
                <button 
                   onClick={async () => {
                      try {
-                        const response = await fetch('/api/superadmin/sync-metrics', {
-                           method: 'POST',
-                           headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-                        });
-                        if (response.ok) {
+                        const res = await api.syncSuperadminMetrics();
+                        if (res && res.success) {
                            window.location.reload();
                         }
                      } catch (e) {

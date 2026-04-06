@@ -271,6 +271,12 @@ export async function getSuperadminOverview() {
   return await apiRequest('/superadmin/overview');
 }
 
+export async function syncSuperadminMetrics() {
+  return await apiRequest('/superadmin/sync-metrics', {
+    method: 'POST'
+  });
+}
+
 // =====================================================
 // PATIENTS
 // =====================================================

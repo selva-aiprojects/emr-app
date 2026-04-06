@@ -177,21 +177,14 @@ export async function getTenants() {
       t.subscription_tier,
       t.logo_url,
       t.contact_email,
-      COALESCE(
-        mtm.patients_count,
-        CASE
-          WHEN lower(t.code) = 'nah' THEN (SELECT COUNT(*) FROM nah.patients)
-          WHEN lower(t.code) = 'ehs' THEN (SELECT COUNT(*) FROM ehs.patients)
-          ELSE (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = t.id)
-        END
-      ) as patient_count,
-      COALESCE(mtm.doctors_count, 0) as doctors_count,
-      COALESCE(mtm.available_beds, 0) as beds_available,
-      COALESCE(mtm.available_ambulances, 0) as ambulances_available,
+      COALESCE(mtm.patients_count, 0) as patients,
+      COALESCE(mtm.doctors_count, 0) as doctors,
+      COALESCE(mtm.available_beds, 0) as bedsAvailable,
+      COALESCE(mtm.available_ambulances, 0) as ambulancesAvailable,
       COALESCE(mtm.insurance_capacity, 0) as insurance_capacity,
       COALESCE(mtm.active_users_count, 0) as active_users_count
     FROM emr.tenants t
-    LEFT JOIN public.management_tenant_metrics mtm
+    LEFT JOIN emr.management_tenant_metrics mtm
       ON mtm.tenant_id = t.id
     ORDER BY t.name
   `);

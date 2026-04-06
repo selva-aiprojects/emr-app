@@ -307,8 +307,11 @@ export async function refreshTenantMetrics(tenantId, schemaName = null) {
 export async function getSuperadminOverview() {
   if (!infrastructureReady) await ensureManagementPlaneInfrastructure();
 
+  console.log('[METRICS_AUDIT] Fetching global summary from emr.management_dashboard_summary...');
   const { rows: summaryRows } = await pool.query("SELECT * FROM emr.management_dashboard_summary WHERE summary_key = 'global'");
-  const summary = summaryRows[0] || { total_tenants: 0, total_doctors: 0, total_patients: 0 };
+  let summary = summaryRows[0] || { total_tenants: 0, total_doctors: 0, total_patients: 0 };
+  
+  console.log('[METRICS_AUDIT] Row from DB:', summary);
 
   const { rows: tenantRows } = await pool.query(`
     SELECT mtm.*, t.status
@@ -317,16 +320,21 @@ export async function getSuperadminOverview() {
     ORDER BY mtm.patients_count DESC
   `);
 
+  console.log('[METRICS_AUDIT] Metrics for individual tenants:', tenantRows.length);
+
   // DIRECT AUDIT FALLBACK (Nuclear Scan for Initial Sync)
-  if (Number(summary.total_patients) === 0) {
+  if (Number(summary.total_patients || 0) === 0) {
+     console.log('[METRICS_AUDIT] Summary is empty. Triggering nuclear fallback...');
      try {
-       const { rows: pAudit } = await pool.query('SELECT count(*)::int FROM emr.patients');
-       const { rows: uAudit } = await pool.query("SELECT count(*)::int FROM emr.users WHERE lower(role) LIKE '%doctor%' OR name LIKE 'Dr.%'");
-       const { rows: tAudit } = await pool.query('SELECT count(*)::int FROM emr.management_tenants');
+       const { rows: pAudit } = await pool.query('SELECT count(*)::int as count FROM emr.patients');
+       const { rows: uAudit } = await pool.query("SELECT count(*)::int as count FROM emr.users WHERE lower(role) LIKE '%doctor%' OR name LIKE 'Dr.%'");
+       const { rows: tAudit } = await pool.query('SELECT count(*)::int as count FROM emr.management_tenants');
        
        summary.total_patients = Number(pAudit[0].count);
        summary.total_doctors = Number(uAudit[0].count);
        summary.total_tenants = Number(tAudit[0].count);
+
+       console.log('[METRICS_AUDIT] Fallback results:', { patients: summary.total_patients, doctors: summary.total_doctors });
 
        // Try shard schemas too
        const schemas = ['nah', 'ehs', 'tenant_nah', 'tenant_ehs'];
@@ -336,10 +344,13 @@ export async function getSuperadminOverview() {
            summary.total_patients += Number(res.rows[0].count);
          } catch(e) {}
        }
-     } catch (err) {}
+       console.log('[METRICS_AUDIT] Final aggregated patients:', summary.total_patients);
+     } catch (err) {
+       console.error('[METRICS_AUDIT] Fallback failed:', err.message);
+     }
   }
 
-  return {
+  const response = {
     totals: {
       tenants: Number(summary.total_tenants || 0),
       doctors: Number(summary.total_doctors || 0),
@@ -367,4 +378,7 @@ export async function getSuperadminOverview() {
     })),
     generatedAt: new Date().toISOString()
   };
+
+  console.log('[METRICS_AUDIT] Returning final response with totals:', response.totals);
+  return response;
 }
