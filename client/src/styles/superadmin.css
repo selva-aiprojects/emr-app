@@ -289,8 +289,8 @@
 
 .metric-subtitle {
   font-size: 12px;
-  color: #64748b;
-  font-weight: 500;
+  color: var(--text-muted); /* Darker for accessibility */
+  font-weight: 600;
 }
 
 /* Tenant Health Matrix */

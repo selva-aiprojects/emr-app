@@ -33,10 +33,10 @@
   --info: #3B82F6;
   --info-soft: #EFF6FF;
 
-  --text-main: #1E293B;
-  --text-strong: #0F172A;
-  --text-muted: #64748B;
-  --text-soft: #94A3B8;
+  --text-main: #1E293B;     /* Slate-800 - Primary Content */
+  --text-strong: #020617;   /* Slate-950 - Headings */
+  --text-muted: #475569;    /* Slate-600 - Descriptive Text (Darkened for visibility) */
+  --text-soft: #64748B;     /* Slate-500 - Secondary Labels (Darkened for visibility) */
 
   --border: rgba(0, 119, 182, 0.14);
   --surface: #FFFFFF;

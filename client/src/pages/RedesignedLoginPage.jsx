@@ -95,7 +95,7 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
               <span className="text-emerald-300">Healthcare</span> <br />
               <span className="text-indigo-300">Dynamics</span>
             </h2>
-            <p className="hero-description text-slate-300 font-medium">
+            <p className="hero-description text-slate-100 font-medium">
               Enterprise intelligence for clinical performance and unified hospital governance.
             </p>
           </div>
@@ -107,8 +107,8 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
                 <Shield className="w-6 h-6" />
               </div>
               <div className="feature-text">
-                <h3>Enterprise Security</h3>
-                <p>HIPAA Compliant • SOC 2 Certified</p>
+                <h3 className="text-white">Enterprise Security</h3>
+                <p className="text-slate-100 font-bold">HIPAA Compliant • SOC 2 Certified</p>
               </div>
             </div>
             <div className="feature-item">
@@ -116,8 +116,8 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
                 <Activity className="w-6 h-6" />
               </div>
               <div className="feature-text">
-                <h3>Real-time Analytics</h3>
-                <p>Live Patient Monitoring • Clinical Insights</p>
+                <h3 className="text-white">Real-time Analytics</h3>
+                <p className="text-slate-100 font-bold">Live Patient Monitoring • Clinical Insights</p>
               </div>
             </div>
             <div className="feature-item">
@@ -125,8 +125,8 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
                 <Database className="w-6 h-6" />
               </div>
               <div className="feature-text">
-                <h3>Cloud Infrastructure</h3>
-                <p>99.9% Uptime • Auto-scaling</p>
+                <h3 className="text-white">Cloud Infrastructure</h3>
+                <p className="text-slate-100 font-bold">99.9% Uptime • Auto-scaling</p>
               </div>
             </div>
           </div>
@@ -135,15 +135,15 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
           <div className="trust-indicators">
             <div className="trust-item">
               <div className="trust-dot"></div>
-              <span>256-bit Encryption</span>
+              <span className="text-white font-black">256-bit Encryption</span>
             </div>
             <div className="trust-item">
               <div className="trust-dot"></div>
-              <span>GDPR Compliant</span>
+              <span className="text-white font-black">GDPR Compliant</span>
             </div>
             <div className="trust-item">
               <div className="trust-dot"></div>
-              <span>ISO 27001 Certified</span>
+              <span className="text-white font-black">ISO 27001 Certified</span>
             </div>
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
           {/* Form Header */}
           <div className="form-header">
             <h2 className="form-title">Platform Gateway</h2>
-            <p className="form-subtitle text-slate-400">Authenticate your secure identity to access clinical operations.</p>
+            <p className="form-subtitle text-slate-600 font-bold">Authenticate your secure identity to access clinical operations.</p>
           </div>
 
           {/* Quick Access Cards */}
