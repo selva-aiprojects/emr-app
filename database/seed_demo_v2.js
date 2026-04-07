@@ -11,11 +11,23 @@ async function generateUUID(schema, table, uniqueField, value) {
 async function runSeeder() {
   console.log("🚀 Starting V2 Demo Data Seed Generation...");
   try {
-    const tenantsRes = await query('SELECT id, code, schema_name FROM emr.management_tenants WHERE status = $1', ['active']);
-    const tenants = tenantsRes.rows;
+    const args = process.argv.slice(2);
+    const targetTenantFilter = args[0] ? args[0].toLowerCase() : null;
+
+    let queryStr = 'SELECT id, code, schema_name FROM emr.management_tenants WHERE status = $1';
+    let queryArgs = ['active'];
+
+    const tenantsRes = await query(queryStr, queryArgs);
+    let tenants = tenantsRes.rows;
+
+    if (targetTenantFilter) {
+        tenants = tenants.filter(t => t.code.toLowerCase().includes(targetTenantFilter) || t.schema_name?.toLowerCase().includes(targetTenantFilter) || (t.name && t.name.toLowerCase().includes(targetTenantFilter)));
+    }
 
     if (tenants.length === 0) {
-        console.log("No active tenants found.");
+        console.log(`❌ No active tenants found matching "${targetTenantFilter || ''}".`);
+        console.log("Here are the currently available ACTIVE tenants:");
+        tenantsRes.rows.forEach(t => console.log(`  - Code: ${t.code} | Schema: ${t.schema_name} | ID: ${t.id}`));
         process.exit(0);
     }
 
