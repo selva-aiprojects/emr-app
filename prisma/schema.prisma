@@ -1,12 +1,11 @@
 generator client {
   provider        = "prisma-client-js"
   output          = "../node_modules/.prisma/client"
-  previewFeatures = ["driverAdapters", "multiSchema"]
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["public", "emr"]
 }
 
 model Tenant {
