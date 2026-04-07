@@ -63,7 +63,7 @@ function registerCleanupHooks() {
   cleanupRegistered = true;
 }
 
-const managementDatabaseUrl = withSchema(ensureDatabaseUrl(), 'public');
+const managementDatabaseUrl = withSchema(ensureDatabaseUrl(), 'emr');
 const managementPool = new pg.Pool({
   connectionString: managementDatabaseUrl,
   ssl: { rejectUnauthorized: false }
@@ -71,7 +71,7 @@ const managementPool = new pg.Pool({
 const managementAdapter = new PrismaPg(managementPool);
 
 /**
- * Management client for the Control Plane (always points to the public schema).
+ * Management client for the Control Plane (always points to the emr schema).
  */
 export const managementClient = new ManagementClient({
   adapter: managementAdapter

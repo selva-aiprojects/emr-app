@@ -5,6 +5,18 @@
 
 import { query } from './connection.js';
 
+function snakeToCamel(obj) {
+  if (Array.isArray(obj)) return obj.map(v => snakeToCamel(v));
+  if (obj !== null && obj.constructor === Object) {
+    return Object.keys(obj).reduce((result, key) => {
+      const camelKey = key.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('_', ''));
+      result[camelKey] = snakeToCamel(obj[key]);
+      return result;
+    }, {});
+  }
+  return obj;
+}
+
 // =====================================================
 // BOOTSTRAP
 // =====================================================
@@ -34,39 +46,39 @@ export async function getBootstrapData(tenantId, userId) {
   ] = await Promise.all([
     runSafeQuery('SELECT * FROM emr.users WHERE id = $1', [userId]),
     runSafeQuery(
-      'SELECT * FROM emr.patients WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100',
+      'SELECT * FROM patients WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM emr.walkins WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM walkins WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM emr.encounters WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM encounters WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM emr.invoices WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM invoices WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM emr.inventory_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM inventory_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM emr.employees WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM employees WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM emr.employee_leaves WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM employee_leaves WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM emr.insurance_providers WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM insurance_providers WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM emr.claims WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM claims WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
   ]);
@@ -92,16 +104,16 @@ export async function getBootstrapData(tenantId, userId) {
   user.role = userRole;
 
   return {
-    user,
-    patients: patientsResult.rows,
+    user: snakeToCamel(user),
+    patients: snakeToCamel(patientsResult.rows),
     appointments: [], // Add appointment query later if needed
-    walkins: walkinsResult.rows,
-    encounters: encountersResult.rows,
-    invoices: invoicesResult.rows,
-    inventory: inventoryResult.rows,
-    employees: employeesResult.rows,
-    employeesLeaves: employeesLeavesResult.rows,
-    insuranceProviders: insuranceProvidersResult.rows,
-    claims: claimsResult.rows,
+    walkins: snakeToCamel(walkinsResult.rows),
+    encounters: snakeToCamel(encountersResult.rows),
+    invoices: snakeToCamel(invoicesResult.rows),
+    inventory: snakeToCamel(inventoryResult.rows),
+    employees: snakeToCamel(employeesResult.rows),
+    employeesLeaves: snakeToCamel(employeesLeavesResult.rows),
+    insuranceProviders: snakeToCamel(insuranceProvidersResult.rows),
+    claims: snakeToCamel(claimsResult.rows),
   };
 }

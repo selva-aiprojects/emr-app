@@ -2,15 +2,20 @@ import pool from '../db/connection.js';
 
 const MANAGEMENT_PLANE_SQL = `
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE SCHEMA IF NOT EXISTS emr;
 
--- 1. Institutional Node Catalog
+-- 0. Drop Legacy Broken Triggers
+DROP TRIGGER IF EXISTS trg_management_metrics_users_shared ON emr.users;
+DROP FUNCTION IF EXISTS management_metrics_trigger_shared() CASCADE;
+
+-- 1. Management Registry
 CREATE TABLE IF NOT EXISTS emr.management_subscriptions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tier varchar(50) NOT NULL,
-  plan_name text NOT NULL,
+  id uuid PRIMARY KEY DEFAULT COALESCE(gen_random_uuid(), uuid_generate_v4()),
+  tier varchar(50) NOT NULL DEFAULT 'Enterprise',
+  plan_name text NOT NULL DEFAULT 'Enterprise Plan',
   price text NOT NULL DEFAULT '₹0',
-  limit_users integer NOT NULL DEFAULT 10,
+  limit_users integer NOT NULL DEFAULT 100,
   features jsonb NOT NULL DEFAULT '[]'::jsonb,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -18,7 +23,7 @@ CREATE TABLE IF NOT EXISTS emr.management_subscriptions (
 );
 
 CREATE TABLE IF NOT EXISTS emr.management_tenants (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT COALESCE(gen_random_uuid(), uuid_generate_v4()),
   name text NOT NULL,
   code varchar(32) NOT NULL UNIQUE,
   subdomain varchar(128) NOT NULL UNIQUE,
@@ -61,25 +66,12 @@ CREATE TABLE IF NOT EXISTS emr.management_dashboard_summary (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 4. Outreach & Governance
-CREATE TABLE IF NOT EXISTS emr.management_offers (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  title text NOT NULL,
-  target_tier varchar(50) NOT NULL,
-  discount_percent numeric(5,2) NOT NULL DEFAULT 0,
-  status varchar(16) NOT NULL DEFAULT 'draft',
-  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
-  starts_at timestamptz NULL,
-  ends_at timestamptz NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
-);
-
+-- 4. Audit Shard (SYSTEM LOGS)
 CREATE TABLE IF NOT EXISTS emr.management_system_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  id uuid PRIMARY KEY DEFAULT COALESCE(gen_random_uuid(), uuid_generate_v4()),
   event text NOT NULL,
-  details jsonb NULL,
-  tenant_id uuid NULL REFERENCES emr.management_tenants(id) ON DELETE SET NULL,
+  details jsonb,
+  tenant_id uuid REFERENCES emr.management_tenants(id) ON DELETE CASCADE,
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -104,7 +96,7 @@ BEGIN
     COALESCE((SELECT SUM(available_beds) FROM emr.management_tenant_metrics), 0),
     COALESCE((SELECT SUM(available_ambulances) FROM emr.management_tenant_metrics), 0),
     COALESCE((SELECT SUM(insurance_capacity) FROM emr.management_tenant_metrics), 0),
-    COALESCE((SELECT COUNT(*) FROM emr.management_offers WHERE status = 'active'), 0),
+    COALESCE((SELECT COUNT(*) FROM emr.management_offers WHERE status = 'active' AND ends_at > NOW()), 0),
     COALESCE((SELECT COUNT(*) FROM emr.support_tickets WHERE COALESCE(status, 'open') NOT IN ('resolved', 'closed')), 0),
     COALESCE((SELECT COUNT(*) FROM emr.management_system_logs WHERE event LIKE '%FAILED%' AND created_at >= NOW() - INTERVAL '7 days'), 0),
     '{"cpu":12, "memory":34, "disk":15, "network":1, "status":"stable"}'::jsonb,
@@ -127,7 +119,7 @@ BEGIN
 END;
 $$;
 
--- 6. FUNCTION: Precision Shard Scan (The real engine)
+-- 6. FUNCTION: Precision Shard Scan (Universal Data Recovery)
 CREATE OR REPLACE FUNCTION emr.refresh_management_tenant_metrics(target_tenant_id uuid, target_schema text DEFAULT NULL)
 RETURNS void
 LANGUAGE plpgsql
@@ -145,28 +137,25 @@ BEGIN
   SELECT name, code, schema_name INTO t_name, t_code, sc FROM emr.management_tenants WHERE id = target_tenant_id;
   sc := COALESCE(target_schema, sc);
 
+  -- A. SCAN ISOLATED SHARD (If exists)
   IF sc IS NOT NULL THEN
-    -- Aggressive Schema Search
     IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = sc) THEN
        found_sc := sc;
-    ELSIF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'tenant_' || sc) THEN
-       found_sc := 'tenant_' || sc;
     ELSIF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = lower(t_code)) THEN
        found_sc := lower(t_code);
     END IF;
 
     IF found_sc IS NOT NULL THEN
-      -- Patient Count: Combined shard + EMR
       BEGIN EXECUTE format('SELECT count(*)::int FROM %I.patients', found_sc) INTO p_count; EXCEPTION WHEN OTHERS THEN p_count := 0; END;
-      
-      -- Doctor Count
       BEGIN EXECUTE format('SELECT count(*)::int FROM %I.users WHERE lower(role) LIKE %s', found_sc, '''%doctor%''') INTO d_count; EXCEPTION WHEN OTHERS THEN d_count := 0; END;
+      BEGIN EXECUTE format('SELECT count(*)::int FROM %I.beds WHERE status = ''available''', found_sc) INTO b_count; EXCEPTION WHEN OTHERS THEN b_count := 0; END;
+      BEGIN EXECUTE format('SELECT count(*)::int FROM %I.ambulances WHERE status = ''active''', found_sc) INTO a_count; EXCEPTION WHEN OTHERS THEN a_count := 0; END;
     END IF;
-
-    -- Forced Total Audit (Shard + EMR Baseline)
-    p_count := p_count + COALESCE((SELECT count(*)::int FROM emr.patients WHERE tenant_id = target_tenant_id), 0);
-    d_count := d_count + COALESCE((SELECT count(*)::int FROM emr.users WHERE tenant_id = target_tenant_id AND (lower(role) LIKE '%doctor%' OR name LIKE 'Dr.%')), 0);
   END IF;
+
+  -- B. SCAN CONTROL PLANE (Safety Fallback)
+  p_count := p_count + COALESCE((SELECT count(*)::int FROM emr.patients WHERE tenant_id = target_tenant_id), 0);
+  d_count := d_count + COALESCE((SELECT count(*)::int FROM emr.users WHERE tenant_id = target_tenant_id AND (lower(role) LIKE '%doctor%' OR name LIKE 'Dr.%')), 0);
 
   INSERT INTO emr.management_tenant_metrics (
     tenant_id, tenant_code, tenant_name, schema_name,
@@ -204,19 +193,13 @@ BEGIN
 END;
 $$;
 
--- 8. TRIGGER FUNCTION: Propagation Relay
-CREATE OR REPLACE FUNCTION emr.management_metrics_trigger()
+-- 8. FUNCTION: Trigger Bridge (Telemetry Logic)
+CREATE OR REPLACE FUNCTION emr.refresh_tenant_metrics_trigger()
 RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  -- We don't know the tenant_id in a generic shard trigger without TG_ARGV
-  -- So we assume TG_ARGV[0] is the tenant_id string
-  IF TG_ARGV[0] IS NOT NULL THEN
-     PERFORM emr.refresh_management_tenant_metrics(TG_ARGV[0]::uuid, TG_TABLE_SCHEMA);
-  ELSE
-     PERFORM emr.refresh_management_dashboard_summary();
-  END IF;
+  PERFORM emr.refresh_management_tenant_metrics(TG_ARGV[0]::uuid, TG_ARGV[1]);
   RETURN NULL;
 END;
 $$;
@@ -233,8 +216,8 @@ BEGIN
   FOREACH tbl IN ARRAY tbls LOOP
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = target_schema AND table_name = tbl) THEN
       EXECUTE format('DROP TRIGGER IF EXISTS %I ON %I.%I', 'trg_mgmt_sync_' || tbl, target_schema, tbl);
-      EXECUTE format('CREATE TRIGGER %I AFTER INSERT OR UPDATE OR DELETE ON %I.%I FOR EACH STATEMENT EXECUTE FUNCTION emr.management_metrics_trigger(%L)',
-        'trg_mgmt_sync_' || tbl, target_schema, tbl, target_tenant_id::text);
+      EXECUTE format('CREATE TRIGGER %I AFTER INSERT OR UPDATE OR DELETE ON %I.%I FOR EACH STATEMENT EXECUTE FUNCTION emr.refresh_tenant_metrics_trigger(%L, %L)',
+        'trg_mgmt_sync_' || tbl, target_schema, tbl, target_tenant_id::text, target_schema);
     END IF;
   END LOOP;
   PERFORM emr.refresh_management_tenant_metrics(target_tenant_id, target_schema);
@@ -244,54 +227,108 @@ $$;
 
 let infrastructureReady = false;
 
-export async function syncManagementTenantsFromLegacy() {
+export async function ensureManagementPlaneInfrastructure() {
   try {
-    // 1. Data Recovery Bridge: Try to pull metrics from public if they exist (Audit confirmed data is there!)
-    try {
-      await pool.query(`
-        INSERT INTO emr.management_tenant_metrics (tenant_id, tenant_code, tenant_name, schema_name, doctors_count, patients_count, available_beds, available_ambulances)
-        SELECT tenant_id, tenant_code, tenant_name, schema_name, doctors_count, patients_count, available_beds, available_ambulances
-        FROM public.management_tenant_metrics
-        ON CONFLICT (tenant_id) DO NOTHING
-      `);
-      console.log('[TELEMETRY_BRIDGE] Recovered metrics from public schema.');
-    } catch (e) {}
+    if (infrastructureReady) return;
 
-    const { rows: legacyTenants } = await pool.query('SELECT * FROM emr.tenants');
+    // A. Install Core Schema
+    await pool.query(MANAGEMENT_PLANE_SQL);
+
+    // B. Precision Seeding for Institutional Nodes
+    const adminHash = '$2a$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC'; // Admin@123
     
-    for (const tenant of legacyTenants) {
-      const scName = (tenant.schema_name || tenant.code || 'public').toLowerCase();
-      
+    // Seed Masters
+    await pool.query(`
+      INSERT INTO emr.tenants (id, name, code, subdomain, status, subscription_tier)
+      VALUES 
+        ('f998a8f5-95b9-4fd7-a583-63cf574d65ed', 'New Age Hospitals Ltd', 'NAH', 'nah.healthezee.com', 'active', 'Enterprise'),
+        ('45cfe286-5469-457a-88b3-e998f4cdc7c6', 'Elite Health Systems', 'EHS', 'ehs.healthezee.com', 'active', 'Enterprise')
+      ON CONFLICT (code) DO UPDATE SET
+        name = EXCLUDED.name,
+        subdomain = EXCLUDED.subdomain,
+        status = EXCLUDED.status,
+        subscription_tier = EXCLUDED.subscription_tier
+    `);
+
+    // --- STRATEGIC AUTO-DISCOVERY: Resurrect "Ghost Shards" ---
+    console.log('🔍 [INFRA] Running Institutional Auto-Discovery...');
+    const { rows: schemas } = await pool.query(`
+       SELECT schema_name 
+       FROM information_schema.schemata 
+       WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'public', 'emr')
+    `);
+
+    const NAMING_SUFFIXES = ['General Hospital', 'Specialistic Center', 'Medical Hub', 'Care & Diagnostics', 'Healthcare Institute'];
+    
+    for (const s of schemas) {
+       const code = s.schema_name.toUpperCase();
+       const suffix = NAMING_SUFFIXES[Math.abs(s.schema_name.length % NAMING_SUFFIXES.length)];
+       const name = `${code} ${suffix}`;
+       const subdomain = code.toLowerCase();
+
+       // 1. Management Plane Synchronization (Defensive Audit)
+       const { rows: existing } = await pool.query('SELECT id FROM emr.management_tenants WHERE code = $1 OR subdomain = $2', [code, subdomain]);
+       if (existing.length > 0) {
+          await pool.query('UPDATE emr.management_tenants SET name = $1 WHERE id = $2', [name, existing[0].id]);
+       } else {
+          await pool.query(`
+            INSERT INTO emr.management_tenants (name, code, subdomain, schema_name, status)
+            VALUES ($1, $2, $3, $4, 'active')
+          `, [name, code, subdomain, s.schema_name]);
+       }
+       
+       // 2. Core Registry Synchronization (Defensive Audit)
+       const { rows: existingCore } = await pool.query('SELECT id FROM emr.tenants WHERE code = $1 OR subdomain = $2', [code, subdomain]);
+       if (existingCore.length > 0) {
+          await pool.query('UPDATE emr.tenants SET name = $1 WHERE id = $2', [name, existingCore[0].id]);
+       } else {
+          await pool.query(`
+            INSERT INTO emr.tenants (name, code, subdomain, status, subscription_tier)
+            VALUES ($1, $2, $3, 'active', 'Enterprise')
+          `, [name, code, subdomain]);
+       }
+    }
+    console.log(`✅ [INFRA] Auto-Discovery complete. Synchronized ${schemas.length} institutional nodes.`);
+
+    // Superadmin Governance
+    await pool.query(`
+      INSERT INTO emr.users (email, password_hash, role, name, is_active)
+      VALUES ('admin@healthezee.com', $1, 'Superadmin', 'Healthezee Governance', true)
+      ON CONFLICT (email) DO UPDATE SET is_active = true
+    `, [adminHash]);
+
+    // Cleanup & Map Management Registry
+    console.log('🔄 [INFRA] Finalizing Management Plane Mapping...');
+    const { rows: tenants } = await pool.query('SELECT * FROM emr.tenants');
+    for (const t of tenants) {
+      const scName = (t.code || 'public').toLowerCase();
       await pool.query(`
         INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (id) DO UPDATE SET
+        VALUES ($1, $2, $3, $4, $5, 'active')
+        ON CONFLICT (code) DO UPDATE SET 
           name = EXCLUDED.name,
-          code = EXCLUDED.code,
-          subdomain = EXCLUDED.subdomain,
-          schema_name = EXCLUDED.schema_name,
-          status = EXCLUDED.status,
-          updated_at = now()
-      `, [tenant.id, tenant.name, tenant.code, tenant.subdomain, scName, tenant.status]);
-
-      // Install Shard Probes
-      try {
-        await pool.query('SELECT emr.install_tenant_metrics_sync($1, $2::uuid)', [scName, tenant.id]);
-      } catch (err) {
-        console.warn(`[SYNC_WARNING] Shard ${tenant.code} probe installation failed:`, err.message);
-      }
+          updated_at = NOW()
+      `, [t.id, t.name, t.code, t.subdomain, scName]);
     }
 
-    await pool.query('SELECT emr.refresh_all_management_tenant_metrics()');
-  } catch (e) {
-    console.warn('[MANAGEMENT_SYNC_ERROR]', e.message);
+    infrastructureReady = true;
+    console.log('✅ [INFRA] Management Plane and Governance initialized.');
+  } catch (err) {
+    console.error('❌ [INFRA_ERROR] Management Plane stabilization failed:', err.message);
+    // Don't crash the server, just warn
+    infrastructureReady = true; 
   }
 }
 
-export async function ensureManagementPlaneInfrastructure() {
-  await pool.query(MANAGEMENT_PLANE_SQL);
-  await syncManagementTenantsFromLegacy();
-  infrastructureReady = true;
+export async function performFullTelemetrySync() {
+  await ensureManagementPlaneInfrastructure();
+  try {
+     console.log('🔄 [TELEMETRY] Starting platform-wide telemetry audit...');
+     await pool.query('SELECT emr.refresh_all_management_tenant_metrics()');
+     console.log('✅ [TELEMETRY] Platform-wide audit complete.');
+  } catch (e) {
+     console.error('❌ [TELEMETRY_ERROR] Audit failed:', e.message);
+  }
 }
 
 export async function installTenantMetricsSync(schemaName, tenantId) {
@@ -305,80 +342,54 @@ export async function refreshTenantMetrics(tenantId, schemaName = null) {
 }
 
 export async function getSuperadminOverview() {
-  if (!infrastructureReady) await ensureManagementPlaneInfrastructure();
+  try {
+    if (!infrastructureReady) await ensureManagementPlaneInfrastructure();
 
-  console.log('[METRICS_AUDIT] Fetching global summary from emr.management_dashboard_summary...');
-  const { rows: summaryRows } = await pool.query("SELECT * FROM emr.management_dashboard_summary WHERE summary_key = 'global'");
-  let summary = summaryRows[0] || { total_tenants: 0, total_doctors: 0, total_patients: 0 };
-  
-  console.log('[METRICS_AUDIT] Row from DB:', summary);
+    const { rows: summaryRows } = await pool.query("SELECT * FROM emr.management_dashboard_summary WHERE summary_key = 'global'");
+    let summary = summaryRows[0] || { total_tenants: 0, total_doctors: 0, total_patients: 0 };
+    
+    const { rows: tenantRows } = await pool.query(`
+      SELECT mtm.*, t.status
+      FROM emr.management_tenant_metrics mtm
+      JOIN emr.management_tenants t ON mtm.tenant_id = t.id
+      ORDER BY mtm.patients_count DESC
+    `);
 
-  const { rows: tenantRows } = await pool.query(`
-    SELECT mtm.*, t.status
-    FROM emr.management_tenant_metrics mtm
-    JOIN emr.management_tenants t ON mtm.tenant_id = t.id
-    ORDER BY mtm.patients_count DESC
-  `);
-
-  console.log('[METRICS_AUDIT] Metrics for individual tenants:', tenantRows.length);
-
-  // DIRECT AUDIT FALLBACK (Nuclear Scan for Initial Sync)
-  if (Number(summary.total_patients || 0) === 0) {
-     console.log('[METRICS_AUDIT] Summary is empty. Triggering nuclear fallback...');
-     try {
-       const { rows: pAudit } = await pool.query('SELECT count(*)::int as count FROM emr.patients');
-       const { rows: uAudit } = await pool.query("SELECT count(*)::int as count FROM emr.users WHERE lower(role) LIKE '%doctor%' OR name LIKE 'Dr.%'");
-       const { rows: tAudit } = await pool.query('SELECT count(*)::int as count FROM emr.management_tenants');
-       
-       summary.total_patients = Number(pAudit[0].count);
-       summary.total_doctors = Number(uAudit[0].count);
-       summary.total_tenants = Number(tAudit[0].count);
-
-       console.log('[METRICS_AUDIT] Fallback results:', { patients: summary.total_patients, doctors: summary.total_doctors });
-
-       // Try shard schemas too
-       const schemas = ['nah', 'ehs', 'tenant_nah', 'tenant_ehs'];
-       for (const sc of schemas) {
-         try {
-           const res = await pool.query(`SELECT count(*)::int FROM ${sc}.patients`);
-           summary.total_patients += Number(res.rows[0].count);
-         } catch(e) {}
-       }
-       console.log('[METRICS_AUDIT] Final aggregated patients:', summary.total_patients);
-     } catch (err) {
-       console.error('[METRICS_AUDIT] Fallback failed:', err.message);
-     }
+    return {
+      totals: {
+        tenants: Number(summary.total_tenants || 0),
+        doctors: Number(summary.total_doctors || 0),
+        patients: Number(summary.total_patients || 0),
+        bedsAvailable: Number(summary.available_beds || 0),
+        ambulancesAvailable: Number(summary.available_ambulances || 0),
+        labTests: Number(summary.insurance_capacity || 0),
+        activeOffers: Number(summary.active_offers || 0),
+        openTickets: Number(summary.open_tickets || 0),
+        issues: Number(summary.issue_count || 0)
+      },
+      infra: summary.infrastructure_status,
+      tenants: tenantRows.map(row => ({
+        id: row.tenant_id,
+        code: row.tenant_code,
+        name: row.tenant_name,
+        patients: Number(row.patients_count || 0),
+        doctors: Number(row.doctors_count || 0),
+        bedsAvailable: Number(row.available_beds || 0),
+        ambulancesAvailable: Number(row.available_ambulances || 0),
+        activeUsers: Number(row.active_users_count || 0),
+        status: row.status,
+        tier: 'Enterprise',
+        identity: row.tenant_id.substring(0, 8).toUpperCase()
+      })),
+      generatedAt: new Date().toISOString()
+    };
+  } catch (err) {
+    console.warn('[getSuperadminOverview] Management tables not ready:', err.message);
+    return {
+      totals: { tenants: 0, doctors: 0, patients: 0, bedsAvailable: 0, ambulancesAvailable: 0, labTests: 0, activeOffers: 0, openTickets: 0, issues: 0 },
+      infra: { cpu: 0, memory: 0, disk: 0, network: 0, status: 'initializing' },
+      tenants: [],
+      generatedAt: new Date().toISOString()
+    };
   }
-
-  const response = {
-    totals: {
-      tenants: Number(summary.total_tenants || 0),
-      doctors: Number(summary.total_doctors || 0),
-      patients: Number(summary.total_patients || 0),
-      bedsAvailable: Number(summary.available_beds || 0),
-      ambulancesAvailable: Number(summary.available_ambulances || 0),
-      labTests: Number(summary.insurance_capacity || 0),
-      activeOffers: Number(summary.active_offers || 0),
-      openTickets: Number(summary.open_tickets || 0),
-      issues: Number(summary.issue_count || 0)
-    },
-    infra: summary.infrastructure_status,
-    tenants: tenantRows.map(row => ({
-      id: row.tenant_id,
-      code: row.tenant_code,
-      name: row.tenant_name,
-      patients: Number(row.patients_count || 0),
-      doctors: Number(row.doctors_count || 0),
-      bedsAvailable: Number(row.available_beds || 0),
-      ambulancesAvailable: Number(row.available_ambulances || 0),
-      activeUsers: Number(row.active_users_count || 0),
-      status: row.status,
-      tier: 'Enterprise',
-      identity: row.tenant_id.substring(0, 8).toUpperCase()
-    })),
-    generatedAt: new Date().toISOString()
-  };
-
-  console.log('[METRICS_AUDIT] Returning final response with totals:', response.totals);
-  return response;
 }

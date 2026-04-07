@@ -8,6 +8,7 @@ import {
   globalPasswordReset, 
   createNewTenant,
   syncLegacyTenants,
+  syncManagementMetrics,
   sendCommunication
 } from '../controllers/superadmin.controller.js';
 
@@ -20,6 +21,7 @@ router.use(authenticate, requireRole('Superadmin'));
  * Sync legacy tenants to Management Plane
  */
 router.post('/sync-infra', syncLegacyTenants);
+router.post('/sync-metrics', syncManagementMetrics);
 
 /**
  * High-level consolidated stats (Patients, Doctors, Depts counts)
@@ -54,8 +56,16 @@ router.post('/users/provision', provisionTenantUser);
 router.post('/users/reset-password', globalPasswordReset);
 
 /**
- * Strategic Communication Dispatch
+ * System Logs Audit
  */
-router.post('/communication/send', sendCommunication);
+router.get('/logs', async (req, res) => {
+  const { query } = await import('../db/connection.js');
+  try {
+    const logs = await query('SELECT * FROM emr.management_system_logs ORDER BY created_at DESC LIMIT 100');
+    res.json(logs.rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 export default router;

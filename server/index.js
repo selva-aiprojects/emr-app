@@ -12,31 +12,173 @@ import { authenticate, requireRole, requireTenant, requirePermission, restrictPa
 import { evaluateAllFeatures, featureGate, moduleGate } from './middleware/featureFlag.middleware.js';
 import * as repo from './db/repository.js';
 import { createAuditLog, calculatePerformanceScore } from './db/repository.js';
-import * as ai from './services/ai.service.js';
-import * as notify from './services/notification.service.js';
-import pharmacyRoutes from '../pharmacy-service/src/routes/pharmacy.routes.js';
-import aiRoutes from './routes/ai.routes.js';
-import superadminRoutes from './routes/superadmin.routes.js';
 import { sendTenantWelcomeEmail } from './services/mail.service.js';
-import { runAutoMigration } from './auto_migrate.js';
 import { ensureManagementPlaneInfrastructure } from './services/superadminMetrics.service.js';
+import { runAutoMigration } from './auto_migrate.js';
 
+// Route Imports
+import superadminRoutes from './routes/superadmin.routes.js';
+// import pharmacyRoutes from './routes/pharmacy.routes.js'; // Not found in routes dir
+import aiRoutes from './routes/ai.routes.js';
 
 const app = express();
-const PORT = Number(process.env.PORT || 4000);
+
+app.get('/api/debug-patients-schema', async (req, res) => {
+  try {
+    const { rows } = await query(`SELECT * FROM nah.patients LIMIT 1`);
+    res.json({ ok: true, patient: rows[0] });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
+  }
+});
+const PORT = process.env.PORT || 4001;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+app.use(cors());
+app.use(express.json());
 
 // Routes
 app.use('/api/superadmin', superadminRoutes);
+
 app.get('/api/version', (req, res) => res.json({ version: '1.0.6-ISOLATED' }));
+
+app.get('/api/debug-db', async (req, res) => {
+  try {
+    const { query } = await import('./db/connection.js');
+    let output = {};
+    const tenantsRes = await query('SELECT id, code, schema_name FROM emr.management_tenants');
+    output.tenants = tenantsRes.rows;
+    for (const t of tenantsRes.rows) {
+      if (['NAH', 'EHS', 'KCH'].includes(t.code)) {
+        const schema = t.schema_name;
+        output[schema] = {};
+        try {
+          const userRes = await query('SELECT role, count(*) FROM emr.users WHERE tenant_id = $1 GROUP BY role', [t.id]);
+          output[schema].users = userRes.rows;
+          
+          const tables = await query(`SELECT table_name FROM information_schema.tables WHERE table_schema = $1`, [schema]);
+          output[schema].tables = [];
+          
+          for (const tbl of tables.rows) {
+             const cols = await query(`SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2`, [schema, tbl.table_name]);
+             output[schema].tables.push({
+               table: tbl.table_name,
+               columns: cols.rows
+             });
+          }
+        } catch (e) {
+          output[schema].error = e.message;
+        }
+      }
+    }
+    res.json(output);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/seed-v2', async (req, res) => {
+  try {
+    const tenantsRes = await query("SELECT id, code, subdomain FROM emr.tenants WHERE status = 'active'");
+    const logs = [];
+    
+    for (const tenant of tenantsRes.rows) {
+      const schema = tenant.code.toLowerCase();
+      const legacyId = tenant.id;
+      
+      // Attempt to find the management plane ID to prevent drift
+      let managementId = legacyId;
+      try {
+        const mgmtRes = await query("SELECT id FROM emr.management_tenants WHERE code = $1", [tenant.code]);
+        if (mgmtRes.rows.length > 0) {
+          managementId = mgmtRes.rows[0].id;
+          logs.push(`Found management ID for ${tenant.code}: ${managementId}`);
+        }
+      } catch (e) {
+        logs.push(`Management plane check failed for ${tenant.code}: ${e.message}`);
+      }
+      
+      // Choose the ID that is most likely to be in the User JWT
+      // Usually, the app prefers managementId if available
+      const activeId = managementId;
+
+      const roles = [
+        { email: `doctor1@${schema}.com`, name: 'Dr. Ryan Cardiologist', role: 'Doctor' },
+        { email: `nurse1@${schema}.com`, name: 'Nurse Joy', role: 'Nurse' },
+        { email: `admin1@${schema}.com`, name: 'Admin One', role: 'Admin' }
+      ];
+      
+      const DB_PASSWORD_HASH = '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC'; // admin123
+      
+      for (const r of roles) {
+        // Seed user with BOTH IDs to be safe
+        await query(`INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active) 
+                    VALUES ($1, $2, $3, $4, $5, true) 
+                    ON CONFLICT (tenant_id, email) DO NOTHING`, [activeId, r.email, DB_PASSWORD_HASH, r.name, r.role]);
+        
+        if (legacyId !== activeId) {
+          await query(`INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active) 
+                      VALUES ($1, $2, $3, $4, $5, true) 
+                      ON CONFLICT (tenant_id, email) DO NOTHING`, [legacyId, r.email, DB_PASSWORD_HASH, r.name, r.role]);
+        }
+      }
+      
+      await query(`CREATE SCHEMA IF NOT EXISTS "${schema}"`);
+      await query(`CREATE TABLE IF NOT EXISTS "${schema}".patients (LIKE emr.patients INCLUDING ALL)`);
+      await query(`CREATE TABLE IF NOT EXISTS "${schema}".appointments (LIKE emr.appointments INCLUDING ALL)`);
+      await query(`CREATE TABLE IF NOT EXISTS "${schema}".encounters (LIKE emr.encounters INCLUDING ALL)`);
+      await query(`CREATE TABLE IF NOT EXISTS "${schema}".invoices (LIKE emr.invoices INCLUDING ALL)`);
+      await query(`CREATE TABLE IF NOT EXISTS "${schema}".service_requests (LIKE emr.service_requests INCLUDING ALL)`);
+      
+      for(let i=1; i<=15; i++) {
+        const mrn = `${tenant.code}-PT-00${i}`;
+        const patientEmail = `pt${i}@${schema}.com`;
+        
+        try {
+          // Insert with BOTH legacy and active IDs for maximum visibility
+          await query(`INSERT INTO "${schema}".patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, created_at) 
+                      VALUES ($1, $2, 'Patient', $3, '1980-01-01', 'Male', '555-0000', $4, CURRENT_DATE) 
+                      ON CONFLICT (tenant_id, mrn) DO NOTHING`, [activeId, mrn, i, patientEmail]);
+          
+          const ptRes = await query(`SELECT id FROM "${schema}".patients WHERE mrn = $1 AND tenant_id = $2`, [mrn, activeId]);
+          if (ptRes.rows.length > 0) {
+            const pId = ptRes.rows[0].id;
+            const uniqueInvStr = `INV-${i}-${Date.now().toString().slice(-4)}`;
+            
+            await query(`INSERT INTO "${schema}".appointments (tenant_id, patient_id, scheduled_start, scheduled_end, status, created_at) 
+                        VALUES ($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'completed', CURRENT_TIMESTAMP)`, [activeId, pId]);
+            
+            await query(`INSERT INTO "${schema}".encounters (tenant_id, patient_id, encounter_type, visit_date, status) 
+                        VALUES ($1, $2, 'OPD', CURRENT_DATE, 'closed')`, [activeId, pId]);
+            
+            await query(`INSERT INTO "${schema}".invoices (tenant_id, patient_id, invoice_number, total, paid, status) 
+                        VALUES ($1, $2, $3, 1500, 1500, 'paid') ON CONFLICT DO NOTHING`, [activeId, pId, uniqueInvStr]);
+            
+            // Add some Service Requests for "Critical Alerts"
+            if (i % 5 === 0) {
+              await query(`INSERT INTO "${schema}".service_requests (tenant_id, patient_id, category, intent, status, notes, created_at) 
+                          VALUES ($1, $2, 'lab', 'order', 'pending', '{"criticalFlag": "true"}', CURRENT_TIMESTAMP)`, [activeId, pId]);
+            }
+          }
+        } catch(e) {
+          logs.push(`Patient insertion error for pt ${i}: ${e.message}`);
+        }
+      }
+    }
+    res.json({ success: true, message: "Advanced Seeding Completed", logs });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
+});
 
 app.get('/api/admin/audit-all-shards', async (req, res) => {
   try {
     const { query } = await import('./db/connection.js');
     const logs = [];
     
-    // Check known schemas
-    const schemas = ['emr', 'nah', 'ehs', 'tenant_nah', 'tenant_ehs'];
+    // Check known schemas (Dynamic Discovery)
+    const { rows: schemasRes } = await query("SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'public', 'emr')");
+    const schemas = ['emr', ...schemasRes.map(r => r.schema_name)];
     const results = {};
     
     for (const sc of schemas) {
@@ -53,9 +195,9 @@ app.get('/api/admin/audit-all-shards', async (req, res) => {
 
     // Check Management Plane
     try {
-      const mtRes = await query('SELECT count(*) FROM public.management_tenants');
+      const mtRes = await query('SELECT count(*) FROM emr.management_tenants');
       results.management_tenants = mtRes.rows[0].count;
-      const msRes = await query('SELECT count(*) FROM public.management_dashboard_summary WHERE summary_key = \'global\'');
+      const msRes = await query('SELECT count(*) FROM emr.management_dashboard_summary WHERE summary_key = \'global\'');
       results.management_summary = msRes.rows;
     } catch(e) { results.management_plane_error = e.message; }
 
@@ -65,67 +207,20 @@ app.get('/api/admin/audit-all-shards', async (req, res) => {
   }
 });
 
-app.get('/api/admin/force-nah-migration', async (req, res) => {
-  const log = [];
+app.get('/api/check-nah', async (req, res) => {
   try {
-    const { query } = await import('./db/connection.js');
-    log.push('🚀 [FORCE_MIGRATION] Starting Zero-Failure Move...');
-
-    const toKeep = [
-      { id: 'f998a8f5-95b9-4fd7-a583-63cf574d65ed', code: 'nah' },
-      { id: '45cfe286-5469-457a-88b3-e998f4cdc7c6', code: 'ehs' }
-    ];
-
-    // 1. Clean Slate
-    for (const t of toKeep) {
-      await query(`DROP SCHEMA IF EXISTS ${t.code} CASCADE`);
-      await query(`CREATE SCHEMA ${t.code}`);
-      log.push(`🧹 [FORCE_MIGRATION] Cleaned and created schema: ${t.code}`);
-    }
-
-    // 2. Audit Control Plane
-    const tableRes = await query("SELECT table_name FROM information_schema.tables WHERE table_schema = 'emr' AND table_type = 'BASE TABLE'");
-    const emrTables = tableRes.rows.map(r => r.table_name);
-    const exclude = ['tenants', 'users', 'audit_logs', 'tenant_resources', 'tenant_features', 'global_kill_switches', 'tenant_feature_status'];
-    const candidates = emrTables.filter(t => !exclude.includes(t));
-
-    for (const tenant of toKeep) {
-      log.push(`📦 [FORCE_MIGRATION] Processing ${tenant.code}...`);
-      
-      for (const t of candidates) {
-        try {
-          // Check for tenant_id column
-          const colCheck = await query(`
-            SELECT column_name FROM information_schema.columns 
-            WHERE table_schema = 'emr' AND table_name = $1 AND column_name = 'tenant_id'
-          `, [t]);
-          const hasTenantId = colCheck.rows.length > 0;
-
-          // Create table
-          await query(`CREATE TABLE IF NOT EXISTS ${tenant.code}.${t} (LIKE emr.${t} INCLUDING ALL)`);
-          
-          let moveRes;
-          if (hasTenantId) {
-            moveRes = await query(`INSERT INTO ${tenant.code}.${t} SELECT * FROM emr.${t} WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [tenant.id]);
-          } else {
-            moveRes = await query(`INSERT INTO ${tenant.code}.${t} SELECT * FROM emr.${t} ON CONFLICT DO NOTHING`);
-          }
-          
-          if (moveRes.rowCount > 0) log.push(`   ✅ Migrated ${moveRes.rowCount} rows for ${t}`);
-        } catch (tableErr) {
-          log.push(`   ❌ Skip ${t}: ${tableErr.message}`);
-        }
-      }
-    }
-
-    // 3. Final Tenant Cleanup
-    const keepIds = toKeep.map(t => t.id);
-    const delRes = await query('DELETE FROM emr.tenants WHERE id NOT IN ($1, $2)', keepIds);
-    log.push(`✅ [FORCE_MIGRATION] Cleanup: Deleted ${delRes.rowCount} redundant tenants.`);
-
-    res.send(`<h1>Migration Successful</h1><pre>${log.join('\n')}</pre><p><a href="/">Go to Dashboard</a></p>`);
-  } catch (error) {
-    res.status(500).send(`<h1>Migration Failed</h1><pre>${log.join('\n')}\n❌ ERROR: ${error.message}</pre>`);
+    const tenantId = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'; 
+    const nahCount = await query('SELECT count(*) FROM nah.patients').catch(() => ({ rows: [{count: 'N/A'}]}));
+    const dotNahCount = await query('SELECT count(*) FROM "nah.healthezee.com".patients').catch(() => ({ rows: [{count: 'N/A'}]}));
+    const mgmtSchema = await query("SELECT schema_name FROM emr.management_tenants WHERE id = $1", [tenantId]);
+    
+    res.json({
+      nah_simple_count: nahCount.rows[0].count,
+      nah_dot_count: dotNahCount.rows[0].count,
+      registry_schema_name: mgmtSchema.rows[0].schema_name
+    });
+  } catch (e) {
+    res.json({ error: e.message });
   }
 });
 
@@ -135,19 +230,6 @@ const isDirectRun =
   process.argv[1] === currentFilePath ||
   process.argv[1]?.endsWith('server/index.js') ||
   !!process.env.RENDER; // Force listen if on Render
-
-app.use(cors());
-app.use(express.json());
-
-if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'your-secret-key-change-in-production') {
-  console.warn('⚠️ WARNING: JWT_SECRET is not properly configured. Using insecure default.');
-}
-
-// DEBUG: Log all requests
-app.use((req, res, next) => {
-  console.log(`[REQUEST] ${req.method} ${req.path}`);
-  next();
-});
 
 // Test database connection on startup
 await testConnection();
@@ -206,12 +288,17 @@ async function ensureTenantColumns() {
     const columns = res.rows.map(r => r.column_name);
     const missing = [];
     if (!columns.includes('logo_url')) missing.push('ADD COLUMN logo_url TEXT');
+    if (!columns.includes('contact_email')) missing.push('ADD COLUMN contact_email VARCHAR(255)');
+    if (!columns.includes('status')) missing.push('ADD COLUMN status VARCHAR(32) DEFAULT \'active\'');
     if (!columns.includes('subscription_tier')) missing.push('ADD COLUMN subscription_tier VARCHAR(32) DEFAULT \'Professional\'');
     if (!columns.includes('billing_config')) missing.push('ADD COLUMN billing_config JSONB DEFAULT \'{}\'::JSONB');
+    if (!columns.includes('theme')) missing.push('ADD COLUMN theme JSONB DEFAULT \'{}\'::JSONB');
+    if (!columns.includes('features')) missing.push('ADD COLUMN features JSONB DEFAULT \'{}\'::JSONB');
 
     if (missing.length > 0) {
-      console.log(`[SCHEMA_FIX] Adding missing columns to emr.tenants: ${missing.length} columns`);
-      await query(`ALTER TABLE emr.tenants ${missing.join(', ')}`);
+      console.log(`[SCHEMA_FIX] Synchronizing emr.tenants structure: ${missing.length} columns`);
+      const alterSql = `ALTER TABLE emr.tenants ${missing.join(', ')}`;
+      await query(alterSql);
     }
 
     // Also ensure patients table exists for the count subquery
@@ -222,51 +309,19 @@ async function ensureTenantColumns() {
   }
 }
 
-async function ensureNAHTier() {
-  try {
-    let nahId;
-    const res = await query("SELECT id FROM emr.tenants WHERE code = 'NAH'");
-    if (res.rows.length > 0) {
-      nahId = res.rows[0].id;
-      await query("UPDATE emr.tenants SET subscription_tier = 'Professional' WHERE code = 'NAH' AND (subscription_tier IS NULL OR subscription_tier = 'Basic')");
-      console.log('[TENANT_FIX] NAH tier verified as Professional.');
-    } else {
-      console.log('[TENANT_FIX] NAH tenant missing. Creating for demo...');
-      const insertRes = await query(`
-        INSERT INTO emr.tenants (name, code, subdomain, subscription_tier)
-        VALUES ('New Age Hospital', 'NAH', 'nah.local', 'Professional')
-        RETURNING id
-      `);
-      nahId = insertRes.rows[0].id;
-    }
-
-    // Ensure NAH admin user exists for the demo
-    if (nahId) {
-      const userRes = await query("SELECT id FROM emr.users WHERE tenant_id = $1 AND email = 'admin@newage.hospital'", [nahId]);
-      if (userRes.rows.length === 0) {
-        console.log('[TENANT_FIX] NAH admin user missing. Creating for demo...');
-        await query(`
-          INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
-          VALUES ($1, 'admin@newage.hospital', '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC', 'Dr. Sarah Johnson', 'Admin', true)
-        `, [nahId]);
-      }
-    }
-  } catch (err) {
-    console.warn('[TENANT_FIX] Failed to ensure NAH environment:', err.message);
-  }
-}
-
-// Global initialization
+// Global initialization Logic (Silent Boot)
 (async () => {
   try {
-    await verifyFeatureFlagSchema();
-    await runAutoMigration();
-    await ensureTenantColumns();
-    await ensureNAHTier();
-    // CRITICAL: Management plane sync must run AFTER all emr.tenants fixes to pick up final IDs
-    await ensureManagementPlaneInfrastructure();
+     console.log('🚀 [STARTUP] Multi-Tenant Node initialized. (Background sync active)');
+     await ensureTenantColumns();
+     // Create management plane tables (non-blocking)
+     ensureManagementPlaneInfrastructure().then(() => {
+       console.log('✅ [STARTUP] Management plane tables ready');
+     }).catch(err => {
+       console.warn('⚠️ [STARTUP] Management plane setup deferred:', err.message);
+     });
   } catch (err) {
-    console.error('❌ [STARTUP_ERROR] Initialization failed:', err.message);
+     console.warn('⚠️ [STARTUP_WARNING] Basic schema check failed:', err.message);
   }
 })();
 
@@ -353,11 +408,12 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'tenantId is required for tenant login' });
     }
 
-    // Resolve tenant code to UUID if needed
     let resolvedTenantId = tenantId;
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-    if (!uuidRegex.test(tenantId)) {
+    if (tenantId === 'superadmin') {
+      resolvedTenantId = null;
+    } else if (!uuidRegex.test(tenantId)) {
       const tenant = await repo.getTenantByCode(tenantId);
       if (!tenant) {
         console.log(`[LOGIN] Invalid tenant code: ${tenantId}`);
@@ -369,23 +425,25 @@ app.post('/api/login', async (req, res) => {
     user = await repo.getUserByEmail(email, resolvedTenantId);
 
     if (!user) {
-      console.log(`[LOGIN] User not found: ${email} for tenant: ${tenantId}`);
+      console.log(`❌ [AUTH_FAIL] User not found: ${email} for tenant: ${resolvedTenantId}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     if (!user.is_active) {
-      console.log(`[LOGIN] User inactive: ${email}`);
+      console.log(`❌ [AUTH_FAIL] User inactive: ${email}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const isValidPassword = await comparePassword(password, user.password_hash);
     if (!isValidPassword) {
-      console.log(`[LOGIN] Password mismatch for: ${email}`);
+      console.log(`❌ [AUTH_FAIL] Invalid password attempt for: ${email}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    console.log(`✅ [AUTH_SUCCESS] User verified: ${email} (Role: ${user.role})`);
+
     await repo.updateUserLastLogin(user.id);
-    await createAuditLog({
+    await repo.createAuditLog({
       tenantId: user.tenant_id,
       userId: user.id,
       userName: user.name,
@@ -451,11 +509,12 @@ app.post('/api/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: typeof error === 'string' ? error : error.message, detail: error.message, stack: error.stack?.split('\n').slice(0, 3) });
   }
 });
 
-// =====================================================
+
+
 // DEBUG TOKEN (Diagnostic only)
 // =====================================================
 
@@ -574,7 +633,7 @@ app.use('/api', authenticate);
 app.use('/api', evaluateAllFeatures);
 
 // Pharmacy microservice routes
-app.use('/api/pharmacy/v1', requireTenant, pharmacyRoutes);
+// app.use('/api/pharmacy/v1', requireTenant, pharmacyRoutes);
 app.use('/api/ai/v1', requireTenant, aiRoutes);
 
 app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
@@ -786,27 +845,28 @@ app.put('/api/tenants/:id/status', async (req, res) => {
 app.patch('/api/tenants/:id/settings', requireTenant, async (req, res) => {
   try {
     const { id } = req.params;
-    const { displayName, primaryColor, accentColor, logo_url, featureInventory, featureTelehealth, subscriptionTier, billingConfig } = req.body;
+    const { displayName, primaryColor: newPrimaryColor, accentColor: newAccentColor, logo_url, featureInventory, featureTelehealth, subscriptionTier, billingConfig } = req.body;
+ 
+     const theme = (newPrimaryColor || newAccentColor) ? {
+       primary: newPrimaryColor,
+       accent: newAccentColor,
+     } : null;
+ 
+     const features = (featureInventory !== undefined || featureTelehealth !== undefined) ? {
+       inventory: Boolean(featureInventory),
+       telehealth: Boolean(featureTelehealth),
+     } : null;
+ 
+     const tenant = await repo.updateTenantSettings({
+       tenantId: id,
+       displayName,
+       theme,
+       features,
+       subscriptionTier,
+       billingConfig,
+       logo_url
+     });
 
-    const theme = (primaryColor || accentColor) ? {
-      primary: primaryColor,
-      accent: accentColor,
-    } : null;
-
-    const features = (featureInventory !== undefined || featureTelehealth !== undefined) ? {
-      inventory: Boolean(featureInventory),
-      telehealth: Boolean(featureTelehealth),
-    } : null;
-
-    const tenant = await repo.updateTenantSettings({
-      tenantId: id,
-      displayName,
-      theme,
-      features,
-      subscriptionTier,
-      billingConfig,
-      logo_url
-    });
 
     if (!tenant) {
       return res.status(404).json({ error: 'Tenant not found' });
@@ -1003,7 +1063,7 @@ app.post('/api/admin/kill-switches', authenticate, requireRole('Superadmin'), as
       return res.status(500).json({ error: 'Failed to update kill switch' });
     }
 
-    await createAuditLog({
+    await repo.createAuditLog({
       userId: req.user.id,
       userName: req.user.name,
       action: 'kill_switch.update',
@@ -1020,9 +1080,9 @@ app.post('/api/admin/kill-switches', authenticate, requireRole('Superadmin'), as
 });
 
 // Subscription Catalog Management
-app.get('/api/admin/subscription-catalog', requireRole('Superadmin'), async (req, res) => {
+app.get('/api/admin/subscription-catalog', authenticate, requireRole('Superadmin'), async (req, res) => {
   try {
-    const { rows: catalog } = await query('SELECT * FROM public.management_subscriptions WHERE is_active = true ORDER BY created_at');
+    const { rows: catalog } = await query('SELECT * FROM emr.management_subscriptions WHERE is_active = true ORDER BY created_at');
     
     // Map database fields to frontend expected ones
     const mappedCatalog = catalog.map(plan => ({
@@ -1049,7 +1109,7 @@ app.get('/api/admin/subscription-catalog', requireRole('Superadmin'), async (req
   }
 });
 
-app.post('/api/admin/subscription-catalog', requireRole('Superadmin'), async (req, res) => {
+app.post('/api/admin/subscription-catalog', authenticate, requireRole('Superadmin'), async (req, res) => {
   try {
     const { subscription } = req.body;
 
@@ -1059,7 +1119,7 @@ app.post('/api/admin/subscription-catalog', requireRole('Superadmin'), async (re
 
     const { query } = await import('./db/connection.js');
     await query(`
-      INSERT INTO public.management_subscriptions (tier, plan_name, price, features, updated_at)
+      INSERT INTO emr.management_subscriptions (tier, plan_name, price, features, updated_at)
       VALUES ($1, $2, $3, $4, NOW())
       ON CONFLICT (id) DO UPDATE SET 
         plan_name = EXCLUDED.plan_name,
@@ -1120,7 +1180,7 @@ app.post('/api/admin/apply-subscription-bundle', requireRole('Superadmin'), asyn
       updatedCount++;
     }
 
-    await createAuditLog({
+    await repo.createAuditLog({
       userId: req.user.id,
       userName: req.user.name,
       action: 'subscription_bundle.apply',
@@ -1215,25 +1275,30 @@ import { getRealtimeDashboardMetrics } from './enhanced_dashboard_metrics_fixed.
 app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission('dashboard'), async (req, res) => {
   try {
     const tenantId = req.tenantId;
+
     const { timeFilter = 'daily' } = req.query;
 
     // Get real-time metrics from enhanced dashboard module
     const metrics = await getRealtimeDashboardMetrics(tenantId);
 
-    // Get true totals (unfiltered by date)
-    const [trueTotalPatients, trueTotalAppointments, trueTotalRevenue] = await Promise.all([
-      query('SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1', [tenantId]),
-      query('SELECT COUNT(*) as count FROM appointments WHERE tenant_id = $1', [tenantId]),
-      query('SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND status = \'paid\'', [tenantId])
-    ]);
+    // Total Patients count (all time)
+    const trueTotalPatients = await query(`SELECT COUNT(*)::int as count FROM patients WHERE tenant_id = $1`, [tenantId]).catch(() => ({ rows: [{ count: 0 }] }));
+    const trueTotalAppointments = await query(`SELECT COUNT(*)::int as count FROM appointments WHERE tenant_id = $1`, [tenantId]).catch(() => ({ rows: [{ count: 0 }] }));
+    const trueTotalRevenue = await query(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND status = 'paid'`, [tenantId]).catch(() => ({ rows: [{ total: 0 }] }));
 
     const totalPatients = parseInt(trueTotalPatients.rows[0]?.count || 0);
     const totalAppointments = parseInt(trueTotalAppointments.rows[0]?.count || 0);
     const totalRevenue = parseFloat(trueTotalRevenue.rows[0]?.total || 0);
 
+    // Helper for safe query execution inside this route
+    const safeQuery = async (q, p) => {
+      try { return await query(q, p); }
+      catch (e) { return { rows: [] }; }
+    };
+
     // Get additional statistics for enhanced dashboard
     const [patientStatsResult, appointmentStatsResult, bedOccupancyResult] = await Promise.all([
-      query(`
+      safeQuery(`
         SELECT 
           COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as new_patients,
           COUNT(CASE WHEN created_at < CURRENT_DATE - INTERVAL '30 days' THEN 1 END) as returning_patients
@@ -1241,7 +1306,7 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
         WHERE tenant_id = $1
       `, [tenantId]),
 
-      query(`
+      safeQuery(`
         SELECT 
           COUNT(CASE WHEN status = 'scheduled' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as scheduled_today,
           COUNT(CASE WHEN status = 'completed' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END) as completed_today,
@@ -1251,7 +1316,7 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
         WHERE tenant_id = $1
       `, [tenantId]),
 
-      query(`
+      safeQuery(`
         SELECT 
           COUNT(CASE WHEN status = 'occupied' THEN 1 END) as occupied,
           COUNT(CASE WHEN status = 'available' THEN 1 END) as available
@@ -1261,7 +1326,7 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
     ]);
 
     // Get department distribution
-    const departmentResult = await query(`
+    const departmentResult = await safeQuery(`
       SELECT role as department, COUNT(*) as count 
       FROM users 
       WHERE tenant_id = $1 AND role IS NOT NULL
@@ -1275,7 +1340,7 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
     }));
 
     // Get available doctors
-    const doctorsResult = await query(`
+    const doctorsResult = await safeQuery(`
       SELECT
         u.id,
         u.name,
@@ -1283,8 +1348,10 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
         u.is_active,
         COUNT(a.id) as consultations,
         COALESCE(
-          ROUND(AVG(EXTRACT(EPOCH FROM (a.scheduled_end - a.scheduled_start)) / 60))
-            FILTER (WHERE a.status = 'completed' AND a.scheduled_end IS NOT NULL),
+          ROUND(
+            AVG(EXTRACT(EPOCH FROM (a.scheduled_end - a.scheduled_start)) / 60)
+              FILTER (WHERE a.status = 'completed' AND a.scheduled_end IS NOT NULL)
+          ),
           0
         ) as avg_time,
         0 as satisfaction
@@ -1306,29 +1373,29 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
       topDiagnosesResult,
       topServicesResult
     ] = await Promise.all([
-      query(`
+      safeQuery(`
         SELECT designation, COUNT(*) as count 
         FROM employees 
         WHERE tenant_id = $1 AND designation IS NOT NULL
         GROUP BY designation
         ORDER BY count DESC
-      `, [tenantId]).catch(() => ({ rows: [] })),
+      `, [tenantId]),
 
-      query(`
+      safeQuery(`
         SELECT
           (SELECT COUNT(*) FROM departments WHERE tenant_id = $1) as departments,
           (SELECT COUNT(*) FROM wards WHERE tenant_id = $1) as wards,
           (SELECT COUNT(*) FROM beds WHERE tenant_id = $1) as beds,
           (SELECT COUNT(*) FROM services WHERE tenant_id = $1) as services,
           (SELECT COUNT(*) FROM users WHERE tenant_id = $1) as total_staff
-      `, [tenantId]).catch(() => ({ rows: [{}] })),
+      `, [tenantId]),
 
-      query(`
+      safeQuery(`
         SELECT status, COUNT(*) as count 
         FROM encounters 
         WHERE tenant_id = $1
         GROUP BY status
-      `, [tenantId]).catch(() => ({ rows: [] })),
+      `, [tenantId]),
 
       query(`
         WITH months AS (
@@ -3503,48 +3570,9 @@ app.post('/api/admin/migrate-multi-schema', async (req, res) => {
 
 
 // Force Multi-Tenancy Isolation and Cleanup
+// Force Multi-Tenancy Isolation (Legacy Bridge Endpoint)
 app.get('/force-isolate', async (req, res) => {
-  const log = [];
-  const toKeep = [
-    { id: 'f998a8f5-95b9-4fd7-a583-63cf574d65ed', code: 'nah' },
-    { id: '45cfe286-5469-457a-88b3-e998f4cdc7c6', code: 'ehs' }
-  ];
-  const tables = ['clinical_records', 'prescriptions', 'procedures', 'observations', 'diagnostic_reports', 'conditions', 'service_requests', 'frontdesk_visits', 'claims', 'documents', 'blood_requests', 'invoices', 'appointments', 'encounters', 'patients', 'inventory_items', 'salary_structures', 'payroll_items', 'attendance', 'payroll_runs', 'employees', 'departments', 'services'];
-
-  try {
-    const { query } = await import('./db/connection.js');
-    log.push('🚀 Started Force Isolation...');
-
-    // 1. Create Resource Monitor table
-    await query(`CREATE TABLE IF NOT EXISTS emr.tenant_resources (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE, UNIQUE(tenant_id))`);
-    log.push('✅ Created/Verified emr.tenant_resources');
-
-    // 2. Perform Migration for NAH and EHS
-    for (const tenant of toKeep) {
-      const schemaName = `tenant_${tenant.code.toLowerCase()}`;
-      await query(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`);
-      log.push(`📦 Created schema: ${schemaName}`);
-
-      for (const table of tables) {
-        await query(`CREATE TABLE IF NOT EXISTS ${schemaName}.${table} (LIKE emr.${table} INCLUDING ALL)`);
-        const moveRes = await query(`
-          WITH deleted AS (DELETE FROM emr.${table} WHERE tenant_id = $1 RETURNING *)
-          INSERT INTO ${schemaName}.${table} SELECT * FROM deleted ON CONFLICT DO NOTHING
-        `, [tenant.id]);
-        if (moveRes.rowCount > 0) log.push(`   - Migrated ${moveRes.rowCount} rows for ${table} in ${schemaName}`);
-      }
-    }
-
-    // 3. Cleanup redundant tenants
-    const keepIds = toKeep.map(t => t.id);
-    const deleteRes = await query('DELETE FROM emr.tenants WHERE id NOT IN ($1, $2)', keepIds);
-    log.push(`✅ Deleted ${deleteRes.rowCount} redundant tenants from emr.tenants`);
-
-    res.send(`<h1>Isolation Success</h1><pre>${log.join('\n')}</pre><p><a href="/api/tenants">View Final Tenants</a></p>`);
-  } catch (error) {
-    log.push(`❌ CRITICAL ERROR: ${error.message}`);
-    res.status(500).send(`<h1>Isolation Failed</h1><pre>${log.join('\n')}</pre>`);
-  }
+  res.redirect('/api/admin/force-shard-isolation');
 });
 
 
@@ -3568,3 +3596,4 @@ app.get('/api/admin/debug-migration', async (req, res) => {
 
 export { app };
 export default app;
+

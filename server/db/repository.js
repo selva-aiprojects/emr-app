@@ -17,6 +17,7 @@ import * as opdService from './opd.service.js';
 import * as prescriptionService from './prescription.service.js';
 import * as userService from './user.service.js';
 import * as utilityService from './utility.service.js';
+import * as supportService from './support.service.js';
 import * as bootstrapService from './bootstrap.service.js';
 import { getSuperadminOverview as getManagementPlaneOverview } from '../services/superadminMetrics.service.js';
 
@@ -37,6 +38,7 @@ export * from './user.service.js';
 export * from './pharmacy.service.js';
 export * from './insurance.service.js';
 export * from './financials.service.js';
+export * from './support.service.js';
 export * from './doctor_availability.service.js';
 
 // Superadmin specific queries

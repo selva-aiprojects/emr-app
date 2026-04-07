@@ -68,22 +68,40 @@ export default function TenantControlCenter({ tenants = [], onRefresh }) {
 
   const handleProvision = async (data) => {
     try {
-      await superadminService.provisionTenant({
+      showToast({ 
+        message: `Initializing Shard [${data.code}] on Cluster Node...`, 
+        type: 'info' 
+      });
+
+      const result = await superadminService.provisionTenant({
         name: data.name,
         code: data.code,
         subdomain: data.subdomain,
         contactEmail: data.contactEmail,
+        adminLoginEmail: data.adminLoginEmail,
         primaryColor: data.primaryColor,
         accentColor: data.accentColor,
       }, {
-        email: `admin@${data.subdomain}.com`,
+        email: data.adminLoginEmail || `admin@${data.subdomain}.com`,
         name: `${data.name} Admin`,
         password: "Medflow@2026" // Default protocol
       });
+
+      showToast({ 
+        message: `Healthcare Grid Shard [${data.code}] successfully provisioned and registry linked!`, 
+        type: 'success',
+        title: 'Sharding Complete'
+      });
+
       setIsProvisioning(false);
       onRefresh?.();
-      return { success: true };
+      return result;
     } catch (err) {
+      showToast({ 
+        message: err.message, 
+        type: 'error', 
+        title: 'Provisioning Failed' 
+      });
       throw err;
     }
   }
@@ -252,7 +270,7 @@ export default function TenantControlCenter({ tenants = [], onRefresh }) {
       {/* Provisioning Modal */}
       {isProvisioning && (
          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
-            <div className="bg-slate-50 rounded-[48px] w-full max-w-2xl relative shadow-2xl animate-in slide-in-from-bottom-8 duration-500 overflow-hidden">
+            <div className="bg-slate-50 rounded-[48px] w-full max-w-4xl relative shadow-2xl animate-in slide-in-from-bottom-8 duration-500 overflow-hidden">
                <div className="flex justify-between items-center p-8 bg-white border-b border-slate-100">
                   <div className="flex items-center gap-4">
                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
@@ -268,7 +286,8 @@ export default function TenantControlCenter({ tenants = [], onRefresh }) {
                   </button>
                </div>
                
-               <div className="p-8 max-h-[70vh] overflow-y-auto">
+               <div className="p-8 max-h-[85vh] overflow-y-auto">
+
                   <TenantCreationForm onCreate={handleProvision} />
                </div>
             </div>

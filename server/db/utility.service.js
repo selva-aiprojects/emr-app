@@ -15,9 +15,9 @@ export async function getReportSummary(tenantId) {
     const overviewSql = `
       SELECT
         (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1) as users,
-        (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = $1) as patients,
-        (SELECT COUNT(*) FROM emr.appointments WHERE tenant_id = $1) as appointments,
-        (SELECT COALESCE(SUM(total), 0) FROM emr.invoices WHERE tenant_id = $1 AND status = 'paid') as revenue
+        (SELECT COUNT(*) FROM patients WHERE tenant_id = $1) as patients,
+        (SELECT COUNT(*) FROM appointments WHERE tenant_id = $1) as appointments,
+        (SELECT COALESCE(SUM(total), 0) FROM invoices WHERE tenant_id = $1 AND status = 'paid') as revenue
     `;
     const overviewRes = await query(overviewSql, [tenantId]);
     const overview = overviewRes.rows[0];

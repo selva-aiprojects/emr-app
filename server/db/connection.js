@@ -36,44 +36,48 @@ export async function query(text, params) {
     client = await pool.connect();
     const tenantId = tenantContext ? tenantContext.getStore() : null;
     
-    // Default schema is Control Plane
+    // 1. Context Resolution (Non-Recursive)
     let schemaName = 'emr';
-    
     if (tenantId && tenantId !== 'SUPERADMIN_BYPASS') {
-      // Resolve tenantId to short code (cached)
+      // Direct pool query to avoid infinite recursion
       if (!tenantCodeCache.has(tenantId)) {
-        const res = await client.query('SELECT code FROM emr.tenants WHERE id = $1', [tenantId]);
-        if (res.rows.length > 0) {
-          tenantCodeCache.set(tenantId, res.rows[0].code.toLowerCase());
+        try {
+          // Check Management Plane (Newest)
+          let res = await pool.query('SELECT schema_name FROM emr.management_tenants WHERE id = $1', [tenantId]);
+          
+          if (res.rows.length === 0) {
+            // Check Legacy Tenants table (fallback to LOWER(code) as schema)
+            res = await pool.query('SELECT code as schema_name FROM emr.tenants WHERE id = $1', [tenantId]);
+            if (res.rows.length > 0) {
+              res.rows[0].schema_name = res.rows[0].schema_name.toLowerCase();
+            }
+          }
+
+          if (res.rows.length > 0) {
+            tenantCodeCache.set(tenantId, res.rows[0].schema_name);
+          } else {
+            console.warn(`[DB_ROUTING_WARN] No schema found for tenantId: ${tenantId}`);
+          }
+        } catch (err) {
+          console.error('[DB_ROUTING_ERROR] Database routing failed:', err.message);
         }
       }
-      
-      const code = tenantCodeCache.get(tenantId);
-      if (code) {
-        schemaName = code;
-      }
-    }
-    
-    // Set dynamic search_path for isolation
-    if (schemaName && schemaName !== 'emr') {
-      await client.query(`SET search_path TO ${schemaName}, emr, public`);
-    } else {
-      await client.query('SET search_path TO emr, public');
+      const schema = tenantCodeCache.get(tenantId);
+      if (schema) schemaName = schema;
     }
 
+    // 2. Session Configuration (Sequence-Harden)
+    // IMPORTANT: Schema name must be quoted to handle names with periods (e.g. nah.healthezee.com)
+    await client.query(`SET search_path TO "${schemaName}", emr, public`);
+    
     if (tenantId === 'SUPERADMIN_BYPASS') {
-      await client.query(`SELECT set_config('app.bypass_rls', 'true', false)`);
+      await client.query("SELECT set_config('app.bypass_rls', 'true', false)");
     } else if (tenantId) {
-      await client.query(`SELECT set_config('app.current_tenant', $1, false)`, [tenantId]);
+      await client.query("SELECT set_config('app.current_tenant', $1, false)", [tenantId]);
     }
 
+    // 3. Execution Phase
     const res = await client.query(text, params);
-    
-    if (process.env.NODE_ENV === 'development' && !text.includes('set_config')) {
-      const duration = Date.now() - start;
-      console.log('[DB_QUERY] Executed', { text: text.substring(0, 100), duration, rows: res.rowCount });
-    }
-    
     return res;
   } catch (error) {
     console.error('[CRITICAL_DB_ERROR]', { text, params, error: error.message });
@@ -100,45 +104,9 @@ export async function testConnection() {
     const result = await query('SELECT NOW() as now');
     console.log('✅ Database connection successful');
 
-    // 🚀 [STARTUP] FORCE ONE-TIME ISOLATION & CLEANUP
-    const toKeep = [
-      { id: 'f998a8f5-95b9-4fd7-a583-63cf574d65ed', code: 'nah' },
-      { id: '45cfe286-5469-457a-88b3-e998f4cdc7c6', code: 'ehs' }
-    ];
-    const tables = ['clinical_records', 'prescriptions', 'procedures', 'observations', 'diagnostic_reports', 'conditions', 'service_requests', 'frontdesk_visits', 'claims', 'documents', 'blood_requests', 'invoices', 'appointments', 'encounters', 'patients'];
-
-    // 1. Create Infrastructure Table
-    await pool.query(`CREATE TABLE IF NOT EXISTS emr.tenant_resources (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id UUID UNIQUE REFERENCES emr.tenants(id) ON DELETE CASCADE)`);
-    
-    // 2. Provision & Migrate (Now using exact names)
-    for (const tenant of toKeep) {
-      const sc = tenant.code;
-      await pool.query(`CREATE SCHEMA IF NOT EXISTS ${sc}`);
-      for (const t of tables) {
-        await pool.query(`CREATE TABLE IF NOT EXISTS ${sc}.${t} (LIKE emr.${t} INCLUDING ALL)`);
-        // Move data from emr schema (and fallback from any legacy tenant_ schema)
-        await pool.query(`
-          INSERT INTO ${sc}.${t} 
-          SELECT * FROM emr.${t} WHERE tenant_id = $1
-          ON CONFLICT DO NOTHING
-        `, [tenant.id]);
-        
-        // Also move from legacy if exist
-        try {
-          const legacy = `tenant_${sc}`;
-          await pool.query(`INSERT INTO ${sc}.${t} SELECT * FROM ${legacy}.${t} ON CONFLICT DO NOTHING`);
-        } catch (e) { /* ignore if legacy doesn't exist */ }
-      }
-    }
-
-    // 3. Cleanup redundant tenants
-    const keepIds = toKeep.map(t => t.id);
-    const delRes = await pool.query('DELETE FROM emr.tenants WHERE id NOT IN ($1, $2)', keepIds);
-    if (delRes.rowCount > 0) console.log(`✅ [ISOLATION] Cleaned up ${delRes.rowCount} redundant tenants.`);
-
     return true;
   } catch (error) {
-    console.error('❌ Database connection/migration failed:', error.message);
+    console.error('❌ Database connection failed:', error.message);
     return false;
   }
 }

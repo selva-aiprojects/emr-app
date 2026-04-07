@@ -127,9 +127,21 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
   return result.rows[0];
 }
 
+/**
+ * Resolves tenant code using the same priority as connection.js schema routing:
+ * 1. emr.management_tenants (new registry, has explicit schema_name)
+ * 2. emr.tenants (legacy fallback)
+ */
+async function resolveTenantCode(tenantId) {
+  let result = await query('SELECT code FROM emr.management_tenants WHERE id = $1', [tenantId]);
+  if (!result.rows[0]) {
+    result = await query('SELECT code FROM emr.tenants WHERE id = $1', [tenantId]);
+  }
+  return (result.rows[0]?.code || 'UNK').toUpperCase();
+}
+
 export async function generateMRN(tenantId) {
-  const tenantResult = await query('SELECT code FROM emr.tenants WHERE id = $1', [tenantId]);
-  const tenantCode = tenantResult.rows[0]?.code || 'UNK';
+  const tenantCode = await resolveTenantCode(tenantId);
 
   const sql = `
     INSERT INTO emr.mrn_sequences (tenant_id, sequence_value)
@@ -145,8 +157,7 @@ export async function generateMRN(tenantId) {
 }
 
 export async function generateInvoiceNumber(tenantId) {
-  const tenantResult = await query('SELECT code FROM emr.tenants WHERE id = $1', [tenantId]);
-  const tenantCode = tenantResult.rows[0]?.code || 'UNK';
+  const tenantCode = await resolveTenantCode(tenantId);
 
   const sql = `
     INSERT INTO emr.invoice_sequences (tenant_id, sequence_value)
@@ -162,33 +173,45 @@ export async function generateInvoiceNumber(tenantId) {
 }
 
 export async function getTenants() {
-  const result = await query(`
-    SELECT
-      t.id,
-      t.name,
-      t.code,
-      t.subdomain,
-      t.theme,
-      t.features,
-      t.billing_config,
-      t.status,
-      t.created_at,
-      t.updated_at,
-      t.subscription_tier,
-      t.logo_url,
-      t.contact_email,
-      COALESCE(mtm.patients_count, 0) as patients,
-      COALESCE(mtm.doctors_count, 0) as doctors,
-      COALESCE(mtm.available_beds, 0) as bedsAvailable,
-      COALESCE(mtm.available_ambulances, 0) as ambulancesAvailable,
-      COALESCE(mtm.insurance_capacity, 0) as insurance_capacity,
-      COALESCE(mtm.active_users_count, 0) as active_users_count
-    FROM emr.tenants t
-    LEFT JOIN emr.management_tenant_metrics mtm
-      ON mtm.tenant_id = t.id
-    ORDER BY t.name
-  `);
-  return result.rows;
+  try {
+    const result = await query(`
+      SELECT
+        t.id,
+        t.name,
+        t.code,
+        t.subdomain,
+        t.theme,
+        t.features,
+        t.billing_config,
+        t.status,
+        t.created_at,
+        t.updated_at,
+        t.subscription_tier,
+        t.logo_url,
+        t.contact_email,
+        COALESCE(mtm.patients_count, 0) as patients,
+        COALESCE(mtm.doctors_count, 0) as doctors,
+        COALESCE(mtm.available_beds, 0) as bedsAvailable,
+        COALESCE(mtm.available_ambulances, 0) as ambulancesAvailable,
+        COALESCE(mtm.insurance_capacity, 0) as insurance_capacity,
+        COALESCE(mtm.active_users_count, 0) as active_users_count
+      FROM emr.tenants t
+      LEFT JOIN emr.management_tenant_metrics mtm
+        ON mtm.tenant_id = t.id
+      ORDER BY t.name
+    `);
+    return result.rows;
+  } catch (err) {
+    console.warn('[getTenants] Metrics table missing, using fallback:', err.message);
+    const result = await query(`
+      SELECT id, name, code, subdomain, theme, features, billing_config,
+             status, created_at, updated_at, subscription_tier, logo_url, contact_email,
+             0 as patients, 0 as doctors, 0 as "bedsAvailable",
+             0 as "ambulancesAvailable", 0 as insurance_capacity, 0 as active_users_count
+      FROM emr.tenants ORDER BY name
+    `);
+    return result.rows;
+  }
 }
 
 export async function getTenantById(id) {
@@ -205,17 +228,28 @@ export async function updateTenantStatus(id, status) {
 }
 
 export async function getTenantByCode(code) {
-  const result = await query('SELECT * FROM emr.tenants WHERE code = $1', [code]);
+  const result = await query('SELECT * FROM emr.tenants WHERE UPPER(code) = UPPER($1)', [code]);
   return result.rows[0];
 }
 export async function createTenant({ name, code, subdomain, contactEmail, theme, features }) {
+  // 1. Create in legacy tenants table
   const sql = `
     INSERT INTO emr.tenants (name, code, subdomain, contact_email, theme, features, status)
     VALUES ($1, $2, $3, $4, $5, $6, 'active')
     RETURNING *
   `;
-  const result = await query(sql, [name, code, subdomain, contactEmail, theme, JSON.stringify(features)]);
-  return result.rows[0];
+  const result = await query(sql, [name, code, subdomain, contactEmail, theme, features ? JSON.stringify(features) : '{}']);
+  const tenant = result.rows[0];
+
+  // 2. Sync to management_tenants (new registry)
+  const mgmtSql = `
+    INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status)
+    VALUES ($1, $2, $3, $4, $5, 'active')
+    ON CONFLICT (id) DO NOTHING
+  `;
+  await query(mgmtSql, [tenant.id, name, code, subdomain, code.toLowerCase()]);
+
+  return tenant;
 }
 
 /**

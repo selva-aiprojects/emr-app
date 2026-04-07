@@ -3,6 +3,8 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import bcrypt from 'bcryptjs';
 import { installTenantMetricsSync } from './superadminMetrics.service.js';
+import { sendTenantWelcomeEmail } from './mail.service.js';
+import { query } from '../db/connection.js';
 
 const execAsync = promisify(exec);
 
@@ -25,13 +27,13 @@ const DEFAULT_ROLE_DEFINITIONS = [
 ];
 
 function buildTenantSchemaName(code) {
-  const normalizedCode = String(code || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+  const normalizedCode = String(code || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
 
   if (!normalizedCode) {
     throw new Error('Tenant code is required to derive the tenant schema.');
   }
 
-  return `tenant_${normalizedCode}`;
+  return `${normalizedCode}`;
 }
 
 /**
@@ -53,46 +55,72 @@ export async function provisionNewTenant(tenantData, adminData) {
   let tenant;
 
   try {
-    // 1. Create entry in the management database (Control Plane)
-    tenant = await managementClient.tenant.create({
-      data: {
-        name: tenantData.name,
-        code: tenantData.code,
-        subdomain: tenantData.subdomain,
-        schema_name: schemaName,
-        status: 'active'
-      }
+    // 1. Create or Find entry in the management database (Control Plane)
+    tenant = await managementClient.tenant.findUnique({
+      where: { code: tenantData.code }
     });
 
+    if (!tenant) {
+      tenant = await managementClient.tenant.create({
+        data: {
+          name: tenantData.name,
+          code: tenantData.code,
+          subdomain: tenantData.subdomain,
+          schema_name: schemaName,
+          status: 'active'
+        }
+      });
+    } else {
+      console.log(`[PROVISIONING] Found existing registry record for ${tenantData.code}. Initiating Shard Repair...`);
+    }
+
     // 2. Execute raw SQL to create the dedicated Postgres schema
-    await managementClient.$executeRawUnsafe(`CREATE SCHEMA "${schemaName}"`);
+    await managementClient.$executeRawUnsafe(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
 
     // 3. Run migrations for the new schema using Prisma CLI
     console.log(`Running migrations for schema ${schemaName}...`);
-    await execAsync('npx prisma migrate deploy --schema=./prisma/tenant.prisma', {
-      cwd: process.cwd(),
-      env: {
-        ...process.env,
-        DATABASE_URL: getTenantDatabaseUrl(schemaName)
+    try {
+      await execAsync('npx prisma migrate deploy --schema=./prisma/tenant.prisma', {
+        cwd: process.cwd(),
+        env: {
+          ...process.env,
+          DATABASE_URL: getTenantDatabaseUrl(schemaName)
+        }
+      });
+    } catch (migrateErr) {
+      console.warn(`⚠️ [PRISMA_CLI_FAIL] Falling back to manual shard initialization for ${schemaName}:`, migrateErr.message);
+      
+      // Safety Fallback: Manually initialize core identity tables if Prisma fails (common in restricted envs)
+      await query(`CREATE TABLE IF NOT EXISTS ${schemaName}."roles" (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT UNIQUE, description TEXT, is_system BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
+      await query(`CREATE TABLE IF NOT EXISTS ${schemaName}."users" (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE, password_hash TEXT, name TEXT, role_id UUID REFERENCES ${schemaName}."roles"(id), created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
+      
+      // Also ensure all clinical tables are ready via our generic migration bridge
+      const CLINICAL_TABLES = [
+        'clinical_records', 'prescriptions', 'procedures', 'observations', 'diagnostic_reports', 
+        'conditions', 'service_requests', 'frontdesk_visits', 'claims', 'documents', 
+        'blood_requests', 'invoices', 'appointments', 'encounters', 'patients'
+      ];
+      for (const t of CLINICAL_TABLES) {
+        await query(`CREATE TABLE IF NOT EXISTS ${schemaName}.${t} (LIKE emr.${t} INCLUDING ALL)`);
       }
-    });
+    }
 
     // 4. Seed the initial Admin User and default Roles into the new schema
     console.log(`Seeding initial data into ${schemaName}...`);
-    const tenantDb = getTenantClient(schemaName);
 
-    const createdRoles = await Promise.all(
-      DEFAULT_ROLE_DEFINITIONS.map((role) =>
-        tenantDb.role.upsert({
-          where: { name: role.name },
-          update: {
-            description: role.description,
-            is_system: role.is_system
-          },
-          create: role
-        })
-      )
-    );
+    const createdRoles = [];
+    for (const roleDef of DEFAULT_ROLE_DEFINITIONS) {
+      const roleResult = await query(`
+        INSERT INTO "${schemaName}"."roles" (name, description, is_system)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (name) DO UPDATE SET 
+          description = EXCLUDED.description,
+          is_system = EXCLUDED.is_system
+        RETURNING id, name
+      `, [roleDef.name, roleDef.description, roleDef.is_system]);
+      
+      createdRoles.push(roleResult.rows[0]);
+    }
 
     const adminRole = createdRoles.find((role) => role.name === 'Admin');
     if (!adminRole) {
@@ -100,14 +128,14 @@ export async function provisionNewTenant(tenantData, adminData) {
     }
 
     const hashedPassword = await bcrypt.hash(adminData.password, 10);
-    const user = await tenantDb.user.create({
-      data: {
-        email: adminData.email,
-        password_hash: hashedPassword,
-        name: adminData.name,
-        role_id: adminRole.id
-      }
-    });
+    const userResult = await query(`
+      INSERT INTO "${schemaName}"."users" (email, password_hash, name, role_id)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
+      RETURNING id, email
+    `, [adminData.email, hashedPassword, adminData.name, adminRole.id]);
+
+    const user = userResult.rows[0];
 
     await installTenantMetricsSync(schemaName, tenant.id);
 
@@ -124,22 +152,39 @@ export async function provisionNewTenant(tenantData, adminData) {
         tenant_id: tenant.id
       }
     });
+    
+    // 6. Send welcome email to the communication address (strictly as per requirements)
+    const communicationRecipient = tenantData.contactEmail || 'b.selvakumar@gmail.com';
+    console.log(`[PROVISIONING] Sending welcome email to Board Member / Communication recipient: ${communicationRecipient}`);
+    
+    try {
+      await sendTenantWelcomeEmail(
+        communicationRecipient, 
+        tenantData.name, 
+        tenantData.subdomain, 
+        { email: adminData.email, password: adminData.password }
+      );
+      console.log(`[PROVISIONING] Welcome email successfully dispatched to communication hub for ${tenantData.code}`);
+    } catch (mailErr) {
+      console.warn(`[PROVISIONING] Communication dispatch failed for ${communicationRecipient}:`, mailErr.message);
+      // Non-fatal for the core process
+    }
 
     return {
       ...tenant,
-      schema_name: schemaName
+      schema_name: schemaName,
+      adminLoginEmail: adminData.email,
+      contactEmail: tenantData.contactEmail,
+      defaultPassword: adminData.password // For UI preview
     };
+
   } catch (error) {
     console.error(`Provisioning failed for ${tenantData.code}:`, error);
 
     try {
       await releaseTenantClient(schemaName);
-      await managementClient.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
-      if (tenant?.id) {
-        await managementClient.tenant.delete({
-          where: { id: tenant.id }
-        });
-      }
+      
+      // 1. Log failure BEFORE purging metadata (prevents FK violation)
       await managementClient.systemLog.create({
         data: {
           event: 'TENANT_PROVISIONING_FAILED',
@@ -150,7 +195,17 @@ export async function provisionNewTenant(tenantData, adminData) {
           },
           tenant_id: tenant?.id
         }
-      });
+      }).catch(logErr => console.error('Failed to log provisioning failure:', logErr.message));
+
+      // 2. Cleanup partial Shard
+      await managementClient.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+      
+      // 3. Purge orphaned metadata
+      if (tenant?.id) {
+        await managementClient.tenant.delete({
+          where: { id: tenant.id }
+        });
+      }
     } catch (rollbackError) {
       console.error('Tenant provisioning rollback failed:', rollbackError);
     }

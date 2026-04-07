@@ -12,7 +12,8 @@ const INITIAL = {
   name: '',
   code: '',
   subdomain: '',
-  contactEmail: '',
+  contactEmail: 'b.selvakumar@gmail.com', // Override: Defaulting to user's email for testing as requested
+  adminLoginEmail: '',
   subscriptionTier: 'Professional',
   primaryColor: '#0f5a6e',
   accentColor: '#f57f17',
@@ -35,6 +36,13 @@ export default function TenantCreationForm({ onCreate }) {
         if (!prev._codeManual)      next.code      = slug;
         if (!prev._subManual)       next.subdomain = sub;
       }
+      
+      // Auto-suggest admin login email based on subdomain
+      if (name === 'subdomain' && !prev._adminEmailManual) {
+        next.adminLoginEmail = `admin@${value.toLowerCase() || 'hospital'}.com`;
+      }
+      if (name === 'adminLoginEmail') next._adminEmailManual = true;
+
       if (name === 'code')      next._codeManual = true;
       if (name === 'subdomain') next._subManual  = true;
       return next;
@@ -57,6 +65,7 @@ export default function TenantCreationForm({ onCreate }) {
         code:             form.code.trim().toUpperCase(),
         subdomain:        form.subdomain.trim().toLowerCase(),
         contactEmail:     form.contactEmail.trim().toLowerCase(),
+        adminLoginEmail:  form.adminLoginEmail.trim().toLowerCase(),
         subscriptionTier: form.subscriptionTier,
         primaryColor:     form.primaryColor,
         accentColor:      form.accentColor,
@@ -105,29 +114,57 @@ export default function TenantCreationForm({ onCreate }) {
           />
         </div>
 
-        {/* Contact Email */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
-           <label className="block text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2 leading-none">
-             Primary Admin Contact Unit
-           </label>
-           <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
-                 <Building2 className="w-4 h-4" />
+        {/* IDENTITY DUAL CONTROL */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           {/* Communication Email (Mandatory) */}
+           <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
+              <label className="block text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2 leading-none">
+                 Communication Email (Board Member / Recipient) *
+              </label>
+              <div className="flex items-center gap-3">
+                 <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
+                    <Globe className="w-4 h-4" />
+                 </div>
+                 <input
+                   type="email"
+                   name="contactEmail"
+                   value={form.contactEmail}
+                   onChange={handleChange}
+                   placeholder="e.g. board@hospital.com"
+                   required
+                   className="flex-1 bg-transparent text-sm font-bold text-slate-800 focus:outline-none placeholder:text-slate-300"
+                 />
               </div>
-              <input
-                type="email"
-                name="contactEmail"
-                value={form.contactEmail}
-                onChange={handleChange}
-                placeholder="Institutional Admin Email"
-                required
-                className="flex-1 bg-transparent text-sm font-bold text-slate-800 focus:outline-none placeholder:text-slate-300"
-              />
+              <p className="text-[9px] font-bold text-slate-400 mt-2 italic uppercase tracking-widest leading-relaxed">
+                * SYSTEM CREDENTIALS (PASSWORD) WILL BE SENT STRICTLY TO THIS EMAIL ONLY.
+              </p>
            </div>
-           <p className="text-[9px] font-bold text-slate-400 mt-2 italic uppercase tracking-widest">
-             * Credentials and node access keys strictly dispatched here.
-           </p>
+
+           {/* Admin Login ID (Different from communication) */}
+           <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
+              <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-2 leading-none">
+                 New Admin Login Identity / Email *
+              </label>
+              <div className="flex items-center gap-3">
+                 <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                    <Hash className="w-4 h-4" />
+                 </div>
+                 <input
+                   type="email"
+                   name="adminLoginEmail"
+                   value={form.adminLoginEmail}
+                   onChange={handleChange}
+                   placeholder="e.g. admin@hospital.com"
+                   required
+                   className="flex-1 bg-transparent text-sm font-bold text-slate-800 focus:outline-none placeholder:text-slate-300"
+                 />
+              </div>
+              <p className="text-[9px] font-bold text-slate-400 mt-2 italic uppercase tracking-widest leading-relaxed">
+                * THIS WILL BE THE LOGIN USERID FOR THE TENANT ADMIN CONSOLE.
+              </p>
+           </div>
         </div>
+
 
         {/* Code + Subdomain row */}
         <div className="grid grid-cols-2 gap-3">
@@ -246,31 +283,54 @@ export default function TenantCreationForm({ onCreate }) {
           <div className="space-y-3">
             <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
               <CheckCircle className="w-4 h-4" />
-              <span className="font-semibold">Tenant provisioned successfully!</span>
+              <span className="font-semibold text-xs uppercase tracking-widest">Shard Provisioned & Identity Hub Dispatched</span>
             </div>
             
             {provisionedData && (
-              <div className="bg-slate-900 rounded-xl p-4 text-white shadow-xl animate-in fade-in zoom-in duration-300">
-                <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 border-b border-white/10 pb-2">
-                  System Generated Admin Credentials
-                </div>
-                <div className="space-y-3">
-                   <div className="flex justify-between items-center group">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">Email:</span>
-                      <span className="text-xs font-mono font-bold text-slate-100">{provisionedData.adminLoginEmail}</span>
+              <div className="bg-slate-900 rounded-[32px] p-6 text-white shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-500">
+                <div className="flex items-center gap-2 mb-4">
+                   <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
+                      <CheckCircle className="w-4 h-4" />
                    </div>
-                   <div className="flex justify-between items-center group">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase">Password:</span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">{provisionedData.defaultPassword}</span>
+                   <div className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
+                      Provisioning Finalized
                    </div>
                 </div>
-                <div className="mt-4 p-2 bg-white/5 rounded-lg border border-white/10 text-[9px] text-slate-400 leading-relaxed italic">
-                  Note: Email communication is currently being optimized. Please manually share these credentials with the client.
+
+                <div className="space-y-4">
+                   <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                      <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 leading-none">
+                         Communication Shard (BOARD MEMBER)
+                      </div>
+                      <div className="text-sm font-bold truncate">{provisionedData.contactEmail}</div>
+                      <div className="text-[8px] text-slate-500 uppercase mt-1 font-black leading-none italic">
+                         * FULL CREDENTIALS DISPATCHED HERE SECURELY.
+                      </div>
+                   </div>
+
+                   <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
+                      <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-2 leading-none">
+                         Admin Authentication Identity
+                      </div>
+                      <div className="flex justify-between items-center bg-slate-800/50 p-2.5 rounded-xl border border-white/5 mt-2">
+                        <div className="text-[10px] text-slate-400 uppercase font-black">Login ID</div>
+                        <div className="text-xs font-mono font-bold text-slate-100">{provisionedData.adminLoginEmail}</div>
+                      </div>
+                      <div className="flex justify-between items-center bg-slate-800/50 p-2.5 rounded-xl border border-white/5 mt-2">
+                        <div className="text-[10px] text-slate-400 uppercase font-black">Protocol PWD</div>
+                        <div className="text-xs font-mono font-bold text-emerald-400">{provisionedData.defaultPassword}</div>
+                      </div>
+                   </div>
+                </div>
+                
+                <div className="mt-6 flex items-center justify-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] animate-pulse">
+                   <Globe className="w-3 h-3" /> System Synchronizing Globally...
                 </div>
               </div>
             )}
           </div>
         )}
+
         {status === 'error' && (
           <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
             <AlertCircle className="w-4 h-4" />

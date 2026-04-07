@@ -1,3 +1,5 @@
+import { ShieldCheck } from 'lucide-react';
+
 export function StatusBadge({ status = "pending", size = "md" }) {
   const statusKey = String(status).toLowerCase();
   const tones = {

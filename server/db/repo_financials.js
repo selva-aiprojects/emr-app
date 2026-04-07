@@ -2,11 +2,11 @@ import { query } from './connection.js';
 
 export async function recordAttendance({ tenantId, employeeId, date, timeIn, timeOut, status }) {
     const sql = `
-    INSERT INTO emr.attendance (tenant_id, employee_id, date, check_in, check_out, status)
+    INSERT INTO attendance (tenant_id, employee_id, date, check_in, check_out, status)
     VALUES ($1, $2, $3, $4, $5, $6)
     ON CONFLICT (tenant_id, employee_id, date) DO UPDATE 
-    SET check_in = COALESCE(EXCLUDED.check_in, emr.attendance.check_in),
-        check_out = COALESCE(EXCLUDED.check_out, emr.attendance.check_out),
+    SET check_in = COALESCE(EXCLUDED.check_in, attendance.check_in),
+        check_out = COALESCE(EXCLUDED.check_out, attendance.check_out),
         status = EXCLUDED.status,
         updated_at = NOW()
     RETURNING *
@@ -18,8 +18,8 @@ export async function recordAttendance({ tenantId, employeeId, date, timeIn, tim
 export async function getAttendance(tenantId, date) {
     const sql = `
     SELECT a.*, e.name, e.code, e.shift 
-    FROM emr.attendance a
-    JOIN emr.employees e ON a.employee_id = e.id
+    FROM attendance a
+    JOIN employees e ON a.employee_id = e.id
     WHERE a.tenant_id = $1 AND a.date = $2
   `;
     const result = await query(sql, [tenantId, date]);
@@ -28,7 +28,7 @@ export async function getAttendance(tenantId, date) {
 
 export async function addExpense({ tenantId, category, description, amount, date, paymentMethod, reference, recordedBy }) {
     const sql = `
-    INSERT INTO emr.expenses (tenant_id, category, description, amount, date, payment_method, reference, recorded_by)
+    INSERT INTO expenses (tenant_id, category, description, amount, date, payment_method, reference, recorded_by)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
@@ -37,7 +37,7 @@ export async function addExpense({ tenantId, category, description, amount, date
 }
 
 export async function getExpenses(tenantId, filters = {}) {
-    let sql = `SELECT * FROM emr.expenses WHERE tenant_id = $1`;
+    let sql = `SELECT * FROM expenses WHERE tenant_id = $1`;
     const params = [tenantId];
     if (filters.month) {
         sql += ` AND DATE_TRUNC('month', date) = $2`;
@@ -52,7 +52,7 @@ export async function getFinancialSummary(tenantId, month) {
     // 1. Income (Invoices)
     const incomeSql = `
     SELECT COALESCE(SUM(paid), 0) as total_income 
-    FROM emr.invoices 
+    FROM invoices 
     WHERE tenant_id = $1 AND status IN ('paid', 'partially_paid') 
     AND DATE_TRUNC('month', created_at) = $2::timestamp
   `;
@@ -60,7 +60,7 @@ export async function getFinancialSummary(tenantId, month) {
     // 2. Expenses
     const expenseSql = `
     SELECT category, COALESCE(SUM(amount), 0) as total 
-    FROM emr.expenses 
+    FROM expenses 
     WHERE tenant_id = $1 
     AND DATE_TRUNC('month', date) = $2::timestamp 
     GROUP BY category
@@ -68,7 +68,7 @@ export async function getFinancialSummary(tenantId, month) {
 
     // 3. Salaries (Estimated from Employee Master)
     const salarySql = `
-    SELECT COALESCE(SUM(salary), 0) as total_salaries FROM emr.employees WHERE tenant_id = $1
+    SELECT COALESCE(SUM(salary), 0) as total_salaries FROM employees WHERE tenant_id = $1
   `;
 
     const [incomeRes, expenseRes, salaryRes] = await Promise.all([

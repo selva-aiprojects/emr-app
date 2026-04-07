@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["public"]
+  schemas  = ["emr"]
 }
 
 model Tenant {
@@ -23,7 +23,7 @@ model Tenant {
   system_logs       SystemLog[]
 
   @@map("management_tenants")
-  @@schema("public")
+  @@schema("emr")
 }
 
 model Subscription {
@@ -35,7 +35,7 @@ model Subscription {
   tenants     Tenant[]
 
   @@map("management_subscriptions")
-  @@schema("public")
+  @@schema("emr")
 }
 
 model SystemLog {
@@ -47,5 +47,5 @@ model SystemLog {
   created_at DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("management_system_logs")
-  @@schema("public")
+  @@schema("emr")
 }

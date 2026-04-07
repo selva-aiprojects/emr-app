@@ -24,6 +24,7 @@ const STAT_LABELS = [
 ];
 
 export default function GlobalDashboard({ tenants = [], overview = {} }) {
+  const [isSyncing, setIsSyncing] = React.useState(false);
   const totals = overview?.totals || {};
   
   // FAIL-SAFE: If the global summary is 0 but tenants have data, manually sum them in real-time
@@ -75,21 +76,28 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
                <p className="text-xs text-slate-500 font-medium mt-1">Real-time numerical breakup of individual hospital node activities</p>
             </div>
             <div className="flex gap-3">
-               <button 
-                  onClick={async () => {
-                     try {
-                        const res = await api.syncSuperadminMetrics();
-                        if (res && res.success) {
-                           window.location.reload();
-                        }
-                     } catch (e) {
-                        console.error('Sync failed', e);
-                     }
-                  }} 
-                  className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 text-[10px] font-black uppercase text-indigo-600 hover:bg-slate-50 transition-colors"
-               >
-                  <Activity size={12} className="animate-pulse" /> Sync Active
-               </button>
+                <button 
+                   disabled={isSyncing}
+                   onClick={async () => {
+                      try {
+                         setIsSyncing(true);
+                         const res = await api.syncSuperadminMetrics();
+                         if (res && res.success) {
+                            alert('Management Plane Synchronized successfully!');
+                            window.location.reload();
+                         }
+                      } catch (e) {
+                         console.error('Sync failed', e);
+                         alert('Sync failed: ' + (e.message || 'Check server logs'));
+                      } finally {
+                         setIsSyncing(false);
+                      }
+                   }} 
+                   className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-100 text-[10px] font-black uppercase text-indigo-600 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                >
+                   <Activity size={12} className={isSyncing ? "animate-spin" : "animate-pulse"} /> 
+                   {isSyncing ? "Syncing..." : "Sync Active"}
+                </button>
                <button className="px-5 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-colors">Export Ledger</button>
             </div>
          </header>

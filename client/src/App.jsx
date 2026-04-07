@@ -5,7 +5,6 @@ import { fallbackPermissions } from './config/modules.js';
 import { featureFlagService } from './services/featureFlag.service.js';
 import AppLayout from './components/AppLayout.jsx';
 import { ErrorBoundary } from './components/ErrorBoundary.jsx';
-import LoginPage from './pages/LoginPage.jsx';
 import Chatbot from './components/Chatbot.jsx';
 const EnhancedSuperadminPage = lazy(() => import('./pages/EnhancedSuperadminPage.jsx'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
@@ -494,7 +493,7 @@ export default function App() {
       >
         <ErrorBoundary>
           <Suspense fallback={suspenseFallback}>
-            {['superadmin', 'tenant_management', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'support', 'reports', 'admin'].includes(view) && (
+            {activeUser?.role === 'Superadmin' && ['superadmin', 'tenant_management', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'support', 'reports', 'admin'].includes(view) && (
             <EnhancedSuperadminPage
               view={view}
               tenant={tenant}

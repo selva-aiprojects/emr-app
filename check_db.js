@@ -1,24 +1,23 @@
-import dotenv from 'dotenv';
-dotenv.config();
 import { query } from './server/db/connection.js';
 
 async function check() {
   try {
-    const t = await query('SELECT count(*) FROM emr.tenants');
-    const u = await query('SELECT count(*) FROM emr.users');
-    const p = await query('SELECT count(*) FROM emr.patients');
-    const i = await query('SELECT count(*) FROM emr.invoices WHERE status = \'paid\'');
-    const rev = await query('SELECT sum(total) as rev FROM emr.invoices WHERE status = \'paid\'');
-
-    console.log({
-      tenants: t.rows[0].count,
-      users: u.rows[0].count,
-      patients: p.rows[0].count,
-      paid_invoices: i.rows[0].count,
-      total_revenue: rev.rows[0].rev || 0
-    });
-  } catch (err) {
-    console.error(err);
+    const tenants = await query('SELECT count(*) FROM emr.tenants');
+    const m_tenants = await query('SELECT count(*) FROM emr.management_tenants');
+    const summary = await query('SELECT * FROM emr.management_dashboard_summary');
+    const metrics = await query('SELECT * FROM emr.management_tenant_metrics');
+    
+    console.log('--- DB STATE ---');
+    console.log('Tenants Table (EMR):', tenants.rows[0].count);
+    console.log('Management Tenants:', m_tenants.rows[0].count);
+    console.log('Management Summary:', summary.rows);
+    console.log('Management Metrics:', metrics.rows.length);
+    
+    if (metrics.rows.length > 0) {
+      console.log('First Metric Row Doctors:', metrics.rows[0].doctors_count);
+    }
+  } catch (error) {
+    console.error('ERROR:', error.message);
   } finally {
     process.exit(0);
   }

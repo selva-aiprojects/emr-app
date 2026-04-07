@@ -12,24 +12,16 @@ import { query } from './connection.js';
 export async function getPatients(tenantId, userRole = null, limit = 50, offset = 0, includeArchived = false) {
   let sql = `
     SELECT 
-      p.id, p.first_name, p.last_name, p.dob, p.gender, p.phone, p.email, p.address, p.city, p.state, p.country, p.postal_code, p.mrn, p.blood_group, p.allergies, p.emergency_contact_name, p.emergency_contact_phone, p.emergency_contact_relationship, p.insurance_provider, p.insurance_policy_number, p.created_at, p.updated_at, p.is_archived,
-      u.name as primary_doctor_name
+      p.id, p.first_name, p.last_name, p.date_of_birth, p.gender, p.phone, p.email, p.address, p.mrn, p.blood_group, p.medical_history, p.emergency_contact, p.insurance, p.created_at, p.updated_at, p.is_archived
     FROM patients p
-    LEFT JOIN emr.users u ON p.primary_doctor_id = u.id
     WHERE p.tenant_id = $1
   `;
 
   const params = [tenantId];
   let paramIndex = 2;
 
-  // Apply role-based data masking
-  if (userRole) {
-    sql += ` AND $${paramIndex++} = ANY (
-      SELECT user_id FROM emr.user_roles WHERE role_name = $${paramIndex++} AND tenant_id = $${paramIndex++}
-    )`;
-    params.push(userRole);
-    paramIndex++;
-  }
+  // Note: role-based scoping is handled at the application layer (App.jsx scopedPatients)
+  // The userRole param is kept for API compatibility but no longer filters at DB level
 
   if (!includeArchived) {
     sql += ` AND p.is_archived = $${paramIndex++}`;
@@ -104,7 +96,7 @@ export async function searchPatients(tenantId, searchTerm, filters = {}) {
 }
 
 export async function getPatientById(id, tenantId, userRole = null) {
-  let sql = `
+  const sql = `
     SELECT 
       p.*, u.name as primary_doctor_name
     FROM patients p
@@ -112,27 +104,17 @@ export async function getPatientById(id, tenantId, userRole = null) {
     WHERE p.id = $1 AND p.tenant_id = $2
   `;
 
-  const params = [id, tenantId];
-  let paramIndex = 3;
-
-  // Apply role-based data masking
-  if (userRole) {
-    sql += ` AND $${paramIndex++} = ANY (
-      SELECT user_id FROM emr.user_roles WHERE role_name = $${paramIndex++} AND tenant_id = $${paramIndex++}
-    )`;
-    params.push(userRole);
-  }
-
-  const result = await query(sql, params);
+  // Note: role-based access scoping is handled at the application layer
+  const result = await query(sql, [id, tenantId]);
   return result.rows[0];
 }
 
 export async function createPatient({ tenantId, firstName, lastName, dob, gender, phone, email, address, city, state, country, postalCode, bloodGroup, allergies, emergencyContactName, emergencyContactPhone, emergencyContactRelationship, insuranceProvider, insurancePolicyNumber, primaryDoctorId }) {
   const sql = `
     INSERT INTO patients (
-      tenant_id, first_name, last_name, dob, gender, phone, email, address, city, state, country, postal_code, blood_group, allergies, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, insurance_provider, insurance_policy_number, primary_doctor_id, mrn, created_at
+      tenant_id, first_name, last_name, dob, gender, phone, email, address, city, state, country, postal_code, blood_group, allergies, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, insurance_provider, insurance_policy_number, primary_doctor_id
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
     RETURNING *
   `;
 
@@ -140,7 +122,7 @@ export async function createPatient({ tenantId, firstName, lastName, dob, gender
     tenantId, firstName, lastName, dob, gender, phone, email, address, city, state, country, postalCode, bloodGroup, allergies, emergencyContactName, emergencyContactPhone, emergencyContactRelationship, insuranceProvider, insurancePolicyNumber, primaryDoctorId
   ]);
 
-  // Generate MRN correctly from emr schema (function is global)
+  // Generate MRN from shared emr schema function
   const mrnResult = await query('SELECT emr.get_next_mrn($1) as mrn', [tenantId]);
   const mrn = mrnResult.rows[0].mrn;
 

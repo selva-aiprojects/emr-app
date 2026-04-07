@@ -24,11 +24,6 @@ const sql = `
     tenant_id::varchar = current_setting('app.current_tenant', true)
     OR current_setting('app.bypass_rls', true) = 'true'
   );
-
-  -- Seed some default data for New Age Hospital (f998a8f5-95b9-4fd7-a583-63cf574d65ed)
-  INSERT INTO emr.ambulances (tenant_id, vehicle_number, model, status, current_driver, contact_number)
-  VALUES ('f998a8f5-95b9-4fd7-a583-63cf574d65ed', 'MH-01-AM-101', 'Force Traveller (Cardiac Care)', 'Available', 'Ramesh Kumar', '+91 98765 43210')
-  ON CONFLICT DO NOTHING;
 `;
 
 async function run() {
