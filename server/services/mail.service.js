@@ -9,28 +9,29 @@ dotenv.config();
  * Prioritizes Resend API, falls back to SMTP, then Mock
  */
 export async function sendTenantWelcomeEmail(email, tenantName, subdomain, credentials) {
-  const fromName = "MedFlow Platform";
+  const fromName = "Healthezee Platform";
   const fromEmail = process.env.SMTP_FROM && !process.env.SMTP_FROM.includes('your-email') 
     ? process.env.SMTP_FROM 
-    : "onboarding@resend.dev";
-  const subject = `Welcome to MedFlow: ${tenantName} Workspace Initialized`;
+    : "Healthezee Platform <care@cognivectra.com>";
+  const subject = `Welcome to Healthezee: ${tenantName} Workspace Initialized`;
 
   const htmlContent = `
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px">
-      <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin-bottom: 8px">MedFlow Activation</h1>
+      <h1 style="color: #0f172a; font-size: 24px; font-weight: 800; margin-bottom: 8px">Healthezee Activation</h1>
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 16px 0" />
       <p style="color: #64748b; font-size: 14px">Your institutional node for <strong>${tenantName}</strong> has been successfully provisioned on the Healthcare Grid.</p>
       <div style="background: #f8fafc; padding: 25px; border-radius: 12px; margin: 24px 0; border: 1px solid #f1f5f9">
         <h3 style="margin-top: 0; font-size: 15px; color: #011627; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em">WORKSPACE TOPOLOGY</h3>
-        <p style="margin: 8px 0; font-size: 14px; color: #334155"><strong>Access Terminal:</strong> <a href="https://${subdomain}.medflow.app" style="color: #1e4d78; font-weight: 700">https://${subdomain}.medflow.app</a></p>
+        <p style="margin: 8px 0; font-size: 14px; color: #334155"><strong>Access Terminal:</strong> <a href="https://emr-app-orpin.vercel.app/" style="color: #1e4d78; font-weight: 700">https://emr-app-orpin.vercel.app/</a></p>
+        <p style="margin: 8px 0; font-size: 14px; color: #0f172a; font-weight: bold; margin-top: 12px;">Select "FACILITY"</p>
         <div style="height: 1px; background: #e2e8f0; margin: 20px 0"></div>
         <h3 style="margin-top: 0; font-size: 15px; color: #011627; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em">INITIAL SECURITY TOKEN</h3>
-        <p style="margin: 8px 0; font-size: 14px; color: #334155"><strong>Sync Identifier:</strong> ${credentials.email}</p>
+        <p style="margin: 8px 0; font-size: 14px; color: #334155"><strong>Sync Identifier:</strong> admin@${subdomain}.com</p>
         <p style="margin: 8px 0; font-size: 14px; color: #334155"><strong>Security Code:</strong> <code style="background: #011627; color: #ffffff; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-family: monospace">${credentials.password}</code></p>
       </div>
       <p style="color: #64748b; font-size: 12px; font-style: italic">* Re-initialize your security token after your first successful synchronization for compliance.</p>
       <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 24px 0" />
-      <p style="color: #94a3b8; font-size: 11px; text-align: center; text-transform: uppercase; font-weight: 700; letter-spacing: 0.1em">neural clinical governance • medflow v1.0</p>
+      <p style="color: #94a3b8; font-size: 11px; text-align: center; text-transform: uppercase; font-weight: 700; letter-spacing: 0.1em">neural clinical governance • Healthezee v1.0</p>
     </div>
   `;
 
@@ -44,7 +45,8 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          from: fromEmail === "onboarding@resend.dev" ? fromEmail : (fromEmail.includes('<') ? fromEmail : `${fromName} <${fromEmail}>`),
+          // Using your verified production domain
+          from: fromEmail,
           to: [email],
           subject: subject,
           html: htmlContent

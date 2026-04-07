@@ -51,6 +51,9 @@ function buildTenantSchemaName(code) {
  * @returns {Promise<Object>} The newly created tenant record
  */
 export async function provisionNewTenant(tenantData, adminData) {
+  // Always enforce the default setup credential for new Tenant Admins
+  adminData.password = "Admin@123";
+
   const schemaName = buildTenantSchemaName(tenantData.code);
   let tenant;
 
