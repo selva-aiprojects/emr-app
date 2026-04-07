@@ -496,6 +496,7 @@ export default function App() {
             {activeUser?.role === 'Superadmin' && ['superadmin', 'tenant_management', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'support', 'reports', 'admin'].includes(view) && (
             <EnhancedSuperadminPage
               view={view}
+              apiClient={api}
               tenant={tenant}
               userRole={activeUser?.role}
               superOverview={superOverview}
@@ -875,12 +876,24 @@ export default function App() {
             activeUser={activeUser}
             tenant={tenant}
             onUpdateUserRole={(id, role) => withRefresh(() => api.updateUser(id, { role }))}
-            onResetPassword={(id) => alert('Password reset initialization sent to personnel email.')}
+        onResetPassword={async (userId) => {
+              const newPassword = window.prompt('Enter new password for this user (min 8 chars):');
+              if (!newPassword || newPassword.length < 8) {
+                if (newPassword !== null) showToast({ message: 'Password must be at least 8 characters.', type: 'error' });
+                return;
+              }
+              try {
+                const targetUser = users.find(u => u.id === userId);
+                if (!targetUser) { showToast({ message: 'User not found.', type: 'error' }); return; }
+                await api.resetUserPassword(session.tenantId, targetUser.email, newPassword);
+                showToast({ message: `Password reset successfully for ${targetUser.name || targetUser.email}.`, type: 'success' });
+              } catch (err) {
+                showToast({ message: 'Password reset failed: ' + err.message, type: 'error' });
+              }
+            }}
           />
         )}
 
-        {view === 'lab' && <LabPage tenant={tenant} activeUser={activeUser} />}
-        
         {view === 'lab_availability' && <LabAvailabilityPage 
             tenant={tenant} 
             activeUser={activeUser}

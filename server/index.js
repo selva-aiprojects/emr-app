@@ -177,29 +177,48 @@ app.get('/api/admin/audit-all-shards', async (req, res) => {
     const logs = [];
     
     // Check known schemas (Dynamic Discovery)
-    const { rows: schemasRes } = await query("SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'public', 'emr')");
-    const schemas = ['emr', ...schemasRes.map(r => r.schema_name)];
-    const results = {};
-    
+    const { rows: schemasRes } = await query(`
+       SELECT s.schema_name FROM information_schema.schemata s
+       INNER JOIN information_schema.tables t ON s.schema_name = t.table_schema
+       WHERE s.schema_name NOT IN ('information_schema', 'pg_catalog', 'public', 'emr')
+       AND t.table_name = 'patients'
+    `);
+    const schemas = schemasRes.map(r => r.schema_name);
+    const results = {
+      core_engine: {},
+      institutional_shards: []
+    };
+
+    // 1. Audit Core Engine (emr)
+    const emrTables = await query("SELECT count(*)::int FROM information_schema.tables WHERE table_schema = 'emr'");
+    results.core_engine.table_count = emrTables.rows[0].count;
+
+    // 2. Audit Individual Shards
     for (const sc of schemas) {
+      const shardInfo = { schema: sc };
       try {
-        const pRes = await query(`SELECT count(*) FROM ${sc}.patients`);
-        results[`${sc}_patients`] = pRes.rows[0].count;
-      } catch(e) { results[`${sc}_patients`] = 'N/A'; }
-      
-      try {
-        const uRes = await query(`SELECT count(*) FROM ${sc}.users`);
-        results[`${sc}_users`] = uRes.rows[0].count;
-      } catch(e) { results[`${sc}_users`] = 'N/A'; }
+        const tCount = await query(`SELECT count(*)::int FROM information_schema.tables WHERE table_schema = $1`, [sc]);
+        shardInfo.table_count = tCount.rows[0].count;
+        shardInfo.in_sync = (shardInfo.table_count >= results.core_engine.table_count);
+        
+        const pRes = await query(`SELECT count(*) FROM "${sc}".patients`);
+        shardInfo.patients = pRes.rows[0].count;
+        
+        const uRes = await query(`SELECT count(*) FROM "${sc}".users`);
+        shardInfo.users = uRes.rows[0].count;
+      } catch(e) { 
+        shardInfo.error = e.message; 
+      }
+      results.institutional_shards.push(shardInfo);
     }
 
-    // Check Management Plane
-    try {
-      const mtRes = await query('SELECT count(*) FROM emr.management_tenants');
-      results.management_tenants = mtRes.rows[0].count;
-      const msRes = await query('SELECT count(*) FROM emr.management_dashboard_summary WHERE summary_key = \'global\'');
-      results.management_summary = msRes.rows;
-    } catch(e) { results.management_plane_error = e.message; }
+    // 3. System Health
+    const mtRes = await query('SELECT count(*) FROM emr.management_tenants');
+    results.management_registry_count = mtRes.rows[0].count;
+    results.sync_summary = {
+      total_shards: schemas.length,
+      perfect_sync: results.institutional_shards.filter(s => s.in_sync).length
+    };
 
     res.json(results);
   } catch (err) {
@@ -636,92 +655,7 @@ app.use('/api', evaluateAllFeatures);
 // app.use('/api/pharmacy/v1', requireTenant, pharmacyRoutes);
 app.use('/api/ai/v1', requireTenant, aiRoutes);
 
-app.post('/api/tenants', requireRole('Superadmin'), async (req, res) => {
-  try {
-    const { name, code, subdomain, contactEmail, primaryColor, accentColor, subscriptionTier } = req.body;
-
-    if (!name || !code || !subdomain || !contactEmail) {
-      return res.status(400).json({ error: 'name, code, subdomain, and contactEmail are required' });
-    }
-
-    const theme = {
-      primary: primaryColor || '#0f5a6e',
-      accent: accentColor || '#f57f17',
-    };
-
-    // 1. Create the tenant record
-    const tenant = await repo.createTenant({ name, code, subdomain, contactEmail, theme });
-
-    // 2. Automate Schema Provisioning (Isolated clinical data plane)
-    const provisioningResult = await repo.provisionTenantSchema(tenant.id, code.toLowerCase());
-    console.log(`[PROVISIONING] Result for ${code}:`, provisioningResult.success ? 'SUCCESS' : 'FAILED');
-
-    // 3. Apply subscription tier if provided
-    if (subscriptionTier && ['Free', 'Basic', 'Professional', 'Enterprise'].includes(subscriptionTier)) {
-      await repo.setTenantTier(tenant.id, subscriptionTier);
-      tenant.subscription_tier = subscriptionTier;
-    }
-
-    // 3. Create Default Administrator User for the new tenant
-    // IMPLEMENTED: Default password "Medflow@2026"
-    const defaultPassword = "Medflow@2026";
-    const passwordHash = await hashPassword(defaultPassword);
-
-    const adminLoginEmail = `admin@${subdomain}.com`;
-
-    const adminUser = await repo.createUser({
-      tenantId: tenant.id,
-      email: adminLoginEmail,
-      passwordHash,
-      name: `${name} Administrator`,
-      role: 'Admin',
-    });
-
-    // 4. Dispatch Activation Email
-    const mailResult = await sendTenantWelcomeEmail(
-      contactEmail,
-      name,
-      subdomain,
-      { email: adminLoginEmail, password: defaultPassword }
-    ).catch(e => {
-      console.error('Email sending failed:', e.message);
-      return { success: false };
-    });
-
-    await repo.createAuditLog({
-      tenantId: tenant.id,
-      userId: req.user.id,
-      userName: req.user.name,
-      action: 'tenant.create',
-      entityName: 'tenant',
-      entityId: tenant.id,
-      details: {
-        code,
-        schemaName: code.toLowerCase(),
-        provisioningStatus: provisioningResult.success ? 'success' : 'failed',
-        provisioningLog: provisioningResult.log,
-        subscriptionTier: subscriptionTier || 'Basic',
-        adminProvisioned: !!adminUser,
-        emailStatus: mailResult?.success ? 'sent' : 'failed',
-        defaultPassword: "Medflow@2026"
-      },
-    });
-
-    res.status(201).json({
-      ...tenant,
-      adminProvisioned: true,
-      emailSent: mailResult?.success || false,
-      adminLoginEmail,
-      defaultPassword: "Medflow@2026"
-    });
-  } catch (error) {
-    console.error('Error creating tenant:', error);
-    if (error.constraint || error.code === '23505') {
-      return res.status(409).json({ error: 'Tenant code or subdomain already exists.' });
-    }
-    res.status(500).json({ error: 'Failed to create tenant: ' + error.message });
-  }
-});
+// MOVED to Routes/superadmin.routes.js -> createNewTenant controller
 
 /**
  * Superadmin endpoint to reset a tenant user's password
@@ -988,8 +922,7 @@ app.patch('/api/admin/tenants/:id/tier', authenticate, requireRole('Superadmin')
 
     if (!tier) return res.status(400).json({ error: 'tier is required' });
 
-    const { setTenantTier } = await import('./db/repository.js');
-    const tenant = await setTenantTier(id, tier);
+    const tenant = await repo.setTenantTier(id, tier);
 
     await repo.createAuditLog({
       userId: req.user.id,
@@ -1117,11 +1050,10 @@ app.post('/api/admin/subscription-catalog', authenticate, requireRole('Superadmi
       return res.status(400).json({ error: 'Subscription tier is required' });
     }
 
-    const { query } = await import('./db/connection.js');
     await query(`
       INSERT INTO emr.management_subscriptions (tier, plan_name, price, features, updated_at)
       VALUES ($1, $2, $3, $4, NOW())
-      ON CONFLICT (id) DO UPDATE SET 
+      ON CONFLICT (tier) DO UPDATE SET 
         plan_name = EXCLUDED.plan_name,
         price = EXCLUDED.price,
         features = EXCLUDED.features,

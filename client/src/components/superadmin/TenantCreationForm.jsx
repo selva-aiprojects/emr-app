@@ -1,56 +1,57 @@
 import React, { useState } from 'react';
-import { Building2, Hash, Globe, Palette, Star, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { 
+  Building2, Hash, Globe, Palette, Star, 
+  Loader2, CheckCircle, AlertCircle, Cpu, 
+  Mail, ShieldCheck, Zap, Activity, Layers, 
+  Box, Crown, Check, Shield, Server,
+  Lock, ArrowRight, Dna
+} from 'lucide-react';
 
 const TIERS = [
-  { value: 'Free',         label: 'Free',         color: '#8b5cf6', icon: '🆓', price: 'Free' },
-  { value: 'Basic',        label: 'Basic',        color: '#6b7280', icon: '🩺', price: '₹99/mo' },
-  { value: 'Professional', label: 'Professional', color: '#3b82f6', icon: '⭐', price: '₹299/mo' },
-  { value: 'Enterprise',   label: 'Enterprise',   color: '#10b981', icon: '🏢', price: '₹599/mo' },
+  { value: 'Free',         label: 'Free',         color: 'slate',    icon: Box, price: 'SYD-01' },
+  { value: 'Basic',        label: 'Basic',        color: 'blue',     icon: ShieldCheck, price: 'SYD-02' },
+  { value: 'Professional', label: 'Professional', color: 'indigo',   icon: Zap, price: 'SYD-03' },
+  { value: 'Enterprise',   label: 'Enterprise',   color: 'rose',     icon: Crown, price: 'SYD-04' },
 ];
 
 const INITIAL = {
   name: '',
   code: '',
   subdomain: '',
-  contactEmail: 'b.selvakumar@gmail.com', // Override: Defaulting to user's email for testing as requested
+  contactEmail: 'b.selvakumar@gmail.com',
   adminLoginEmail: '',
   subscriptionTier: 'Professional',
-  primaryColor: '#0f5a6e',
-  accentColor: '#f57f17',
+  primaryColor: '#6366f1',
+  accentColor: '#f43f5e',
 };
 
-export default function TenantCreationForm({ onCreate }) {
+export default function TenantCreationForm({ onCreate, isDark = true }) {
   const [form, setForm]       = useState(INITIAL);
   const [loading, setLoading] = useState(false);
   const [status, setStatus]   = useState(null); // null | 'success' | 'error'
   const [errMsg, setErrMsg]   = useState('');
+  const [provisionedData, setProvisionedData] = useState(null);
 
   function handleChange(e) {
     const { name, value } = e.target;
     setForm(prev => {
       const next = { ...prev, [name]: value };
-      // Auto-generate code + subdomain from name if user hasn't touched them
       if (name === 'name') {
         const slug = value.replace(/[^a-zA-Z0-9\s]/g, '').trim().toUpperCase().split(/\s+/).map(w => w[0] || '').join('').slice(0, 5);
         const sub  = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 30);
         if (!prev._codeManual)      next.code      = slug;
         if (!prev._subManual)       next.subdomain = sub;
       }
-      
-      // Auto-suggest admin login email based on subdomain
       if (name === 'subdomain' && !prev._adminEmailManual) {
         next.adminLoginEmail = `admin@${value.toLowerCase() || 'hospital'}.com`;
       }
       if (name === 'adminLoginEmail') next._adminEmailManual = true;
-
       if (name === 'code')      next._codeManual = true;
       if (name === 'subdomain') next._subManual  = true;
       return next;
     });
     setStatus(null);
   }
-
-  const [provisionedData, setProvisionedData] = useState(null);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -60,16 +61,7 @@ export default function TenantCreationForm({ onCreate }) {
     setProvisionedData(null);
 
     try {
-      const result = await onCreate({
-        name:             form.name.trim(),
-        code:             form.code.trim().toUpperCase(),
-        subdomain:        form.subdomain.trim().toLowerCase(),
-        contactEmail:     form.contactEmail.trim().toLowerCase(),
-        adminLoginEmail:  form.adminLoginEmail.trim().toLowerCase(),
-        subscriptionTier: form.subscriptionTier,
-        primaryColor:     form.primaryColor,
-        accentColor:      form.accentColor,
-      });
+      const result = await onCreate({ ...form });
       setProvisionedData(result);
       setStatus('success');
       setForm(INITIAL);
@@ -81,276 +73,223 @@ export default function TenantCreationForm({ onCreate }) {
     }
   }
 
-  const selectedTier = TIERS.find(t => t.value === form.subscriptionTier);
-
   return (
-    <section className="clinical-card p-6">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center shadow">
-          <Building2 className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Provision New Tenant</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Create a new clinic / hospital workspace</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-
-        {/* Tenant Name */}
-        <div>
-          <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-            <Building2 className="w-3 h-3 inline mr-1" />Tenant Name *
-          </label>
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            placeholder="e.g. Healthezee Basic Clinic"
-            required
-            className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white text-slate-800 placeholder-slate-400"
-          />
-        </div>
-
-        {/* IDENTITY DUAL CONTROL */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-           {/* Communication Email (Mandatory) */}
-           <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
-              <label className="block text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2 leading-none">
-                 Communication Email (Board Member / Recipient) *
-              </label>
-              <div className="flex items-center gap-3">
-                 <div className="p-2 bg-indigo-100 text-indigo-600 rounded-lg">
-                    <Globe className="w-4 h-4" />
-                 </div>
-                 <input
-                   type="email"
-                   name="contactEmail"
-                   value={form.contactEmail}
-                   onChange={handleChange}
-                   placeholder="e.g. board@hospital.com"
-                   required
-                   className="flex-1 bg-transparent text-sm font-bold text-slate-800 focus:outline-none placeholder:text-slate-300"
-                 />
-              </div>
-              <p className="text-[9px] font-bold text-slate-400 mt-2 italic uppercase tracking-widest leading-relaxed">
-                * SYSTEM CREDENTIALS (PASSWORD) WILL BE SENT STRICTLY TO THIS EMAIL ONLY.
-              </p>
-           </div>
-
-           {/* Admin Login ID (Different from communication) */}
-           <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 shadow-sm">
-              <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-[0.2em] mb-2 leading-none">
-                 New Admin Login Identity / Email *
-              </label>
-              <div className="flex items-center gap-3">
-                 <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-                    <Hash className="w-4 h-4" />
-                 </div>
-                 <input
-                   type="email"
-                   name="adminLoginEmail"
-                   value={form.adminLoginEmail}
-                   onChange={handleChange}
-                   placeholder="e.g. admin@hospital.com"
-                   required
-                   className="flex-1 bg-transparent text-sm font-bold text-slate-800 focus:outline-none placeholder:text-slate-300"
-                 />
-              </div>
-              <p className="text-[9px] font-bold text-slate-400 mt-2 italic uppercase tracking-widest leading-relaxed">
-                * THIS WILL BE THE LOGIN USERID FOR THE TENANT ADMIN CONSOLE.
-              </p>
-           </div>
-        </div>
-
-
-        {/* Code + Subdomain row */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-              <Hash className="w-3 h-3 inline mr-1" />Short Code *
-            </label>
-            <input
-              type="text"
-              name="code"
-              value={form.code}
-              onChange={handleChange}
-              placeholder="e.g. MBC"
-              maxLength={10}
-              required
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white text-slate-800 placeholder-slate-400 uppercase"
-            />
-            <p className="text-[10px] text-slate-400 mt-1">Used for patient MRNs</p>
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-1.5">
-              <Globe className="w-3 h-3 inline mr-1" />Subdomain *
-            </label>
-            <input
-              type="text"
-              name="subdomain"
-              value={form.subdomain}
-              onChange={handleChange}
-              placeholder="e.g. healthezee-basic"
-              maxLength={50}
-              required
-              className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 bg-white text-slate-800 placeholder-slate-400 lowercase"
-            />
-            <p className="text-[10px] text-slate-400 mt-1">Must be unique</p>
-          </div>
-        </div>
-
-        {/* Subscription Tier */}
-        <div>
-          <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-            <Star className="w-3 h-3 inline mr-1" />Subscription Tier *
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {TIERS.map(tier => (
-              <button
-                key={tier.value}
-                type="button"
-                onClick={() => { setForm(f => ({ ...f, subscriptionTier: tier.value })); setStatus(null); }}
-                className={`p-2.5 rounded-xl border-2 text-center transition-all cursor-pointer ${
-                  form.subscriptionTier === tier.value
-                    ? 'border-slate-900 bg-slate-900 text-white shadow-lg scale-[1.02]'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
-                }`}
-              >
-                <div className="text-lg">{tier.icon}</div>
-                <div className="text-[11px] font-black uppercase tracking-wide mt-0.5">{tier.label}</div>
-                <div className="text-[10px] opacity-70 mt-0.5">{tier.price}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Theme Colors */}
-        <div>
-          <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
-            <Palette className="w-3 h-3 inline mr-1" />Brand Colors
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 bg-white">
-              <input
-                type="color"
-                name="primaryColor"
-                value={form.primaryColor}
-                onChange={handleChange}
-                className="w-7 h-7 rounded cursor-pointer border-0 p-0 bg-transparent"
-              />
-              <div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase">Primary</div>
-                <div className="text-xs text-slate-700 font-mono">{form.primaryColor}</div>
-              </div>
+    <div className={`w-full mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 ${isDark ? 'text-slate-200' : 'text-slate-900'}`}>
+      <form onSubmit={handleSubmit} className="space-y-12">
+         {/* SHARD IDENTITY SECTION */}
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <div className="col-span-full space-y-4">
+               <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                     <Dna size={16} />
+                  </div>
+                  <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Nominal Identity</h4>
+               </div>
+               <input 
+                  type="text" 
+                  name="name" 
+                  value={form.name} 
+                  onChange={handleChange} 
+                  placeholder="E.G. MAYO CLINIC CENTRAL SHARD" 
+                  required 
+                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 text-[14px] font-black text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 placeholder:text-slate-300 uppercase tracking-tight transition-all" 
+               />
             </div>
-            <div className="flex items-center gap-2 border border-slate-200 rounded-lg px-3 py-2 bg-white">
-              <input
-                type="color"
-                name="accentColor"
-                value={form.accentColor}
-                onChange={handleChange}
-                className="w-7 h-7 rounded cursor-pointer border-0 p-0 bg-transparent"
-              />
-              <div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase">Accent</div>
-                <div className="text-xs text-slate-700 font-mono">{form.accentColor}</div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Preview badge */}
-        {form.name && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-black shadow"
-              style={{ backgroundColor: form.primaryColor }}
-            >
-              {form.code?.slice(0,2) || '?'}
+            <div className="space-y-4">
+               <label className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Shard Code (Unique)</label>
+               <div className="relative group">
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700 group-focus-within:text-indigo-400" />
+                  <input 
+                    type="text" 
+                    name="code" 
+                    value={form.code} 
+                    onChange={handleChange} 
+                    placeholder="MAY-01" 
+                    required 
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-[13px] font-black text-indigo-600 outline-none focus:ring-1 focus:ring-indigo-500/50 uppercase font-mono tracking-widest placeholder:text-slate-300 transition-all" 
+                  />
+               </div>
             </div>
-            <div>
-              <div className="text-xs font-bold text-slate-800">{form.name || 'Tenant Name'}</div>
-              <div className="text-[10px] text-slate-400">{form.subdomain || 'subdomain'}.healthezee.app · {selectedTier?.icon} {form.subscriptionTier}</div>
-            </div>
-          </div>
-        )}
 
-        {/* Status Messages */}
-        {status === 'success' && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm">
-              <CheckCircle className="w-4 h-4" />
-              <span className="font-semibold text-xs uppercase tracking-widest">Shard Provisioned & Identity Hub Dispatched</span>
+            <div className="space-y-4">
+               <label className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ml-1">Subdomain Route</label>
+               <div className="relative group flex items-center bg-slate-50 border border-slate-200 rounded-2xl pr-6 transition-all focus-within:ring-1 focus-within:ring-indigo-500/50">
+                  <Globe className="ml-4 w-4 h-4 text-slate-700 group-focus-within:text-indigo-400" />
+                  <input 
+                    type="text" 
+                    name="subdomain" 
+                    value={form.subdomain} 
+                    onChange={handleChange} 
+                    placeholder="mayo-central" 
+                    required 
+                    className="flex-1 bg-transparent py-4 pl-4 text-[13px] font-black text-slate-800 outline-none lowercase font-mono placeholder:text-slate-300" 
+                  />
+                  <span className="text-[11px] font-black text-slate-600 uppercase tracking-widest">.emr.care</span>
+               </div>
+            </div>
+         </div>
+
+         {/* GOVERNANCE SHARDS */}
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-10 bg-slate-50/50 rounded-[2.5rem] border border-slate-200 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+               <Shield size={120} strokeWidth={1} />
             </div>
             
-            {provisionedData && (
-              <div className="bg-slate-900 rounded-[32px] p-6 text-white shadow-2xl border border-white/10 animate-in fade-in zoom-in duration-500">
-                <div className="flex items-center gap-2 mb-4">
-                   <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center text-white">
-                      <CheckCircle className="w-4 h-4" />
-                   </div>
-                   <div className="text-[10px] font-black text-white uppercase tracking-[0.2em]">
-                      Provisioning Finalized
-                   </div>
-                </div>
+            <div className="space-y-4 relative z-10">
+               <label className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] block">Board Dispatch (EMAIL)</label>
+               <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
+                  <input 
+                    type="email" 
+                    name="contactEmail" 
+                    value={form.contactEmail} 
+                    onChange={handleChange} 
+                    required 
+                    className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-[12px] font-black text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500/50" 
+                  />
+               </div>
+               <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.1em] italic">System credentials relay target</p>
+            </div>
+            
+            <div className="space-y-4 relative z-10">
+               <label className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] block">Root Identity (LOGIN)</label>
+               <div className="relative">
+                  <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
+                  <input 
+                    type="email" 
+                    name="adminLoginEmail" 
+                    value={form.adminLoginEmail} 
+                    onChange={handleChange} 
+                    required 
+                    className="w-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-6 text-[12px] font-black text-slate-700 outline-none focus:ring-1 focus:ring-indigo-500/50" 
+                  />
+               </div>
+               <p className="text-[9px] font-black text-slate-600 uppercase tracking-[0.1em] italic">Primary authentication nexus</p>
+            </div>
+         </div>
 
-                <div className="space-y-4">
-                   <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                      <div className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2 leading-none">
-                         Communication Shard (BOARD MEMBER)
-                      </div>
-                      <div className="text-sm font-bold truncate">{provisionedData.contactEmail}</div>
-                      <div className="text-[8px] text-slate-500 uppercase mt-1 font-black leading-none italic">
-                         * FULL CREDENTIALS DISPATCHED HERE SECURELY.
-                      </div>
+         {/* SHARDING TIER SELECTION */}
+         <div className="space-y-6">
+            <h4 className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] ml-1">Deployment Capacity Shard</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+               {TIERS.map(t => (
+                 <button
+                   key={t.value}
+                   type="button"
+                   onClick={() => setForm(f => ({ ...f, subscriptionTier: t.value }))}
+                   className={`p-6 rounded-[2rem] border transition-all relative flex flex-col items-center text-center gap-3 group ${
+                     form.subscriptionTier === t.value 
+                        ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_10px_25px_rgba(79,70,229,0.2)] scale-105 z-10' 
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-200 hover:bg-slate-50'
+                   }`}
+                 >
+                   <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
+                     form.subscriptionTier === t.value ? 'bg-white/20 text-white' : 'bg-white/[0.03] text-slate-500 group-hover:text-indigo-400'
+                   }`}>
+                      <t.icon size={20} />
                    </div>
+                   <div className="text-[12px] font-black uppercase tracking-widest">{t.label}</div>
+                   <div className={`text-[10px] font-black uppercase tracking-[0.2em] italic opacity-40`}>{t.price}</div>
+                   {form.subscriptionTier === t.value && (
+                      <div className="absolute top-4 right-4 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.5)]">
+                         <Check size={12} className="text-white font-bold" />
+                      </div>
+                   )}
+                 </button>
+               ))}
+            </div>
+         </div>
 
-                   <div className="bg-white/5 p-4 rounded-2xl border border-white/10">
-                      <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-2 leading-none">
-                         Admin Authentication Identity
-                      </div>
-                      <div className="flex justify-between items-center bg-slate-800/50 p-2.5 rounded-xl border border-white/5 mt-2">
-                        <div className="text-[10px] text-slate-400 uppercase font-black">Login ID</div>
-                        <div className="text-xs font-mono font-bold text-slate-100">{provisionedData.adminLoginEmail}</div>
-                      </div>
-                      <div className="flex justify-between items-center bg-slate-800/50 p-2.5 rounded-xl border border-white/5 mt-2">
-                        <div className="text-[10px] text-slate-400 uppercase font-black">Protocol PWD</div>
-                        <div className="text-xs font-mono font-bold text-emerald-400">{provisionedData.defaultPassword}</div>
-                      </div>
-                   </div>
-                </div>
-                
-                <div className="mt-6 flex items-center justify-center gap-2 text-[9px] font-bold text-slate-500 uppercase tracking-[0.2em] animate-pulse">
-                   <Globe className="w-3 h-3" /> System Synchronizing Globally...
-                </div>
-              </div>
+         {/* VISUAL SHARDS */}
+         <div className="grid grid-cols-2 gap-8">
+            <div className="group bg-white border border-slate-200 p-6 rounded-[2rem] flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm">
+               <div className="flex items-center gap-6">
+                  <div className="relative">
+                     <input type="color" name="primaryColor" value={form.primaryColor} onChange={handleChange} className="w-14 h-14 rounded-2xl cursor-pointer border-none bg-transparent relative z-10" />
+                     <div className="absolute inset-0 rounded-2xl shadow-inner pointer-events-none" style={{ backgroundColor: form.primaryColor }} />
+                  </div>
+                  <div>
+                     <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Primary Shard</p>
+                     <p className="text-[14px] font-black text-slate-900 uppercase tabular-nums tracking-widest">{form.primaryColor}</p>
+                  </div>
+               </div>
+               <Palette className="text-slate-800" size={32} />
+            </div>
+
+            <div className="group bg-white border border-slate-200 p-6 rounded-[2.5rem] flex items-center justify-between hover:border-rose-200 transition-all shadow-sm">
+               <div className="flex items-center gap-6">
+                  <div className="relative">
+                     <input type="color" name="accentColor" value={form.accentColor} onChange={handleChange} className="w-14 h-14 rounded-2xl cursor-pointer border-none bg-transparent relative z-10" />
+                     <div className="absolute inset-0 rounded-2xl shadow-inner pointer-events-none" style={{ backgroundColor: form.accentColor }} />
+                  </div>
+                  <div>
+                     <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Accent Shard</p>
+                     <p className="text-[14px] font-black text-slate-900 uppercase tabular-nums tracking-widest">{form.accentColor}</p>
+                  </div>
+               </div>
+               <Layers className="text-slate-800" size={32} />
+            </div>
+         </div>
+
+         {/* SUBMISSION BLOCK */}
+         <div className="pt-10 border-t border-slate-200 flex flex-col gap-6">
+            {status === 'success' && provisionedData ? (
+               <div className="bg-emerald-50 border border-emerald-100 rounded-[2.5rem] p-10 animate-in zoom-in-95 duration-500 shadow-sm">
+                  <header className="flex items-center justify-between mb-8">
+                     <div className="flex items-center gap-3">
+                        <CheckCircle size={20} className="text-emerald-500" />
+                        <span className="text-[14px] font-black text-emerald-600 uppercase tracking-[0.2em] italic">Shard Activated</span>
+                     </div>
+                     <button onClick={() => setStatus(null)} className="text-[10px] font-black text-slate-400 uppercase hover:text-slate-900 transition-colors">Dismiss</button>
+                  </header>
+                  <div className="grid grid-cols-2 gap-10">
+                     <div className="space-y-4">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Root ID</p>
+                        <p className="text-[14px] font-black text-slate-900 font-mono break-all">{provisionedData.adminLoginEmail}</p>
+                     </div>
+                     <div className="space-y-4">
+                        <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Credential Token</p>
+                        <code className="text-[14px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">MedFlow@2024</code>
+                     </div>
+                  </div>
+               </div>
+            ) : status === 'error' ? (
+               <div className="bg-rose-50 border border-rose-100 rounded-[2.5rem] p-10 animate-in slide-in-from-top-4 duration-300 shadow-sm">
+                  <div className="flex items-center gap-4 text-rose-600">
+                     <AlertCircle size={24} />
+                     <div>
+                        <h4 className="text-[14px] font-black uppercase tracking-tighter italic">Deployment Intercepted</h4>
+                        <p className="text-[11px] font-bold text-rose-500/80 leading-tight mt-1">{errMsg}</p>
+                     </div>
+                  </div>
+               </div>
+            ) : (
+               <button 
+                  type="submit" 
+                  disabled={loading}
+                  className={`w-full py-6 rounded-[2.5rem] text-[13px] font-black uppercase tracking-[0.4em] transition-all flex items-center justify-center gap-4 relative overflow-hidden group/btn ${
+                     loading 
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200' 
+                        : 'bg-slate-900 text-white hover:bg-indigo-600 hover:shadow-xl shadow-indigo-100 border border-slate-900'
+                  }`}
+               >
+                  {loading ? (
+                     <>
+                        <Loader2 className="animate-spin" size={20} />
+                        <span className="relative z-10 italic">Initializing Shard Protocol...</span>
+                     </>
+                  ) : (
+                     <>
+                        <Box size={22} className="group-hover/btn:rotate-12 transition-transform" />
+                        <span className="relative z-10">Deploy Institutional Shard</span>
+                        <ArrowRight size={22} className="group-hover/btn:translate-x-2 transition-transform" />
+                     </>
+                  )}
+               </button>
             )}
-          </div>
-        )}
-
-        {status === 'error' && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-            <AlertCircle className="w-4 h-4" />
-            <span className="font-semibold">{errMsg}</span>
-          </div>
-        )}
-
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading || !form.name || !form.code || !form.subdomain || !form.contactEmail}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 text-white text-sm font-black uppercase tracking-widest hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-        >
-          {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" /> Provisioning...</>
-          ) : (
-            <><Building2 className="w-4 h-4" /> Provision Tenant</>
-          )}
-        </button>
+         </div>
       </form>
-    </section>
+    </div>
   );
 }

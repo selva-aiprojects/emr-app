@@ -1,298 +1,405 @@
 import React, { useState } from 'react';
 import { 
-  Building2, 
-  UserPlus, 
-  Key, 
-  ShieldCheck, 
-  Plus, 
-  Trash2, 
-  Edit3, 
-  CheckCircle2, 
-  AlertTriangle,
-  ArrowUpRight,
-  ChevronRight,
-  X,
-  History,
-  Lock
+  Building2, UserPlus, Key, ShieldCheck, 
+  Plus, Trash2, Edit3, CheckCircle2, 
+  AlertTriangle, ArrowUpRight, ChevronRight, 
+  X, History, Lock, Search, Filter, 
+  Activity, Globe, Settings, Box, Database,
+  Fingerprint, Zap
 } from 'lucide-react';
 import { useToast } from '../../hooks/useToast.jsx';
 import { superadminService } from '../../services/superadmin.service.js';
 import TenantCreationForm from './TenantCreationForm.jsx';
 
-const TIERS = [
-  { value: 'Free', color: 'slate', icon: '🆓' },
-  { value: 'Basic', color: 'indigo', icon: '🩺' },
-  { value: 'Professional', color: 'emerald', icon: '⭐' },
-  { value: 'Enterprise', color: 'rose', icon: '🏢' },
-];
-
-export default function TenantControlCenter({ tenants = [], onRefresh }) {
+export default function TenantControlCenter({ tenants = [], onRefresh, apiClient }) {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState('active_tenants');
+  const [activeTab, setActiveTab] = useState('shards');
   const [isProvisioning, setIsProvisioning] = useState(false);
-  const [selectedTenant, setSelectedTenant] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [editingTenant, setEditingTenant] = useState(null);
 
-  const stats = [
-    { label: 'Network Nodes', value: tenants.length, icon: Building2, color: 'indigo' },
-    { label: 'Identity Clusters', value: tenants.length * 2, icon: ShieldCheck, color: 'emerald' },
-    { label: 'Pending Shards', value: 3, icon: AlertTriangle, color: 'amber' },
-  ];
+  const filteredTenants = tenants.filter(t => 
+    (t.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+    (t.code || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleResetPassword = async (t) => {
     const password = prompt("Enter new master password for " + t.name);
     if (!password) return;
-
     try {
-      showToast({ message: `Initiating secure master password reset for ${t.name}...`, type: 'info' });
+      showToast({ message: `Resetting password for ${t.name}...`, type: 'info' });
       await superadminService.resetUserPassword(t.code, `admin@${t.subdomain}.com`, password);
-      showToast({ message: `Identity vault reset successful for ${t.name}.`, type: 'success' });
+      showToast({ message: `Password reset successful.`, type: 'success' });
     } catch (err) {
       showToast({ message: err.message, type: 'error', title: 'Reset Failed' });
     }
   };
 
-  const handleAddAdmin = async (t) => {
-    const name = prompt("Enter new admin name for " + t.name);
-    const email = prompt("Enter new admin email (e.g. support@" + t.subdomain + ".com)");
-    const password = prompt("Enter password");
-    if (!name || !email || !password) return;
-
-    try {
-       showToast({ message: `Provisioning new identity for ${t.name}...`, type: 'info' });
-       await superadminService.provisionAdmin(t.code, { name, email, password, roleName: 'Admin' });
-       showToast({ message: `Admin identity successfully mapped to ${t.name}.`, type: 'success' });
-    } catch (err) {
-       showToast({ message: err.message, type: 'error', title: 'Identity Fail' });
-    }
-  }
-
   const handleProvision = async (data) => {
     try {
-      showToast({ 
-        message: `Initializing Shard [${data.code}] on Cluster Node...`, 
-        type: 'info' 
-      });
-
-      const result = await superadminService.provisionTenant({
-        name: data.name,
-        code: data.code,
-        subdomain: data.subdomain,
-        contactEmail: data.contactEmail,
-        adminLoginEmail: data.adminLoginEmail,
-        primaryColor: data.primaryColor,
-        accentColor: data.accentColor,
+      showToast({ message: `Provisioning tenant ${data.name}...`, type: 'info' });
+      await superadminService.provisionTenant({
+        ...data
       }, {
         email: data.adminLoginEmail || `admin@${data.subdomain}.com`,
         name: `${data.name} Admin`,
-        password: "Medflow@2026" // Default protocol
+        password: "Medflow@2026"
       });
-
-      showToast({ 
-        message: `Healthcare Grid Shard [${data.code}] successfully provisioned and registry linked!`, 
-        type: 'success',
-        title: 'Sharding Complete'
-      });
-
+      showToast({ message: `Tenant ${data.code} created successfully!`, type: 'success' });
       setIsProvisioning(false);
       onRefresh?.();
-      return result;
     } catch (err) {
-      showToast({ 
-        message: err.message, 
-        type: 'error', 
-        title: 'Provisioning Failed' 
-      });
+      showToast({ message: err.message, type: 'error', title: 'Failed' });
       throw err;
     }
   }
 
-  return (
-    <div className="space-y-12 animate-fade-in">
-      {/* Metrics Row */}
-      <header className="grid grid-cols-1 md:grid-cols-3 gap-8">
-         {stats.map((s, i) => (
-            <div key={i} className="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm flex items-center gap-6">
-               <div className={`w-14 h-14 rounded-2xl bg-${s.color}-50 text-${s.color}-600 flex items-center justify-center`}>
-                  <s.icon size={28} />
-               </div>
-               <div>
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{s.label}</h4>
-                  <p className="text-3xl font-black text-slate-900 tabular-nums">{s.value}</p>
-               </div>
-            </div>
-         ))}
-      </header>
+  const handleDeleteTenant = async (t) => {
+    if (!window.confirm(`⚠️ DESTRUCTIVE ACTION: Are you sure you want to PERMANENTLY DELETE shard [${t.code}] (${t.name})? This will purge all clinical data and schemas.`)) {
+      return;
+    }
+    
+    try {
+      showToast({ message: `Decommissioning shard ${t.code}...`, type: 'warning' });
+      await superadminService.deleteTenant(t.id);
+      showToast({ message: `Shard ${t.code} purged from the grid.`, type: 'success' });
+      onRefresh?.();
+    } catch (err) {
+      showToast({ message: err.message, type: 'error', title: 'Deletion Failed' });
+    }
+  };
 
-      {/* Control Tabs */}
-      <section className="bg-white rounded-[40px] border border-slate-100 shadow-sm overflow-hidden">
-         <header className="px-10 py-8 border-b border-slate-50 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 bg-slate-50/10">
-            <div className="flex gap-2 bg-slate-100 p-1.5 rounded-2xl">
-               {[
-                  { id: 'active_tenants', label: 'Nodes List', icon: Building2 },
-                  { id: 'admin_users', label: 'Identity Access', icon: Lock },
-                  { id: 'reset_protocol', label: 'Reset Vault', icon: History }
-               ].map((tab) => (
-                  <button 
-                     key={tab.id}
-                     onClick={() => setActiveTab(tab.id)}
-                     className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                        activeTab === tab.id 
-                           ? 'bg-white text-indigo-600 shadow-md' 
-                           : 'text-slate-500 hover:bg-white/50'
-                     }`}
-                  >
-                     <tab.icon size={12} /> {tab.label}
-                  </button>
-               ))}
+  const handleUpdateTenant = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = {
+      name: fd.get('name'),
+      subdomain: fd.get('subdomain'),
+      subscription_tier: fd.get('tier'),
+      contact_email: fd.get('email'),
+      status: fd.get('status')
+    };
+
+    try {
+      showToast({ message: `Relinking identity for ${editingTenant.code}...`, type: 'info' });
+      await superadminService.updateTenant(editingTenant.id, data);
+      showToast({ message: `Node configuration synchronized.`, type: 'success' });
+      setEditingTenant(null);
+      onRefresh?.();
+    } catch (err) {
+      showToast({ message: err.message, type: 'error', title: 'Update Failed' });
+    }
+  };
+
+  return (
+    <div className="space-y-12 max-w-[1600px] mx-auto pb-32 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* PROFESSIONAL TITLE BLOCK */}
+      <div className="flex justify-between items-end">
+         <div>
+            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase mb-1">Shard Orchestration</h2>
+            <div className="flex items-center gap-3">
+               <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Platform Nodes</span>
+               <div className="w-1 h-1 rounded-full bg-slate-300" />
+               <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Institutional Provisioning</span>
+            </div>
+         </div>
+         <div className="flex gap-4">
+            <div className="relative group w-[280px]">
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-indigo-600" />
+               <input 
+                 type="text" 
+                 placeholder="Search Node Identity..."
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 className="w-full bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-4 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 placeholder:text-slate-400 transition-all font-tabular uppercase tracking-wider shadow-sm"
+               />
             </div>
             <button 
                onClick={() => setIsProvisioning(true)}
-               className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-colors shadow-lg flex items-center gap-2"
+               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
             >
-               <Plus size={14} /> Provision New Hospital Shard
+               <Plus size={14} /> Provision New Shard
             </button>
-         </header>
+         </div>
+      </div>
 
-         {/* Content Table Area */}
-         <div className="p-4 md:p-10">
-            {activeTab === 'active_tenants' && (
-               <div className="overflow-x-auto min-w-[800px]">
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                     {tenants.map((t, idx) => {
-                        const tier = TIERS.find(tier => tier.value === t.subscriptionTier) || TIERS[0];
-                        return (
-                           <div key={t.id || idx} className="bg-slate-50/50 p-6 rounded-[32px] border border-slate-100 group hover:bg-white hover:shadow-xl transition-all duration-500 relative">
-                              <div className="flex justify-between items-start mb-6">
-                                 <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-sm font-black text-indigo-600 shadow-sm uppercase group-hover:scale-110 group-hover:rotate-6 transition-transform">
-                                    {t.name?.slice(0, 2)}
-                                 </div>
-                                 <div className={`px-3 py-1 rounded-full bg-${tier.color}-100 text-${tier.color}-600 text-[8px] font-black uppercase tracking-widest border border-${tier.color}-200`}>
-                                    {tier.icon} {t.subscriptionTier || 'Standard'}
-                                 </div>
-                              </div>
-                              <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight group-hover:text-indigo-600 transition-colors uppercase">{t.name}</h4>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 mb-8">{t.subdomain}.healthezee.app</p>
-                              
-                              <div className="flex items-center gap-2 pt-4 border-t border-white/50">
-                                 <button onClick={() => handleResetPassword(t)} className="flex-1 py-3 bg-white text-slate-600 hover:text-indigo-600 border border-slate-100 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:shadow-md flex items-center justify-center gap-2">
-                                    <Key size={12} /> Reset PWD
-                                 </button>
-                                 <button className="flex-1 py-3 bg-white text-slate-600 hover:text-emerald-600 border border-slate-100 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all hover:shadow-md flex items-center justify-center gap-2">
-                                    <UserPlus size={12} /> Add Admin
-                                 </button>
-                                 <button className="p-3 bg-white text-slate-300 hover:text-rose-500 border border-slate-100 rounded-xl transition-all">
-                                    <Trash2 size={14} />
-                                 </button>
-                              </div>
+      {/* SHARD CONTROL GRID */}
+      <section className="space-y-8">
+         <div className="flex gap-6 border-b border-slate-200">
+            {[
+               { id: 'shards', label: 'Active Shards', icon: Box },
+               { id: 'identities', label: 'Identity Nodes', icon: Fingerprint },
+               { id: 'security', label: 'Security Protocols', icon: ShieldCheck }
+            ].map((tab) => (
+               <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`pb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] transition-all border-b-2 ${
+                     activeTab === tab.id ? 'border-indigo-600 text-slate-900' : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}
+               >
+                  <tab.icon size={12} /> {tab.label}
+               </button>
+            ))}
+         </div>
 
-                              <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                 <ArrowUpRight size={16} className="text-slate-300" />
+         {activeTab === 'shards' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+               {filteredTenants.map((t, idx) => (
+                  <div key={t.id || idx} className="group relative bg-white border border-slate-200 p-8 rounded-[2rem] transition-all hover:border-indigo-200 hover:shadow-md overflow-hidden flex flex-col justify-between min-h-[320px]">
+                     <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+                        <Database size={64} strokeWidth={1} />
+                     </div>
+
+                     <div>
+                        <div className="flex justify-between items-start mb-8">
+                           <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-black text-[14px] uppercase group-hover:scale-110 transition-transform">
+                              {t.name?.slice(0, 2)}
+                           </div>
+                           <div className="flex flex-col items-end gap-2">
+                              <span className="px-3 py-1 rounded-full bg-slate-50 text-slate-500 text-[8px] font-black uppercase tracking-widest border border-slate-200">
+                                 {t.subscriptionTier || 'Standard'} Tier
+                              </span>
+                              <div className="flex items-center gap-1.5 font-black text-[9px] text-emerald-600 uppercase tracking-widest">
+                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live
                               </div>
                            </div>
-                        );
-                     })}
-                  </div>
-               </div>
-            )}
-            
-            {activeTab === 'admin_users' && (
-               <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                  <div className="lg:col-span-3">
-                     <table className="w-full text-left">
-                        <thead>
-                           <tr className="border-b border-slate-50">
-                              <th className="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Admin Entity</th>
-                              <th className="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Identity Node</th>
-                              <th className="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Access Level</th>
-                              <th className="p-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Lifecycle</th>
-                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                           {tenants.slice(0, 5).map((t, i) => (
-                              <tr key={i} className="hover:bg-slate-50 transition-colors group">
-                                 <td className="p-6">
-                                    <div className="flex items-center gap-4">
-                                       <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform">
-                                          <UserPlus size={16} className="text-slate-400" />
-                                       </div>
-                                       <div>
-                                          <p className="text-xs font-black text-slate-900 uppercase">Hospital Admin - {i+1}</p>
-                                          <p className="text-[10px] font-bold text-slate-400 lowercase">admin.{t.code || 'SYS'}@healthezee.app</p>
-                                       </div>
-                                    </div>
-                                 </td>
-                                 <td className="p-6 text-center">
-                                    <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg">{t.code || 'SYS'}</span>
-                                 </td>
-                                 <td className="p-6 text-right">
-                                    <span className="text-[10px] font-black uppercase text-slate-700 tracking-widest">Root Authority</span>
-                                 </td>
-                                 <td className="p-6 text-center">
-                                    <div className="flex items-center justify-center gap-1.5">
-                                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                                       <span className="text-[10px] font-black text-emerald-600 uppercase">Active</span>
-                                    </div>
-                                 </td>
-                              </tr>
-                           ))}
-                        </tbody>
-                     </table>
-                  </div>
-                  <div className="space-y-6">
-                     <div className="bg-indigo-900 rounded-[32px] p-8 text-white relative overflow-hidden shadow-xl">
-                        <h4 className="text-[10px] font-black text-indigo-300 uppercase tracking-widest mb-4">Identity Protocol</h4>
-                        <p className="text-sm font-medium text-indigo-100 leading-relaxed mb-6">Provisioning an Admin generates a unique key assigned to the hospital shard.</p>
-                        <button className="w-full py-4 bg-white text-indigo-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-colors">Start Key Gen</button>
-                        <div className="absolute -bottom-6 -right-6 w-24 h-24 bg-white/5 blur-2xl rounded-full" />
-                     </div>
-                  </div>
-               </div>
-            )}
+                        </div>
 
-            {activeTab === 'reset_protocol' && (
-               <div className="max-w-2xl mx-auto py-12 text-center space-y-8 animate-in zoom-in-95 duration-500">
-                  <div className="w-20 h-20 rounded-[32px] bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-amber-100 group hover:rotate-6 transition-transform">
-                     <History size={40} />
-                  </div>
-                  <div>
-                     <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-3">Global Identity Reset Vault</h3>
-                     <p className="text-sm text-slate-500 font-medium max-w-[400px] mx-auto leading-relaxed">System-wide reset of admin credentials for specific healthcare nodes. Logs are permanently recorded in the immutable audit shard.</p>
-                  </div>
-                  <div className="flex flex-col gap-3 max-w-[320px] mx-auto">
-                     <button className="w-full py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-colors shadow-xl">Protocol Force-Reset</button>
-                     <button className="w-full py-4 bg-white text-slate-400 border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:border-slate-400 hover:text-slate-900 transition-all">Audit Reset Records</button>
-                  </div>
-               </div>
-            )}
-         </div>
-      </section>
+                        <h4 className="text-[16px] font-black text-slate-900 tracking-tight uppercase group-hover:text-indigo-600 transition-colors mb-1 truncate leading-tight">{t.name}</h4>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-8 font-tabular">{t.subdomain}.emr.care</p>
 
-      {/* Provisioning Modal */}
-      {isProvisioning && (
-         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
-            <div className="bg-slate-50 rounded-[48px] w-full max-w-4xl relative shadow-2xl animate-in slide-in-from-bottom-8 duration-500 overflow-hidden">
-               <div className="flex justify-between items-center p-8 bg-white border-b border-slate-100">
-                  <div className="flex items-center gap-4">
-                     <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
-                        <Plus size={24} />
+                        <div className="grid grid-cols-2 gap-4 mb-8">
+                           <div className="space-y-1">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Shard ID</p>
+                              <p className="text-[11px] font-black text-slate-700 tabular-nums uppercase">{t.code || 'SYS-' + idx}</p>
+                           </div>
+                           <div className="space-y-1">
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Created</p>
+                              <p className="text-[11px] font-black text-slate-700 tabular-nums">{new Date(t.created_at || Date.now()).toLocaleDateString()}</p>
+                           </div>
+                        </div>
                      </div>
-                     <div>
-                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">Shard Provisioning</h3>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Initialization: AP-SOUTH-1-CLUSTER</p>
-                     </div>
+
+                      <div className="flex items-center gap-2 pt-6 border-t border-slate-100">
+                        <button onClick={() => handleResetPassword(t)} className="flex-1 py-3 rounded-xl bg-slate-50 text-[9px] font-black uppercase tracking-widest text-slate-500 hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-2 group/btn shadow-sm">
+                           <Key size={12} className="group-hover/btn:rotate-12 transition-transform" /> Reset Security
+                        </button>
+                        <button onClick={() => setEditingTenant(t)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-slate-50 transition-all shadow-sm" title="Edit Node Configuration">
+                           <Edit3 size={14} />
+                        </button>
+                        <button onClick={() => handleDeleteTenant(t)} className="w-10 h-10 flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all shadow-sm" title="Decommission Node">
+                           <Trash2 size={14} />
+                        </button>
+                      </div>
                   </div>
-                  <button onClick={() => setIsProvisioning(false)} className="p-3 hover:bg-slate-100 rounded-2xl transition-all">
-                     <X size={20} className="text-slate-400" />
-                  </button>
+               ))}
+
+               {/* ADD NEW SHARD PLACEHOLDER */}
+               <button 
+                  onClick={() => setIsProvisioning(true)}
+                  className="bg-[#f8fafc] border-2 border-slate-200 border-dashed p-8 rounded-[2rem] flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-white hover:border-indigo-300 transition-all group min-h-[320px] shadow-sm"
+               >
+                  <div className="w-16 h-16 rounded-[2rem] bg-white border border-slate-100 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-sm">
+                     <Plus size={32} />
+                  </div>
+                  <span className="text-[11px] font-black uppercase tracking-[0.3em]">Deploy New Shard</span>
+               </button>
+            </div>
+         )}
+
+         {activeTab === 'identities' && (
+            <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden shadow-sm p-4">
+               <table className="w-full text-left border-separate border-spacing-y-2">
+                  <thead>
+                     <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        <th className="px-8 py-5">Identity Node</th>
+                        <th className="px-8 py-5 text-center">Assigned Shard</th>
+                        <th className="px-8 py-5 text-center">Lifecycle</th>
+                        <th className="px-8 py-5 text-right">Integrity</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     {tenants.map((t, i) => (
+                        <IdentityRow key={t.id || i} tenant={t} apiClient={apiClient} />
+                     ))}
+                  </tbody>
+               </table>
+            </div>
+         )}
+
+         {activeTab === 'security' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <div className="bg-white border border-slate-200 p-10 rounded-[2.5rem] relative overflow-hidden group shadow-sm hover:border-indigo-200 transition-all">
+                  <h3 className="text-[18px] font-black text-slate-900 uppercase tracking-tighter mb-4 italic">Security Directive Alpha</h3>
+                  <p className="text-[12px] font-bold text-slate-500 leading-relaxed mb-10">
+                     Initialize a global audit of all administrative identities across the institutional grid. This process will verify 2FA compliance and encryption sharding integrity.
+                  </p>
+                  <button className="w-full py-5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-indigo-600 transition-all shadow-md">Start Global Audit</button>
+                  <History className="absolute -right-4 -bottom-4 text-slate-100 group-hover:text-indigo-50 transition-colors" size={160} />
                </div>
                
-               <div className="p-8 max-h-[85vh] overflow-y-auto">
-
-                  <TenantCreationForm onCreate={handleProvision} />
+               <div className="bg-white border border-rose-100 p-10 rounded-[2.5rem] relative overflow-hidden shadow-sm hover:border-rose-200 transition-all">
+                  <h3 className="text-[18px] font-black text-slate-900 uppercase tracking-tighter mb-4 italic">Emergency Protocol</h3>
+                  <p className="text-[12px] font-bold text-slate-500 leading-relaxed mb-10">
+                     Immediate revocation of all active system-wide administrative tokens. This action will enforce a global re-authentication on the next heartbeat.
+                  </p>
+                  <button className="w-full py-5 border border-rose-500 text-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-rose-600 hover:text-white transition-all shadow-sm">Revoke All Tokens</button>
+                  <AlertTriangle className="absolute -right-4 -bottom-4 text-rose-50/50" size={160} />
                </div>
+            </div>
+         )}
+      </section>
+
+      {/* PROVISIONING MODAL - COMMAND CENTER AESTHETIC */}
+      {/* EDIT TENANT MODAL */}
+      {editingTenant && (
+         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center z-[110] p-8">
+            <div className="bg-white border border-slate-200 rounded-[3rem] w-full max-w-xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+               <header className="px-10 py-10 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                  <div>
+                    <h3 className="text-[18px] font-black text-slate-900 uppercase tracking-tighter italic">Edit Node Configuration</h3>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black">Shard Integrity Control: {editingTenant.code}</p>
+                  </div>
+                  <button onClick={() => setEditingTenant(null)} className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-slate-900 transition-all shadow-sm">
+                     <X size={18} />
+                  </button>
+               </header>
+
+               <form onSubmit={handleUpdateTenant} className="p-10 space-y-6">
+                  <div className="space-y-2">
+                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Hospital Identity Name</label>
+                     <input name="name" defaultValue={editingTenant.name} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-[13px] font-black text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all" />
+                  </div>
+                  <div className="space-y-2">
+                     <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Global Shard Namespace (Subdomain)</label>
+                     <input name="subdomain" defaultValue={editingTenant.subdomain} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-[13px] font-black text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                     <div className="space-y-2">
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Subscription Tier</label>
+                        <select name="tier" defaultValue={editingTenant.subscriptionTier} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-[13px] font-black text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 appearance-none">
+                           <option value="Free">Free Tier</option>
+                           <option value="Basic">Basic Node</option>
+                           <option value="Professional">Professional Cluster</option>
+                           <option value="Enterprise">Enterprise Grid</option>
+                        </select>
+                     </div>
+                     <div className="space-y-2">
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Node Status</label>
+                        <select name="status" defaultValue={editingTenant.status || 'active'} className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-[13px] font-black text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 appearance-none">
+                           <option value="active">Active (Online)</option>
+                           <option value="suspended">Suspended (Offline)</option>
+                           <option value="maintenance">Under Maintenance</option>
+                        </select>
+                     </div>
+                     <div className="space-y-2 col-span-2">
+                        <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Contact Authority Email</label>
+                        <input name="email" type="email" defaultValue={editingTenant.contactEmail || `admin@${editingTenant.subdomain}.com`} required className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-[13px] font-black text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all" />
+                     </div>
+                  </div>
+                  <div className="pt-6">
+                    <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-3xl text-[12px] font-black uppercase tracking-[0.2em] hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-200">
+                      Synchronize Node Configuration
+                    </button>
+                  </div>
+               </form>
+            </div>
+         </div>
+      )}
+
+      {/* PROVISIONING MODAL - COMMAND CENTER AESTHETIC */}
+      {isProvisioning && (
+         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xl flex items-center justify-center z-[110] p-8">
+            <div className="bg-white border border-slate-200 rounded-[3rem] w-full max-w-4xl shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden relative">
+               {/* Ambient Glow */}
+               <div className="absolute top-[-100px] left-[-100px] w-80 h-80 bg-indigo-600/5 rounded-full blur-[80px] pointer-events-none" />
+
+               <header className="px-10 py-10 border-b border-slate-100 flex justify-between items-center relative z-10 bg-slate-50/50">
+                  <div>
+                     <div className="flex items-center gap-3 mb-1">
+                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                        <h3 className="text-[18px] font-black text-slate-900 uppercase tracking-tighter italic">Institutional Provisioning</h3>
+                     </div>
+                     <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-black ml-5">New Institutional Shard Deployment Protocol</p>
+                  </div>
+                  <button onClick={() => setIsProvisioning(false)} className="w-12 h-12 flex items-center justify-center bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-100 transition-all shadow-sm">
+                     <X size={20} />
+                  </button>
+               </header>
+               
+               <div className="p-10 max-h-[70vh] overflow-y-auto no-scrollbar relative z-10 bg-white">
+                  <TenantCreationForm onCreate={handleProvision} isDark={false} />
+               </div>
+               
+               <footer className="px-10 py-6 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                     <ShieldCheck size={12} className="text-indigo-600" /> Root Authority Cleared
+                  </span>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic">Protocol v4.2.0-PROV</span>
+               </footer>
             </div>
          </div>
       )}
     </div>
+  );
+}
+
+function IdentityRow({ tenant, apiClient }) {
+  const [admin, setAdmin] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const fetchAdmin = async () => {
+      try {
+        const data = await apiClient.getTenantAdmin(tenant.id);
+        if (mounted) setAdmin(data);
+      } catch (e) {
+        if (mounted) setAdmin({ email: `admin@${tenant.code?.toLowerCase()}.com`, name: 'Fallback Admin' });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    fetchAdmin();
+    return () => { mounted = false; };
+  }, [tenant.id, tenant.code]);
+
+  return (
+    <tr className="group hover:bg-slate-50 transition-all">
+       <td className="px-8 py-6 bg-white first:rounded-l-2xl border-y border-l border-slate-100 group-hover:border-indigo-100">
+          <div className="flex items-center gap-4">
+             <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-600/10 group-hover:text-indigo-600 transition-colors">
+                <Lock size={14} />
+             </div>
+             <div>
+                <p className="text-[12px] font-black text-slate-900 uppercase tracking-tight">
+                  {loading ? 'Discovering...' : admin?.email}
+                </p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                  {loading ? 'Scanning Shard Identity' : (admin?.name || 'Primary Administrative Authority')}
+                </p>
+             </div>
+          </div>
+       </td>
+       <td className="px-8 py-6 bg-white border-y border-slate-100 text-center group-hover:bg-slate-50/50">
+          <span className="px-3 py-1 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-full text-[9px] font-black uppercase tracking-[0.15em]">
+             {tenant.code || 'SYS-NODE'}
+          </span>
+       </td>
+       <td className="px-8 py-6 bg-white border-y border-slate-100 text-center group-hover:bg-slate-50/50">
+          <span className="flex items-center justify-center gap-2 text-emerald-600 text-[10px] font-black uppercase tracking-widest italic drop-shadow-sm">
+             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Authority Active
+          </span>
+       </td>
+       <td className="px-8 py-6 bg-white last:rounded-r-2xl border-y border-r border-slate-100 text-right group-hover:border-indigo-100">
+          <div className="flex items-center justify-end gap-3 text-slate-400">
+             <Zap size={14} className={loading ? "animate-pulse text-slate-300" : "text-amber-500"} />
+             <span className="text-[10px] font-black uppercase tracking-widest">
+               {loading ? 'Validating' : 'Verified'}
+             </span>
+          </div>
+       </td>
+    </tr>
   );
 }

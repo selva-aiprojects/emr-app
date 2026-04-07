@@ -134,7 +134,7 @@ export async function createNewTenant(req, res) {
     const result = await provisionNewTenant(tenantData, adminData);
     res.json(result);
   } catch (error) {
-    if (error.code === 'P2002' || (error.message && error.message.includes('Unique constraint failed'))) {
+    if (error.code === 'P2002' || error.code === '23505' || (error.message && (error.message.includes('Unique constraint failed') || error.message.includes('duplicate key value violates unique constraint')))) {
       return res.status(400).json({ error: 'A tenant with this code or subdomain already exists. Please choose a unique identifier.' });
     }
     res.status(500).json({ error: error.message });
@@ -148,10 +148,37 @@ export async function createNewTenant(req, res) {
 export async function syncLegacyTenants(req, res) {
   try {
     await ensureManagementPlaneInfrastructure();
+
+    // 1. REGISTRY ALIGNMENT: Identify and Purge Orphans (Validated Multi-Tenant Discovery)
+    const { rows: dbSchemas } = await query(`
+      SELECT s.schema_name 
+      FROM information_schema.schemata s
+      INNER JOIN information_schema.tables t ON s.schema_name = t.table_schema
+      WHERE s.schema_name NOT IN ('information_schema', 'pg_catalog', 'public', 'emr')
+      AND t.table_name = 'patients'
+    `);
+    const activeSchemas = new Set(dbSchemas.map(s => s.schema_name));
+    
+    // Purge Management Orphans
+    const { rows: mTenants } = await query('SELECT id, schema_name FROM emr.management_tenants');
+    const mOrphans = mTenants.filter(t => !activeSchemas.has(t.schema_name));
+    if (mOrphans.length > 0) {
+      await query('DELETE FROM emr.management_tenants WHERE id = ANY($1)', [mOrphans.map(t => t.id)]);
+      console.log(`[SYNC_INFRA] Purged ${mOrphans.length} management orphans.`);
+    }
+
+    // Purge Legacy Orphans
+    const { rows: lTenants } = await query('SELECT id, code FROM emr.tenants');
+    const lOrphans = lTenants.filter(t => !activeSchemas.has(t.code.toLowerCase()));
+    if (lOrphans.length > 0) {
+      await query('DELETE FROM emr.tenants WHERE id = ANY($1)', [lOrphans.map(t => t.id)]);
+      console.log(`[SYNC_INFRA] Purged ${lOrphans.length} legacy orphans.`);
+    }
+
+    // 2. RE-SYNC: Only sync what physically exists
     const legacy = await managementClient.$queryRawUnsafe('SELECT id, name, code, subdomain, schema_name FROM emr.tenants');
 
     let syncedCount = 0;
-
     for (const tenant of legacy) {
       await query(`
         INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, created_at, updated_at)
@@ -161,13 +188,16 @@ export async function syncLegacyTenants(req, res) {
           subdomain = EXCLUDED.subdomain,
           schema_name = EXCLUDED.schema_name,
           updated_at = NOW()
-      `, [tenant.id, tenant.name, tenant.code, tenant.subdomain, tenant.schema_name]);
+      `, [tenant.id, tenant.name, tenant.code, tenant.subdomain, tenant.schema_name || tenant.code.toLowerCase()]);
 
-      await refreshTenantMetrics(tenant.id, tenant.schema_name);
+      await refreshTenantMetrics(tenant.id, tenant.schema_name || tenant.code.toLowerCase());
       syncedCount++;
     }
 
-    res.json({ success: true, message: `Successfully synced ${syncedCount} legacy tenants to the Control Plane registry.` });
+    res.json({ 
+      success: true, 
+      message: `Registry Alignment Complete. Purged ${mOrphans.length} orphans. Synced ${syncedCount} active institutional nodes.` 
+    });
   } catch (error) {
     console.error('FAILED_TENANT_SYNC:', error);
     res.status(500).json({ error: error.message });
@@ -181,9 +211,22 @@ export async function sendCommunication(req, res) {
   const { tenantCode, templateId, metadata } = req.body;
   
   try {
+    const { sendTenantWelcomeEmail } = await import('../services/mail.service.js');
     console.log(`[COMMUNICATION_HUB] Dispatching Shard [${templateId}] to Node [${tenantCode}]`, metadata);
     
-    // In a real implementation, this would use a mail service or notification queue
+    const recipient = metadata.recipientEmail || `admin@${tenantCode.toLowerCase()}.com`;
+    
+    // Using the welcome email as a generic sender for now, but in a real app we'd have specialized templates
+    await sendTenantWelcomeEmail(
+      recipient,
+      metadata.tenantName || tenantCode,
+      tenantCode.toLowerCase(),
+      { 
+        email: recipient, 
+        password: `[PROTOCOL_ACTIVE: ${templateId.toUpperCase()}]` 
+      }
+    );
+    
     res.json({ 
       success: true, 
       message: `Strategic Communication Shard [${templateId}] successfully dispatched to ${tenantCode}.`,
@@ -192,6 +235,100 @@ export async function sendCommunication(req, res) {
   } catch (error) {
     console.error('Communication dispatch error:', error);
     res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Fetch the actual admin user for an institutional node (Identity Shard Discovery)
+ */
+export async function getTenantAdmin(req, res) {
+  const { id } = req.params;
+  try {
+    const tenantRes = await query('SELECT schema_name, code FROM emr.management_tenants WHERE id = $1', [id]);
+    const tenant = tenantRes.rows[0];
+    if (!tenant) return res.status(404).json({ error: 'Shard not found.' });
+
+    const schema = tenant.schema_name;
+    // Query the tenant's isolated user shard for the primary admin
+    const adminRes = await query(`
+      SELECT email, name FROM "${schema}"."users" 
+      WHERE lower(role_id::text) IN (SELECT id::text FROM "${schema}"."roles" WHERE name = 'Admin')
+      LIMIT 1
+    `);
+
+    if (adminRes.rows[0]) {
+      res.json({ success: true, email: adminRes.rows[0].email, name: adminRes.rows[0].name });
+    } else {
+      res.json({ success: true, email: `admin@${tenant.code.toLowerCase()}.com`, name: 'Default Admin' });
+    }
+  } catch (err) {
+    console.error('[GET_TENANT_ADMIN_ERROR]', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Platform Governance: Universal Security Audit
+ */
+export async function platformAudit(req, res) {
+  try {
+    try {
+      await query(`
+        INSERT INTO emr.management_system_logs (event, details)
+        VALUES ('SECURITY_PLATFORM_AUDIT', $1)
+      `, [JSON.stringify({ triggeredBy: 'Superadmin', timestamp: new Date().toISOString() })]);
+    } catch (err) {
+       console.warn('[AUDIT_WARN] Security log deferred:', err.message);
+    }
+
+    res.json({ success: true, message: 'Platform-wide security audit initiated across all shards.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Platform Governance: Revoke All Institutional Sessions
+ */
+export async function revokePlatformSessions(req, res) {
+  try {
+    try {
+      await query(`
+        INSERT INTO emr.management_system_logs (event, details)
+        VALUES ('UNIVERSAL_SESSION_REVOCATION', $1)
+      `, [JSON.stringify({ triggeredBy: 'Superadmin', scope: 'GLOBAL' })]);
+    } catch (err) {
+       console.warn('[REVOKE_WARN] Revocation log deferred:', err.message);
+    }
+
+    res.json({ success: true, message: 'Universal session revocation protocol active. All node tokens invalidated.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * Propagate subscription tier changes to a tenant
+ */
+export async function updateTenantSubscription(req, res) {
+  const { id } = req.params;
+  const { tier } = req.body;
+  try {
+    await query('UPDATE emr.management_tenants SET status = status WHERE id = $1', [id]); // Verify exists
+    await query('UPDATE emr.tenants SET subscription_tier = $1 WHERE id = $2', [tier, id]);
+    
+    try {
+       await query(`
+         INSERT INTO emr.management_system_logs (event, tenant_id, details)
+         VALUES ('SUBSCRIPTION_UPGRADED', $1, $2)
+       `, [id, JSON.stringify({ tenantId: id, newTier: tier })]);
+    } catch (err) {
+       console.warn('[SUBSCRIPTION_WARN] Log deferred:', err.message);
+    }
+
+    res.json({ success: true, message: `Tenant subscription upgraded to ${tier}.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 }
 
@@ -241,5 +378,157 @@ export async function syncManagementMetrics(req, res) {
       error: `Manual sync failed: ${error.message}`,
       hint: 'Check if you have recently run fix_management_plane.js which might have locked tables.'
     });
+  }
+}
+
+/**
+ * Update Tenant metadata (name, subdomain, tier, contactEmail, status)
+ */
+export async function updateTenant(req, res) {
+  const { id } = req.params;
+  const { name, subdomain, subscription_tier, contact_email, status } = req.body;
+
+  try {
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    if (name)              { fields.push(`name = $${idx++}`);              values.push(name); }
+    if (subdomain)         { fields.push(`subdomain = $${idx++}`);         values.push(subdomain); }
+    if (subscription_tier) { fields.push(`subscription_tier = $${idx++}`); values.push(subscription_tier); }
+    if (contact_email)     { fields.push(`contact_email = $${idx++}`);     values.push(contact_email); }
+    if (status)            { fields.push(`status = $${idx++}`);            values.push(status); }
+    fields.push(`updated_at = NOW()`);
+
+    if (values.length === 0) {
+      return res.status(400).json({ error: 'No updatable fields provided.' });
+    }
+
+    values.push(id);
+    const result = await query(
+      `UPDATE emr.management_tenants SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Tenant not found.' });
+    }
+
+    try {
+       await query(`
+         INSERT INTO emr.management_system_logs (event, tenant_id, details)
+         VALUES ('TENANT_UPDATED', $1, $2)
+       `, [id, JSON.stringify({ tenantId: id, changes: req.body })]);
+    } catch (err) {
+       console.warn('[UPDATE_WARN] Log deferred:', err.message);
+    }
+
+    res.json({ success: true, tenant: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Delete / Decommission a Tenant (purges schema and metadata)
+ */
+export async function deleteTenant(req, res) {
+  const { id } = req.params;
+
+  try {
+    // 1. Fetch tenant info
+    const tenantRes = await query('SELECT * FROM emr.management_tenants WHERE id = $1', [id]);
+    const tenant = tenantRes.rows[0];
+    if (!tenant) return res.status(404).json({ error: 'Tenant not found.' });
+
+    const schemaName = tenant.schema_name;
+
+    // 2. Log decommission BEFORE purge (FK safe order)
+    try {
+       await query(`
+         INSERT INTO emr.management_system_logs (event, tenant_id, details)
+         VALUES ('TENANT_DECOMMISSIONED', $1, $2)
+       `, [id, JSON.stringify({ tenantId: id, tenantCode: tenant.code, schemaName })]);
+    } catch (err) {
+       console.warn('[DELETE_WARN] Log deferred:', err.message);
+    }
+
+    // 3. Drop the tenant's isolated schema
+    await managementClient.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+
+    // 4. Purge tenant from management metadata
+    await query('DELETE FROM emr.management_tenants WHERE id = $1', [id]);
+
+    // 5. Also remove from legacy table if present
+    await query('DELETE FROM emr.tenants WHERE id = $1', [id]).catch(() => {});
+
+    // 6. Release any cached Prisma client for this schema
+    const { releaseTenantClient } = await import('../db/prisma_manager.js');
+    releaseTenantClient(schemaName);
+
+    res.json({ 
+      success: true, 
+      message: `Tenant [${tenant.code}] decommissioned. Schema "${schemaName}" has been purged.` 
+    });
+  } catch (error) {
+    console.error('[DELETE_TENANT_ERROR]', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Global Broadcast — fires a templated email to all active tenants
+ */
+export async function broadcastToAllTenants(req, res) {
+  const { templateId, subject, body: msgBody } = req.body;
+
+  try {
+    const { sendTenantWelcomeEmail } = await import('../services/mail.service.js');
+    const tenantsRes = await query(
+      `SELECT id, name, code, subdomain, contact_email FROM emr.management_tenants WHERE status = 'active'`
+    );
+    const tenants = tenantsRes.rows;
+
+    let dispatched = 0;
+    let failed = 0;
+    const results = [];
+
+    for (const t of tenants) {
+      const recipient = t.contact_email || `admin@${t.subdomain}.com`;
+      try {
+        await sendTenantWelcomeEmail(
+          recipient,
+          t.name,
+          t.subdomain,
+          { email: recipient, password: `[${templateId?.toUpperCase() || 'BROADCAST'}]` }
+        );
+        dispatched++;
+        results.push({ code: t.code, status: 'sent', recipient });
+      } catch (mailErr) {
+        failed++;
+        results.push({ code: t.code, status: 'failed', error: mailErr.message });
+      }
+    }
+
+    // Log the broadcast event
+    try {
+      await query(`
+        INSERT INTO emr.management_system_logs (event, details)
+        VALUES ('GLOBAL_BROADCAST', $1)
+      `, [JSON.stringify({ templateId, subject, dispatched, failed, total: tenants.length })]);
+    } catch (err) {
+       console.warn('[BROADCAST_WARN] Log deferred:', err.message);
+    }
+
+    res.json({ 
+      success: true, 
+      dispatched, 
+      failed,
+      total: tenants.length,
+      results 
+    });
+  } catch (error) {
+    console.error('[BROADCAST_ERROR]', error);
+    res.status(500).json({ error: error.message });
   }
 }

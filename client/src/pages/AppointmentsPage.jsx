@@ -103,7 +103,7 @@ export default function AppointmentsPage({
       await onCreateWalkin(e);
       showToast({ message: 'Walk-in registered successfully!', type: 'success', title: 'Appointments' });
     } catch (err) {
-      alert(err.message);
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
     }
   };
 
@@ -125,7 +125,7 @@ export default function AppointmentsPage({
       }
       showToast({ message: 'Patient registered successfully!', type: 'success', title: 'Appointments' });
     } catch (err) {
-      alert(err.message);
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
     }
   };
 
@@ -134,7 +134,7 @@ export default function AppointmentsPage({
       await onSetAppointmentStatus(id, status);
       showToast({ message: 'Appointment status updated.', type: 'success', title: 'Appointments' });
     } catch (err) {
-      alert(err.message);
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
     }
   };
 
@@ -143,7 +143,7 @@ export default function AppointmentsPage({
       await onConvertWalkin(id);
       showToast({ message: 'Walk-in admitted successfully!', type: 'success', title: 'Appointments' });
     } catch (err) {
-      alert(err.message);
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
     }
   };
 
@@ -153,7 +153,7 @@ export default function AppointmentsPage({
       setReschedulingAppointment(null);
       showToast({ message: 'Appointment rescheduled successfully!', type: 'success', title: 'Appointments' });
     } catch (err) {
-      alert(err.message);
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
     }
   };
 

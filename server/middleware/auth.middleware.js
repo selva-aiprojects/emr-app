@@ -25,7 +25,7 @@ export async function authenticate(req, res, next) {
       });
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    const token = authHeader.substring(7).trim(); // Ensure no leading/trailing whitespace
 
     // Verify token
     let decoded;
@@ -34,9 +34,17 @@ export async function authenticate(req, res, next) {
       if (!decoded || !decoded.userId) {
         throw new Error('Token payload missing userId');
       }
+      console.log(`[AUTH_SUCCESS] User ${decoded.userId} (${decoded.role}) verified for ${req.path}`);
     } catch (error) {
-      console.error('[AUTH_ERROR] JWT Verification failed:', error.message);
-      return res.status(401).json({ error: 'Invalid token', message: error.message });
+      console.error('[AUTH_ERROR] JWT Verification failed for token:', token.substring(0, 10) + '...', 'Error:', error.message);
+      return res.status(401).json({ 
+        error: 'Invalid token', 
+        message: error.message,
+        diagnostic: {
+          tokenPrefix: token.substring(0, 10),
+          length: token.length
+        }
+      });
     }
 
     // Fetch user from database

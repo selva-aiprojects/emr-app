@@ -5,8 +5,10 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Stable fallback secret for live environments if .env is missing on Render
-const JWT_SECRET = process.env.JWT_SECRET || 'MedFlow_Stable_Production_Secret_2024';
+const JWT_SECRET = (process.env.JWT_SECRET || 'Medflow_EMR_Enterprise_Core_Super_Secret_2026').trim();
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+console.log(`[AUTH_SERVICE] Initialized with Secret Length: ${JWT_SECRET.length}. Source: ${process.env.JWT_SECRET ? 'ENV' : 'FALLBACK'}`);
 
 /**
  * Hash a plain text password using bcrypt
@@ -47,7 +49,8 @@ export function generateToken(payload) {
  */
 export function verifyToken(token) {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    const cleanToken = (token || '').trim();
+    return jwt.verify(cleanToken, JWT_SECRET);
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
       throw new Error('Token has expired');

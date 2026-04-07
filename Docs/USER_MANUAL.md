@@ -1,94 +1,71 @@
-# User Manual & Access Guide - MedFlow EMR
+# MedFlow EMR - User Manual & Access Guide
 
-## 1. 🔑 Access Credentials (DEMO)
+## 1. 🔑 Access & Authentication
+To access the MedFlow platform, navigate to the provided application URL and select your institutional node from the tenant registry.
 
-### 🛡️ Superadmin Access (Platform Governance)
-- **Tenant**: Platform Superadmin
-- **Email**: `superadmin@emr.local`
-- **Password**: `Admin@123`
-- **Role**: Superadmin (Manage tenants, features, and platform reports)
+### 1.1 Verified Demo Credentials
+The following identities are pre-provisioned for system validation:
 
-### 🏥 Enterprise Hospital (Full Features)
-- **Tenant**: Enterprise Hospital Systems
-- **Email**: `admin@ehs.local` (Admin)
-- **Password**: `Test@123`
-- **Role**: Admin (All hospital modules enabled)
-
-### 🎭 Specialized Role Logins (Enterprise)
-- **Doctor**: `doctor@ehs.local` / `Test@123`
-- **Nurse**: `nurse@ehs.local` / `Test@123`
-- **Pharmacist**: `pharmacy@ehs.local` / `Test@123`
-- **Reception**: `frontdesk@ehs.local` / `Test@123`
-- **Billing**: `accounts@ehs.local` / `Test@123`
+| Tier | Role | Tenant | Email | Password |
+| :--- | :--- | :--- | :--- | :--- |
+| **Platform** | **Superadmin** | `Platform Superadmin` | `superadmin@emr.local` | `Admin@123` |
+| **Enterprise** | **Admin** | `Enterprise Hospital Systems` | `david@enterprise.hos` | `Test@123` |
+| **Enterprise** | **Doctor** | `Enterprise Hospital Systems` | `michael@enterprise.hos` | `Test@123` |
+| **Professional**| **Doctor** | `Professional Medical Center` | `robert@professional.med` | `Test@123` |
+| **Basic** | **Doctor** | `Basic Health Clinic` | `sarah@basic.health` | `Test@123` |
 
 ---
 
-## 2. 🚀 Quick Start Guide
+## 2. 👨‍⚕️ Clinical Operations (Doctors/Nurses)
+Manage the vertical patient lifecycle from consultation to longitudinal history.
 
-1. **Access the App**: Navigate to `http://localhost:5174`.
-2. **Select Tenant**: Choose the appropriate tenant from the login dropdown.
-3. **Sign In**: Enter your email and password.
-4. **Dashboard**: View your role-specific metrics upon entering the workspace.
-
----
-
-## 3. 👨‍⚕️ Clinician & Doctor Workflows
-
-### 3.1 Consultation & EMR
-- **Patient Lookup**: Use the sidebar to search by Name or MRN.
-- **New Recording**: Click "New Consultation" to start an encounter.
-- **Vitals & Diagnosis**: Record Chief Complaints, BP, and HR in the glassmorphic form.
-- **Rx Module**: Add medications specifying dosage, duration, and instructions.
-- **Branded Rx**: Use the "Generate Prescription" button for a professional printout.
-
-### 3.2 AI Assistance
-- **Clinical Chatbot**: Use the floating Gemini bubble for queries.
-- **Longitudinal Snapshot**: (Enterprise only) Generate clinical data summaries.
+### 2.1 Consultations & EMR
+- **New Encounter**: Click "New Consultation" in the EMR workspace.
+- **Vitals Telemetry**: Record real-time metrics (BP, Pulse, Temperature).
+- **Clinical Journal**: View the longitudinal clinical record timeline in the sidebar.
+- **℞ Prescriptions**: Add medications with dosage and frequency protocols.
+- **Branded Rx**: Click "Generate Prescription" to produce a professional clinical summary.
 
 ---
 
-## 4. 💊 Pharmacy & Inventory Workflows
+## 3. 💊 Operational Workflows (Pharmacy/Lab)
+Department-specific modules for fulfillment and diagnostics.
 
-### 4.1 Prescription Dispensing
-- **Dispense Queue**: View "Pending" prescriptions from clinical staff.
-- **Finalize Dispense**: Clicking this marks the order as issued and decrements stock.
+### 3.1 Pharmacy Dispensation
+- **Workstation Queue**: Monitor pending prescription shards from clinical staff.
+- **Finalize Dispense**: Issuing medications automatically synchronizes inventory levels.
 
-### 4.2 Stock Management
-- **Visual Meters**: View real-time inventory levels in the "Inventory" module.
-- **Restocking**: Controlled addition of resource units with an integrated audit trail.
-
----
-
-## 5. 💰 Billing & Insurance Workflows
-
-### 5.1 Invoicing
-- **Generate Invoice**: Create financial records for consultations or diagnostics.
-- **Payment Settlement**: Record payments via Cash, Card, or UPI with due balance tracking.
-
-### 5.2 Insurance Claims
-- **Registry**: Locate insurance providers by tenant settings.
-- **Claim Processing**: Create and track claims linked to specific patient encounters.
+### 3.2 Inventory Control
+- **Pulse Indicators**: Visual meters show real-time stock vs. reorder points.
+- **Stock Audit**: Use the "Restock" action to increment units with audit trail support.
 
 ---
 
-## 6. 👥 HR & Operations Workflows
+## 4. 🏢 Revenue & Fiscal Governance (Admin)
+Manage institutional branding, settings, and finance.
 
-### 6.1 Employee Lifecycle
-- **Employee Master**: Manage staff identities, departments, and salaries.
-- **Attendance**: Log daily check-in/out and review leave applications.
+### 4.1 Master Governance
+- **Institutional Branding**: Customize Primary/Accent colors and upload hospital logos in Admin Settings.
+- **Revenue Dashboard**: Monitor collections (Cash/UPI/Card) and pending settlements.
+- **Insurance Nexus**: Register providers and track the settlement lifecycle of claims.
 
-### 6.2 Hospital Setup
-- **Department Master**: Define specialties and administrative units.
-- **Bed Stewardship**: Monitor real-time ward throughput and bed occupancy.
+### 4.2 Resource Management
+- **Departments & Beds**: Configure specialties and monitor live bed occupancy telemetry.
+- **HR & Workforce**: (Enterprise) Manage employee records, daily attendance, and payroll summaries.
 
 ---
 
-## 7. 🛡️ Platform Management (Superadmin)
+## 5. 🛡️ Platform Control Plane (Superadmin Only)
+Global oversight and ecosystem management.
 
-### 7.1 Tenant Provisioning
-- **One-Click Hospital Creation**: Add new tenants with dedicated schemas.
-- **Feature Management**: Granularly toggle modules (Labs, Billing, AI) per tenant.
+### 5.1 Shard Provisioning
+- **Tenant Onboarding**: Create new hospital workspaces with automated admin provisioning.
+- **Global Broadcasts**: Dispatch "Strategic Offers" or system alerts to all active tenant nodes.
+- **Feature Management**: Granularly override subscription modules for any specific tenant.
 
-### 7.2 Growth & Monitoring
-- **Offer Announcements**: Broadcast institutional upgrades to tenant dashboards.
-- **Platform Analytics**: Global revenue and patient volume tracking.
+---
+
+## 6. 🤖 Clinical AI & Collaboration
+- **Geminai Chatbot助理**: Use the interactive bubble for instant navigation and data lookups.
+- **AI Diagnostics**: (Enterprise) Generate automated longitudinal summaries and treatment snapshots.
+- **Staff Hub**: Real-time departmental messaging for rapid clinical coordination.

@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS emr.management_subscriptions (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE emr.management_subscriptions ADD COLUMN IF NOT EXISTS price text NOT NULL DEFAULT '₹0';
+ALTER TABLE emr.management_subscriptions ADD COLUMN IF NOT EXISTS features jsonb NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE TABLE IF NOT EXISTS emr.management_tenants (
   id uuid PRIMARY KEY DEFAULT COALESCE(gen_random_uuid(), uuid_generate_v4()),
@@ -29,6 +31,8 @@ CREATE TABLE IF NOT EXISTS emr.management_tenants (
   subdomain varchar(128) NOT NULL UNIQUE,
   schema_name varchar(64) NOT NULL UNIQUE,
   status varchar(16) NOT NULL DEFAULT 'active',
+  contact_email varchar(128) NULL,
+  subscription_tier varchar(50) NOT NULL DEFAULT 'Professional',
   subscription_id uuid NULL REFERENCES emr.management_subscriptions(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
@@ -234,7 +238,18 @@ export async function ensureManagementPlaneInfrastructure() {
     // A. Install Core Schema
     await pool.query(MANAGEMENT_PLANE_SQL);
 
-    // B. Precision Seeding for Institutional Nodes
+    // B. Seed Official Subscriptions (FEATURES.md v2.0 Sync)
+    await pool.query(`
+      INSERT INTO emr.management_subscriptions (tier, plan_name, price, limit_users, features)
+      VALUES 
+        ('Free', 'Hobbyist Pilot', '₹0', 1, '["permission-core_engine-access"]'),
+        ('Basic', 'Small Clinic', '₹1999', 5, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access"]'),
+        ('Professional', 'Specialty Center', '₹5999', 25, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access"]'),
+        ('Enterprise', 'Full Hospital OS', '₹9999', 1000, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access", "permission-hr_payroll-access"]')
+      ON CONFLICT DO NOTHING
+    `);
+
+    // C. Precision Seeding for Institutional Nodes
     const adminHash = '$2a$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC'; // Admin@123
     
     // Seed Masters
@@ -250,12 +265,14 @@ export async function ensureManagementPlaneInfrastructure() {
         subscription_tier = EXCLUDED.subscription_tier
     `);
 
-    // --- STRATEGIC AUTO-DISCOVERY: Resurrect "Ghost Shards" ---
-    console.log('🔍 [INFRA] Running Institutional Auto-Discovery...');
+    // --- STRATEGIC AUTO-DISCOVERY: Resurrect "Ghost Shards" (Validated Only) ---
+    console.log('🔍 [INFRA] Running Institutional Auto-Discovery (Validation-First)...');
     const { rows: schemas } = await pool.query(`
-       SELECT schema_name 
-       FROM information_schema.schemata 
-       WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'public', 'emr')
+       SELECT s.schema_name 
+       FROM information_schema.schemata s
+       INNER JOIN information_schema.tables t ON s.schema_name = t.table_schema
+       WHERE s.schema_name NOT IN ('information_schema', 'pg_catalog', 'public', 'emr')
+       AND t.table_name = 'patients'
     `);
 
     const NAMING_SUFFIXES = ['General Hospital', 'Specialistic Center', 'Medical Hub', 'Care & Diagnostics', 'Healthcare Institute'];
@@ -349,10 +366,21 @@ export async function getSuperadminOverview() {
     let summary = summaryRows[0] || { total_tenants: 0, total_doctors: 0, total_patients: 0 };
     
     const { rows: tenantRows } = await pool.query(`
-      SELECT mtm.*, t.status
-      FROM emr.management_tenant_metrics mtm
-      JOIN emr.management_tenants t ON mtm.tenant_id = t.id
-      ORDER BY mtm.patients_count DESC
+      SELECT 
+        t.id as tenant_id,
+        t.code as tenant_code,
+        t.name as tenant_name,
+        t.status,
+        t.subscription_tier,
+        t.contact_email,
+        COALESCE(mtm.doctors_count, 0) as doctors_count,
+        COALESCE(mtm.patients_count, 0) as patients_count,
+        COALESCE(mtm.available_beds, 0) as available_beds,
+        COALESCE(mtm.available_ambulances, 0) as available_ambulances,
+        COALESCE(mtm.active_users_count, 0) as active_users_count
+      FROM emr.management_tenants t
+      LEFT JOIN emr.management_tenant_metrics mtm ON t.id = mtm.tenant_id
+      ORDER BY t.created_at DESC
     `);
 
     return {
@@ -378,7 +406,8 @@ export async function getSuperadminOverview() {
         ambulancesAvailable: Number(row.available_ambulances || 0),
         activeUsers: Number(row.active_users_count || 0),
         status: row.status,
-        tier: 'Enterprise',
+        subscriptionTier: row.subscription_tier || 'Professional',
+        contactEmail: row.contact_email,
         identity: row.tenant_id.substring(0, 8).toUpperCase()
       })),
       generatedAt: new Date().toISOString()

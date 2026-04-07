@@ -134,7 +134,7 @@ export default function BillingPage({
       showToast({ message: 'Invoice created successfully!', type: 'success', title: 'Billing' });
       setActiveView('list');
     } catch (err) {
-      alert(err.message);
+      showToast({ title: 'Ledger Error', message: err.message, type: 'error' });
     }
   };
 
@@ -152,7 +152,7 @@ export default function BillingPage({
         setShowPaymentLink({ ...invoice, insuranceCoverage, patientLiability, txnId: gatewayRes.transactionId });
       }
     } catch (err) {
-      alert('Payment Gateway Unreachable: ' + err.message);
+      showToast({ title: 'Gateway Error', message: err.message, type: 'error' });
     } finally {
       setIsProcessing(false);
     }
@@ -164,7 +164,7 @@ export default function BillingPage({
       showToast({ message: 'Payment recorded successfully!', type: 'success', title: 'Billing' });
       setShowPaymentLink(null);
     } catch (err) {
-      alert(err.message);
+      showToast({ title: 'Settlement Error', message: err.message, type: 'error' });
     }
   };
 

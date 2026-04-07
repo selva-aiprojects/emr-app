@@ -55,27 +55,31 @@ export async function provisionNewTenant(tenantData, adminData) {
   let tenant;
 
   try {
-    // 1. Create or Find entry in the management database (Control Plane)
-    tenant = await managementClient.tenant.findUnique({
-      where: { code: tenantData.code }
-    });
-
-    if (!tenant) {
-      tenant = await managementClient.tenant.create({
-        data: {
-          name: tenantData.name,
-          code: tenantData.code,
-          subdomain: tenantData.subdomain,
-          schema_name: schemaName,
-          status: 'active'
-        }
-      });
-    } else {
-      console.log(`[PROVISIONING] Found existing registry record for ${tenantData.code}. Initiating Shard Repair...`);
-    }
+    // 1. Create or Map entry in the management database (Control Plane)
+    const insertSql = `
+      INSERT INTO emr.management_tenants (name, code, subdomain, schema_name, status, contact_email, subscription_tier)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (code) DO UPDATE SET 
+        name = EXCLUDED.name,
+        updated_at = NOW()
+      RETURNING *
+    `;
+    
+    const { rows: [createdTenant] } = await query(insertSql, [
+      tenantData.name,
+      tenantData.code,
+      tenantData.subdomain,
+      schemaName,
+      'active',
+      tenantData.contactEmail,
+      tenantData.subscriptionTier || 'Professional'
+    ]);
+    
+    tenant = createdTenant;
+    console.log(`[PROVISIONING] Control plane registry active for ${tenant.code}.`);
 
     // 2. Execute raw SQL to create the dedicated Postgres schema
-    await managementClient.$executeRawUnsafe(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
+    await query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
 
     // 3. Run migrations for the new schema using Prisma CLI
     console.log(`Running migrations for schema ${schemaName}...`);
@@ -140,19 +144,20 @@ export async function provisionNewTenant(tenantData, adminData) {
     await installTenantMetricsSync(schemaName, tenant.id);
 
     // 5. Log success to the global system log
-    await managementClient.systemLog.create({
-      data: {
-        event: 'TENANT_PROVISIONED',
-        details: {
-          schemaName,
-          tenantId: tenant.id,
-          adminEmail: user.email,
-          seededRoles: createdRoles.map((role) => role.name)
-        },
-        tenant_id: tenant.id
-      }
-    });
-    
+    try {
+      await query(`
+        INSERT INTO emr.management_system_logs (id, event, tenant_id, details, created_at)
+        VALUES (gen_random_uuid(), 'TENANT_PROVISIONED', $1, $2, NOW())
+      `, [tenant.id, JSON.stringify({
+        schemaName,
+        tenantId: tenant.id,
+        adminEmail: user.email,
+        seededRoles: createdRoles.map((role) => role.name)
+      })]);
+    } catch (logErr) {
+      console.warn('[PROVISIONING_WARN] System log recording deferred:', logErr.message);
+    }
+
     // 6. Send welcome email to the communication address (strictly as per requirements)
     const communicationRecipient = tenantData.contactEmail || 'b.selvakumar@gmail.com';
     console.log(`[PROVISIONING] Sending welcome email to Board Member / Communication recipient: ${communicationRecipient}`);
@@ -185,26 +190,24 @@ export async function provisionNewTenant(tenantData, adminData) {
       await releaseTenantClient(schemaName);
       
       // 1. Log failure BEFORE purging metadata (prevents FK violation)
-      await managementClient.systemLog.create({
-        data: {
-          event: 'TENANT_PROVISIONING_FAILED',
-          details: {
-            schemaName,
-            tenantCode: tenantData.code,
-            message: error.message
-          },
-          tenant_id: tenant?.id
-        }
-      }).catch(logErr => console.error('Failed to log provisioning failure:', logErr.message));
+      if (tenant?.id) {
+        await query(`
+          INSERT INTO emr.management_system_logs (id, event, tenant_id, details, created_at)
+          VALUES (gen_random_uuid(), 'TENANT_PROVISIONING_FAILED', $1, $2, NOW())
+        `, [tenant.id, JSON.stringify({
+           schemaName,
+           tenantCode: tenantData.code,
+           message: error.message
+        })]).catch(logErr => console.error('Failed to log provisioning failure:', logErr.message));
+      }
 
       // 2. Cleanup partial Shard
-      await managementClient.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+      await query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
       
       // 3. Purge orphaned metadata
       if (tenant?.id) {
-        await managementClient.tenant.delete({
-          where: { id: tenant.id }
-        });
+        await query('DELETE FROM emr.management_tenants WHERE id = $1', [tenant.id])
+          .catch(err => console.error('Orphaned tenant metadata purge failed:', err.message));
       }
     } catch (rollbackError) {
       console.error('Tenant provisioning rollback failed:', rollbackError);

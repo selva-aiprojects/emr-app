@@ -97,7 +97,7 @@ export default function InpatientPage({ tenant, providers, onDischarge }) {
       setShowSummary(null);
       if (onDischarge) onDischarge();
     } catch (err) {
-      alert('DISCHARGE LOCK: ' + err.message);
+      showToast({ title: 'Discharge Lock', message: err.message, type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -233,7 +233,7 @@ export default function InpatientPage({ tenant, providers, onDischarge }) {
                   // Refresh data
                   window.location.reload();
                 } catch (err) {
-                  alert('ADMISSION BREACH: ' + err.message);
+                  showToast({ title: 'Admission Breach', message: err.message, type: 'error' });
                 } finally {
                   setLoading(false);
                 }
@@ -443,7 +443,7 @@ export default function InpatientPage({ tenant, providers, onDischarge }) {
                         onClick={() => {
                           const bestBed = getBestFitBed(ward.id);
                           if (bestBed) {
-                            alert(`AUTONOMOUS NODE ALLOCATION:\nBed ${bestBed.bed_number} identified as optimal best-fit for new influx.`);
+                            showToast({ title: 'Autonomous Allocation', message: `Bed ${bestBed.bed_number} identified as optimal best-fit for new influx.`, type: 'info' });
                           } else {
                             showToast({ message: 'FACILITY CAPACITY BREACH: No available shards in this sector.', type: 'error' });
                           }

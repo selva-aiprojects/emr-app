@@ -29,7 +29,7 @@ MedFlow is designed to scale with your practice — from a single-provider clini
 | **Core Promise** | Digital Patient List & Notes | Clinical ops + Pharmacy digitised | Full outpatient + complex inpatient | Complete hospital operating system |
 | **Typical Users** | 1 staff members | 1–3 staff (Doctor + Nurse) | 5–20 staff (Doctors, Nurses, Pharmacy, Lab) | Unlimited staff across all departments |
 | **Subscription Code** | `Free` | `Basic` | `Professional` | `Enterprise` |
-| **Price (indicative)** | $0 / month | $99 / month | $299 / month | $599 / month |
+| **Price (Official)** | ₹0 / month | ₹1999 / month | ₹5999 / month | ₹9999 / month |
 
 ---
 

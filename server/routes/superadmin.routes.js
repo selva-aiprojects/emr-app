@@ -9,7 +9,14 @@ import {
   createNewTenant,
   syncLegacyTenants,
   syncManagementMetrics,
-  sendCommunication
+  sendCommunication,
+  deleteTenant,
+  updateTenant,
+  broadcastToAllTenants,
+  getTenantAdmin,
+  platformAudit,
+  revokePlatformSessions,
+  updateTenantSubscription
 } from '../controllers/superadmin.controller.js';
 
 const router = express.Router();
@@ -46,6 +53,16 @@ router.get('/overview', async (req, res) => {
 router.post('/tenants', createNewTenant);
 
 /**
+ * Update Tenant metadata (name, subdomain, tier, contactEmail)
+ */
+router.patch('/tenants/:id', updateTenant);
+
+/**
+ * Delete/Decommission a Tenant (with schema purge)
+ */
+router.delete('/tenants/:id', deleteTenant);
+
+/**
  * User Provisioning for a specific tenant
  */
 router.post('/users/provision', provisionTenantUser);
@@ -54,6 +71,32 @@ router.post('/users/provision', provisionTenantUser);
  * Universal Global Password Reset
  */
 router.post('/users/reset-password', globalPasswordReset);
+
+/**
+ * Global Broadcast — emails all active tenants
+ */
+router.post('/broadcast', broadcastToAllTenants);
+
+/**
+ * Targeted communication dispatch (single tenant)
+ */
+router.post('/communicate', sendCommunication);
+
+/**
+ * Identity Discovery for Individual Shards
+ */
+router.get('/tenants/:id/admin', getTenantAdmin);
+
+/**
+ * Universal Security Operations
+ */
+router.post('/audit', platformAudit);
+router.post('/revoke-sessions', revokePlatformSessions);
+
+/**
+ * Subscription Propagation
+ */
+router.patch('/tenants/:id/subscription', updateTenantSubscription);
 
 /**
  * System Logs Audit

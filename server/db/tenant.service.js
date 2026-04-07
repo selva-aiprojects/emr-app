@@ -180,22 +180,19 @@ export async function getTenants() {
         t.name,
         t.code,
         t.subdomain,
-        t.theme,
-        t.features,
-        t.billing_config,
         t.status,
         t.created_at,
         t.updated_at,
         t.subscription_tier,
-        t.logo_url,
         t.contact_email,
+        t.schema_name,
         COALESCE(mtm.patients_count, 0) as patients,
         COALESCE(mtm.doctors_count, 0) as doctors,
-        COALESCE(mtm.available_beds, 0) as bedsAvailable,
-        COALESCE(mtm.available_ambulances, 0) as ambulancesAvailable,
+        COALESCE(mtm.available_beds, 0) as "bedsAvailable",
+        COALESCE(mtm.available_ambulances, 0) as "ambulancesAvailable",
         COALESCE(mtm.insurance_capacity, 0) as insurance_capacity,
         COALESCE(mtm.active_users_count, 0) as active_users_count
-      FROM emr.tenants t
+      FROM emr.management_tenants t
       LEFT JOIN emr.management_tenant_metrics mtm
         ON mtm.tenant_id = t.id
       ORDER BY t.name
@@ -204,50 +201,71 @@ export async function getTenants() {
   } catch (err) {
     console.warn('[getTenants] Metrics table missing, using fallback:', err.message);
     const result = await query(`
-      SELECT id, name, code, subdomain, theme, features, billing_config,
-             status, created_at, updated_at, subscription_tier, logo_url, contact_email,
+      SELECT id, name, code, subdomain, 
+             status, created_at, updated_at, subscription_tier, contact_email,
              0 as patients, 0 as doctors, 0 as "bedsAvailable",
              0 as "ambulancesAvailable", 0 as insurance_capacity, 0 as active_users_count
-      FROM emr.tenants ORDER BY name
+      FROM emr.management_tenants ORDER BY name
     `);
     return result.rows;
   }
 }
 
 export async function getTenantById(id) {
-  const result = await query('SELECT * FROM emr.tenants WHERE id = $1', [id]);
+  const result = await query('SELECT * FROM emr.management_tenants WHERE id = $1', [id]);
   return result.rows[0];
 }
 
 export async function updateTenantStatus(id, status) {
   const result = await query(
-    'UPDATE emr.tenants SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+    'UPDATE emr.management_tenants SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
     [status, id]
   );
   return result.rows[0];
 }
 
 export async function getTenantByCode(code) {
-  const result = await query('SELECT * FROM emr.tenants WHERE UPPER(code) = UPPER($1)', [code]);
+  const result = await query('SELECT * FROM emr.management_tenants WHERE UPPER(code) = UPPER($1)', [code]);
   return result.rows[0];
 }
-export async function createTenant({ name, code, subdomain, contactEmail, theme, features }) {
-  // 1. Create in legacy tenants table
+export async function createTenant({ name, code, subdomain, contactEmail, theme, features, subscription_tier }) {
+  // 1. Create in legacy tenants table (with all metadata)
   const sql = `
-    INSERT INTO emr.tenants (name, code, subdomain, contact_email, theme, features, status)
-    VALUES ($1, $2, $3, $4, $5, $6, 'active')
+    INSERT INTO emr.tenants (name, code, subdomain, contact_email, theme, features, subscription_tier, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, 'active')
     RETURNING *
   `;
-  const result = await query(sql, [name, code, subdomain, contactEmail, theme, features ? JSON.stringify(features) : '{}']);
+  const result = await query(sql, [
+    name, 
+    code, 
+    subdomain, 
+    contactEmail, 
+    theme ? JSON.stringify(theme) : '{}', 
+    features ? JSON.stringify(features) : '{}',
+    subscription_tier || 'Professional'
+  ]);
   const tenant = result.rows[0];
 
-  // 2. Sync to management_tenants (new registry)
+  // 2. Sync to management_tenants (modern control plane registry)
   const mgmtSql = `
-    INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status)
-    VALUES ($1, $2, $3, $4, $5, 'active')
-    ON CONFLICT (id) DO NOTHING
+    INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier)
+    VALUES ($1, $2, $3, $4, $5, 'active', $6, $7)
+    ON CONFLICT (code) DO UPDATE SET
+      name = EXCLUDED.name,
+      subdomain = EXCLUDED.subdomain,
+      contact_email = EXCLUDED.contact_email,
+      subscription_tier = EXCLUDED.subscription_tier,
+      updated_at = NOW()
   `;
-  await query(mgmtSql, [tenant.id, name, code, subdomain, code.toLowerCase()]);
+  await query(mgmtSql, [
+    tenant.id, 
+    name, 
+    code, 
+    subdomain, 
+    code.toLowerCase(),
+    contactEmail,
+    subscription_tier || 'Professional'
+  ]);
 
   return tenant;
 }

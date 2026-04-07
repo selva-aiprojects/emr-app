@@ -56,7 +56,7 @@ export default function SupportPage({ tenant, activeUser }) {
             loadTickets();
             showToast({ message: 'Support ticket raised!', type: 'success', title: 'Support' });
         } catch (err) {
-            alert('Failed to create ticket: ' + err.message);
+            showToast({ title: 'Support Error', message: err.message, type: 'error' });
         } finally {
             setSubmitting(false);
         }
@@ -68,7 +68,7 @@ export default function SupportPage({ tenant, activeUser }) {
             loadTickets();
             showToast({ message: 'Ticket status updated.', type: 'success', title: 'Support' });
         } catch (err) {
-            alert('Failed to update status: ' + err.message);
+            showToast({ title: 'Status Update Failed', message: err.message, type: 'error' });
         }
     };
 

@@ -10,7 +10,9 @@ dotenv.config();
  */
 export async function sendTenantWelcomeEmail(email, tenantName, subdomain, credentials) {
   const fromName = "MedFlow Platform";
-  const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER || "onboarding@resend.dev";
+  const fromEmail = process.env.SMTP_FROM && !process.env.SMTP_FROM.includes('your-email') 
+    ? process.env.SMTP_FROM 
+    : "onboarding@resend.dev";
   const subject = `Welcome to MedFlow: ${tenantName} Workspace Initialized`;
 
   const htmlContent = `
@@ -42,7 +44,7 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          from: `${fromName} <${fromEmail}>`,
+          from: fromEmail === "onboarding@resend.dev" ? fromEmail : (fromEmail.includes('<') ? fromEmail : `${fromName} <${fromEmail}>`),
           to: [email],
           subject: subject,
           html: htmlContent

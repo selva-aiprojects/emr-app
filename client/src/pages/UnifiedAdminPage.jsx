@@ -14,294 +14,161 @@ import {
   Filter,
   TrendingUp,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Box,
+  LayoutGrid,
+  Menu,
+  X,
+  Globe,
+  ShieldCheck,
+  Zap,
+  Crown
 } from 'lucide-react';
 import { useToast } from '../hooks/useToast.jsx';
 import { api } from '../api.js';
-import '../styles/critical-care.css';
 
-export default function UnifiedAdminPage({ tenant, userRole = 'admin' }) {
+// Real Superadmin Components
+import GlobalDashboard from '../components/superadmin/GlobalDashboard.jsx';
+import TenantControlCenter from '../components/superadmin/TenantControlCenter.jsx';
+import SubscriptionEngine from '../components/superadmin/SubscriptionEngine.jsx';
+
+export default function UnifiedAdminPage({ tenant, userRole = 'superadmin' }) {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [metrics, setMetrics] = useState({
-    tenants: 0,
-    users: 0,
-    activeOffers: 0,
-    systemHealth: 'healthy'
-  });
+  const [tenants, setTenants] = useState([]);
+  const [overview, setOverview] = useState({});
 
-  // Context-aware tabs based on user role
   const adminTabs = [
-    {
-      id: 'overview',
-      name: 'System Overview',
-      description: 'Dashboard and system health',
-      icon: Activity,
-      color: 'blue',
-      roles: ['superadmin', 'admin']
-    },
-    {
-      id: 'tenants',
-      name: 'Tenant Management',
-      description: 'Manage organizations and facilities',
-      icon: Building2,
-      color: 'indigo',
-      roles: ['superadmin']
-    },
-    {
-      id: 'users',
-      name: 'User Provisioning',
-      description: 'Add and manage user accounts',
-      icon: Users,
-      color: 'green',
-      roles: ['superadmin', 'admin']
-    },
-    {
-      id: 'offers',
-      name: 'Offer Management',
-      description: 'Subscription plans and pricing',
-      icon: Package,
-      color: 'purple',
-      roles: ['superadmin']
-    },
-    {
-      id: 'billing',
-      name: 'Billing & Payments',
-      description: 'Revenue and payment processing',
-      icon: CreditCard,
-      color: 'emerald',
-      roles: ['superadmin', 'admin']
-    },
-    {
-      id: 'system',
-      name: 'System Settings',
-      description: 'Configuration and maintenance',
-      icon: Settings,
-      color: 'slate',
-      roles: ['superadmin']
-    }
+    { id: 'overview', name: 'Overview', icon: Activity, color: 'indigo' },
+    { id: 'tenants', name: 'Nodes Control', icon: Building2, color: 'blue' },
+    { id: 'offers', name: 'Plan Registry', icon: Package, color: 'emerald' },
+    { id: 'billing', name: 'Fiscal Ledger', icon: CreditCard, color: 'rose' },
+    { id: 'system', name: 'Core Config', icon: Settings, color: 'slate' }
   ];
 
-  // Filter tabs based on user role
-  const availableTabs = adminTabs.filter(tab => tab.roles.includes(userRole));
-
   useEffect(() => {
-    loadMetrics();
+    loadData();
   }, []);
 
-  const loadMetrics = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      // Load metrics based on available tabs
-      const response = await api.getAdminMetrics();
-      setMetrics(response.data || metrics);
+      const [ov, tn] = await Promise.all([
+        api.getSuperadminOverview(),
+        api.getTenants()
+      ]);
+      setOverview(ov || {});
+      setTenants(tn || []);
     } catch (error) {
-      console.error('Failed to load admin metrics:', error);
-      showToast({ 
-        message: 'Failed to load system metrics', 
-        type: 'error', 
-        title: 'Admin Dashboard' 
-      });
+       console.error('Data sync failed:', error);
+       showToast({ title: 'Sync Error', message: 'Platform data is temporarily unavailable.', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const renderTabContent = () => {
+  const renderContent = () => {
+    if (loading) return (
+      <div className="flex flex-col items-center justify-center py-40 gap-4">
+         <Activity className="animate-spin text-indigo-600" size={32} />
+         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Synchronizing Cluster...</p>
+      </div>
+    );
+
     switch (activeTab) {
       case 'overview':
-        return (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {availableTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className="clinical-card p-6 text-left hover:shadow-xl transition-all duration-300 group"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-12 h-12 rounded-xl bg-${tab.color}-50 text-${tab.color}-600 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <tab.icon size={24} />
-                  </div>
-                  <ChevronRight className={`text-${tab.color}-400 group-hover:translate-x-1 transition-transform`} size={20} />
-                </div>
-                <h3 className="font-black text-slate-900 mb-2">{tab.name}</h3>
-                <p className="text-sm text-slate-600">{tab.description}</p>
-              </button>
-            ))}
-          </div>
-        );
-
+        return <GlobalDashboard tenants={tenants} overview={overview} />;
       case 'tenants':
-        return (
-          <div className="clinical-card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-black text-slate-900">Tenant Management</h2>
-              <button className="clinical-btn bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2">
-                <Plus size={16} />
-                Add Tenant
-              </button>
-            </div>
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={20} />
-                <input
-                  type="text"
-                  placeholder="Search tenants..."
-                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <button className="clinical-btn bg-slate-100 text-slate-700 px-4 py-3 rounded-xl flex items-center gap-2">
-                <Filter size={16} />
-                Filter
-              </button>
-            </div>
-            <div className="text-center py-12 text-slate-500">
-              <Building2 className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p className="font-medium">Tenant management interface</p>
-              <p className="text-sm mt-2">Integrate with existing tenant management components</p>
-            </div>
-          </div>
-        );
-
-      case 'users':
-        return (
-          <div className="clinical-card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-black text-slate-900">User Provisioning</h2>
-              <button className="clinical-btn bg-green-600 text-white px-4 py-2 rounded-xl flex items-center gap-2">
-                <Plus size={16} />
-                Add User
-              </button>
-            </div>
-            <div className="text-center py-12 text-slate-500">
-              <Users className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p className="font-medium">User provisioning interface</p>
-              <p className="text-sm mt-2">Integrate with existing user management components</p>
-            </div>
-          </div>
-        );
-
+        return <TenantControlCenter tenants={tenants} onRefresh={loadData} />;
       case 'offers':
-        return (
-          <div className="clinical-card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-black text-slate-900">Offer Management</h2>
-              <button className="clinical-btn bg-purple-600 text-white px-4 py-2 rounded-xl flex items-center gap-2">
-                <Plus size={16} />
-                Create Offer
-              </button>
-            </div>
-            <div className="text-center py-12 text-slate-500">
-              <Package className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p className="font-medium">Offer management interface</p>
-              <p className="text-sm mt-2">Integrate with existing OfferManagement component</p>
-            </div>
-          </div>
-        );
-
+        return <SubscriptionEngine tenants={tenants} />;
       case 'billing':
         return (
-          <div className="clinical-card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-black text-slate-900">Billing & Payments</h2>
-              <button className="clinical-btn bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-2">
-                <TrendingUp size={16} />
-                View Reports
-              </button>
-            </div>
-            <div className="text-center py-12 text-slate-500">
-              <CreditCard className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p className="font-medium">Billing management interface</p>
-              <p className="text-sm mt-2">Integrate with existing billing components</p>
-            </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-20 text-center space-y-4">
+             <CreditCard className="mx-auto text-slate-100" size={80} />
+             <h3 className="text-sm font-black uppercase tracking-widest">Global Fiscal Ledger</h3>
+             <p className="text-[10px] text-slate-400 font-bold uppercase">Consolidated platform revenue & institutional receivables.</p>
           </div>
         );
-
       case 'system':
         return (
-          <div className="clinical-card">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-black text-slate-900">System Settings</h2>
-              <button className="clinical-btn bg-slate-600 text-white px-4 py-2 rounded-xl flex items-center gap-2">
-                <Settings size={16} />
-                Configure
-              </button>
-            </div>
-            <div className="text-center py-12 text-slate-500">
-              <Settings className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-              <p className="font-medium">System configuration interface</p>
-              <p className="text-sm mt-2">Integrate with existing system settings</p>
-            </div>
+          <div className="bg-white rounded-2xl border border-slate-200 p-20 text-center space-y-4">
+             <Settings className="mx-auto text-slate-100" size={80} />
+             <h3 className="text-sm font-black uppercase tracking-widest">Infrastructure Config</h3>
+             <p className="text-[10px] text-slate-400 font-bold uppercase">Low-level platform orchestration & governance keys.</p>
           </div>
         );
-
       default:
         return null;
     }
   };
 
   return (
-    <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
-        <div>
-          <h1 className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-slate-900" />
-            Unified Admin Console
-            <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">
-              {userRole.toUpperCase()}
-            </span>
-          </h1>
-          <p className="dim-label">
-            Context-aware administrative interface for {tenant?.name || 'System Management'}.
-          </p>
-          <div className="flex items-center gap-4 mt-4">
-            <div className="flex items-center gap-2 text-sm">
-              <div className={`w-2 h-2 rounded-full ${metrics.systemHealth === 'healthy' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-              <span className="font-medium text-slate-700">System {metrics.systemHealth}</span>
+    <div className="min-h-screen bg-slate-50/50 p-2 sm:p-4 lg:p-8 animate-fade-in relative overflow-hidden">
+      {/* Background Subtle Elements */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-50/30 blur-[120px] rounded-full -z-10" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-rose-50/30 blur-[120px] rounded-full -z-10" />
+
+      {/* Modern Compact Header */}
+      <header className="max-w-[1400px] mx-auto mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+         <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-slate-200 group hover:rotate-12 transition-transform">
+               <Shield size={24} />
             </div>
-            <div className="text-sm text-slate-500">
-              {metrics.tenants} Tenants • {metrics.users} Users • {metrics.activeOffers} Active Offers
+            <div>
+               <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight italic flex items-center gap-2">
+                  Unified Admin Console
+                  <span className="text-[9px] bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100 font-black not-italic uppercase tracking-widest">Active</span>
+               </h1>
+               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Platform Governance · Cluster Shards: {tenants.length}</p>
             </div>
-          </div>
-        </div>
+         </div>
+
+         {/* Navigation Tab Bar */}
+         <nav className="bg-white p-1 rounded-xl border border-slate-200 flex gap-1 shadow-sm overflow-x-auto no-scrollbar">
+            {adminTabs.map(tab => (
+               <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                     activeTab === tab.id ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-900'
+                  }`}
+               >
+                  <tab.icon size={14} /> {tab.name}
+               </button>
+            ))}
+         </nav>
       </header>
 
-      {/* Tab Navigation */}
-      <div className="mb-8">
-        <div className="flex flex-wrap gap-2 p-1 bg-slate-50 rounded-xl border border-slate-200">
-          {availableTabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === tab.id
-                  ? `bg-${tab.color}-600 text-white shadow-lg`
-                  : `text-slate-600 hover:bg-slate-100`
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <tab.icon size={16} />
-                {tab.name}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Main Viewport */}
+      <main className="max-w-[1400px] mx-auto pb-20">
+         {renderContent()}
+      </main>
 
-      {/* Tab Content */}
-      <div className="min-h-[400px]">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900"></div>
-          </div>
-        ) : (
-          renderTabContent()
-        )}
-      </div>
+      {/* Floating Status Bar */}
+      <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-md px-6 py-3 rounded-full border border-slate-200 shadow-2xl flex items-center gap-6 z-50">
+         <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full animate-pulse ${overview.health === 'critical' ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Core Engine: Stable</span>
+         </div>
+         <div className="w-px h-3 bg-slate-200" />
+         <div className="flex items-center gap-2">
+            <Activity size={12} className="text-indigo-500" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">Yield: Optimized</span>
+         </div>
+         <div className="w-px h-3 bg-slate-200" />
+         <div className="text-[9px] font-black uppercase tracking-widest text-slate-400">
+            Node: AP-SOUTH-1-EMR
+         </div>
+      </footer>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fade-in 0.4s ease-out forwards; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
     </div>
   );
 }

@@ -5,14 +5,14 @@ export async function runAutoMigration() {
   
   try {
     // 1. Discover all active tenants
-    const { rows: tenants } = await query('SELECT id, code FROM emr.tenants WHERE code IS NOT NULL');
+    const { rows: tenants } = await query('SELECT id, code FROM emr.management_tenants WHERE status = \'active\'');
     console.log(`🔍 [STARTUP] Discovered ${tenants.length} institutional nodes for infrastructure verification.`);
 
     // 2. Create Infrastructure Matrix table in Control Plane
     await query(`
       CREATE TABLE IF NOT EXISTS emr.tenant_resources (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          tenant_id UUID NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+          tenant_id UUID NOT NULL REFERENCES emr.management_tenants(id) ON DELETE CASCADE,
           cpu_cores_limit DECIMAL(4,2) DEFAULT 1.0,
           ram_gb_limit INTEGER DEFAULT 2,
           storage_gb_limit INTEGER DEFAULT 10,

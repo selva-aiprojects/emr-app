@@ -66,5 +66,34 @@ export const superadminService = {
    */
   getSystemLogs: async () => {
     return superadminRequest('/logs');
+  },
+
+  /**
+   * Update Tenant metadata (platform-level)
+   */
+  updateTenant: async (tenantId, data) => {
+    return superadminRequest(`/tenants/${tenantId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete hospital shard with schema purge
+   */
+  deleteTenant: async (tenantId) => {
+    return superadminRequest(`/tenants/${tenantId}`, {
+      method: 'DELETE'
+    });
+  },
+
+  /**
+   * Platform-wide broadcast to all active institutional nodes
+   */
+  broadcastToAllTenants: async (templateId, subject, body) => {
+    return superadminRequest('/broadcast', {
+      method: 'POST',
+      body: JSON.stringify({ templateId, subject, body }),
+    });
   }
 };

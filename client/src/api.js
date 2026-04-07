@@ -772,6 +772,8 @@ const apiClient = {
   getTenants,
   createTenant,
   updateTenantSettings,
+  provisionTenantAdmin,
+  resetTenantUserPassword,
 
   // Users
   getUsers,
@@ -782,12 +784,14 @@ const apiClient = {
 
   // Superadmin
   getSuperadminOverview,
+  syncSuperadminMetrics,
 
   // Patients
   getPatients,
   createPatient,
   addClinicalRecord,
   getPatientPrintData,
+  searchPatients,
 
   // Walk-ins
   createWalkin,
@@ -800,7 +804,9 @@ const apiClient = {
   rescheduleAppointment,
 
   // Encounters
+  getEncounters,
   createEncounter,
+  dischargePatient,
 
   // Invoices
   getInvoices,
@@ -812,6 +818,7 @@ const apiClient = {
   updateInventoryStock,
 
   // Employees
+  getEmployees,
   createEmployee,
   createEmployeeLeave,
 
@@ -862,7 +869,7 @@ const apiClient = {
   getRealtimeTick,
 };
 
-// Add aliases for backward compatibility with old frontend code
+// Add aliases for backward compatibility
 apiClient.addPatient = createPatient;
 apiClient.addWalkin = createWalkin;
 apiClient.addAppointment = createAppointment;
@@ -876,7 +883,7 @@ apiClient.addEncounter = createEncounter;
 apiClient.dischargePatient = dischargePatient;
 apiClient.searchPatients = searchPatients;
 apiClient.getPrescriptions = getPrescriptions;
-apiClient.dispensePrescription = dispensePrescriptionOld; // keeping old alias just in case
+apiClient.dispensePrescription = dispensePrescriptionOld;
 apiClient.createPrescription = createPrescription;
 apiClient.validatePrescription = validatePrescription;
 apiClient.getPharmacyQueue = getPharmacyQueue;
@@ -900,24 +907,8 @@ apiClient.addEmployeeLeave = createEmployeeLeave;
 apiClient.getSupportTickets = getSupportTickets;
 apiClient.addSupportTicket = createSupportTicket;
 apiClient.updateSupportStatus = updateSupportTicketStatus;
-apiClient.getNotices = getNotices;
-apiClient.createNotice = createNotice;
-apiClient.updateNoticeStatus = updateNoticeStatus;
-apiClient.getDocuments = getDocuments;
-apiClient.createDocument = createDocument;
-apiClient.setDocumentDeleted = setDocumentDeleted;
 apiClient.getInvoices = getInvoices;
 apiClient.getBootstrap = getBootstrapData;
-
-// Ambulance & Blood Bank Hub
-apiClient.getAmbulances = getAmbulances;
-apiClient.createAmbulance = createAmbulance;
-apiClient.dispatchAmbulance = dispatchAmbulance;
-apiClient.updateAmbulanceStatus = updateAmbulanceStatus;
-apiClient.getBloodUnits = getBloodUnits;
-apiClient.createBloodUnit = createBloodUnit;
-apiClient.getBloodRequests = getBloodRequests;
-apiClient.createBloodRequest = createBloodRequest;
 
 // Lab module
 apiClient.getLabOrders = (tenantId, status) => apiRequest(`/lab/orders${status ? `?status=${status}` : ''}`);
@@ -928,21 +919,12 @@ apiClient.recordLabResults = (id, data) => apiRequest(`/lab/orders/${id}/results
 // Infrastructure & Administrative Masters
 apiClient.getDepartments = () => apiRequest('/departments');
 apiClient.createDepartment = (data) => apiRequest('/departments', { method: 'POST', body: JSON.stringify(data) });
-
 apiClient.getWards = () => apiRequest('/wards');
 apiClient.createWard = (data) => apiRequest('/wards', { method: 'POST', body: JSON.stringify(data) });
-
 apiClient.getBeds = (wardId) => apiRequest(`/beds?wardId=${wardId}`);
 apiClient.createBed = (data) => apiRequest('/beds', { method: 'POST', body: JSON.stringify(data) });
-
 apiClient.getServices = () => apiRequest('/services');
 apiClient.createService = (data) => apiRequest('/services', { method: 'POST', body: JSON.stringify(data) });
-
-// Superadmin Feature Management
-apiClient.getAdminTenantFeatures = (tenantId) => apiRequest(`/admin/tenants/${tenantId}/features`);
-apiClient.updateTenantTier = (tenantId, tier) => apiRequest(`/admin/tenants/${tenantId}/tier`, { method: 'PATCH', body: JSON.stringify({ tier }) });
-apiClient.updateTenantStatus = (tenantId, status) => apiRequest(`/tenants/${tenantId}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
-apiClient.updateTenantFeatureOverride = (tenantId, featureFlag, enabled) => apiRequest(`/admin/tenants/${tenantId}/features`, { method: 'POST', body: JSON.stringify({ featureFlag, enabled }) });
 
 // Generic HTTP methods
 apiClient.get = (url) => apiRequest(url);
@@ -955,6 +937,26 @@ apiClient.del = (url) => apiRequest(url, { method: 'DELETE' });
 export default apiClient;
 export { apiClient as api };
 
-// Append: Patient fetch by ID
+// ─── Extended Superadmin & Platform Operations ──────────────────────────────
 apiClient.getPatient = (id, tenantId) => apiRequest(`/patients/${id}${tenantId ? `?tenantId=${tenantId}` : ''}`);
 
+apiClient.resetUserPassword = (tenantId, email, newPassword) =>
+  apiRequest('/superadmin/users/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ tenantCode: tenantId, email, newPassword })
+  });
+
+apiClient.updateTenant = (tenantId, data) =>
+  apiRequest(`/superadmin/tenants/${tenantId}`, { method: 'PATCH', body: JSON.stringify(data) });
+
+apiClient.deleteTenant = (tenantId) =>
+  apiRequest(`/superadmin/tenants/${tenantId}`, { method: 'DELETE' });
+
+apiClient.superadminBroadcast = (templateId, subject, msgBody) =>
+  apiRequest('/superadmin/broadcast', { method: 'POST', body: JSON.stringify({ templateId, subject, body: msgBody }) });
+
+apiClient.getAdminSupportTickets = () => apiRequest('/superadmin/tickets');
+apiClient.getTenantAdmin         = (id) => apiRequest(`/superadmin/tenants/${id}/admin`);
+apiClient.platformAudit          = () => apiRequest('/superadmin/audit', { method: 'POST' });
+apiClient.revokePlatformSessions = () => apiRequest('/superadmin/revoke-sessions', { method: 'POST' });
+apiClient.updateTenantSubscription = (id, tier) => apiRequest(`/superadmin/tenants/${id}/subscription`, { method: 'PATCH', body: JSON.stringify({ tier }) });

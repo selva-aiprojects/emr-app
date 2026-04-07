@@ -21,10 +21,11 @@ async function repair() {
     // 2. Create foundational structure with STRICT Prisma 7 naming
     await pool.query(`
       CREATE SCHEMA IF NOT EXISTS emr;
+      CREATE EXTENSION IF NOT EXISTS pgcrypto;
       CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
       CREATE TABLE emr.management_subscriptions (
-        "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         "tier" VARCHAR(50) NOT NULL DEFAULT 'Enterprise',
         "plan_name" TEXT NOT NULL DEFAULT 'Enterprise Plan',
         "limit_users" INTEGER NOT NULL DEFAULT 100,
@@ -32,19 +33,21 @@ async function repair() {
       );
 
       CREATE TABLE emr.management_tenants (
-        "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         "name" TEXT NOT NULL,
         "code" VARCHAR(32) UNIQUE NOT NULL,
         "subdomain" VARCHAR(128) UNIQUE NOT NULL,
         "schema_name" VARCHAR(64) UNIQUE NOT NULL,
         "status" VARCHAR(16) NOT NULL DEFAULT 'active',
+        "contact_email" VARCHAR(128),
+        "subscription_tier" VARCHAR(50) NOT NULL DEFAULT 'Professional',
         "subscription_id" UUID REFERENCES emr.management_subscriptions(id) ON DELETE SET NULL,
         "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE TABLE emr.management_system_logs (
-        "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         "event" TEXT NOT NULL,
         "details" JSONB,
         "tenant_id" UUID REFERENCES emr.management_tenants(id) ON DELETE SET NULL,
@@ -55,8 +58,8 @@ async function repair() {
     // 3. Migrate data back with UUID stability
     console.log('🔄 Mapping 2 existing tenants to the new Management Plane...');
     await pool.query(`
-      INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status)
-      SELECT id, name, code, subdomain, COALESCE(schema_name, LOWER(code)), status
+      INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, contact_email)
+      SELECT id, name, code, subdomain, COALESCE(schema_name, LOWER(code)), status, contact_email
       FROM emr.tenants
       ON CONFLICT DO NOTHING;
     `);
