@@ -98,7 +98,7 @@ export const PatientOverviewChart = ({ data = [] }) => {
       }
     ]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Revenue Trend Chart (Bar Chart)
@@ -140,7 +140,7 @@ export const RevenueTrendChart = ({ data = [] }) => {
       emphasis: { itemStyle: { color: HEALTHCARE_COLORS.primary, opacity: 0.8 } }
     }]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Department Distribution Chart (Pie Chart)
@@ -180,7 +180,7 @@ export const DepartmentDistributionChart = ({ data = [] }) => {
       emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold', formatter: '{b}\n{c}' } }
     }]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Appointment Status Chart (Horizontal Bar)
@@ -221,7 +221,7 @@ export const AppointmentStatusChart = ({ data = [] }) => {
       label: { show: true, position: 'right', color: HEALTHCARE_COLORS.darkText, fontSize: 11, fontWeight: 600, formatter: (params) => params.value }
     }]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Bed Occupancy Chart (Pie/Doughnut)
@@ -256,7 +256,7 @@ export const BedOccupancyChart = ({ data = [] }) => {
       label: { show: true, color: HEALTHCARE_COLORS.white, fontSize: 12, fontWeight: 700, formatter: (params) => `{percent|${params.percent}%}` }
     }]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Top Diagnoses Chart (Horizontal Bar)
@@ -284,7 +284,7 @@ export const TopDiagnosesChart = ({ data = [] }) => {
       label: { show: true, position: 'right', fontWeight: 700 }
     }]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Top Revenue Services Chart (Pie/Doughnut)
@@ -321,7 +321,7 @@ export const TopServicesChart = ({ data = [] }) => {
       emphasis: { label: { show: true, fontSize: 12, fontWeight: 'bold', formatter: '{b}\n₹{c}' } }
     }]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Staff Distribution Chart
@@ -348,7 +348,7 @@ export const StaffDistributionChart = ({ data = [] }) => {
       emphasis: { label: { show: true, fontSize: 12, fontWeight: 'bold' } }
     }]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Patient Journey Chart (Horizontal Bar / Funnel)
@@ -386,7 +386,7 @@ export const PatientJourneyChart = ({ data = [] }) => {
       label: { show: true, position: 'right', fontWeight: 700 }
     }]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - No-Show Rate Analysis (Line + Bar combo)
@@ -453,7 +453,7 @@ export const NoShowRateChart = ({ data = [] }) => {
       }
     ]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 // Apache ECharts - Doctor Performance Chart (Multi-metric horizontal bar)
@@ -514,7 +514,7 @@ export const DoctorPerformanceChart = ({ data = [] }) => {
       }
     ]
   };
-  return <ReactEcharts option={option} style={{ height: '100%', width: '100%' }} />;
+  return <ReactEcharts option={option} notMerge={true} style={{ height: '100%', width: '100%' }} />;
 };
 
 export default {

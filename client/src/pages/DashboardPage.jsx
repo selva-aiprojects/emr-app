@@ -37,7 +37,7 @@ import {
   TopDiagnosesChart, 
   TopServicesChart 
 } from '../components/EChartsComponents.jsx';
-import CostGovernance from '../components/CostGovernance.jsx';
+
 
 /* ─── LIVE PATIENT QUEUE COMPONENT ────────────────────────────────── */
 function LiveQueue({ appointments = [], patients = [], setView, setActivePatientId }) {
@@ -348,10 +348,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       {/* ── MISSING FLOW: Offer Announcement for Tenant Scaling ── */}
       <OfferAnnouncement tenant={tenant} />
 
-      {/* ── NEW: COST GOVERNANCE (For Admin roles) ── */}
-      {(activeUser?.role === 'Admin' || activeUser?.role === 'Management' || activeUser?.role === 'Accounts') && (
-        <CostGovernance tenant={tenant} />
-      )}
+
 
       {/* Key Metrics Row - centered elevated cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">

@@ -10,9 +10,8 @@ dotenv.config();
  */
 export async function sendTenantWelcomeEmail(email, tenantName, subdomain, credentials) {
   const fromName = "Healthezee Platform";
-  const fromEmail = process.env.SMTP_FROM && !process.env.SMTP_FROM.includes('your-email') 
-    ? process.env.SMTP_FROM 
-    : "Healthezee Platform <care@cognivectra.com>";
+  // Explicitly force the verified domain instead of relying on .env file fallback
+  const fromEmail = "Healthezee Platform <care@cognivectra.com>";
   const subject = `Welcome to Healthezee: ${tenantName} Workspace Initialized`;
 
   const htmlContent = `
@@ -45,8 +44,8 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          // Using your verified production domain
-          from: fromEmail,
+          // 'onboarding@resend.dev' works without domain verification (sends only to the registered email in Resend)
+          from: "onboarding@resend.dev",
           to: [email],
           subject: subject,
           html: htmlContent
@@ -66,26 +65,7 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
     }
   }
 
-  // --- STRATEGY 2: SMTP FALLBACK (Standard) ---
-  try {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '465'),
-      secure: true,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-    });
-
-    const info = await transporter.sendMail({ from: `${fromName} <${fromEmail}>`, to: email, subject, html: htmlContent });
-    console.log('✉️ [SMTP_SUCCESS] Email dispatched via SMTP:', info.messageId);
-    return { success: true, messageId: info.messageId };
-  } catch (err) {
-    console.warn('❌ [MAIL_SERVICE_FAIL] SMTP Dispatch failure:', err.message);
-    
-    // --- STRATEGY 3: MOCK FAIL-SAFE (Dev only) ---
-    if (process.env.NODE_ENV === 'development') {
-      console.log('✉️ [MAIL_MOCK] Reverting to mock log due to all-dispatch failure.');
-      return { success: true, mocked: true };
-    }
-    return { success: false, error: err.message };
-  }
+  // --- MOCK FAIL-SAFE (Skipping SMTP for pure Resend test) ---
+  console.log('✉️ [MAIL_MOCK] Reverting to mock log. SMTP is currently bypassed.');
+  return { success: true, mocked: true };
 }

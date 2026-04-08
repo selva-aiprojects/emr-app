@@ -1,12 +1,48 @@
 import { managementClient, getTenantClient, getTenantDatabaseUrl, releaseTenantClient } from '../db/prisma_manager.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { readFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
 import { installTenantMetricsSync } from './superadminMetrics.service.js';
 import { sendTenantWelcomeEmail } from './mail.service.js';
 import { query } from '../db/connection.js';
 
 const execAsync = promisify(exec);
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Executes the tenant base schema SQL on the given schema.
+ * This is the canonical way to initialize a new tenant's database.
+ */
+async function executeTenantBaseSchema(schemaName) {
+  const sqlPath = join(__dirname, '../../database/tenant_base_schema.sql');
+  const sql = readFileSync(sqlPath, 'utf8');
+  
+  // Set search_path to the tenant schema first, then execute all DDL
+  await query(`SET search_path TO "${schemaName}", public`);
+  
+  // Split on semicolons and run each statement
+  const statements = sql
+    .split(';')
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && !s.startsWith('--'));
+  
+  for (const stmt of statements) {
+    try {
+      await query(stmt);
+    } catch (e) {
+      // Log but continue — some statements may already exist
+      if (!e.message.includes('already exists')) {
+        console.warn(`[SCHEMA_WARN] ${e.message.substring(0, 100)}`);
+      }
+    }
+  }
+  
+  // Reset search_path to default
+  await query(`SET search_path TO "${schemaName}", emr, public`);
+}
 
 const DEFAULT_ROLE_DEFINITIONS = [
   {
@@ -84,33 +120,10 @@ export async function provisionNewTenant(tenantData, adminData) {
     // 2. Execute raw SQL to create the dedicated Postgres schema
     await query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
 
-    // 3. Run migrations for the new schema using Prisma CLI
-    console.log(`Running migrations for schema ${schemaName}...`);
-    try {
-      await execAsync('npx prisma migrate deploy --schema=./prisma/tenant.prisma', {
-        cwd: process.cwd(),
-        env: {
-          ...process.env,
-          DATABASE_URL: getTenantDatabaseUrl(schemaName)
-        }
-      });
-    } catch (migrateErr) {
-      console.warn(`⚠️ [PRISMA_CLI_FAIL] Falling back to manual shard initialization for ${schemaName}:`, migrateErr.message);
-      
-      // Safety Fallback: Manually initialize core identity tables if Prisma fails (common in restricted envs)
-      await query(`CREATE TABLE IF NOT EXISTS ${schemaName}."roles" (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT UNIQUE, description TEXT, is_system BOOLEAN DEFAULT false, created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
-      await query(`CREATE TABLE IF NOT EXISTS ${schemaName}."users" (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), email TEXT UNIQUE, password_hash TEXT, name TEXT, role_id UUID REFERENCES ${schemaName}."roles"(id), created_at TIMESTAMP DEFAULT NOW(), updated_at TIMESTAMP DEFAULT NOW())`);
-      
-      // Also ensure all clinical tables are ready via our generic migration bridge
-      const CLINICAL_TABLES = [
-        'clinical_records', 'prescriptions', 'procedures', 'observations', 'diagnostic_reports', 
-        'conditions', 'service_requests', 'frontdesk_visits', 'claims', 'documents', 
-        'blood_requests', 'invoices', 'appointments', 'encounters', 'patients'
-      ];
-      for (const t of CLINICAL_TABLES) {
-        await query(`CREATE TABLE IF NOT EXISTS ${schemaName}.${t} (LIKE emr.${t} INCLUDING ALL)`);
-      }
-    }
+    // 3. Run full tenant base schema — ALL tables required for operations
+    console.log(`Initializing full tenant schema for ${schemaName}...`);
+    await executeTenantBaseSchema(schemaName);
+    console.log(`✅ [PROVISIONING] Full tenant schema initialized for ${schemaName}`);
 
     // 4. Seed the initial Admin User and default Roles into the new schema
     console.log(`Seeding initial data into ${schemaName}...`);
