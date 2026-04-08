@@ -1,72 +1,60 @@
 /**
- * Cleanup all tenants except NHGL
- * NOTE: DROP SCHEMA runs outside transactions (DDL auto-commit)
+ * NHGL TOTAL PURGE v5 — NUCLEAR OPTION
+ * =====================================
+ * - Truncates everything in the drug master/audit to break FK chains.
+ * - Deletes ALL tenants except NHGL.
+ * - Deletes ALL users except NHGL.
+ * - Resets everything to a Clean-NHGL-Only state.
  */
-import pool from '../server/db/connection.js';
 
-const KEEP_TENANT_ID = 'b01f0cdc-4e8b-4db5-ba71-e657a414695e';
-const KEEP_SCHEMA = 'nhgl';
+import pg from 'pg';
+import dotenv from 'dotenv';
+dotenv.config();
 
-async function sq(client, sql, params = []) {
-  try {
-    return await client.query(sql, params);
-  } catch(e) {
-    console.warn(`  ⚠️  ${e.message.substring(0, 120)}`);
-    return { rowCount: 0, rows: [] };
+const client = new pg.Client({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+const KEEP_ID = 'b01f0cdc-4e8b-4db5-ba71-e657a414695e';
+const KEEP_CODE = 'NHGL';
+
+async function runPurge() {
+  await client.connect();
+  console.log('☢️ Starting Nuclear Cleanup...');
+
+  // 1. Break FKs by TRUNCATING the leaf tables (ONLY in emr schema)
+  console.log('🔄 Wiping Global Drug/Audit Tables (Cascading TRUNCATE)...');
+  await client.query(`TRUNCATE emr.drug_batches, emr.drug_master, emr.audit_logs CASCADE`);
+
+  // 2. Clear Tenants
+  console.log('🔄 Cleaning Registries (Keeping Only NHGL)...');
+  await client.query(`DELETE FROM emr.management_tenants WHERE id != $1 AND code != $2`, [KEEP_ID, KEEP_CODE]);
+  await client.query(`DELETE FROM emr.tenants WHERE id != $1 AND code != $2`, [KEEP_ID, KEEP_CODE]);
+
+  // 3. Clear Users (Keep NHGL users)
+  console.log('🔄 Cleaning Global Users...');
+  await client.query(`DELETE FROM emr.users WHERE tenant_id != $1`, [KEEP_ID]);
+
+  // 4. Force NHGL to be "nhgl" for everything
+  console.log('🔄 Standardizing NHGL Routing...');
+  await client.query(`UPDATE emr.management_tenants SET name = 'NHGL Healthcare Institute', subdomain = 'nhgl', schema_name = 'nhgl' WHERE id = $1`, [KEEP_ID]);
+  await client.query(`UPDATE emr.tenants SET name = 'NHGL Healthcare Institute', subdomain = 'nhgl' WHERE id = $1`, [KEEP_ID]);
+
+  // 5. Schema verification
+  console.log('🔄 Final hygiene...');
+  const schemas = await client.query(`SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT IN ('nhgl','emr','public','information_schema','pg_catalog','pg_toast')`);
+  for (const s of schemas.rows) {
+     console.log(`  🗑️  Dropping ${s.schema_name}`);
+     await client.query(`DROP SCHEMA IF EXISTS "${s.schema_name}" CASCADE`).catch(()=>{});
   }
+
+  await client.end();
+  console.log('\n🌟 PURGE SUCCESSFUL. Only NHGL Healthcare Institute exists in the system now.');
+  process.exit(0);
 }
 
-async function cleanup() {
-  console.log('🧹 Starting tenant cleanup — keeping NHGL only...\n');
-
-  const client = await pool.connect();
-  try {
-    // Get all tenants to remove
-    const res = await client.query(
-      `SELECT id, name, code, schema_name FROM emr.management_tenants WHERE id != $1`,
-      [KEEP_TENANT_ID]
-    );
-    console.log(`Found ${res.rows.length} tenant(s) to remove:`);
-    res.rows.forEach(t => console.log(`  - ${t.name} (${t.code}) → schema: ${t.schema_name}`));
-    console.log('');
-
-    for (const t of res.rows) {
-      const schema = t.schema_name;
-      console.log(`Processing: ${t.name} (${t.code})`);
-
-      // 1. Drop schema — must be OUTSIDE a transaction block
-      if (schema && schema !== 'emr' && schema !== 'public' && schema !== KEEP_SCHEMA) {
-        await sq(client, `DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
-        console.log(`  ✅ Dropped schema: ${schema}`);
-      }
-
-      // 2. Remove users
-      const ur = await sq(client, `DELETE FROM emr.users WHERE tenant_id = $1`, [t.id]);
-      console.log(`  ✅ Removed ${ur.rowCount} users`);
-
-      // 3. Remove from emr.tenants
-      await sq(client, `DELETE FROM emr.tenants WHERE id = $1`, [t.id]);
-
-      // 4. Remove from emr.management_tenants
-      await sq(client, `DELETE FROM emr.management_tenants WHERE id = $1`, [t.id]);
-      console.log(`  ✅ Registry cleared`);
-    }
-
-    console.log('\n✅ Cleanup complete. Remaining tenants:');
-    const remaining = await client.query(
-      `SELECT name, code, schema_name, status FROM emr.management_tenants ORDER BY name`
-    );
-    remaining.rows.forEach(r =>
-      console.log(`  🏥 ${r.name} (${r.code}) | Schema: ${r.schema_name} | ${r.status}`)
-    );
-
-    process.exit(0);
-  } catch(err) {
-    console.error('❌ Cleanup failed:', err.message);
-    process.exit(1);
-  } finally {
-    client.release();
-  }
-}
-
-cleanup();
+runPurge().catch(e => {
+  console.error('\n❌ Purge Failed:', e.message);
+  process.exit(1);
+});

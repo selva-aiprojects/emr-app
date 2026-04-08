@@ -1420,14 +1420,13 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
 
       query(`
         SELECT
-          display_name as name,
+          category as name,
           COUNT(*)::int as value
         FROM service_requests
         WHERE tenant_id = $1
-          AND display_name IS NOT NULL
-          AND BTRIM(display_name) <> ''
-        GROUP BY display_name
-        ORDER BY value DESC, display_name
+          AND category IS NOT NULL
+        GROUP BY category
+        ORDER BY value DESC, category
         LIMIT 8
       `, [tenantId]).catch(async () => {
         try {
@@ -1482,7 +1481,7 @@ app.get('/api/dashboard/metrics', authenticate, requireTenant, requirePermission
       totalPatients,
       totalAppointments,
       totalRevenue,
-      criticalAlerts: Number(metrics.criticalLabResults || 0),
+      criticalAlerts: Number(metrics.criticalAlerts || 0),
 
       // Enhanced statistics
       patientStats: {
@@ -3512,7 +3511,7 @@ app.get('/force-isolate', async (req, res) => {
 app.get('/api/admin/debug-migration', async (req, res) => {
   try {
     const { query } = await import('./db/connection.js');
-    const tenantCount = await query('SELECT COUNT(*) FROM emr.tenants');
+    const tenantCount = await query('SELECT COUNT(*) FROM emr.tenants', [], { timeout: 30000 });
     const resourceTable = await query("SELECT to_regclass('emr.tenant_resources') as exists");
     
     res.json({

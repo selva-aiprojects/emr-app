@@ -3,6 +3,13 @@
 
 import { query } from './db/connection.js';
 
+function calculateGrowth(current, previous) {
+  const curr = parseFloat(current || 0);
+  const prev = parseFloat(previous || 0);
+  if (prev === 0) return curr > 0 ? 100 : 0;
+  return Math.round(((curr - prev) / prev) * 100);
+}
+
 export async function getRealtimeDashboardMetrics(tenantId) {
   try {
     console.log('🔍 Calculating real-time dashboard metrics...');
@@ -26,7 +33,14 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       labPending,
       totalLabToday,
       ambulancesTotal,
-      ambulancesAvailable
+      ambulancesAvailable,
+      medicineShortage,
+      doctorAbsence,
+      lowBloodStock,
+      mtdRevenue,
+      prevMonthRevenue,
+      mtdPatients,
+      prevMonthPatients
     ] = await Promise.all([
       // Today's appointments (scheduled_start)
       query(`SELECT COUNT(*) as count FROM appointments WHERE tenant_id = $1 AND DATE(scheduled_start) = CURRENT_DATE`, [tenantId]),
@@ -53,7 +67,7 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       query(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1`, [tenantId]),
       
       // Critical lab results
-      query(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND (notes::jsonb->>'criticalFlag' = 'true' OR notes LIKE '%critical%') AND DATE(created_at) >= CURRENT_DATE - INTERVAL '24 hours'`, [tenantId]),
+      query(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND (notes::jsonb->>'criticalFlag' = 'true' OR notes::text LIKE '%critical%') AND DATE(created_at) >= CURRENT_DATE - INTERVAL '24 hours'`, [tenantId]),
 
       // Blood Bank Units
       query(`SELECT COUNT(*) as count FROM blood_units WHERE tenant_id = $1`, [tenantId]),
@@ -68,7 +82,28 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       query(`SELECT COUNT(*) as count FROM ambulances WHERE tenant_id = $1`, [tenantId]),
 
       // Fleet Available
-      query(`SELECT COUNT(*) as count FROM ambulances WHERE tenant_id = $1 AND (status = 'available' OR status = 'ONLINE')`, [tenantId])
+      query(`SELECT COUNT(*) as count FROM ambulances WHERE tenant_id = $1 AND (status = 'available' OR status = 'ONLINE')`, [tenantId]),
+
+      // Medicine Shortage (today)
+      query(`SELECT COUNT(*) as count FROM inventory_items WHERE tenant_id = $1 AND current_stock <= reorder_level`, [tenantId]),
+
+      // Doctor Absence (today)
+      query(`SELECT COUNT(*) as count FROM attendance a JOIN employees e ON a.employee_id = e.id WHERE a.tenant_id = $1 AND a.date = CURRENT_DATE AND a.status = 'Absent' AND e.designation = 'Doctor'`, [tenantId]),
+
+      // Low Blood Stock (below 5 units per group)
+      query(`SELECT COUNT(*) as count FROM (SELECT blood_group, COUNT(*) FROM blood_units WHERE tenant_id = $1 GROUP BY blood_group HAVING COUNT(*) < 5) as low_stock`, [tenantId]),
+
+      // MTD Revenue
+      query(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE) AND status = 'paid'`, [tenantId]),
+
+      // Prev Month Revenue
+      query(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND status = 'paid'`, [tenantId]),
+
+      // MTD Patients
+      query(`SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)`, [tenantId]),
+
+      // Prev Month Patients
+      query(`SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'`, [tenantId])
     ]);
     
     const labsTotal = parseInt(totalLabToday.rows[0]?.count || 0);
@@ -91,6 +126,15 @@ export async function getRealtimeDashboardMetrics(tenantId) {
         available: parseInt(ambulancesAvailable.rows[0]?.count || 0), 
         total: parseInt(ambulancesTotal.rows[0]?.count || 0), 
         active: Math.max(0, parseInt(ambulancesTotal.rows[0]?.count || 0) - parseInt(ambulancesAvailable.rows[0]?.count || 0)) 
+      },
+      criticalAlerts: 
+        parseInt(criticalLabResults.rows[0]?.count || 0) + 
+        parseInt(medicineShortage.rows[0]?.count || 0) + 
+        parseInt(doctorAbsence.rows[0]?.count || 0) +
+        parseInt(lowBloodStock.rows[0]?.count || 0),
+      growth: {
+        revenue: calculateGrowth(mtdRevenue.rows[0]?.total, prevMonthRevenue.rows[0]?.total),
+        patients: calculateGrowth(mtdPatients.rows[0]?.count, prevMonthPatients.rows[0]?.count)
       }
     };
     

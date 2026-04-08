@@ -92,6 +92,25 @@ function LiveQueue({ appointments = [], patients = [], setView, setActivePatient
   );
 }
 
+/* ─── PREMIUM DASHBOARD LOADER ────────────────────────────────────────── */
+function DashboardLoader() {
+  return (
+    <div className="fixed inset-0 z-[999] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in">
+       <div className="relative">
+          <div className="w-20 h-20 rounded-2xl bg-[var(--primary)] shadow-2xl shadow-indigo-200 flex items-center justify-center animate-pulse">
+             <HeartPulse className="w-10 h-10 text-white" />
+          </div>
+          <div className="absolute -inset-4 border-2 border-indigo-500/20 rounded-full animate-ping"></div>
+          <div className="absolute -inset-8 border border-indigo-500/10 rounded-full animate-ping [animation-delay:0.5s]"></div>
+       </div>
+       <div className="mt-10 text-center">
+          <h2 className="text-sm font-black uppercase tracking-[0.3em] text-slate-800 mb-2">NHGL Intelligence</h2>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest animate-pulse">Synchronizing Clinical Data Nodes...</p>
+       </div>
+    </div>
+  );
+}
+
 export default function DashboardPage({ metrics, activeUser, setView, tenant, view, appointments = [], patients = [], setActivePatientId }) {
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -116,6 +135,14 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
     masterStats: {},
     noShowTrend: []
   });
+  const [secondsSinceSync, setSecondsSinceSync] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSecondsSinceSync(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Get current view title
   const getCurrentViewTitle = () => {
@@ -142,7 +169,15 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
   useEffect(() => {
     loadDashboardData();
     loadAlerts();
+    setSecondsSinceSync(0);
   }, [timeFilter]);
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
+  };
 
   async function loadDashboardData() {
     try {
@@ -174,8 +209,11 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         noShowTrend: data.noShowTrend || [],
         bloodBank: data.bloodBank || { value: 0, label: 'Units' },
         labProgress: data.labProgress || { value: 0, label: '%' },
-        fleetStatus: data.fleetStatus || { available: 0, total: 0 }
+        fleetStatus: data.fleetStatus || { available: 0, total: 0 },
+        growth: data.growth || { revenue: 0, patients: 0 }
       });
+
+      setSecondsSinceSync(0);
 
       // Set report data for charts - use real historical data
       setReportData({
@@ -295,19 +333,22 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
 
   return (
     <div className="page-shell-premium animate-fade-in overflow-x-hidden">
+      {loading && <DashboardLoader />}
+      
       {/* 1. CLINICAL GOVERNANCE HEADER */}
-      <header className="page-header-premium mb-10 pb-6 border-b border-[var(--accent-soft)]">
-        <div>
+      <header className="page-header-premium mb-10 pb-6 border-b border-[var(--accent-soft)] flex justify-between items-end">
+        <div className="animate-slide-down">
+           <div className="flex items-center gap-2 mb-2">
+              <span className="live-indicator"></span>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-600">Active Sync: {secondsSinceSync}s ago</span>
+           </div>
            <h1 className="flex items-center gap-3">
-              Hospital Dashboard
-              <span className="text-[10px] bg-[var(--clinical-primary)] text-white px-3 py-1 rounded-full border border-[var(--clinical-secondary)]/20 uppercase tracking-tighter font-black">Admin View</span>
+              {getGreeting()}, {activeUser?.name?.split(' ')[0] || 'Admin'}
+              <span className="text-[9px] bg-[var(--clinical-primary)] text-white px-2 py-0.5 rounded-lg border border-white/10 uppercase tracking-tighter font-black">Institutional Console</span>
            </h1>
-           <p className="dim-label">Monitor hospital health, revenue trends, and operational capacity for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-[var(--clinical-secondary)] uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> {today} • System Online
-           </p>
+           <p className="dim-label text-xs">Facility Health Overview for {tenant?.name || 'Authorized Centre'}</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 animate-slide-left">
           <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
              {['daily', 'weekly', 'monthly', 'yearly'].map(filter => (
                <button
@@ -350,50 +391,84 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
 
 
 
-      {/* Key Metrics Row - centered elevated cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <div className="dashboard-card metric-card">
-          <div className="flex justify-center mb-3">
-            <div className="bg-[var(--accent-soft)] rounded-lg p-3">
-              <Users className="w-6 h-6 text-[var(--clinical-blue)]" />
-            </div>
+      {/* 2. CORE METRICS GRID (Lively & Analytical) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 stagger-entrance">
+        {/* Metric Card 1: Revenue */}
+        <div className="platform-metric-card group hover:scale-[1.02] transition-transform duration-500">
+          <div className="metric-header text-right">
+             <div className="metric-icon emerald shadow-lg shadow-emerald-100">
+                <TrendingUp className="w-6 h-6" />
+             </div>
+             <div className="text-right">
+                <div className={`text-[10px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.growth?.revenue >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                   {realtimeMetrics.growth?.revenue >= 0 ? 'Surge' : 'Dip'}
+                </div>
+                <div className="text-[9px] text-slate-400 font-bold">{realtimeMetrics.growth?.revenue}% vs Prev</div>
+             </div>
           </div>
-          <p className="metric-value">{realtimeMetrics.totalPatients}</p>
-          <p className="metric-label">Total Patients</p>
-          <span className="text-xs text-teal-600 font-medium">+12%</span>
+          <div className="metric-content mt-4">
+             <div className="metric-value">{currency(realtimeMetrics.totalRevenue)}</div>
+             <div className="metric-title">Gross Revenue</div>
+             <div className="metric-subtitle">Total collections processed</div>
+          </div>
         </div>
 
-        <div className="dashboard-card metric-card">
-          <div className="flex justify-center mb-3">
-            <div className="bg-[var(--primary-soft)] rounded-lg p-3">
-              <Calendar className="w-6 h-6 text-[var(--medical-navy)]" />
-            </div>
+        {/* Metric Card 2: Appointments */}
+        <div className="platform-metric-card group hover:scale-[1.02] transition-transform duration-500">
+          <div className="metric-header text-right">
+             <div className="metric-icon blue shadow-lg shadow-blue-100">
+                <Calendar className="w-6 h-6" />
+             </div>
+             <div className="text-right">
+                <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none">Active</div>
+                <div className="text-[9px] text-slate-400 font-bold">Planned Today</div>
+             </div>
           </div>
-          <p className="metric-value">{realtimeMetrics.totalAppointments}</p>
-          <p className="metric-label">Appointments</p>
-          <span className="text-xs text-blue-600 font-medium">+8%</span>
+          <div className="metric-content mt-4">
+             <div className="metric-value">{realtimeMetrics.totalAppointments}</div>
+             <div className="metric-title">OPD Appointments</div>
+             <div className="metric-subtitle">Scheduled consultations</div>
+          </div>
         </div>
 
-        <div className="dashboard-card metric-card">
-          <div className="flex justify-center mb-3">
-            <div className="bg-[var(--clinical-accent-soft)] rounded-lg p-3">
-              <span className="text-2xl font-bold text-[var(--clinical-accent)]">₹</span>
-            </div>
+        {/* Metric Card 3: Patients */}
+        <div className="platform-metric-card group hover:scale-[1.02] transition-transform duration-500">
+          <div className="metric-header text-right">
+             <div className="metric-icon green shadow-lg shadow-green-100">
+                <Users className="w-6 h-6" />
+             </div>
+             <div className="text-right">
+                <div className={`text-[10px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.growth?.patients >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                   {realtimeMetrics.growth?.patients >= 0 ? 'Growing' : 'Stable'}
+                </div>
+                <div className="text-[9px] text-slate-400 font-bold">{realtimeMetrics.growth?.patients}% MoM Growth</div>
+             </div>
           </div>
-          <p className="metric-value">{currency(realtimeMetrics.totalRevenue)}</p>
-          <p className="metric-label">Revenue</p>
-          <span className="text-xs text-indigo-600 font-medium">+15%</span>
+          <div className="metric-content mt-4">
+             <div className="metric-value">{realtimeMetrics.totalPatients}</div>
+             <div className="metric-title">Total Patients</div>
+             <div className="metric-subtitle">Registered clinical files</div>
+          </div>
         </div>
 
-        <div className="dashboard-card metric-card">
-          <div className="flex justify-center mb-3">
-            <div className="bg-[var(--danger-soft)] rounded-lg p-3">
-              <AlertCircle className="w-6 h-6 text-[var(--danger)]" />
-            </div>
+        {/* Metric Card 4: Critical Alerts */}
+        <div className={`platform-metric-card group transition-all duration-500 ${realtimeMetrics.criticalAlerts > 0 ? 'bg-red-50/30 animate-alert-pulse border-red-200' : ''}`}>
+          <div className="metric-header text-right">
+             <div className={`metric-icon red shadow-lg ${realtimeMetrics.criticalAlerts > 0 ? 'shadow-red-200 animate-pulse' : 'shadow-red-100'}`}>
+                <AlertCircle className="w-6 h-6" />
+             </div>
+             <div className="text-right">
+                <div className={`text-[10px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.criticalAlerts > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                   {realtimeMetrics.criticalAlerts > 0 ? 'Attention' : 'Stable'}
+                </div>
+                <div className="text-[9px] text-slate-400 font-bold">Critical Node Detection</div>
+             </div>
           </div>
-          <p className="metric-value">{hasAnyAlerts ? '3' : '0'}</p>
-          <p className="metric-label">Critical Alerts</p>
-          <span className="text-xs text-rose-600 font-medium">3 urgent</span>
+          <div className="metric-content mt-4">
+             <div className={`metric-value ${realtimeMetrics.criticalAlerts > 0 ? 'text-red-700' : ''}`}>{realtimeMetrics.criticalAlerts}</div>
+             <div className="metric-title">Critical Alerts</div>
+             <div className="metric-subtitle">Shortages / Absences</div>
+          </div>
         </div>
       </div>
 

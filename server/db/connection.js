@@ -43,17 +43,25 @@ export async function query(text, params) {
       if (!tenantCodeCache.has(tenantId)) {
         try {
           // Check Management Plane (Newest)
-          let res = await pool.query('SELECT schema_name FROM emr.management_tenants WHERE id = $1', [tenantId]);
+          let res = await pool.query({
+            text: 'SELECT schema_name FROM emr.management_tenants WHERE id = $1',
+            values: [tenantId],
+            timeout: 5000 // Short timeout for routing lookup to avoid hanging
+          });
           
           if (res.rows.length === 0) {
             // Check Legacy Tenants table (fallback to LOWER(code) as schema)
-            res = await pool.query('SELECT code as schema_name FROM emr.tenants WHERE id = $1', [tenantId]);
-            if (res.rows.length > 0) {
+            res = await pool.query({
+              text: 'SELECT code as schema_name FROM emr.tenants WHERE id = $1',
+              values: [tenantId],
+              timeout: 5000
+            });
+            if (res.rows.length > 0 && res.rows[0].schema_name) {
               res.rows[0].schema_name = res.rows[0].schema_name.toLowerCase();
             }
           }
 
-          if (res.rows.length > 0) {
+          if (res.rows.length > 0 && res.rows[0].schema_name) {
             tenantCodeCache.set(tenantId, res.rows[0].schema_name);
           } else {
             console.warn(`[DB_ROUTING_WARN] No schema found for tenantId: ${tenantId}`);

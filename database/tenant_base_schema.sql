@@ -302,6 +302,41 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
+-- ============================================================
+-- 6.1 SUPPLIERS & PURCHASING
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS suppliers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  name text NOT NULL,
+  contact_person text,
+  phone varchar(32),
+  email text,
+  address text,
+  category varchar(32) DEFAULT 'Medical',
+  status varchar(16) DEFAULT 'Active' CHECK (status IN ('Active','Inactive')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS inventory_purchases (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  supplier_id uuid REFERENCES suppliers(id) ON DELETE SET NULL,
+  item_id uuid REFERENCES inventory_items(id) ON DELETE SET NULL,
+  po_number varchar(64),
+  batch_number varchar(64),
+  quantity numeric(12,2) NOT NULL,
+  unit_price numeric(12,2),
+  total_amount numeric(12,2),
+  expiry_date date,
+  received_date date DEFAULT CURRENT_DATE,
+  status varchar(16) DEFAULT 'Received' CHECK (status IN ('Ordered','Received','Cancelled')),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS service_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,
