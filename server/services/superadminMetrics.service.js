@@ -252,60 +252,10 @@ export async function ensureManagementPlaneInfrastructure() {
     // C. Precision Seeding for Institutional Nodes
     const adminHash = '$2a$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC'; // Admin@123
     
-    // Seed Masters
-    await pool.query(`
-      INSERT INTO emr.tenants (id, name, code, subdomain, status, subscription_tier)
-      VALUES 
-        ('f998a8f5-95b9-4fd7-a583-63cf574d65ed', 'New Age Hospitals Ltd', 'NAH', 'nah.healthezee.com', 'active', 'Enterprise'),
-        ('45cfe286-5469-457a-88b3-e998f4cdc7c6', 'Elite Health Systems', 'EHS', 'ehs.healthezee.com', 'active', 'Enterprise')
-      ON CONFLICT (code) DO UPDATE SET
-        name = EXCLUDED.name,
-        subdomain = EXCLUDED.subdomain,
-        status = EXCLUDED.status,
-        subscription_tier = EXCLUDED.subscription_tier
-    `);
+    // [CLEANUP] Hardcoded junk tenants (NAH, EHS) removed to prevent resurrection.
 
-    // --- STRATEGIC AUTO-DISCOVERY: Resurrect "Ghost Shards" (Validated Only) ---
-    console.log('🔍 [INFRA] Running Institutional Auto-Discovery (Validation-First)...');
-    const { rows: schemas } = await pool.query(`
-       SELECT s.schema_name 
-       FROM information_schema.schemata s
-       INNER JOIN information_schema.tables t ON s.schema_name = t.table_schema
-       WHERE s.schema_name NOT IN ('information_schema', 'pg_catalog', 'public', 'emr')
-       AND t.table_name = 'patients'
-    `);
-
-    const NAMING_SUFFIXES = ['General Hospital', 'Specialistic Center', 'Medical Hub', 'Care & Diagnostics', 'Healthcare Institute'];
-    
-    for (const s of schemas) {
-       const code = s.schema_name.toUpperCase();
-       const suffix = NAMING_SUFFIXES[Math.abs(s.schema_name.length % NAMING_SUFFIXES.length)];
-       const name = `${code} ${suffix}`;
-       const subdomain = code.toLowerCase();
-
-       // 1. Management Plane Synchronization (Defensive Audit)
-       const { rows: existing } = await pool.query('SELECT id FROM emr.management_tenants WHERE code = $1 OR subdomain = $2', [code, subdomain]);
-       if (existing.length > 0) {
-          await pool.query('UPDATE emr.management_tenants SET name = $1 WHERE id = $2', [name, existing[0].id]);
-       } else {
-          await pool.query(`
-            INSERT INTO emr.management_tenants (name, code, subdomain, schema_name, status)
-            VALUES ($1, $2, $3, $4, 'active')
-          `, [name, code, subdomain, s.schema_name]);
-       }
-       
-       // 2. Core Registry Synchronization (Defensive Audit)
-       const { rows: existingCore } = await pool.query('SELECT id FROM emr.tenants WHERE code = $1 OR subdomain = $2', [code, subdomain]);
-       if (existingCore.length > 0) {
-          await pool.query('UPDATE emr.tenants SET name = $1 WHERE id = $2', [name, existingCore[0].id]);
-       } else {
-          await pool.query(`
-            INSERT INTO emr.tenants (name, code, subdomain, status, subscription_tier)
-            VALUES ($1, $2, $3, 'active', 'Enterprise')
-          `, [name, code, subdomain]);
-       }
-    }
-    console.log(`✅ [INFRA] Auto-Discovery complete. Synchronized ${schemas.length} institutional nodes.`);
+    // [CLEANUP] Strategic Auto-Discovery disabled to prevent accidental resurrection of stale shards.
+    console.log('🔍 [INFRA] Institutional Auto-Discovery is now dormant (Clean State Enabled).');
 
     // Superadmin Governance
     await pool.query(`
