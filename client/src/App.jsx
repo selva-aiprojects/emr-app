@@ -23,7 +23,7 @@ const EmployeesPage = lazy(() => import('./pages/EmployeesPage.jsx'));
 const AccountsPage = lazy(() => import('./pages/AccountsPage.jsx'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'));
 const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
-const RedesignedLoginPage = lazy(() => import('./pages/RedesignedLoginPage.jsx'));
+const UnifiedLoginPage = lazy(() => import('./pages/UnifiedLoginPage.jsx'));
 const UsersPage = lazy(() => import('./pages/UsersPage.jsx'));
 const LabPage = lazy(() => import('./pages/LabPage.jsx'));
 const LabAvailabilityPage = lazy(() => import('./pages/LabAvailabilityPage.jsx'));
@@ -56,7 +56,9 @@ export default function App() {
       <div className="h-64 bg-slate-50 rounded-xl mt-4" />
     </div>
   );
-  const [tenants, setTenants] = useState([]);
+  const [tenants, setTenants] = useState([
+    { id: 'b01f0cdc-4e8b-4db5-ba71-e657a414695e', name: 'NHGL Healthcare Institute', code: 'NHGL' }
+  ]);
   const [session, setSession] = useState(() => {
     const s = api.getStoredSession();
     const u = api.getStoredUser();
@@ -122,7 +124,9 @@ export default function App() {
   const scopedPatients = useMemo(() => {
     if (!isDoctor) return patients;
     // For Doctors: Show patients with appointments/encounters OR the currently active patient (e.g. just created)
-    return patients.filter((p) => doctorPatientIds?.has(p.id) || p.id === activePatientId);
+    const result = patients.filter((p) => doctorPatientIds?.has(p.id) || p.id === activePatientId);
+    console.log(`[FORENSIC_SCOPE] Doctor Patient Scope. Total: ${patients.length}, Scoped: ${result.length}, ActiveID: ${activePatientId}`);
+    return result;
   }, [isDoctor, patients, doctorPatientIds, activePatientId]);
 
   const scopedAppointments = useMemo(() => (isDoctor ? doctorAppointments : appointments), [isDoctor, doctorAppointments, appointments]);
@@ -280,7 +284,7 @@ export default function App() {
     }
 
     const mode = options.mode || 'full';
-    const bootstrap = await api.getBootstrap(tenantId, userId);
+    const bootstrap = await api.getBootstrapData(tenantId, userId);
 
     const effectivePermissions = mergePermissions(bootstrap.permissions);
     const normalizedRole = normalizeRole(userRole);
@@ -288,16 +292,47 @@ export default function App() {
     const canReadReports = roleViews.includes('reports');
 
     setPermissions(effectivePermissions);
-    setPatients(bootstrap.patients || []);
-    setAppointments(bootstrap.appointments || []);
-    setWalkins(bootstrap.walkins || []);
+
+    // Use non-destructive merging for critical entities to handle replication lag
+    const mergeData = (prev, incoming) => {
+        if (!incoming) return prev;
+        const existingIds = new Set(prev.map(p => p.id));
+        const newOnes = incoming.filter(p => !existingIds.has(p.id));
+        return [...prev, ...newOnes];
+    };
+
+    setPatients(prev => {
+        const merged = mergeData(prev, bootstrap.patients);
+        // Force-prepend any un-synced vault patient if found
+        const vaultRaw = localStorage.getItem('LAST_CREATED_PATIENT_SYNC');
+        if (vaultRaw) {
+            try {
+                const vault = JSON.parse(vaultRaw);
+                const age = Date.now() - vault.timestamp;
+                if (age < 300000) { // 5 minutes
+                    const exists = merged.some(p => p.lastName === vault.lastName);
+                    if (!exists) {
+                         console.log('RE-INJECTING missing patient from SyncVault:', vault.lastName);
+                         return [{ id: 'vault-' + vault.timestamp, ...vault, mrn: 'SYNC-PENDING' }, ...merged];
+                    }
+                }
+            } catch (e) {}
+        }
+        console.log(`DEBUG_REFRESH: Patients count ${prev.length} -> ${merged.length}`);
+        return merged;
+    });
+    setAppointments(prev => mergeData(prev, bootstrap.appointments));
+    setWalkins(prev => mergeData(prev, bootstrap.walkins));
     setEncounters(bootstrap.encounters || []);
+    window.DEBUG_ALL_ENCOUNTERS = bootstrap.encounters || [];
+    
     setInvoices(bootstrap.invoices || []);
-    setInventory(bootstrap.inventory || []);
-    setEmployees(bootstrap.employees || []);
-    setEmployeeLeaves(bootstrap.employeeLeaves || []);
-    setInsuranceProviders(bootstrap.insuranceProviders || []);
-    setClaims(bootstrap.claims || []);
+    setInventory(prev => mergeData(prev, bootstrap.inventory));
+    setEmployees(prev => mergeData(prev, bootstrap.employees));
+    setEmployeeLeaves(prev => mergeData(prev, bootstrap.employeeLeaves));
+    setInsuranceProviders(prev => mergeData(prev, bootstrap.insuranceProviders));
+    setClaims(prev => mergeData(prev, bootstrap.claims));
+    
     if (!activePatientId && bootstrap.patients?.length) {
       setActivePatientId(bootstrap.patients[0].id);
     }
@@ -466,7 +501,7 @@ export default function App() {
   }
 
   if (!session) {
-    return <RedesignedLoginPage tenants={tenants} onLogin={handleLogin} loading={loading} error={error} />;
+    return <UnifiedLoginPage tenants={tenants} onLogin={handleLogin} loading={loading} error={error} />;
   }
 
   // Calculate metrics safely
@@ -544,15 +579,21 @@ export default function App() {
             activeUser={activeUser}
             session={session}
             tenant={tenant}
-            patients={scopedPatients}
+            patients={patients}
             setView={setView}
             setActivePatientId={setActivePatientId}
             onCreatePatient={async (data) => {
+              console.log('DEBUG: onCreatePatient called in App.jsx', data);
               try {
-                await api.createPatient({ ...data, tenantId: tenant?.id || session?.tenantId });
-                await refreshTenantData(tenant?.id || session?.tenantId, activeUser?.id, activeUser?.role, { mode: 'fast' });
+                const newPatient = await api.createPatient({ ...data, tenantId: tenant?.id || session?.tenantId });
+                if (newPatient) {
+                  // Persistent vault injection with REAL server ID
+                  localStorage.setItem('LAST_CREATED_PATIENT_SYNC', JSON.stringify({ ...newPatient, timestamp: Date.now() }));
+                  setPatients(prev => [newPatient, ...prev]);
+                }
                 showToast({ message: 'Patient registered successfully!', type: 'success' });
               } catch (err) {
+                console.error('DEBUG: onCreatePatient FAILED', err);
                 showToast({ message: 'Registration failed: ' + err.message, type: 'error' });
               }
             }}
@@ -684,6 +725,7 @@ export default function App() {
             <EmrPage
               tenant={tenant}
               activeUser={activeUser}
+              selectedId={activePatientId}
               patients={scopedPatients}
               providers={scopedProviders}
               encounters={scopedEncounters}
@@ -700,7 +742,9 @@ export default function App() {
                   diagnosis: data.diagnosis,
                   notes: data.notes,
                   bp: data.bp, // Ensure backend handles these or they'll be ignored
-                  hr: data.hr
+                  hr: data.hr,
+                  wardId: data.wardId,
+                  bedId: data.bedId
                 });
 
                 // 2. Only doctors can create prescription records
@@ -715,7 +759,9 @@ export default function App() {
                       vitals: { bp: data.bp, hr: data.hr },
                       medications: data.medications,
                       notes: data.notes,
-                      providerId: data.providerId
+                      providerId: data.providerId,
+                      wardId: data.wardId,
+                      bedId: data.bedId
                     }
                   });
 
@@ -726,7 +772,9 @@ export default function App() {
                       encounterId: encounterRes?.id || `enc-${Date.now()}`,
                       priority: 'routine',
                       category: data.type === 'Emergency' ? 'stat' : 'outpatient',
-                      items: data.pharmacyItems || []
+                      items: data.pharmacyItems || [],
+                      wardId: data.wardId,
+                      bedId: data.bedId
                     });
                   } catch (rxErr) {
                     console.error('Failed to create pharmacy prescription:', rxErr);
@@ -750,7 +798,9 @@ export default function App() {
           <InpatientPage
             tenant={tenant}
             providers={providers}
+            encounters={encounters}
             onDischarge={() => refreshTenantData()}
+            refreshTenantData={() => refreshTenantData()}
           />
         )}
 
@@ -902,13 +952,6 @@ export default function App() {
               withRefresh(() => api.addAppointment({
                 tenantId: session.tenantId, 
                 userId: activeUser.id,
-                patientId: appointmentData.patientId,
-                labId: appointmentData.labId,
-                testType: appointmentData.testType,
-                date: appointmentData.date,
-                startTime: appointmentData.startTime,
-                endTime: appointmentData.endTime,
-                reason: appointmentData.reason,
                 urgent: appointmentData.urgent,
                 fasting: appointmentData.fasting,
                 price: appointmentData.price

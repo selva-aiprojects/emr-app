@@ -23,6 +23,7 @@ export async function getEncounters(tenantId) {
   return result.rows.map((row) => ({
     ...row,
     patientName: `${row.first_name || ''} ${row.last_name || ''}`.trim(),
+    patient_name: `${row.first_name || ''} ${row.last_name || ''}`.trim(), // Added for snake_case UI compatibility
     providerName: row.provider_name,
   }));
 }
@@ -36,6 +37,8 @@ export async function createEncounter({
   complaint,
   diagnosis,
   notes,
+  wardId,
+  bedId
 }) {
   const sql = `
     INSERT INTO encounters (
@@ -46,9 +49,11 @@ export async function createEncounter({
       chief_complaint,
       diagnosis,
       notes,
-      status
+      status,
+      ward_id,
+      bed_id
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, 'open')
+    VALUES ($1, $2, $3, $4, $5, $6, $7, 'open', $8, $9)
     RETURNING *
   `;
 
@@ -60,7 +65,14 @@ export async function createEncounter({
     complaint,
     diagnosis,
     notes,
+    wardId,
+    bedId
   ]);
+
+  // If a bed is specified, mark it as occupied
+  if (bedId) {
+    await query(`UPDATE beds SET status = 'occupied' WHERE id = $1`, [bedId]);
+  }
 
   return result.rows[0];
 }
@@ -73,6 +85,11 @@ export async function dischargePatient({
   followUpRequired,
   followUpDate,
 }) {
+  // 1. Get the encounter to find the bedId
+  const encRes = await query('SELECT bed_id FROM encounters WHERE id = $1', [encounterId]);
+  const bedId = encRes.rows[0]?.bed_id;
+
+  // 2. Update encounter status
   const sql = `
     UPDATE encounters 
     SET
@@ -94,6 +111,11 @@ export async function dischargePatient({
     encounterId,
     tenantId,
   ]);
+
+  // 3. If a bed was assigned, set it back to available
+  if (bedId) {
+    await query(`UPDATE beds SET status = 'available' WHERE id = $1`, [bedId]);
+  }
 
   return result.rows[0];
 }

@@ -4,54 +4,57 @@
  */
 
 import { query } from './connection.js';
+import { generateMRN } from './tenant.service.js';
 
 // =====================================================
 // PATIENTS
 // =====================================================
 
-export async function getPatients(tenantId, userRole = null, limit = 50, offset = 0, includeArchived = false) {
-  let sql = `
+export async function getPatients(tenantId, userRole = null, limit = 50, offset = 0, includeArchived = false, filters = {}) {
+  const values = [tenantId, includeArchived];
+  let queryStr = `
     SELECT 
       p.id, p.first_name, p.last_name, p.date_of_birth, p.gender, p.phone, p.email, p.address, p.mrn, p.blood_group, p.medical_history, p.emergency_contact, p.insurance, p.created_at, p.updated_at, p.is_archived
     FROM patients p
     WHERE p.tenant_id = $1
-  `;
+    AND p.is_archived = $2`;
 
-  const params = [tenantId];
-  let paramIndex = 2;
-
-  // Note: role-based scoping is handled at the application layer (App.jsx scopedPatients)
-  // The userRole param is kept for API compatibility but no longer filters at DB level
-
-  if (!includeArchived) {
-    sql += ` AND p.is_archived = $${paramIndex++}`;
-    params.push(false);
+  if (filters.text) {
+    const textPattern = `%${filters.text}%`;
+    values.push(textPattern);
+    queryStr += ` AND (p.first_name ILIKE $${values.length} OR p.last_name ILIKE $${values.length} OR p.mrn ILIKE $${values.length} OR p.phone ILIKE $${values.length})`;
   }
 
-  sql += ` ORDER BY p.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
-  params.push(limit, offset);
+  queryStr += ` ORDER BY p.created_at DESC LIMIT $${values.length + 1} OFFSET $${values.length + 2}`;
+  values.push(limit, offset);
 
-  const result = await query(sql, params);
-  return result.rows;
+  console.log(`[PATIENT_SERVICE] Fetching for tenant: ${tenantId}, search: ${filters.text || 'none'}, limit: ${limit}`);
+  const res = await query(queryStr, values);
+  return res.rows;
 }
 
-export async function searchPatients(tenantId, searchTerm, filters = {}) {
-  const { bloodGroup, gender, ageRange, city, state } = filters;
+export async function searchPatients(tenantId, searchTermOrFilters, filters = {}) {
+  // Support both (tenantId, text, filters) and (tenantId, {text, ...})
+  let searchTerm = typeof searchTermOrFilters === 'string' ? searchTermOrFilters : (searchTermOrFilters?.text || '');
+  let searchFilters = typeof searchTermOrFilters === 'object' ? searchTermOrFilters : filters;
+  
+  const { bloodGroup, gender, ageRange, city, state } = searchFilters;
   
   let sql = `
     SELECT 
-      p.id, p.first_name, p.last_name, p.dob, p.gender, p.phone, p.email, p.address, p.city, p.state, p.country, p.postal_code, p.mrn, p.blood_group, p.allergies, p.emergency_contact_name, p.emergency_contact_phone, p.emergency_contact_relationship, p.insurance_provider, p.insurance_policy_number, p.created_at, p.updated_at, p.is_archived,
+      p.id, p.first_name, p.last_name, p.date_of_birth, p.gender, p.phone, p.email, p.address, p.mrn, p.blood_group, p.medical_history, p.emergency_contact, p.insurance, p.created_at, p.updated_at, p.is_archived,
       u.name as primary_doctor_name
     FROM patients p
     LEFT JOIN emr.users u ON p.primary_doctor_id = u.id
-    WHERE p.tenant_id = $1
+    WHERE 1=1
   `;
 
-  const params = [tenantId];
-  let paramIndex = 2;
+  const params = [];
+  let paramIndex = 1;
 
   // Search term
   if (searchTerm) {
+    console.log(`[PATIENT_SEARCH] Searching for "${searchTerm}"`);
     sql += ` AND (
       p.first_name ILIKE $${paramIndex++} OR 
       p.last_name ILIKE $${paramIndex++} OR 
@@ -109,27 +112,24 @@ export async function getPatientById(id, tenantId, userRole = null) {
   return result.rows[0];
 }
 
-export async function createPatient({ tenantId, firstName, lastName, dob, gender, phone, email, address, city, state, country, postalCode, bloodGroup, allergies, emergencyContactName, emergencyContactPhone, emergencyContactRelationship, insuranceProvider, insurancePolicyNumber, primaryDoctorId }) {
-  const sql = `
-    INSERT INTO patients (
-      tenant_id, first_name, last_name, dob, gender, phone, email, address, city, state, country, postal_code, blood_group, allergies, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, insurance_provider, insurance_policy_number, primary_doctor_id
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-    RETURNING *
-  `;
+export async function createPatient({ tenantId, firstName, lastName, dob, gender, phone, email, address, bloodGroup, emergencyContact, insurance, medicalHistory }) {
+  // Generate MRN from shared emr schema function BEFORE insert to avoid Not-Null constraint failure
+  const mrn = await generateMRN(tenantId);
+  console.log(`[PATIENT_CREATE] Creating patient: ${firstName} ${lastName}, MRN: ${mrn}, Tenant: ${tenantId}`);
 
-  const result = await query(sql, [
-    tenantId, firstName, lastName, dob, gender, phone, email, address, city, state, country, postalCode, bloodGroup, allergies, emergencyContactName, emergencyContactPhone, emergencyContactRelationship, insuranceProvider, insurancePolicyNumber, primaryDoctorId
+  const insertRes = await query(`
+    INSERT INTO patients (
+      tenant_id, first_name, last_name, date_of_birth, gender, phone, email, address, 
+      blood_group, medical_history, emergency_contact, insurance, mrn, is_archived
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, false)
+    RETURNING *
+  `, [
+    tenantId, firstName, lastName, dob, gender, phone, email, address, 
+    bloodGroup, JSON.stringify(medicalHistory), emergencyContact, insurance, mrn
   ]);
 
-  // Generate MRN from shared emr schema function
-  const mrnResult = await query('SELECT emr.get_next_mrn($1) as mrn', [tenantId]);
-  const mrn = mrnResult.rows[0].mrn;
-
-  // Update patient with MRN
-  await query('UPDATE patients SET mrn = $1 WHERE id = $2', [mrn, result.rows[0].id]);
-
-  return { ...result.rows[0], mrn };
+  console.log(`[PATIENT_SERVICE] Successfully created patient with MRN: ${mrn}`);
+  return insertRes.rows[0];
 }
 
 export async function updatePatient({ tenantId, id, updates }) {
@@ -143,7 +143,7 @@ export async function updatePatient({ tenantId, id, updates }) {
   });
 
   fields.push('updated_at = NOW()');
-  values.push(id);
+  values.push(id, tenantId);
 
   const sql = `
     UPDATE patients 
@@ -161,7 +161,7 @@ export async function addClinicalRecord({ tenantId, patientId, userId, recordTyp
     INSERT INTO clinical_records (
       tenant_id, patient_id, created_by, record_type, diagnosis, treatment, notes, attachments
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
 

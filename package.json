@@ -10,7 +10,7 @@
   "scripts": {
     "postinstall": "npm run prisma:generate",
     "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
-    "dev:server": "node --watch server/index.js",
+    "dev:server": "node --watch --watch-path=server server/index.js",
     "dev:client": "vite client --port 5175",
     "build": "cd client && npm install && cd .. && vite build client --config client/vite.config.js",
     "preview": "vite preview client --config client/vite.config.js",

@@ -302,7 +302,14 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
                       </td>
                       <td>
                         <div className="text-sm font-bold text-slate-800">{item.patient_first_name} {item.patient_last_name}</div>
-                        <div className="text-[10px] text-slate-400 font-black uppercase mt-0.5">REF: {item.patient_id?.slice(0, 8)}</div>
+                        <div className="flex flex-col gap-0.5">
+                          <div className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">REF: {item.patient_id?.slice(0, 8)}</div>
+                          {item.ward_id && (
+                            <div className="text-[9px] font-black text-blue-600 uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                              <Activity className="w-2.5 h-2.5" /> {item.ward_id} • Bed: {item.bed_id || 'NA'}
+                            </div>
+                          )}
+                        </div>
                       </td>
                       <td>
                          <div className="text-sm font-black text-slate-900">{item.quantity_prescribed} Units</div>

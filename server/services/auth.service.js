@@ -27,7 +27,13 @@ export async function hashPassword(password) {
  * @returns {Promise<boolean>} - True if passwords match
  */
 export async function comparePassword(password, hash) {
-  return await bcrypt.compare(password, hash);
+  try {
+    // Using compareSync to avoid worker thread deadlocks in specific dev environments
+    return bcrypt.compareSync(password, hash);
+  } catch (err) {
+    console.error('[AUTH_SERVICE] Comparison error:', err.message);
+    return false;
+  }
 }
 
 /**

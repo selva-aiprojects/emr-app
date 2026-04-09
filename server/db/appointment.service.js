@@ -10,18 +10,16 @@ import { query } from './connection.js';
 // =====================================================
 
 export async function getAppointments(tenantId, filters = {}) {
-  const { status, doctorId, departmentId, date, patientId } = filters;
+  const { status, doctorId, patientId, date } = filters;
   
   let sql = `
     SELECT 
       a.*, p.first_name || ' ' || p.last_name as patient_name,
       p.phone as patient_phone,
-      d.name as department_name,
       u.name as doctor_name
     FROM appointments a
     LEFT JOIN patients p ON a.patient_id = p.id
-    LEFT JOIN departments d ON a.department_id = d.id
-    LEFT JOIN emr.users u ON a.doctor_id = u.id
+    LEFT JOIN emr.users u ON a.provider_id = u.id
     WHERE a.tenant_id = $1
   `;
   
@@ -34,17 +32,12 @@ export async function getAppointments(tenantId, filters = {}) {
   }
   
   if (doctorId) {
-    sql += ` AND a.doctor_id = $${paramIndex++}`;
+    sql += ` AND a.provider_id = $${paramIndex++}`;
     params.push(doctorId);
   }
   
-  if (departmentId) {
-    sql += ` AND a.department_id = $${paramIndex++}`;
-    params.push(departmentId);
-  }
-  
   if (date) {
-    sql += ` AND DATE(a.start_time) = $${paramIndex++}`;
+    sql += ` AND DATE(a.scheduled_start) = $${paramIndex++}`;
     params.push(date);
   }
   
@@ -53,21 +46,21 @@ export async function getAppointments(tenantId, filters = {}) {
     params.push(patientId);
   }
   
-  sql += ` ORDER BY a.start_time DESC`;
+  sql += ` ORDER BY a.scheduled_start DESC`;
   
   const result = await query(sql, params);
   return result.rows;
 }
 
-export async function createAppointment({ tenantId, patientId, doctorId, departmentId, start, end, type, notes, status = 'scheduled' }) {
+export async function createAppointment({ tenantId, patientId, providerId, start, end, status = 'scheduled', reason, source = 'staff' }) {
   const sql = `
-    INSERT INTO appointments (tenant_id, patient_id, doctor_id, department_id, start_time, end_time, type, status, notes)
+    INSERT INTO appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, status, reason, source)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
   
   const result = await query(sql, [
-    tenantId, patientId, doctorId, departmentId, start, end, type, status, notes
+    tenantId, patientId, providerId, start, end, status, reason, source
   ]);
   
   return result.rows[0];
@@ -89,13 +82,13 @@ export async function getAvailableSlots(tenantId, doctorId, date) {
   const sql = `
     SELECT 
       COUNT(*) as booked_count,
-      EXTRACT(HOUR FROM start_time) as hour_slot
+      EXTRACT(HOUR FROM scheduled_start) as hour_slot
     FROM appointments 
     WHERE tenant_id = $1 
-      AND doctor_id = $2 
-      AND DATE(start_time) = $3 
+      AND provider_id = $2 
+      AND DATE(scheduled_start) = $3 
       AND status != 'cancelled'
-    GROUP BY EXTRACT(HOUR FROM start_time)
+    GROUP BY EXTRACT(HOUR FROM scheduled_start)
     HAVING COUNT(*) < 4
     ORDER BY hour_slot
   `;
@@ -104,16 +97,16 @@ export async function getAvailableSlots(tenantId, doctorId, date) {
   return result.rows;
 }
 
-export async function bookAppointment({ tenantId, patientId, doctorId, departmentId, start, end, type, notes }) {
+export async function bookAppointment({ tenantId, patientId, doctorId, start, end, reason }) {
   // Check for conflicts
   const conflictSql = `
     SELECT COUNT(*) as conflict_count
     FROM appointments 
     WHERE tenant_id = $1 
-      AND doctor_id = $2 
+      AND provider_id = $2 
       AND (
-        (start_time <= $3 AND end_time > $3) OR 
-        (start_time < $4 AND end_time >= $4)
+        (scheduled_start <= $3 AND scheduled_end > $3) OR 
+        (scheduled_start < $4 AND scheduled_end >= $4)
       )
       AND status != 'cancelled'
   `;
@@ -126,6 +119,27 @@ export async function bookAppointment({ tenantId, patientId, doctorId, departmen
   
   // Create appointment
   return await createAppointment({
-    tenantId, patientId, doctorId, departmentId, start, end, type, notes, status: 'confirmed'
+    tenantId, patientId, providerId: doctorId, scheduledStart: start, scheduledEnd: end, reason, status: 'scheduled'
   });
+}
+
+export async function rescheduleAppointment({ appointmentId, tenantId, userId, start, end, reason }) {
+  const sql = `
+    UPDATE appointments 
+    SET 
+      scheduled_start = $1, 
+      scheduled_end = $2, 
+      reason = COALESCE($3, reason),
+      updated_at = NOW()
+    WHERE id = $4 AND tenant_id = $5
+    RETURNING *
+  `;
+  
+  const result = await query(sql, [start, end, reason, appointmentId, tenantId]);
+  
+  if (result.rows.length === 0) {
+    throw new Error('Appointment not found or tenant mismatch');
+  }
+
+  return result.rows[0];
 }

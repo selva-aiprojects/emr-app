@@ -187,7 +187,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         return;
       }
       
-      const data = await api.get(`/dashboard/metrics?tenantId=${tenant.id}&timeFilter=${timeFilter}`);
+      const data = await api.get(`/reports/dashboard/metrics?tenantId=${tenant.id}&timeFilter=${timeFilter}`);
       
       setRealtimeMetrics({
         totalPatients: data.totalPatients || 0,
@@ -681,15 +681,14 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
          </div>
          <div className="dashboard-card bg-slate-50 border border-slate-200 p-4 text-center">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Bed Registry</p>
-            <p className="text-2xl font-black text-emerald-700">₹{(realtimeMetrics.masterStats?.beds || 0).toLocaleString('en-IN')}</p>
+            <p className="text-2xl font-black text-slate-800">{(realtimeMetrics.masterStats?.beds || 0).toLocaleString('en-IN')}</p>
             <div className="w-full bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
                <div className="bg-rose-500 h-full" style={{ width: `${Math.min((realtimeMetrics.masterStats?.beds || 0) * 5, 100)}%` }}></div>
             </div>
          </div>
          <div className="dashboard-card bg-slate-50 border border-slate-200 p-4 text-center">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-1">Service Catalog</p>
-            <p className="text-2xl font-black text-emerald-700">₹{(realtimeMetrics.masterStats?.services || 0).toLocaleString('en-IN')}</p>
-            <p className="text-xl font-black text-slate-800">{realtimeMetrics.masterStats?.services || 0}</p>
+            <p className="text-2xl font-black text-slate-800">{(realtimeMetrics.masterStats?.services || 0).toLocaleString('en-IN')}</p>
             <div className="w-full bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
                <div className="bg-amber-500 h-full" style={{ width: `${Math.min((realtimeMetrics.masterStats?.services || 0) * 2, 100)}%` }}></div>
             </div>

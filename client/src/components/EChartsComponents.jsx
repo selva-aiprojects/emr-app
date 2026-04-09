@@ -270,7 +270,7 @@ export const TopDiagnosesChart = ({ data = [] }) => {
     color: ['#8b5cf6'],
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { top: 10, left: 100, right: 30, bottom: 10, containLabel: false },
+    grid: { top: 10, left: 10, right: 30, bottom: 10, containLabel: true },
     xAxis: { type: 'value', axisLine: { show: false }, splitLine: { lineStyle: { type: 'dashed' } } },
     yAxis: {
       type: 'category',

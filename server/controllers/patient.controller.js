@@ -13,8 +13,8 @@ class PatientController {
       if (search) {
         whereClause = {
           OR: [
-            { firstName: { contains: search, mode: 'insensitive' } },
-            { lastName: { contains: search, mode: 'insensitive' } },
+            { first_name: { contains: search, mode: 'insensitive' } },
+            { last_name: { contains: search, mode: 'insensitive' } },
             { mrn: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } }
           ]
@@ -26,7 +26,7 @@ class PatientController {
         include: {
           appointments: {
             where: { status: 'Scheduled' },
-            orderBy: { appointmentDate: 'asc' },
+            orderBy: { scheduled_start: 'asc' },
             take: 1
           },
           _count: {
@@ -36,7 +36,7 @@ class PatientController {
             }
           }
         },
-        orderBy: { lastName: 'asc', firstName: 'asc' },
+        orderBy: { last_name: 'asc', first_name: 'asc' },
         take: parseInt(limit),
         skip: parseInt(offset)
       });
@@ -121,7 +121,7 @@ class PatientController {
       // Generate MRN if not provided
       if (!patientData.mrn) {
         const lastPatient = await db.patient.findFirst({
-          orderBy: { createdAt: 'desc' },
+          orderBy: { created_at: 'desc' },
           select: { mrn: true }
         });
         
@@ -130,8 +130,21 @@ class PatientController {
         patientData.mrn = `MRN-${nextNumber}`;
       }
 
+      // Map camelCase to snake_case for DB
+      const mappedData = {
+        mrn: patientData.mrn,
+        first_name: patientData.firstName || patientData.first_name,
+        last_name: patientData.lastName || patientData.last_name,
+        email: patientData.email,
+        phone: patientData.phone,
+        date_of_birth: patientData.dob ? new Date(patientData.dob) : (patientData.date_of_birth ? new Date(patientData.date_of_birth) : null),
+        gender: patientData.gender,
+        address: patientData.address,
+        blood_group: patientData.bloodGroup || patientData.blood_group
+      };
+
       const patient = await db.patient.create({
-        data: patientData,
+        data: mappedData,
         include: {
           _count: {
             select: {

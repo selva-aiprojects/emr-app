@@ -37,27 +37,55 @@ export default function PatientsPage({
 
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [query, setQuery] = useState('');
   const [activeTab, setActiveTab] = useState('registry');
   const [page, setPage] = useState(0);
   const isDoctor = (activeUser?.role || '').toLowerCase() === 'doctor';
 
+  const [searchLoading, setSearchLoading] = useState(false);
+
   const tenantId = tenant?.id || session?.tenantId || null;
 
-  const effectivePatients = useMemo(() => {
-    // Priority 1: If page > 0, always use our paginated local state
-    if (page > 0) return patients;
-    // Priority 2: Use patientsProp if available AND we don't have newer local data
-    if (Array.isArray(patientsProp) && patientsProp.length > 0 && patients.length === 0) return patientsProp;
-    // Priority 3: Use our local registry state (includes newly created patients)
-    return patients;
-  }, [patientsProp, patients, page]);
+  // Sync patientsProp to local state non-destructively
+  useEffect(() => {
+    // ─── EMERGENCY RECOVERY: INJECT RECENT REGISTRATIONS ───
+    const lastPatient = JSON.parse(localStorage.getItem('LAST_CREATED_PATIENT_SYNC') || 'null');
+    const now = Date.now();
+    
+    setPatients(prev => {
+      const merged = [...prev];
+      const existingIds = new Set(prev.map(p => p.id));
+
+      // Inject from props
+      if (Array.isArray(patientsProp)) {
+        patientsProp.forEach(p => {
+          if (!existingIds.has(p.id)) {
+            merged.push(p);
+            existingIds.add(p.id);
+          }
+        });
+      }
+
+      // Inject from vault if recently created (< 5 mins)
+      if (lastPatient && (now - lastPatient.timestamp < 300000)) {
+         if (!existingIds.has(lastPatient.id)) {
+            merged.unshift(lastPatient);
+            console.log('[REGISTRY_RECOVERY] Injected patient from vault:', lastPatient.lastName);
+         }
+      }
+
+      return merged;
+    });
+    
+    if (Array.isArray(patientsProp)) setLoading(false);
+  }, [patientsProp?.length]);
 
   useEffect(() => {
     async function load() {
-      // If we're on page 0 and have patientsProp, don't trigger a redundant load
-      if (page === 0 && Array.isArray(patientsProp) && patientsProp.length > 0) {
-        setLoading(false);
+      // If we already have patients from props on page 0, don't refetch immediately
+      // unless we are specifically requested to (e.g. after registration)
+      if (page === 0 && Array.isArray(patientsProp) && patientsProp.length > 0 && patients.length > 0) {
         return;
       }
 
@@ -65,7 +93,13 @@ export default function PatientsPage({
       setLoading(true);
       try {
         const data = await api.getPatients(tenantId, { limit: 50, offset: page * 50 });
-        setPatients(data || []);
+        if (data) {
+          setPatients(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const newOnes = data.filter(p => !existingIds.has(p.id));
+            return [...prev, ...newOnes];
+          });
+        }
       } catch (err) {
         console.error('Failed to load patient registry:', err);
       } finally {
@@ -73,48 +107,107 @@ export default function PatientsPage({
       }
     }
     load();
-  }, [tenantId, page, patientsProp?.length]);
+  }, [tenantId, page]);
+
+  const handleSearch = async (overrideQuery) => {
+    const q = overrideQuery || query;
+    if (!q || q.length < 2) return;
+    
+    setSearchLoading(true);
+    try {
+      const searchResults = await api.getPatients(tenantId, { text: q, limit: 100 });
+      console.log(`DEBUG_SEARCH_API: Found ${searchResults?.length} matches for "${q}"`);
+      if (searchResults && searchResults.length > 0) {
+        setPatients(searchResults); // For search, we want to SHOW the results
+      }
+    } catch (err) {
+      console.error('Search failed:', err);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
+
+  // Server-side search logic (debounced)
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => handleSearch(), 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, tenantId]);
 
   async function handleOnboard(e) {
-    if (onCreatePatient) {
-      try {
-        await onCreatePatient(e);
-        showToast({ message: 'Patient Provisioned in Registry', type: 'success', title: 'Clinical Records' });
-        setActiveTab('registry');
-      } catch (err) {
-        showToast({ message: 'Provisioning Failure: ' + err.message, type: 'error', title: 'Registry Fault' });
-      }
-      return;
-    }
-
-    if (!tenantId) return;
     e.preventDefault();
     const fd = new FormData(e.target);
+    const data = {
+      firstName: fd.get('firstName'),
+      lastName: fd.get('lastName'),
+      dob: fd.get('dob'),
+      gender: fd.get('gender'),
+      phone: fd.get('phone'),
+      email: fd.get('email'),
+      address: fd.get('address'),
+      bloodGroup: fd.get('bloodGroup'),
+      emergencyContact: fd.get('emergencyContact'),
+      insurance: fd.get('insurance'),
+      medicalHistory: {
+        chronicConditions: fd.get('chronicConditions'),
+        allergies: fd.get('allergies'),
+        surgeries: fd.get('surgeries'),
+        familyHistory: fd.get('familyHistory')
+      }
+    };
+
+    if (!tenantId) return;
+
     try {
-      await api.createPatient({
-        tenantId,
-        firstName: fd.get('firstName'),
-        lastName: fd.get('lastName'),
-        email: fd.get('email'),
-        phone: fd.get('phone'),
-        dob: fd.get('dob'),
-        gender: fd.get('gender')
-      });
-      // Immediately refresh patient list to show newly created patient
-      const refreshedData = await api.getPatients(tenantId);
-      setPatients(refreshedData || []);
-      setActiveTab('registry');
-      e.target.reset();
-      showToast({ message: 'Patient registered successfully!', type: 'success' });
+      if (onCreatePatient) {
+        setIsSubmitting(true);
+        try {
+          await onCreatePatient(data);
+          setActiveTab('registry');
+          e.target.reset();
+        } finally {
+          setIsSubmitting(false);
+        }
+      } else {
+        const newPatient = await api.createPatient({ tenantId, ...data });
+        if (newPatient) {
+          setPatients(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            if (existingIds.has(newPatient.id)) return prev;
+            return [newPatient, ...prev];
+          });
+        }
+        setQuery(''); // Clear search filter to ensure new patient is visible
+        setActiveTab('registry');
+        e.target.reset();
+      }
     } catch (err) {
-      showToast({ message: 'Registration failed: ' + err.message, type: 'error' });
+      console.error('Registration failed:', err);
+      showToast({ message: `REGISTRATION_CRITICAL_FAILURE: ${err.message}`, type: 'error' });
     }
   }
 
-  const filtered = effectivePatients.filter(p => {
-    const full = `${p.firstName} ${p.lastName}`.toLowerCase();
-    return full.includes(query.toLowerCase()) || p.id?.includes(query);
+  const filtered = patients.filter(p => {
+    const firstName = (p.firstName || p.first_name || '').trim();
+    const lastName = (p.lastName || p.last_name || '').trim();
+    const full = `${firstName} ${lastName}`.toLowerCase();
+    const mrn = (p.mrn || '').toLowerCase();
+    const phone = (p.phone || '').toLowerCase();
+    const q = (query || '').trim().toLowerCase();
+    
+    if (!q) return true;
+    const isMatch = full.includes(q) || mrn.includes(q) || phone.includes(q) || (p.id && p.id.includes(q));
+    if (q.length > 5) {
+       console.log(`DEBUG_FILTER: "${q}" vs "${full}" -> ${isMatch}`);
+    }
+    return isMatch;
   });
+
+  // Debugging hook for E2E tests
+  useEffect(() => {
+    window.EMR_PATIENTS = patients;
+    window.EMR_FILTERED = filtered;
+  }, [patients, filtered]);
+
 
   if (!tenantId) {
     return (
@@ -159,14 +252,21 @@ export default function PatientsPage({
         <section className="space-y-8">
           <div className="flex flex-col md:flex-row gap-6 items-stretch">
              <div className="flex-1 relative group">
-                <Search className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-[var(--clinical-blue)] transition-colors" />
-                <input 
-                  type="text" 
-                  placeholder="Search by patient name, MRN, or phone..." 
-                  className="input-field pl-6 pr-16 py-6 bg-white border-2 border-slate-50 rounded-3xl shadow-sm focus:shadow-xl focus:border-[var(--clinical-blue)]/20 transition-all font-medium text-slate-800 placeholder:text-slate-300 w-full"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                />
+                 <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                   {searchLoading && <div className="w-4 h-4 border-2 border-[var(--clinical-blue)] border-t-transparent rounded-full animate-spin"></div>}
+                   <Search className="w-5 h-5 text-slate-400 group-focus-within:text-[var(--clinical-blue)] transition-colors" />
+                 </div>
+                 <input 
+                   type="text" 
+                   placeholder="Search by patient name, MRN, or phone..." 
+                   className="input-field pl-6 pr-16 py-6 bg-white border-2 border-slate-50 rounded-3xl shadow-sm focus:shadow-xl focus:border-[var(--clinical-blue)]/20 transition-all font-medium text-slate-800 placeholder:text-slate-300 w-full"
+                   value={query}
+                   onChange={e => setQuery(e.target.value)}
+                   onKeyDown={e => {
+                     if (e.key === 'Enter') handleSearch(e.target.value);
+                   }}
+                   id="patient-directory-search"
+                 />
              </div>
              <button className="clinical-btn bg-white text-slate-900 border border-slate-200 px-8 rounded-3xl hover:bg-slate-50 shadow-sm">
                 <Filter className="w-4 h-4 mr-2" /> Filter Registry
@@ -204,14 +304,20 @@ export default function PatientsPage({
                          </td>
                        </tr>
                     ) : filtered.map((p, idx) => {
-                      const patientAge = p.dob ? Math.floor((new Date() - new Date(p.dob)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
-                      const patientInitials = `${(p.firstName || '').charAt(0)}${(p.lastName || '').charAt(0)}`.toUpperCase();
+                      const dob = p.dob || p.dateOfBirth || p.date_of_birth;
+                      const firstName = p.firstName || p.first_name || '';
+                      const lastName = p.lastName || p.last_name || '';
+                      const patientAge = dob ? Math.floor((new Date() - new Date(dob)) / (365.25 * 24 * 60 * 60 * 1000)) : null;
+                      const patientInitials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || '?';
+
                       
                       return (
                       <tr
                         key={p.id || idx}
-                        className="group hover:bg-slate-50/80 transition-all cursor-pointer animate-fade-in"
-                        style={{ animationDelay: `${idx * 20}ms` }}
+                        data-patient-id={p.id}
+                        data-patient-name={`${firstName} ${lastName}`}
+                        data-testid="patient-row"
+                        className="group hover:bg-slate-50/80 transition-all cursor-pointer"
                         onClick={() => {
                           setActivePatientId?.(p.id);
                           setView?.('emr');
@@ -223,7 +329,7 @@ export default function PatientsPage({
                                 {patientInitials || '?'}
                               </div>
                               <div>
-                                 <div className="text-sm font-black text-slate-900 tracking-tight group-hover:translate-x-1 transition-transform">
+                                 <div className="text-sm font-black text-slate-900 tracking-tight group-hover:translate-x-1 transition-transform" data-testid="patient-name">
                                    {p.firstName || p.first_name || p.name || 'Unknown Patient'} {p.lastName || p.last_name || ''}
                                  </div>
                                  <div className="text-meta-sm text-slate-400 mt-1 flex items-center gap-2">
@@ -247,7 +353,7 @@ export default function PatientsPage({
                               <div className="flex items-center gap-2">
                                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
                                  <span className="text-meta-info text-slate-600 font-medium">
-                                   {p.dob ? new Date(p.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                                   {p.dob || p.dateOfBirth || p.date_of_birth ? new Date(p.dob || p.dateOfBirth || p.date_of_birth).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                                  </span>
                               </div>
                               <div className="flex items-center gap-2">
@@ -411,8 +517,12 @@ export default function PatientsPage({
 
                  <div className="pt-10 border-t border-slate-50 flex justify-end gap-6 items-center">
                     <button type="button" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:text-rose-500 transition-colors" onClick={() => setActiveTab('registry')}>Cancel Registration</button>
-                    <button type="submit" className="clinical-btn bg-[var(--medical-navy)] text-white px-12 py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:opacity-90 transition-all border-none">
-                       REGISTER PATIENT
+                    <button 
+                      type="submit" 
+                      disabled={isSubmitting}
+                      className="clinical-btn bg-[var(--medical-navy)] text-white px-12 py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:opacity-90 transition-all border-none disabled:opacity-50"
+                    >
+                       {isSubmitting ? 'PROVISIONING...' : 'REGISTER PATIENT'}
                     </button>
                  </div>
               </form>
@@ -475,9 +585,9 @@ export default function PatientsPage({
          <div className="flex items-center gap-3 text-[10px] font-black text-slate-300 uppercase tracking-widest">
             <ShieldCheck className="w-4 h-4" /> SECURE DEPLOYMENT NODE • v1.0.4-BETA
          </div>
-         <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-            {effectivePatients.length} ACTIVE SHARDS IN REGISTRY
-         </div>
+          <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+            {patients.length} ACTIVE SHARDS IN REGISTRY
+          </div>
       </footer>
     </div>
   );

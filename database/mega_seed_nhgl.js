@@ -11,7 +11,6 @@ import crypto from 'crypto';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const TENANT_ID = 'b01f0cdc-4e8b-4db5-ba71-e657a414695e';
 const client = new pg.Client({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
@@ -19,7 +18,15 @@ const client = new pg.Client({
 
 async function megaSeed() {
   await client.connect();
-  console.log('🚀 Launching Mega-Seeder v9.2 (Deep Data + Diverse Staff)...');
+  
+  // Resolve Dynamic Tenant ID
+  const tenantRes = await client.query(`SELECT id FROM emr.management_tenants WHERE code = 'NHGL'`);
+  if (tenantRes.rows.length === 0) {
+    console.error('❌ Error: NHGL tenant not found in registry. Run bootstrap first.');
+    process.exit(1);
+  }
+  const TENANT_ID = tenantRes.rows[0].id;
+  console.log(`🚀 Launching Mega-Seeder v9.3 for Tenant: ${TENANT_ID}`);
 
   // 1. Diversify Staffing
   console.log('🧑‍💼  Diversifying Hospital Workforce...');

@@ -27,7 +27,7 @@ export const createPrescription = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    const { patientId, encounterId, items } = req.body;
+    const { patientId, encounterId, items, wardId, bedId } = req.body;
     const providerId = req.user?.id; // From auth middleware
     const role = (req.user?.role || '').toLowerCase();
     const tenantId = req.headers['x-tenant-id'];
@@ -68,8 +68,9 @@ export const createPrescription = async (req, res) => {
       INSERT INTO emr.prescriptions(
         tenant_id, patient_id, encounter_id, provider_id,
        status, intent, priority, category,
+       ward_id, bed_id,
       created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING *
     `;
 
@@ -81,7 +82,9 @@ export const createPrescription = async (req, res) => {
       'active',
       'order',
       req.body.priority || 'routine',
-      req.body.category || 'outpatient'
+      req.body.category || 'outpatient',
+      wardId,
+      bedId
     ]);
 
     const prescription = prescriptionResult.rows[0];
@@ -218,6 +221,8 @@ export const getPharmacyQueue = async (req, res) => {
         p.encounter_id,
         p.status as prescription_status,
         p.priority,
+        p.ward_id,
+        p.bed_id,
         p.created_at,
         pi.item_id,
         pi.drug_id,

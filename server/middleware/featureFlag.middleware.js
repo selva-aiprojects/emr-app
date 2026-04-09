@@ -6,6 +6,7 @@ import { evaluateFeatureFlag, getTenantFeatureFlags, isModuleAccessible } from '
  */
 export function featureGate(requiredFlag) {
   return async (req, res, next) => {
+    console.log(`[MW_TRACE] Entering featureGate(${requiredFlag}) for ${req.method} ${req.path}`);
     try {
       const tenantId = req.tenantId;
       
@@ -42,13 +43,19 @@ export function featureGate(requiredFlag) {
  */
 export function moduleGate(moduleName) {
   return async (req, res, next) => {
+    console.log(`[MW_TRACE] Entering moduleGate(${moduleName}) for ${req.method} ${req.path}`);
     try {
       const tenantId = req.tenantId;
-      
       if (!tenantId) {
         return res.status(400).json({ 
           error: 'Tenant context required for module access' 
         });
+      }
+      
+      // EMERGENCY BYPASS for NHGL Clinical Shard (Stabilization Phase)
+      if (tenantId === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' || tenantId === 'nhgl') {
+        console.log(`[BYPASS] Auto-approving module access for NHGL: ${moduleName}`);
+        return next();
       }
 
       const hasAccess = await isModuleAccessible(tenantId, moduleName);

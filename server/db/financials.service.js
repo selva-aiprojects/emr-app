@@ -100,3 +100,28 @@ export async function getFinancialSummary(tenantId, month) {
         projectedSalaries: parseFloat(salaryRes.rows[0]?.total_salaries || 0)
     };
 }
+
+export async function getDoctorPayouts(tenantId) {
+    const sql = `
+    SELECT 
+      u.id as doctor_id,
+      u.name as doctor_name,
+      u.role,
+      COUNT(DISTINCT e.patient_id) as patient_count,
+      COUNT(DISTINCT e.id) as encounter_count,
+      COALESCE(SUM(i.total), 0) as total_revenue,
+      COALESCE(SUM(i.paid), 0) as collected_amount,
+      (COALESCE(SUM(i.paid), 0) * 0.30) as estimated_commission
+    FROM emr.users u
+    JOIN emr.encounters e ON u.id = e.provider_id
+    JOIN emr.invoices i ON e.id = i.encounter_id
+    WHERE u.tenant_id = $1 
+      AND u.role = 'Doctor'
+      AND i.status = 'paid'
+      AND i.created_at > (NOW() - INTERVAL '30 days')
+    GROUP BY u.id, u.name, u.role
+    ORDER BY total_revenue DESC
+  `;
+    const result = await query(sql, [tenantId]);
+    return result.rows;
+}

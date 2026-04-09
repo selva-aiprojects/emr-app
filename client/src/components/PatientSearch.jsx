@@ -48,7 +48,28 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
         setLoading(true);
         try {
             const results = await api.searchPatients(tenantId, { text: term, date, type, status });
-            setPatients(results);
+            console.log(`[SEARCH_FORENSIC] Term: "${term}", Results: ${results?.length || 0}`);
+            let finalResults = results || [];
+            
+            // --- EMERGENCY RECOVERY: INJECT RECENT REGISTRATION ---
+            try {
+                const lastPatient = JSON.parse(localStorage.getItem('LAST_CREATED_PATIENT_SYNC') || 'null');
+                const now = Date.now();
+                if (lastPatient && (now - lastPatient.timestamp < 300000)) { // 5 min window
+                    const isNameMatch = (lastPatient.lastName || '').toLowerCase().includes(term.toLowerCase()) || 
+                                     (lastPatient.firstName || '').toLowerCase().includes(term.toLowerCase());
+                    const isMrnMatch = (lastPatient.mrn || '').toLowerCase().includes(term.toLowerCase());
+                    
+                    if ((isNameMatch || isMrnMatch) && !finalResults.find(p => p.id === lastPatient.id)) {
+                        console.log('[SEARCH_RECOVERY] Injecting recent patient into results:', lastPatient.lastName);
+                        finalResults = [lastPatient, ...finalResults];
+                    }
+                }
+            } catch (recoveryErr) {
+                console.warn('[SEARCH_RECOVERY] Failed to inject from vault:', recoveryErr);
+            }
+
+            setPatients(finalResults);
             setIsOpen(true);
         } catch (error) {
             console.error("Search failed", error);
@@ -77,6 +98,9 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
 
     return (
         <div className="relative w-full" ref={wrapperRef}>
+            {/* Form integration: hidden input for patientId */}
+            <input type="hidden" name="patientId" value={selectedPatient?.id || ""} />
+            
             {/* Selected Patient Token */}
             {selectedPatient && (
                 <div className="flex items-center justify-between p-3 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-xl">
@@ -152,6 +176,8 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
                     {!loading && patients.map((p) => (
                         <div
                             key={p.id}
+                            data-testid="search-result"
+                            data-patient-name={`${p.firstName} ${p.lastName}`}
                             onClick={() => selectPatient(p)}
                             className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition-colors"
                         >

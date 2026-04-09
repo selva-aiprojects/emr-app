@@ -19,7 +19,8 @@ export async function getInvoices(tenantId, filters = {}) {
       u.name as doctor_name
     FROM invoices i
     LEFT JOIN patients p ON i.patient_id = p.id
-    LEFT JOIN emr.users u ON i.doctor_id = u.id
+    LEFT JOIN encounters e ON i.encounter_id = e.id
+    LEFT JOIN emr.users u ON e.provider_id = u.id
     WHERE i.tenant_id = $1
   `;
   
@@ -62,7 +63,7 @@ export async function getInvoices(tenantId, filters = {}) {
   return result.rows;
 }
 
-export async function createInvoice({ tenantId, patientId, doctorId, items, subtotal, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy }) {
+export async function createInvoice({ tenantId, patientId, encounterId, items, subtotal, taxAmount, totalAmount }) {
   // Generate invoice number correctly from emr schema
   const invoiceNumberSql = `SELECT emr.get_next_invoice_number($1) as invoice_number`;
   const invoiceNumberResult = await query(invoiceNumberSql, [tenantId]);
@@ -70,15 +71,23 @@ export async function createInvoice({ tenantId, patientId, doctorId, items, subt
   
   const sql = `
     INSERT INTO invoices (
-      tenant_id, patient_id, doctor_id, invoice_number, items, subtotal, tax, total, payment_method, insurance_provider, policy_number, notes, status, created_by
+      tenant_id, patient_id, encounter_id, invoice_number, subtotal, tax, total, status
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'draft', $12)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, 'unpaid')
     RETURNING *
   `;
   
   const result = await query(sql, [
-    tenantId, patientId, doctorId, invoiceNumber, JSON.stringify(items), subtotal, taxAmount, totalAmount, paymentMethod, insuranceProvider, policyNumber, notes, createdBy
+    tenantId, patientId, encounterId, invoiceNumber, subtotal, taxAmount, totalAmount
   ]);
+
+  // Insert items into invoice_items if provided
+  if (items && Array.isArray(items)) {
+    for (const item of items) {
+       await query(`INSERT INTO invoice_items (tenant_id, invoice_id, description, quantity, unit_price, total) VALUES ($1, $2, $3, $4, $5, $6)`,
+         [tenantId, result.rows[0].id, item.description, item.quantity || 1, item.unitPrice || item.price, item.total]);
+    }
+  }
   
   return { ...result.rows[0], invoice_number: invoiceNumber };
 }
@@ -93,11 +102,10 @@ export async function updateInvoiceStatus(invoiceId, tenantId, status, additiona
     values.push(additionalData[key]);
   });
   
-  fields.push('updated_at = NOW()');
+  fields.push(`updated_at = $${paramIndex++}`);
   values.push(new Date());
   
   const setClause = fields.join(', ');
-  const setValues = values.join(', ');
   
   const sql = `
     UPDATE invoices
@@ -106,7 +114,7 @@ export async function updateInvoiceStatus(invoiceId, tenantId, status, additiona
     RETURNING *
   `;
   
-  const result = await query(sql, [...setValues, invoiceId, tenantId]);
+  const result = await query(sql, [...values, invoiceId, tenantId]);
   return result.rows[0];
 }
 

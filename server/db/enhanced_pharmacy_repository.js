@@ -103,7 +103,8 @@ export async function createEnhancedPrescription({
   tenantId, patientId, encounterId, doctorId, doctorRegistration,
   prescriptionDate, validityDays, patientWeightKg, patientAgeYears,
   patientGender, knownAllergies, chronicConditions, currentMedications,
-  diagnosisIcd10Codes, specialInstructions, doctorDigitalSignature, createdBy
+  diagnosisIcd10Codes, specialInstructions, doctorDigitalSignature, createdBy,
+  wardId, bedId
 }) {
   // Generate prescription number
   const prescriptionNumber = `RX-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
@@ -114,9 +115,9 @@ export async function createEnhancedPrescription({
       doctor_registration, prescription_date, validity_days, patient_weight_kg,
       patient_age_years, patient_gender, known_allergies, chronic_conditions,
       current_medications, diagnosis_icd10_codes, special_instructions,
-      doctor_digital_signature, status, created_by
+      doctor_digital_signature, status, created_by, ward_id, bed_id
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'ACTIVE', $18)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 'ACTIVE', $18, $19, $20)
     RETURNING *
   `;
   
@@ -125,7 +126,7 @@ export async function createEnhancedPrescription({
     doctorRegistration, prescriptionDate, validityDays, patientWeightKg,
     patientAgeYears, patientGender, knownAllergies, chronicConditions,
     currentMedications, diagnosisIcd10Codes, specialInstructions,
-    doctorDigitalSignature, createdBy
+    doctorDigitalSignature, createdBy, wardId, bedId
   ]);
   
   return result.rows[0];

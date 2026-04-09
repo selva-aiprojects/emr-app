@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
 import PatientSearch from '../components/PatientSearch.jsx';
 import { patientName } from '../utils/format.js';
@@ -118,11 +118,20 @@ function printPrescription(enc, patient, medications, provider, tenant) {
   w.document.close();
 }
 
-export default function EmrPage({ tenant, activeUser, patients, providers, encounters, onCreateEncounter, onDischarge, onCreateDocument }) {
+export default function EmrPage({ tenant, activeUser, selectedId, patients, providers, encounters, onCreateEncounter, onDischarge, onCreateDocument }) {
   const { showToast } = useToast();
+  const [activeTab, setActiveTab] = useState(selectedId ? 'new' : 'active');
+  const [selectedPatientId, setSelectedPatientId] = useState(selectedId || '');
+  
+  // Update local state if prop changes (e.g. searching/switching in parent)
+  useEffect(() => {
+    console.log('[EMR_FORENSIC] selectedId Prop Triggered:', selectedId);
+    if (selectedId && selectedId !== selectedPatientId) {
+      setSelectedPatientId(selectedId);
+      if (activeTab === 'active') setActiveTab('new');
+    }
+  }, [selectedId]);
 
-  const [activeTab, setActiveTab] = useState('active');
-  const [selectedPatientId, setSelectedPatientId] = useState('');
   const [prescriptionItems, setPrescriptionItems] = useState([]);
   const [safetyData, setSafetyData] = useState({ safetyCheck: null, overrideSafety: false });
   const [showDocForm, setShowDocForm] = useState(false);
@@ -229,6 +238,8 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
       instructions: m.instructions
     })) : [];
 
+    const activeInpatientEncounter = encounters.find(enc => enc.patientId === selectedPatientId && enc.status === 'active' && enc.type === 'In-patient');
+
     const data = {
       patientId: selectedPatientId,
       providerId: fd.get('providerId'),
@@ -239,7 +250,9 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
       bp: fd.get('bp'),
       hr: fd.get('hr'),
       medications: legacyMeds,
-      pharmacyItems: canPrescribe ? prescriptionItems : []
+      pharmacyItems: canPrescribe ? prescriptionItems : [],
+      wardId: activeInpatientEncounter?.ward_id,
+      bedId: activeInpatientEncounter?.bed_id
     };
 
     try {
@@ -382,7 +395,11 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                   <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Step 01 / Identity</h4>
                   <p className="text-sm font-bold text-slate-800">Assign Subject for Clinical Documentation</p>
                 </div>
-                <PatientSearch tenantId={tenant?.id} onSelect={(p) => setSelectedPatientId(p.id)} />
+                <PatientSearch 
+                  tenantId={tenant?.id} 
+                  initialPatientId={selectedPatientId}
+                  onSelect={(p) => setSelectedPatientId(p.id)} 
+                />
 
                 {selectedPatient && (
                   <div className="mt-8 p-6 bg-slate-900 rounded-2xl border border-white/10 relative overflow-hidden group shadow-xl">
@@ -519,6 +536,7 @@ export default function EmrPage({ tenant, activeUser, patients, providers, encou
                   </div>
                   <h3 className="text-xl font-black text-slate-900 tracking-tight">Identity Required</h3>
                   <p className="text-sm text-slate-500 mt-3 max-w-xs font-medium">Identify a subject from the registry to initiate professional documentation.</p>
+                  <p className="text-[9px] text-slate-300 font-black uppercase mt-4">Forensic Trace: ID={selectedPatientId || 'NONE'} PatientsCount={patients.length}</p>
                 </article>
               ) : (
               <form className="clinical-card space-y-8 animate-fade-in" onSubmit={handleEncounterSubmit}>

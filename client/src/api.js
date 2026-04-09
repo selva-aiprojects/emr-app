@@ -91,34 +91,33 @@ async function apiRequest(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config);
+    console.log(`[NETWORK_TRACE] ${endpoint} | Status: ${response.status}`);
 
-      // Handle 401 Unauthorized
-      if (response.status === 401) {
-        // If it's a login attempt, don't say "Session expired"
-        if (endpoint === '/login') {
-          throw new Error('Invalid email or password');
-        }
-
-        // Parse JSON response to get specific error message if available
-        let serverMessage = 'Session expired or unauthorized. Please login again.';
-        try {
-          const errorData = await response.json();
-          if (errorData.message || errorData.error) {
-            serverMessage = errorData.message || errorData.error;
-          }
-        } catch (e) {
-          // If JSON parse fails, use default
-        }
-
-        if (getToken()) {
-          clearAuth();
-        }
-        throw new Error(serverMessage);
+    // Handle 401 Unauthorized
+    if (response.status === 401) {
+      if (endpoint === '/login') {
+        throw new Error('Invalid email or password');
       }
+
+      let serverMessage = 'Session expired or unauthorized. Please login again.';
+      try {
+        const errorData = await response.json();
+        if (errorData.message || errorData.error) {
+          serverMessage = errorData.message || errorData.error;
+        }
+      } catch (e) {}
+
+      if (getToken()) {
+        clearAuth();
+      }
+      throw new Error(serverMessage);
+    }
 
     // Parse JSON response safely
     let data = {};
     const text = await response.text();
+    console.log(`[NETWORK_TRACE] ${endpoint} | Raw Body: ${text.substring(0, 100)}...`);
+    
     if (text) {
       try {
         data = JSON.parse(text);
@@ -129,12 +128,13 @@ async function apiRequest(endpoint, options = {}) {
 
     // Handle error responses
     if (!response.ok) {
+      console.error(`[NETWORK_ERROR] ${endpoint} | Code: ${response.status} | Msg:`, data.error || data.message);
       throw new Error(data.error || data.message || `API request failed: ${response.status}`);
     }
 
     return data;
   } catch (error) {
-    console.error('API request error:', error);
+    console.error(`[CRITICAL_API_FAILURE] ${endpoint}:`, error);
     throw error;
   }
 }
@@ -292,7 +292,8 @@ export async function getPatients(tenantId, filters = {}) {
   if (filters.offset) queryParams.offset = filters.offset;
 
   const queryString = new URLSearchParams(queryParams).toString();
-  return await apiRequest(`/patients?${queryString}`);
+  const endpoint = filters.text ? `/patients/search?${queryString}` : `/patients?${queryString}`;
+  return await apiRequest(endpoint);
 }
 
 export async function createPatient(data) {

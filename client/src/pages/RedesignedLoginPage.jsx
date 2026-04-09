@@ -133,6 +133,7 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
                 <div className={`input-wrapper ${focusedField === 'email' ? 'focused' : ''} bg-slate-50 rounded-2xl border border-slate-100 px-4 py-1 flex items-center shadow-sm`}>
                   <Mail className="text-slate-400 mr-2" size={18} />
                   <input
+                    name="email"
                     type="email"
                     placeholder="admin@ehs.com"
                     className="w-full bg-transparent border-none py-3 text-sm font-bold text-slate-700 outline-none"
@@ -151,6 +152,7 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
                 <div className={`input-wrapper ${focusedField === 'password' ? 'focused' : ''} bg-slate-50 rounded-2xl border border-slate-100 px-4 py-1 flex items-center shadow-sm`}>
                   <Lock className="text-slate-400 mr-2" size={18} />
                   <input
+                    name="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••••••"
                     className="w-full bg-transparent border-none py-3 text-sm font-bold text-slate-700 outline-none"

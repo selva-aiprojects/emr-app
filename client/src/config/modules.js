@@ -51,13 +51,13 @@ export const moduleMeta = {
 
 export const fallbackPermissions = {
   Superadmin: ['superadmin', 'tenant_management', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'reports', 'support', 'admin'],
-  Admin: ['dashboard', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings', 'admin_masters'],
-  Doctor: ['dashboard', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'reports', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
+  Admin: ['dashboard', 'appointments', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings', 'admin_masters'],
+  Doctor: ['dashboard', 'appointments', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'reports', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Nurse: ['dashboard', 'find_doctor', 'doctor_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Lab: ['dashboard', 'patients', 'patient-profile', 'lab', 'lab_availability', 'lab_tests', 'reports', 'communication', 'documents'],
   Pharmacy: ['dashboard', 'pharmacy', 'inventory', 'reports', 'communication', 'documents'],
   'Support Staff': ['dashboard', 'inventory', 'support', 'communication'],
-  'Front Office': ['dashboard', 'patients', 'patient-profile', 'billing', 'inpatient', 'communication', 'documents', 'ambulance'],
+  'Front Office': ['dashboard', 'patients', 'appointments', 'patient-profile', 'billing', 'inpatient', 'communication', 'documents', 'ambulance'],
   Billing: ['dashboard', 'billing', 'accounts_receivable', 'accounts', 'insurance', 'reports', 'service_catalog'],
   Insurance: ['dashboard', 'insurance', 'reports'],
   HR: ['dashboard', 'employees', 'employee_master', 'attendance', 'payroll', 'reports', 'communication', 'documents'],

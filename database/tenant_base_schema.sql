@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS encounters (
   tenant_id uuid NOT NULL,
   patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE RESTRICT,
   provider_id uuid,
-  encounter_type varchar(16) NOT NULL CHECK (encounter_type IN ('OPD','IPD','emergency')),
+  encounter_type varchar(32) NOT NULL CHECK (encounter_type IN ('OPD','IPD','emergency','In-patient','Out-patient','Emergency-Department','Observation')),
   visit_date date NOT NULL DEFAULT CURRENT_DATE,
   chief_complaint text,
   diagnosis text,
@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS clinical_records (
   tenant_id uuid NOT NULL,
   patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
   encounter_id uuid REFERENCES encounters(id) ON DELETE SET NULL,
-  section varchar(32) NOT NULL CHECK (section IN ('caseHistory','medications','prescriptions','recommendations','feedbacks','testReports','vitals')),
+  section varchar(32) NOT NULL CHECK (section IN ('caseHistory','medications','prescriptions','recommendations','feedbacks','testReports','vitals','orders','progressNotes')),
   content jsonb NOT NULL,
   created_by uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -622,3 +622,25 @@ CREATE INDEX IF NOT EXISTS idx_beds_ward ON beds(ward_id);
 CREATE INDEX IF NOT EXISTS idx_beds_status ON beds(status);
 CREATE INDEX IF NOT EXISTS idx_expenses_tenant_date ON expenses(tenant_id, date);
 CREATE INDEX IF NOT EXISTS idx_insurance_claims_tenant ON insurance_claims(tenant_id, status);
+
+-- ============================================================
+-- 12. BASE INFRASTRUCTURE PROVISIONING (IDEMPOTENT)
+-- ============================================================
+-- This section ensures every tenant has at least one functional ward/bed
+-- to prevent E2E test failures and provide a better day-one experience.
+-- Note: Replace :tenant_id with actual UUID in registration scripts.
+
+-- DO NOT DELETE: This logic should ideally be triggered by the 
+-- Backend tenant-provisioning service, but these lines serve as 
+-- the source of truth for base clinical data.
+
+/*
+INSERT INTO wards (tenant_id, name, type, base_rate, status)
+SELECT :tenant_id, 'General Medicine Ward', 'General', 1500, 'Active'
+WHERE NOT EXISTS (SELECT 1 FROM wards WHERE tenant_id = :tenant_id);
+
+INSERT INTO beds (tenant_id, ward_id, bed_number, type, status)
+SELECT :tenant_id, (SELECT id FROM wards WHERE tenant_id = :tenant_id LIMIT 1), 'Unit-01', 'General', 'Available'
+WHERE NOT EXISTS (SELECT 1 FROM beds WHERE tenant_id = :tenant_id);
+*/
+

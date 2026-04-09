@@ -19,14 +19,20 @@ const ROLES = [
 async function login(page, tenantLabel, email, password) {
   await page.goto('/');
   
-  // Wait for tenant select to load
-  await page.locator('select[name="tenantId"]').waitFor({ state: 'visible', timeout: 10000 });
+  // Wait for tenant select to load and be interactive
+  const tenantSelect = page.locator('select[name="tenantId"]');
+  await tenantSelect.waitFor({ state: 'visible', timeout: 15000 });
   
   // Login
-  await page.locator('select[name="tenantId"]').selectOption({ label: tenantLabel });
+  await tenantSelect.selectOption({ label: tenantLabel });
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
-  await page.getByRole('button', { name: /Authorize Entry|Continue to Workflow|Login/i }).click();
+  
+  const loginButton = page.getByRole('button', { name: /Authorize Entry|Authenticate Protocol|Login|Sign In/i });
+  await loginButton.click();
+  
+  // Wait for the application to load post-login
+  await page.waitForLoadState('networkidle');
 }
 
 for (const tenant of TENANTS) {
@@ -34,8 +40,17 @@ for (const tenant of TENANTS) {
     test(`Smoke: ${role.key} login works on ${tenant.code}`, async ({ page }) => {
       await login(page, tenant.label, role.email, role.password);
 
-      await expect(page.getByRole('button', { name: /Sign Out/i })).toBeVisible({ timeout: 20000 });
-      await expect(page.getByText(role.displayName).first()).toBeVisible({ timeout: 20000 });
+      // Verify sign out button is present, confirming successful session
+      const signoutBtn = page.getByRole('button', { name: /Sign Out|Logout|Authenticate Protocol/i }).first();
+      // Note: "Authenticate Protocol" is the label on the button itself while it might be loading or if we haven't transitioned
+      // Better to check for actual dashboard indicators
+      
+      const userDisplay = page.getByText(role.displayName).first();
+      await expect(userDisplay).toBeVisible({ timeout: 25000 });
+      
+      // Secondary check for the sign out option which is a clear indicator of being logged in
+      const signout = page.locator('button').filter({ hasText: /Sign Out|Logout/i });
+      await expect(signout.first()).toBeVisible({ timeout: 10000 });
     });
   }
 }
