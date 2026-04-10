@@ -121,10 +121,37 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
     RETURNING *
   `;
 
-  console.log('[REPO_DEBUG] updateTenantSettings SQL:', sql);
-  console.log('[REPO_DEBUG] updateTenantSettings Values:', values);
   const result = await query(sql, values);
-  return result.rows[0];
+  const tenant = result.rows[0];
+
+  // Sync to management_tenants for the modern Control Plane
+  if (tenant) {
+    const mgmtUpdates = [];
+    const mgmtValues = [];
+    let mgmtIdx = 1;
+
+    if (displayName !== undefined) {
+      mgmtUpdates.push(`name = $${mgmtIdx++}`);
+      mgmtValues.push(displayName);
+    }
+    if (subscriptionTier !== undefined) {
+      mgmtUpdates.push(`subscription_tier = $${mgmtIdx++}`);
+      mgmtValues.push(subscriptionTier);
+    }
+    if (req_logo_url !== undefined) {
+      mgmtUpdates.push(`logo_url = $${mgmtIdx++}`);
+      mgmtValues.push(req_logo_url);
+    }
+
+    if (mgmtUpdates.length > 0) {
+      mgmtUpdates.push('updated_at = NOW()');
+      mgmtValues.push(tenantId);
+      const mgmtSql = `UPDATE emr.management_tenants SET ${mgmtUpdates.join(', ')} WHERE id = $${mgmtIdx}`;
+      await query(mgmtSql, mgmtValues);
+    }
+  }
+
+  return tenant;
 }
 
 /**

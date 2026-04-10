@@ -324,7 +324,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
                 ) : (
                   <>
                     <Save className="w-4 h-4 mr-2" />
-                    Persist Changes
+                    Save Settings
                   </>
                 )}
               </button>

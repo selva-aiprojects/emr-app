@@ -54,14 +54,15 @@ router.patch('/:id/settings', authenticate, requireTenant, requireRole('Admin', 
     const { id } = req.params;
     const { 
       displayName, 
+      primaryColor, accentColor,
       newPrimaryColor, newAccentColor, 
       featureInventory, featureTelehealth,
       subscriptionTier, billingConfig, logo_url 
     } = req.body;
 
-    const theme = (newPrimaryColor || newAccentColor) ? {
-      primary: newPrimaryColor,
-      accent: newAccentColor,
+    const theme = (primaryColor || newPrimaryColor || accentColor || newAccentColor) ? {
+      primary: primaryColor || newPrimaryColor,
+      accent: accentColor || newAccentColor,
     } : null;
 
     const features = (featureInventory !== undefined || featureTelehealth !== undefined) ? {
