@@ -20,12 +20,12 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
   const availableAmbulance = Number(totals.ambulancesAvailable || 0) > 0 ? totals.ambulancesAvailable : tenants.reduce((s, t) => s + Number(t.ambulancesAvailable || 0), 0);
 
   const stats = [
-    { label: 'Platform Nodes', icon: Globe, value: activeTenantsCount, sub: 'Active Shards' },
-    { label: 'Personnel', icon: Stethoscope, value: totalDoctors, sub: 'Verified Staff' },
-    { label: 'Patients', icon: Users, value: totalPatients, sub: 'Global Registry' },
-    { label: 'Static Assets', icon: Bed, value: availableBeds, sub: 'Available Beds' },
-    { label: 'Mobile Units', icon: Ambulance, value: availableAmbulance, sub: 'Fleet Status' },
-    { label: 'Lab Flow', icon: FlaskConical, value: totals.labTests || '1.1k', sub: 'Analyzed Units' },
+    { label: 'Hospitals', icon: Globe, value: activeTenantsCount, sub: 'Total registered' },
+    { label: 'Staff', icon: Stethoscope, value: totalDoctors, sub: 'Total verified' },
+    { label: 'Patients', icon: Users, value: totalPatients, sub: 'Patient registry' },
+    { label: 'Beds', icon: Bed, value: availableBeds, sub: 'Beds ready' },
+    { label: 'Ambulances', icon: Ambulance, value: availableAmbulance, sub: 'Fleet info' },
+    { label: 'Lab Work', icon: FlaskConical, value: totals.labTests || '1.1k', sub: 'Tests done' },
   ];
 
   const handleSync = async () => {
@@ -48,7 +48,7 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
       {/* PROFESSIONAL TITLE BLOCK */}
       <div className="flex justify-between items-end">
          <div>
-            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase mb-1">Global Command Hub</h2>
+            <h2 className="text-[20px] font-black text-slate-900 tracking-tighter uppercase mb-1">Main Dashboard</h2>
             <div className="flex items-center gap-3">
                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Operational HUD</span>
                <div className="w-1 h-1 rounded-full bg-slate-300" />
@@ -61,7 +61,7 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
             className="flex items-center gap-3 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm px-5 py-3 rounded-2xl text-[10px] font-black text-slate-700 uppercase tracking-widest transition-all disabled:opacity-50 group"
          >
             <Activity size={14} className={`${isSyncing ? "animate-spin text-indigo-600" : "group-hover:text-indigo-600"} transition-colors`} /> 
-            {isSyncing ? "Synchronizing..." : "Aggregate Metrics"}
+            {isSyncing ? "Updating..." : "Update Everything"}
          </button>
       </div>
 
@@ -87,7 +87,7 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
       {/* SHARD REGISTRY */}
       <section className="bg-white border border-slate-200 shadow-sm rounded-[2.5rem] overflow-hidden">
          <header className="p-8 pb-4 flex justify-between items-center bg-slate-50/50">
-            <h3 className="text-[12px] font-black text-slate-600 uppercase tracking-[0.25em]">Cross-Shard Registry</h3>
+            <h3 className="text-[12px] font-black text-slate-600 uppercase tracking-[0.25em]">Hospital List</h3>
             <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500">
                <span className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active Nodes: {tenants.length}</span>
                <div className="w-1 h-1 rounded-full bg-slate-300" />
@@ -99,12 +99,12 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
             <table className="w-full text-left border-separate border-spacing-y-2">
                <thead>
                   <tr className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                     <th className="px-6 py-4">Facility Node</th>
-                     <th className="px-6 py-4 text-center">Personnel</th>
+                     <th className="px-6 py-4">Hospital Name</th>
+                     <th className="px-6 py-4 text-center">Staff</th>
                      <th className="px-6 py-4 text-center">Patients</th>
-                     <th className="px-6 py-4 text-center">Throughput</th>
+                     <th className="px-6 py-4 text-center">Activity</th>
                      <th className="px-6 py-4 text-center">Performance</th>
-                     <th className="px-6 py-4 text-right">Node State</th>
+                     <th className="px-6 py-4 text-right">Status</th>
                   </tr>
                </thead>
                <tbody>

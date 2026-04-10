@@ -268,7 +268,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
     });
 
     const csvData = [
-      ['HEALTHEZEE EMR CARE - CLINICAL EXECUTIVE REPORT'],
+      ['HOSPITAL BUSINESS REPORT'],
       [`Generated on: ${todayStr}`],
       ['Facility:', tenant?.name || 'Authorized Facility'],
       [''],

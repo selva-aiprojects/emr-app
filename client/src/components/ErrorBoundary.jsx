@@ -23,10 +23,10 @@ export class ErrorBoundary extends React.Component {
           <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm shadow-rose-200">
             <AlertCircle className="w-8 h-8 text-rose-500" />
           </div>
-          <h2 className="text-xl font-black tracking-tight text-slate-900 mb-2 uppercase">Module Stability Compromised</h2>
+          <h2 className="text-xl font-black tracking-tight text-slate-900 mb-2 uppercase">Something went wrong</h2>
           <p className="text-sm font-medium text-slate-500 max-w-lg mb-8">
-            The clinical interface encountered an unexpected rendering fault while executing the current protocol. 
-            This does not compromise the underlying database integrity.
+            The page you are looking for has encountered a temporary problem. 
+            Your data is safe and has not been affected.
           </p>
           
           <div className="flex gap-4">
@@ -40,7 +40,7 @@ export class ErrorBoundary extends React.Component {
               onClick={() => window.location.reload()}
               className="flex items-center gap-2 cx-6 py-3 bg-slate-900 px-6 text-white font-bold text-[11px] uppercase tracking-widest rounded-xl hover:bg-slate-800 transition-all shadow-md shadow-slate-900/10"
             >
-              Master Reset
+              Refresh Page
             </button>
           </div>
 

@@ -88,9 +88,9 @@ export default function BedManagementPage({ tenant }) {
         <div>
            <h1 className="page-title-rich flex items-center gap-3">
               <LayoutPanelTop className="w-8 h-8 text-slate-900" />
-              Institutional Ward & Bed Management
+              Ward & Bed Tracking
            </h1>
-           <p className="dim-label italic">Monitor ward throughput, bed occupancy shards, and real-time facility asset allocation for {tenant?.name || 'New Age Hospital'}.</p>
+           <p className="dim-label italic">Track patient beds, check availability, and manage wards for {tenant?.name || 'New Age Hospital'}.</p>
         </div>
         <div className="flex gap-4">
            <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-100 gap-1 mr-4">
@@ -111,7 +111,7 @@ export default function BedManagementPage({ tenant }) {
              onClick={() => setShowAddWard(!showAddWard)}
              className="clinical-btn bg-slate-900 text-white px-8 rounded-2xl shadow-2xl hover:bg-slate-700 transition-all border-none"
            >
-              <Plus className="w-4 h-4 mr-2" /> {showAddWard ? 'Cancel' : 'Register Ward'}
+              <Plus className="w-4 h-4 mr-2" /> {showAddWard ? 'Cancel' : 'Add Ward'}
            </button>
         </div>
       </header>
@@ -167,7 +167,7 @@ export default function BedManagementPage({ tenant }) {
          <aside className="col-span-12 lg:col-span-3 space-y-4">
             <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
                <Building2 size={12} />
-               Ward Registry
+               Ward List
             </h3>
             <div className="space-y-2">
               {wards.map(ward => (
@@ -199,9 +199,9 @@ export default function BedManagementPage({ tenant }) {
                      </div>
                      <div>
                         <h4 className="text-sm font-black text-slate-900 uppercase">
-                          {selectedWard ? `${selectedWard.name} Bed Assets` : 'No Ward Selected'}
+                          {selectedWard ? `${selectedWard.name} Beds` : 'No Ward Selected'}
                         </h4>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Physical Ward Capacity Allocation</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Bed Availability Summary</p>
                      </div>
                   </div>
                   {selectedWard && (
@@ -210,7 +210,7 @@ export default function BedManagementPage({ tenant }) {
                           <input 
                             type="text" 
                             className="input-field h-[44px] !rounded-xl !text-xs w-48"
-                            placeholder="Register Bed Number (e.g. B-102)"
+                            placeholder="Bed Number (e.g. B-102)"
                             value={bedForm.bed_number}
                             onChange={e => setBedForm({ ...bedForm, bed_number: e.target.value })}
                             required
@@ -242,8 +242,8 @@ export default function BedManagementPage({ tenant }) {
                    <div className="flex flex-col items-center justify-center py-20 gap-6 opacity-30">
                       <Bed size={60} className="text-slate-400" />
                       <div className="text-center">
-                        <p className="text-sm font-black text-slate-800 uppercase tracking-widest">No Bed Units Detected</p>
-                        <p className="text-[10px] font-bold text-slate-500 italic mt-2">Initialize floor plan by adding the first bed asset.</p>
+                        <p className="text-sm font-black text-slate-800 uppercase tracking-widest">No Beds Found</p>
+                        <p className="text-[10px] font-bold text-slate-500 italic mt-2">Add your first bed to start tracking.</p>
                       </div>
                    </div>
                  ) : viewMode === 'plan' ? (

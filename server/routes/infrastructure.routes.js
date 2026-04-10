@@ -63,6 +63,20 @@ router.get('/wards', async (req, res) => {
 });
 
 /**
+ * @route   POST /api/wards
+ * @desc    Create a new ward
+ */
+router.post('/wards', requirePermission('admin'), async (req, res) => {
+  try {
+    const ward = await repo.createWard({ ...req.body, tenantId: req.tenantId });
+    res.status(201).json(ward);
+  } catch (error) {
+    console.error('Error creating ward:', error);
+    res.status(500).json({ error: 'Failed to create ward' });
+  }
+});
+
+/**
  * @route   GET /api/beds
  * @desc    Get all beds for a tenant, optionally filtered by ward
  */
@@ -86,6 +100,28 @@ router.get('/beds', async (req, res) => {
   } catch (error) {
     console.error('Error fetching beds:', error);
     res.status(500).json({ error: 'Failed to fetch beds' });
+  }
+});
+
+/**
+ * @route   POST /api/beds
+ * @desc    Create a new bed
+ */
+router.post('/beds', requirePermission('admin'), async (req, res) => {
+  try {
+    // Map bed_number to bedNumber if needed
+    const bedNumber = req.body.bed_number || req.body.bedNumber;
+    const wardId = req.body.ward_id || req.body.wardId;
+    
+    const bed = await repo.createBed({ 
+      tenantId: req.tenantId, 
+      wardId, 
+      bedNumber 
+    });
+    res.status(201).json(bed);
+  } catch (error) {
+    console.error('Error creating bed:', error);
+    res.status(500).json({ error: 'Failed to create bed' });
   }
 });
 

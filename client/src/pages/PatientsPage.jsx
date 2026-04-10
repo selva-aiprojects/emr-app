@@ -214,7 +214,7 @@ export default function PatientsPage({
   if (!tenantId) {
     return (
       <div className="flex items-center justify-center p-20 text-slate-400 font-black uppercase tracking-[0.2em]">
-        <div className="animate-pulse">Initializing Identification Hub...</div>
+        <div className="animate-pulse">Loading Patient Search...</div>
       </div>
     );
   }
@@ -225,7 +225,7 @@ export default function PatientsPage({
         <div>
            <h1 className="page-title-rich flex items-center gap-3">
               {isDoctor ? 'My Patients' : 'Patient Directory'}
-              <span className="text-meta-sm bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Registration Module</span>
+              <span className="text-meta-sm bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Patient Files</span>
            </h1>
            <p className="dim-label">View and manage all registered patients for {tenant?.name || 'Facility'}.</p>
            <p className="text-meta-sm text-slate-400 mt-2 flex items-center gap-2">
@@ -279,7 +279,7 @@ export default function PatientsPage({
                   <thead>
                     <tr>
                       <th className="tracking-widest">Patient Profile</th>
-                      <th className="tracking-widest">Clinical Details</th>
+                      <th className="tracking-widest">Patient Info</th>
                       {activeUser?.role === 'Superadmin' && <th className="tracking-widest">Facility</th>}
                       <th className="tracking-widest">Contact</th>
                       <th className="tracking-widest">Status</th>
@@ -304,6 +304,7 @@ export default function PatientsPage({
                          </td>
                        </tr>
                     ) : filtered.map((p, idx) => {
+                       if (!p) return null;
                       const dob = p.dob || p.dateOfBirth || p.date_of_birth;
                       const firstName = p.firstName || p.first_name || '';
                       const lastName = p.lastName || p.last_name || '';
@@ -456,7 +457,7 @@ export default function PatientsPage({
               <form className="space-y-12" onSubmit={handleOnboard}>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-6">
-                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--clinical-accent)]">Patient Demographics</h4>
+                       <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--clinical-accent)]">Patient Basics</h4>
                        <div className="space-y-2">
                           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">First Name</label>
                           <input name="firstName" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800 px-6" required />
@@ -540,7 +541,7 @@ export default function PatientsPage({
                           <Activity className="w-5 h-5 text-emerald-400" />
                        </div>
                        <div>
-                          <p className="text-[10px] text-white/40 font-black uppercase tracking-tighter mb-1">Identity Verification</p>
+                          <p className="text-[10px] text-white/40 font-black uppercase tracking-tighter mb-1">Patient ID Check</p>
                           <div className="text-[11px] font-black uppercase tracking-widest text-white/90">System Active</div>
                        </div>
                     </div>
@@ -549,8 +550,8 @@ export default function PatientsPage({
                           <ShieldCheck className="w-5 h-5 text-emerald-400" />
                        </div>
                        <div>
-                          <p className="text-[10px] text-white/40 font-black uppercase tracking-tighter mb-1">Defense Protocol</p>
-                          <div className="text-[11px] font-black uppercase tracking-widest text-white/90">Encryption: AES-256 Active</div>
+                          <p className="text-[10px] text-white/40 font-black uppercase tracking-tighter mb-1">Safe Data Storage</p>
+                          <div className="text-[11px] font-black uppercase tracking-widest text-white/90">Securely Saved</div>
                        </div>
                     </div>
                     <div className="flex items-center gap-5 group/item">
@@ -558,7 +559,7 @@ export default function PatientsPage({
                           <Clock className="w-5 h-5 text-blue-400" />
                        </div>
                        <div>
-                          <p className="text-[10px] text-white/40 font-black uppercase tracking-tighter mb-1">Global Latency</p>
+                          <p className="text-[10px] text-white/40 font-black uppercase tracking-tighter mb-1">Page Speed</p>
                           <div className="text-[11px] font-black uppercase tracking-widest text-white/90">Response: 12ms</div>
                        </div>
                     </div>
@@ -583,7 +584,7 @@ export default function PatientsPage({
             <ShieldCheck className="w-4 h-4" /> SECURE DEPLOYMENT NODE • v1.0.4-BETA
          </div>
           <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-            {patients.length} ACTIVE SHARDS IN REGISTRY
+            {patients.length} TOTAL PATIENTS REGISTERED
           </div>
       </footer>
     </div>

@@ -17,22 +17,11 @@ export default function EnhancedBedCards({ currentBeds, selectedWard }) {
               : 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 border-emerald-300 shadow-emerald-200/50 hover:shadow-emerald-300/70 hover:scale-[1.02]'
           }`}>
             {/* Status Indicator Bar */}
-            <div className={`absolute top-0 left-0 right-0 h-1.5 transition-all duration-300 ${
+            <div className={`absolute top-0 left-0 right-0 h-1 transition-all duration-300 ${
               isOccupied 
-                ? 'bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 shadow-red-500/50' 
-                : 'bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 shadow-emerald-500/50'
+                ? 'bg-rose-500' 
+                : 'bg-emerald-500'
             }`} />
-            
-            {/* Status Badge */}
-            <div className="absolute top-3 right-3">
-              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg transition-all duration-300 ${
-                isOccupied 
-                  ? 'bg-red-600 text-white border-2 border-red-700' 
-                  : 'bg-emerald-600 text-white border-2 border-emerald-700'
-              }`}>
-                {bed.status || 'Available'}
-              </span>
-            </div>
 
             {/* Bed Icon and Number */}
             <div className="flex justify-between items-start mb-4">
@@ -50,26 +39,24 @@ export default function EnhancedBedCards({ currentBeds, selectedWard }) {
             </div>
 
             {/* Bed Status Details */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                <span className="text-sm font-medium text-slate-700">Status</span>
-                <span className={`text-sm font-bold uppercase tracking-wider px-2 py-1 rounded-lg ${
+            <div className="space-y-2 mt-2">
+              <div className="flex items-center justify-between p-2 bg-black/5 rounded-xl">
+                <span className="text-[10px] font-black uppercase text-slate-500">Status</span>
+                <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-lg ${
                   isOccupied 
-                    ? 'text-red-700 bg-red-100' 
+                    ? 'text-rose-700 bg-rose-100' 
                     : 'text-emerald-700 bg-emerald-100'
                 }`}>
-                  {isOccupied ? 'Occupied' : 'Available'}
+                  {isOccupied ? 'Occupied' : 'Ready'}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                <span className="text-sm font-medium text-slate-700">Assignment</span>
+              <div className="flex items-center justify-between p-2 bg-black/5 rounded-xl">
+                <span className="text-[10px] font-black uppercase text-slate-500">Assignment</span>
                 <div className="flex items-center gap-2">
-                  <UserCircle size={16} className={`transition-colors duration-300 ${
-                    isOccupied ? 'text-red-500' : 'text-emerald-500'
-                  }`} />
-                  <span className="text-sm font-medium text-slate-600">
-                    {isOccupied ? 'Patient Assigned' : 'No Assignment'}
+                  <UserCircle size={14} className={isOccupied ? 'text-rose-500' : 'text-emerald-500'} />
+                  <span className="text-[11px] font-bold text-slate-600">
+                    {isOccupied ? 'Yes' : 'No'}
                   </span>
                 </div>
               </div>
@@ -151,7 +138,7 @@ export function EnhancedStatisticsCards({ selectedWard, currentBeds }) {
               <Bed size={24} />
             </div>
             <div>
-              <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-1">Available Capacity</h5>
+              <h5 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 mb-1">Beds Ready</h5>
               <p className="text-xs text-emerald-600 font-medium">Ready for admission</p>
             </div>
           </div>
@@ -159,12 +146,12 @@ export function EnhancedStatisticsCards({ selectedWard, currentBeds }) {
           <div className="flex items-end gap-4">
             <div className="text-center">
               <div className="text-5xl font-black text-emerald-700 mb-1">{availableBeds}</div>
-              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">UNITS READY</div>
+              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider">FREE BEDS</div>
             </div>
             <div className="flex-1 flex items-end justify-end">
               <div className="text-right">
                 <div className="text-3xl font-black text-emerald-700">{Math.round((availableBeds / (totalBeds || 1)) * 100)}%</div>
-                <div className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Available Rate</div>
+                <div className="text-xs font-medium text-emerald-600 uppercase tracking-wider">Free Percentage</div>
               </div>
             </div>
           </div>

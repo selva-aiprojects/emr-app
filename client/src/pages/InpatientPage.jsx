@@ -303,7 +303,7 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Admission Shard Type</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Admission Type</label>
                         <select name="type" className="input-field h-[60px] bg-slate-50 border-none font-black text-slate-800 rounded-2xl">
                           <option value="In-patient">Routine Admission (IPD)</option>
                           <option value="Emergency">Emergency Stabilization (ER)</option>
@@ -313,14 +313,14 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
 
                    <div className="space-y-8">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Clinical Ward</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ward</label>
                          <select name="wardId" className="input-field h-[60px] bg-slate-50 border-none font-black text-slate-800 rounded-2xl" required>
                            {clinicalWards.map(w => <option key={w.id} value={w.id}>{w.name} ({w.type})</option>)}
                          </select>
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Infrastructure Node (Bed)</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bed Number</label>
                         <input name="bedId" placeholder="e.g. Unit-01, ICU-B-04" className="input-field h-[60px] bg-slate-50 border-none font-black text-slate-800 rounded-2xl" required />
                         <p className="text-[9px] font-black text-slate-400 uppercase mt-2 italic px-1">Verify occupancy map before assignment.</p>
                       </div>
@@ -335,9 +335,9 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
                  </div>
 
                  <div className="pt-10 border-t border-slate-50 flex justify-end gap-6 items-center">
-                    <button type="button" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:text-rose-500 transition-colors" onClick={() => setActiveTab('ledger')}>Abort Protocol</button>
+                    <button type="button" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-300 hover:text-rose-500 transition-colors" onClick={() => setActiveTab('ledger')}>Cancel</button>
                     <button type="submit" className="clinical-btn bg-slate-900 text-white px-12 py-6 rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-emerald-600 transition-all border-none">
-                       CONFIRM CLINICAL ADMISSION
+                       Confirm Admission
                     </button>
                  </div>
               </form>
@@ -522,7 +522,7 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
            <div className="relative clinical-card w-full max-w-4xl p-0 overflow-hidden shadow-2xl animate-scale-up">
               <header className="px-10 py-8 bg-slate-900 text-white flex justify-between items-center">
                  <div>
-                    <h3 className="text-xl font-black uppercase tracking-tight">Institutional Discharge Summary</h3>
+                    <h3 className="text-xl font-black uppercase tracking-tight">Patient Discharge Summary</h3>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Patient Release Protocol • Subject-${showSummary.patient_id?.slice(0, 8)}</p>
                  </div>
                  <button onClick={() => setShowSummary(null)} className="text-white/40 hover:text-white">
@@ -608,9 +608,9 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
                       onClick={() => finalizeDischarge(showSummary.id, {})}
                       className="clinical-btn bg-slate-900 text-white px-12 !min-h-[60px] rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-2xl border-none"
                     >
-                       Authorize Egress & Commit Billing
+                       Finalize Discharge & Billing
                     </button>
-                    <button onClick={() => setShowSummary(null)} className="clinical-btn bg-white border border-slate-200 text-slate-400 px-8 rounded-2xl text-xs font-black uppercase">Cancel Protocol</button>
+                    <button onClick={() => setShowSummary(null)} className="clinical-btn bg-white border border-slate-200 text-slate-400 px-8 rounded-2xl text-xs font-black uppercase">Cancel</button>
                  </div>
               </div>
            </div>
@@ -622,9 +622,9 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
            <ShieldCheck className="w-6 h-6" />
         </div>
         <div>
-          <h4 className="text-sm font-black text-slate-900 mb-2 uppercase tracking-tight">Institutional Discharge Guideline</h4>
+          <h4 className="text-sm font-black text-slate-900 mb-2 uppercase tracking-tight">Discharge Rules</h4>
           <p className="text-[11px] font-medium text-slate-500 leading-relaxed max-w-4xl">
-            Discharge authorization requires cross-verification of medical stability and financial clearance. Ensure all clinical trajectories are finalized and recorded in the health ledger before initiating the egress protocol. Post-discharge follow-ups should be scheduled within the Appointments Shard.
+            Discharge needs both medical and bill clearance. Make sure all notes are saved and billing is done before finalizing.
           </p>
         </div>
       </div>
