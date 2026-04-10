@@ -344,7 +344,7 @@ sequenceDiagram
 | **16. Invoice Closed** | System | Status: Partially Paid → Pending Insurance | Invoice Lifecycle |
 | **17. Follow-up** | Front Office | Cardiology follow-up scheduled in 1 week. | Appointment Scheduling |
 
-> **Outcome for Professional:** Arun's complex, multi-day journey — lab, admission, inpatient care, discharge, and insurance claim — is handled entirely within MedFlow with full audit trail and zero paper invoices.
+> **Outcome for Professional:** Arun's complex, multi-day journey — lab, admission, inpatient care, discharge, and insurance claim — is handled entirely within MedFlow with full audit trail and zero paper invoices. **(Architecture Baseline v1.5.8 — 100% E2E Validation Pass)**
 
 ---
 

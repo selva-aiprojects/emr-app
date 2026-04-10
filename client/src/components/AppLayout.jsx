@@ -89,17 +89,17 @@ const navIcons = {
 
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
 const SIDEBAR_GROUPS_DEFAULT = [
-  { name: "Clinical Overview", modules: ["dashboard", "reports"] },
-  { name: "Patient Management", modules: ["patients", "appointments", "find_doctor", "doctor_availability"] },
-  { name: "Diagnostic Services", modules: ["lab", "lab_availability", "ai_vision"] },
-  { name: "Clinical Care", modules: ["emr", "inpatient", "bed_management"] },
-  { name: "Pharmacy & Supplies", modules: ["pharmacy", "inventory"] },
-  { name: "Financial Operations", modules: ["billing", "accounts_receivable", "insurance", "accounts", "accounts_payable"] },
-  { name: "Administrative Control", modules: ["admin", "users", "employees", "employee_master", "attendance", "payroll"] },
-  { name: "Hospital Management", modules: ["hospital_settings", "departments", "admin_masters"] },
-  { name: "Support & Communication", modules: ["support", "communication", "documents", "chat"] },
-  { name: "Emergency Services", modules: ["ambulance", "donor"] },
-  { name: "Service Configuration", modules: ["service_catalog"] },
+  { name: "Hospital Summary", modules: ["dashboard", "reports"] },
+  { name: "Patient Desk", modules: ["patients", "appointments", "find_doctor", "doctor_availability"] },
+  { name: "Lab & Test Services", modules: ["lab", "lab_availability", "ai_vision"] },
+  { name: "Bed & Patient Care", modules: ["emr", "inpatient", "bed_management"] },
+  { name: "Medicine & Stock", modules: ["pharmacy", "inventory"] },
+  { name: "Billing & Payments", modules: ["billing", "accounts_receivable", "insurance", "accounts", "accounts_payable"] },
+  { name: "Staff & Office", modules: ["admin", "users", "employees", "employee_master", "attendance", "payroll"] },
+  { name: "Hospital Settings", modules: ["hospital_settings", "departments", "admin_masters"] },
+  { name: "Help & Messages", modules: ["support", "communication", "documents", "chat"] },
+  { name: "Ambulance & Emergency", modules: ["ambulance", "donor"] },
+  { name: "Service List & Rates", modules: ["service_catalog"] },
 ];
 
 const SIDEBAR_GROUPS_DOCTOR = [
@@ -116,11 +116,11 @@ function getSidebarGroups(role) {
   if (r === "superadmin") {
     return [
       { name: "Intelligence", modules: ["superadmin"] },
-      { name: "Commercials", modules: ["subscription_mgmt"] },
-      { name: "Nodes Control", modules: ["tenant_management"] },
-      { name: "Cloud & Ops", modules: ["infra_health"] },
-      { name: "Ledger", modules: ["financial_control"] },
-      { name: "Outreach", modules: ["communication"] },
+      { name: "Payments & Plans", modules: ["subscription_mgmt"] },
+      { name: "Hospitals List", modules: ["tenant_management"] },
+      { name: "Server Health", modules: ["infra_health"] },
+      { name: "Daily Accounts", modules: ["financial_control"] },
+      { name: "Notices & Messages", modules: ["communication"] },
     ];
   }
   return SIDEBAR_GROUPS_DEFAULT;
@@ -419,7 +419,7 @@ export default function AppLayout({
               </h2>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[var(--clinical-secondary)] leading-none">
-                  Institutional Console
+                  Hospital Control Room
                 </span>
                 <span className="w-0.5 h-0.5 rounded-full bg-[var(--clinical-secondary)]/20" />
                 <span className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-700 leading-none bg-[var(--clinical-secondary)]/8 px-1.5 py-0.5 rounded-md">

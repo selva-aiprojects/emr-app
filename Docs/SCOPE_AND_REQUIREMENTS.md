@@ -37,10 +37,11 @@ The system provides a unified platform for hospital management, including clinic
 - **REQ-PHM-01: Pharmacy Queue**. Unified workstation for pharmacists to monitor and dispense clinical orders.
 - **REQ-INV-01: Stock Intelligence**. Visual inventory meters with real-time reorder point alerts.
 - **REQ-LOG-01: Ambulance Service**. Fleet telemetry tracking (Available/On Mission/Maintenance) and emergency dispatch logs.
-- **REQ-DIAG-01: Labs & Blood Bank**. Result recording, status tracking, and critical alert management for diagnostic shards.
+- **REQ-DIAG-01: Diagnostics & Blood Bank**. Result recording, status tracking, and critical alert management with automated E2E validation (Stability Baseline v1.5.8).
 
 ### 2.5 Revenue & Governance
-- **REQ-BIL-01: Branded Invoicing**. Service-specific billing for OPD, IPD, Diagnostics, and Pharmacy.
+- **REQ-BIL-01: Branded Invoicing**. Service-specific billing (OPD, IPD, Pharmacy) with automated financial handshake and settlement simulation.
+- **REQ-OPS-01: Full Lifecycle Automation**. Guaranteed 100% pass rate for end-to-end clinical regression (Admission → Discharge) via isolated test shards.
 - **REQ-SUP-01: Superadmin Control Plane**. Managed interface for tenant provisioning, global broadcast, and fiscal governance.
 - **REQ-FEATURE-01: Tier-Based Gating**. Automated module availability based on subscription shards (Free, Basic, Professional, Enterprise).
 

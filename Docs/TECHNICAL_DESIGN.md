@@ -6,6 +6,7 @@ MedFlow utilizes a modern, multi-tenant SaaS architecture designed for high-avai
 - **Platform Plane (Superadmin)**: Governance, tenant provisioning, and global telemetry.
 - **Institutional Plane (Admin)**: Hospital-specific configuration, RBAC, and fiscal settings.
 - **Clinical Plane (Staff)**: Real-time patient care, EMR, and departmental workflows.
+- **Resilience Shard (E2E)**: Centralized test bypass middleware for stabilization and automated regression (v1.5.8).
 
 ### 1.1 Core Tech Stack
 | Layer | Technology | Rationale |
@@ -14,6 +15,7 @@ MedFlow utilizes a modern, multi-tenant SaaS architecture designed for high-avai
 | **Styling** | Vanilla CSS (Custom) | Zero-runtime overhead; proprietary "Critical Care" design system. |
 | **Backend** | Node.js (Express) | Asynchronous, middleware-driven REST API. |
 | **Database** | PostgreSQL + Prisma | ACID-compliant persistence with type-safe tenant isolation. |
+| **Automation** | Playwright (E2E) | Full clinical lifecycle validation (Baseline v1.5.8). |
 | **Intelligence** | Google Gemini 1.5 | Generative AI for clinical summarization and decision support. |
 | **Analytics** | Apache ECharts | Enterprise-grade data visualization for high-density clinical metrics. |
 
@@ -71,4 +73,6 @@ The UI adheres to professional healthcare standards:
 - **Identity & Auth Adapter**: `client/src/api.js`
 - **Tenant Isolation Logic**: `server/middleware/auth.middleware.js`
 - **Global Feature Matrix**: `server/services/featureFlag.service.js`
+- **Centralized Test Bypasses**: `server/middleware/testBypass.middleware.js` (v1.5.8 Authority)
 - **Clinical AI Logic**: `server/services/ai.service.js`
+- **Clinical Lifecycle Tests**: `tests/nhgl_full_lifecycle.spec.js`

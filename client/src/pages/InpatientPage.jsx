@@ -167,12 +167,12 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
            <h1 className="flex items-center gap-3">
-              Institutional Inpatient Care Hub
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Clinical Node</span>
+              Admissions & Bed Management
+              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Ward Overview</span>
            </h1>
-           <p className="dim-label">Active inpatient management, bed allocation, and discharge infrastructure for {tenant?.name || 'Authorized Facility'}.</p>
+           <p className="dim-label">Track admitted patients and manage hospital beds for {tenant?.name || 'Authorized Facility'}.</p>
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Census Integrity Validated • Live Ward updates Active
+              <ShieldCheck className="w-3 h-3 text-emerald-500" /> All Beds Synced • Updated Live
            </p>
         </div>
         <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">

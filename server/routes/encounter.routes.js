@@ -42,17 +42,6 @@ router.get('/', async (req, res) => {
  */
 router.post('/', requirePermission('emr'), async (req, res) => {
   try {
-    const fs = await import('fs');
-    const path = await import('path');
-    const logPath = path.join(process.cwd(), 'server_debug.json');
-    const logData = {
-      timestamp: new Date().toISOString(),
-      url: req.originalUrl,
-      body: req.body,
-      tenantId: req.tenantId
-    };
-    fs.appendFileSync(logPath, JSON.stringify(logData, null, 2) + ',\n');
-    
     const { patientId, providerId, type, complaint, diagnosis, notes, wardId, bedId } = req.body;
 
     if (!patientId || !providerId || !type) {
@@ -170,21 +159,7 @@ router.post('/:id/discharge', requirePermission('emr'), async (req, res) => {
     if (req.tenantId === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' && id.startsWith('enc-test-')) {
        console.log(`[ENCOUNTER_BYPASS] Fast-tracking discharge for encounter: ${id}`);
        
-       const dumpPath = await import('path').then(p => p.join(process.cwd(), 'clinical_memory_dump.json'));
-       try {
-         const fs = await import('fs');
-         if (fs.existsSync(dumpPath)) {
-            const data = JSON.parse(fs.readFileSync(dumpPath, 'utf8'));
-            if (data.encounterStore[req.tenantId]) {
-               const originalCount = data.encounterStore[req.tenantId].length;
-               data.encounterStore[req.tenantId] = data.encounterStore[req.tenantId].filter(e => e.id !== id);
-               fs.writeFileSync(dumpPath, JSON.stringify(data, null, 2));
-               console.log(`[ENCOUNTER_BYPASS] Persistence updated. Removed encounter ${id}. Count: ${originalCount} -> ${data.encounterStore[req.tenantId].length}`);
-            }
-         }
-       } catch (e) {
-          console.error('[ENCOUNTER_BYPASS] Persistence update failed:', e.message);
-       }
+       clinicalMemory.deleteEncounter(req.tenantId, id);
 
        return res.json({
          id,

@@ -295,10 +295,10 @@ export default function EmrPage({ tenant, activeUser, selectedId, patients, prov
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
            <h1 className="flex items-center gap-3">
-              EMR Clinical Workspace
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Consultation Desk</span>
+               Patient Visit Notes
+              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Doctor's Visit</span>
            </h1>
-           <p className="dim-label">Longitudinal health recording, clinical assessments, and electronic prescription authorizing for {tenant?.name || 'Authorized Facility'}.</p>
+           <p className="dim-label">Complete health history tracking, patient check-ups, and medicines/prescription notes for {tenant?.name || 'Authorized Facility'}.</p>
            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
               <ShieldCheck className="w-3 h-3 text-emerald-500" /> Clinical Integrity Validated • Diagnostic sync operational
            </p>
@@ -316,10 +316,10 @@ export default function EmrPage({ tenant, activeUser, selectedId, patients, prov
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-              Electronic Medical Record
+              Digital Patient Record
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Structured clinical workspace for documenting visits and prescriptions.
+              Professional setup for visit notes and medicine records.
             </p>
           </div>
           {selectedPatient && (
@@ -392,10 +392,10 @@ export default function EmrPage({ tenant, activeUser, selectedId, patients, prov
       <div className="page-header-premium mb-8">
         <div className="premium-tab-bar">
           <button className={`premium-tab-item ${activeTab === 'active' ? 'active' : ''}`} onClick={() => setActiveTab('active')}>
-             <Activity className="w-4 h-4" /> Active Registry
+             <Activity className="w-4 h-4" /> Active Patients
           </button>
           <button className={`premium-tab-item ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-             <History className="w-4 h-4" /> Persistence Ledger
+             <History className="w-4 h-4" /> Past Visits
           </button>
           <button className={`premium-tab-item ${activeTab === 'new' ? 'active' : ''}`} onClick={() => setActiveTab('new')}>
              <Plus className="w-4 h-4" /> New Assessment
@@ -417,8 +417,8 @@ export default function EmrPage({ tenant, activeUser, selectedId, patients, prov
             <aside className="col-span-12 lg:col-span-4 space-y-8">
               <article className="clinical-card">
                 <div className="mb-6">
-                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Step 01 / Identity</h4>
-                  <p className="text-sm font-bold text-slate-800">Assign Subject for Clinical Documentation</p>
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-[0.2em] mb-1">Step 01 / Patient Name</h4>
+                  <p className="text-sm font-bold text-slate-800">Select Patient for Visit Notes</p>
                 </div>
                 <PatientSearch 
                   tenantId={tenant?.id} 
@@ -441,11 +441,11 @@ export default function EmrPage({ tenant, activeUser, selectedId, patients, prov
                     
                     <div className="relative z-10 space-y-4">
                       <div className="p-4 bg-white/5 rounded-2xl border border-white/10 group-hover:border-rose-500/30 transition-colors">
-                        <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Sensitivity Matrix</label>
+                        <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Known Allergies</label>
                         <div className="text-xs font-bold text-rose-400 group-hover:text-rose-300 transition-colors">{selectedPatient.medicalHistory?.allergies || 'NONE RECORDED'}</div>
                       </div>
                       <div className="p-4 bg-white/5 rounded-2xl border border-white/10 group-hover:border-[var(--primary)]/30 transition-colors">
-                        <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Pathological History</label>
+                        <label className="block text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-2">Past Health Problems</label>
                         <div className="text-xs font-bold text-[var(--primary-soft)]">{selectedPatient.medicalHistory?.chronicConditions || 'CLEAR PROFILE'}</div>
                       </div>
 

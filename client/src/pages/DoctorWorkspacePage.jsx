@@ -76,7 +76,7 @@ export default function DoctorWorkspacePage({
             <h1 className="flex items-center gap-3 text-2xl font-black text-slate-900 leading-tight">
               {activeUser?.name || 'Physician'}
               <span className="text-[9px] bg-slate-900 text-white px-3 py-1 rounded-full uppercase tracking-tighter font-black">
-                Clinical Workspace
+                Doctor's Desk
               </span>
             </h1>
             <p className="text-xs text-slate-400 font-medium mt-1">
@@ -89,7 +89,7 @@ export default function DoctorWorkspacePage({
               className="clinical-btn bg-slate-900 text-white px-6 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-xl border-none"
             >
               <Stethoscope className="w-4 h-4 mr-2" />
-              Open EMR Chart
+              Open Patient File
             </button>
           </div>
         </div>
@@ -98,11 +98,11 @@ export default function DoctorWorkspacePage({
         <div className="flex gap-4 mt-6 flex-wrap">
           <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-100 rounded-2xl">
             <Clock className="w-4 h-4 text-blue-600" />
-            <span className="text-xs font-black text-blue-800">{pendingCount} Pending</span>
+            <span className="text-xs font-black text-blue-800">{pendingCount} Waiting</span>
           </div>
           <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 border border-emerald-100 rounded-2xl">
             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span className="text-xs font-black text-emerald-800">{completedToday} Completed Today</span>
+            <span className="text-xs font-black text-emerald-800">{completedToday} Visits Done Today</span>
           </div>
           <div className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-2xl">
             <Users className="w-4 h-4 text-indigo-600" />
@@ -117,7 +117,7 @@ export default function DoctorWorkspacePage({
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[var(--clinical-secondary)]" />
-              My Schedule
+              My Daily Plan
             </h2>
             <div className="flex bg-slate-100 p-1 rounded-xl gap-1">
               {['today', 'all'].map(f => (
@@ -241,13 +241,13 @@ export default function DoctorWorkspacePage({
         <aside className="col-span-12 lg:col-span-5 space-y-6">
           {/* QUICK ACTIONS */}
           <div className="clinical-card !bg-slate-900 border-none text-white">
-            <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-4">Quick Clinical Actions</h3>
+            <h3 className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 mb-4">Quick Work Shortcuts</h3>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: 'Write EMR Notes', icon: FileText, view: 'emr', color: 'bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300' },
-                { label: 'Lab Results', icon: Activity, view: 'lab', color: 'bg-teal-500/20 hover:bg-teal-500/30 text-teal-300' },
-                { label: 'Prescriptions', icon: Pill, view: 'pharmacy', color: 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300' },
-                { label: 'My Patients', icon: Users, view: 'patients', color: 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300' },
+                { label: 'Write Visit Notes', icon: FileText, view: 'emr', color: 'bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300' },
+                { label: 'Labs & Tests', icon: Activity, view: 'lab', color: 'bg-teal-500/20 hover:bg-teal-500/30 text-teal-300' },
+                { label: 'Medicine Slips', icon: Pill, view: 'pharmacy', color: 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300' },
+                { label: 'My Patients List', icon: Users, view: 'patients', color: 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300' },
               ].map(action => (
                 <button
                   key={action.view}

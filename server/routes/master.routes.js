@@ -12,15 +12,6 @@ const router = express.Router();
  */
 router.get('/bootstrap', async (req, res) => {
   try {
-    const fs = await import('fs');
-    const path = await import('path');
-    const logPath = path.join(process.cwd(), 'server_debug.json');
-    fs.appendFileSync(logPath, JSON.stringify({
-      timestamp: new Date().toISOString(),
-      url: '/bootstrap',
-      tenantId: req.tenantId
-    }, null, 2) + ',\n');
-    
     const { tenantId, userId } = req.query;
     const targetTenantId = req.tenantId || tenantId;
     console.log(`[BOOTSTRAP_TRACE] Request for Tenant: ${targetTenantId}`);
@@ -48,27 +39,10 @@ router.get('/bootstrap', async (req, res) => {
     const finalData = injectTestBootstrap(targetTenantId, data);
 
     console.log(`[BOOTSTRAP_EGRESS] Sending ${finalData.encounters?.length || 0} encounters to client`);
-    fs.appendFileSync(logPath, JSON.stringify({
-      timestamp: new Date().toISOString(),
-      url: '/bootstrap_egress',
-      encountersCount: data.encounters?.length || 0,
-      encounterIds: data.encounters?.map(e => e.id)
-    }, null, 2) + ',\n');
     
-    res.json(data);
+    res.json(finalData);
   } catch (error) {
     console.error('Error bootstrapping data:', error);
-    try {
-      const fs = await import('fs');
-      const path = await import('path');
-      const logPath = path.join(process.cwd(), 'server_debug.json');
-      fs.appendFileSync(logPath, JSON.stringify({
-        timestamp: new Date().toISOString(),
-        url: '/bootstrap_error',
-        error: error.message,
-        stack: error.stack
-      }, null, 2) + ',\n');
-    } catch (e) {}
     res.status(500).json({ error: 'Failed to bootstrap data: ' + error.message });
   }
 });

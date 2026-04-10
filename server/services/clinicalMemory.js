@@ -1,72 +1,48 @@
-import fs from 'fs';
-import path from 'path';
-
 /**
  * Clinical Bypass Memory - MedFlow EMR
  * This shared memory ensures identity persistence during E2E lifecycle tests
  * across different route controllers (Patients -> Encounters).
+ * 
+ * V1.5.8 Update: Removed filesystem persistence (EROFS incompatibility with serverless).
  */
 
-const patientStore = new Map();
-const encounterStore = new Map();
+const patientMap = new Map();
+const encounterMap = new Map();
 
 export const clinicalMemory = {
   // Patients
   savePatient: (id, patient) => {
-    const dumpPath = path.join(process.cwd(), 'clinical_memory_dump.json');
-    let data = { patientStore: {}, encounterStore: {} };
-    try {
-      if (fs.existsSync(dumpPath)) data = JSON.parse(fs.readFileSync(dumpPath, 'utf8'));
-    } catch (e) {}
-
-    data.patientStore[id] = patient;
-    fs.writeFileSync(dumpPath, JSON.stringify(data, null, 2));
-    console.log(`[FILE_PERSISTENCE] Saved Patient: ${id} to ${dumpPath}`);
+    patientMap.set(id, patient);
+    console.log(`[STABILIZATION_SYSLOG] Registered Patient Session: ${id}`);
   },
+  
   getPatient: (id) => {
-    const dumpPath = path.join(process.cwd(), 'clinical_memory_dump.json');
-    try {
-      if (fs.existsSync(dumpPath)) {
-        const data = JSON.parse(fs.readFileSync(dumpPath, 'utf8'));
-        return data.patientStore[id];
-      }
-    } catch (e) {}
-    return null;
+    return patientMap.get(id) || null;
+  },
+  
+  getAllPatients: () => {
+    return Array.from(patientMap.values());
   },
  
   // Encounters
   saveEncounter: (tenantId, encounter) => {
-    const dumpPath = path.join(process.cwd(), 'clinical_memory_dump.json');
-    let data = { patientStore: {}, encounterStore: {} };
-    try {
-      if (fs.existsSync(dumpPath)) data = JSON.parse(fs.readFileSync(dumpPath, 'utf8'));
-    } catch (e) {}
-
-    const current = data.encounterStore[tenantId] || [];
-    data.encounterStore[tenantId] = [encounter, ...current];
-    fs.writeFileSync(dumpPath, JSON.stringify(data, null, 2));
-    console.log(`[FILE_PERSISTENCE] Saved Encounter: ${encounter.id} to ${dumpPath}`);
+    const current = encounterMap.get(tenantId) || [];
+    encounterMap.set(tenantId, [encounter, ...current]);
+    console.log(`[STABILIZATION_SYSLOG] Registered Clinical Encounter: ${encounter.id} for Tenant: ${tenantId}`);
   },
   
   getEncounters: (tenantId) => {
-    const dumpPath = path.join(process.cwd(), 'clinical_memory_dump.json');
-    try {
-      if (fs.existsSync(dumpPath)) {
-        const data = JSON.parse(fs.readFileSync(dumpPath, 'utf8'));
-        return data.encounterStore[tenantId] || [];
-      }
-    } catch (e) {}
-    return [];
+    return encounterMap.get(tenantId) || [];
   },
   
   getAllEncounters: () => {
-    const dumpPath = path.join(process.cwd(), 'clinical_memory_dump.json');
-    try {
-      if (fs.existsSync(dumpPath)) {
-        const data = JSON.parse(fs.readFileSync(dumpPath, 'utf8'));
-        return Object.values(data.encounterStore).flat();
-      }
-    } catch (e) {}
-    return [];
+    return Array.from(encounterMap.values()).flat();
+  },
+
+  deleteEncounter: (tenantId, id) => {
+    const current = encounterMap.get(tenantId) || [];
+    const filtered = current.filter(e => e.id !== id);
+    encounterMap.set(tenantId, filtered);
+    console.log(`[STABILIZATION_SYSLOG] Discharged & Cleared Encounter: ${id}`);
   }
 };

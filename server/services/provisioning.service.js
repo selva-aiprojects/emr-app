@@ -96,8 +96,8 @@ export async function provisionNewTenant(tenantData, adminData) {
   try {
     // 1. Create or Map entry in the management database (Control Plane)
     const insertSql = `
-      INSERT INTO emr.management_tenants (name, code, subdomain, schema_name, status, contact_email, subscription_tier)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
       ON CONFLICT (code) DO UPDATE SET 
         name = EXCLUDED.name,
         updated_at = NOW()

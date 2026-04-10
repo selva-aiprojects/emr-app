@@ -49,15 +49,15 @@ function LiveQueue({ appointments = [], patients = [], setView, setActivePatient
     <div className="bg-white rounded-xl shadow-sm border border-[var(--accent-soft)] overflow-hidden">
        <header className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
           <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
-             <Activity className="w-3.5 h-3.5 text-indigo-500" /> Live Patient Queue
+             <Activity className="w-3.5 h-3.5 text-indigo-500" /> Patients Waiting
           </h3>
-          <span className="text-[9px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold">{queue.length} Pulse</span>
+          <span className="text-[9px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold">{queue.length} Total</span>
        </header>
        <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-50">
           {queue.length === 0 ? (
             <div className="p-10 text-center">
                <Activity className="w-8 h-8 text-slate-100 mx-auto mb-2" />
-               <p className="text-slate-300 text-[10px] font-black uppercase tracking-widest">No active consultations</p>
+               <p className="text-slate-300 text-[10px] font-black uppercase tracking-widest">No patients waiting right now</p>
             </div>
           ) : (
             queue.map((a, idx) => {
@@ -344,9 +344,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
            </div>
            <h1 className="flex items-center gap-3">
               {getGreeting()}, {activeUser?.name?.split(' ')[0] || 'Admin'}
-              <span className="text-[9px] bg-[var(--clinical-primary)] text-white px-2 py-0.5 rounded-lg border border-white/10 uppercase tracking-tighter font-black">Institutional Console</span>
+              <span className="text-[9px] bg-[var(--clinical-primary)] text-white px-2 py-0.5 rounded-lg border border-white/10 uppercase tracking-tighter font-black">Hospital Control Room</span>
            </h1>
-           <p className="dim-label text-xs">Facility Health Overview for {tenant?.name || 'Authorized Centre'}</p>
+           <p className="dim-label text-xs">Hospital Daily Summary for {tenant?.name || 'Authorized Centre'}</p>
         </div>
         <div className="flex items-center gap-4 animate-slide-left">
           <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
@@ -408,8 +408,8 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           </div>
           <div className="metric-content mt-4">
              <div className="metric-value">{currency(realtimeMetrics.totalRevenue)}</div>
-             <div className="metric-title">Gross Revenue</div>
-             <div className="metric-subtitle">Total collections processed</div>
+             <div className="metric-title">Total Income</div>
+             <div className="metric-subtitle">Total money collected today</div>
           </div>
         </div>
 
@@ -426,8 +426,8 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           </div>
           <div className="metric-content mt-4">
              <div className="metric-value">{realtimeMetrics.totalAppointments}</div>
-             <div className="metric-title">OPD Appointments</div>
-             <div className="metric-subtitle">Scheduled consultations</div>
+             <div className="metric-title">Check-up Bookings</div>
+             <div className="metric-subtitle">Scheduled doctor visits today</div>
           </div>
         </div>
 
@@ -446,8 +446,8 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           </div>
           <div className="metric-content mt-4">
              <div className="metric-value">{realtimeMetrics.totalPatients}</div>
-             <div className="metric-title">Total Patients</div>
-             <div className="metric-subtitle">Registered clinical files</div>
+             <div className="metric-title">Total Registered Patients</div>
+             <div className="metric-subtitle">All patient records in system</div>
           </div>
         </div>
 
@@ -466,8 +466,8 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           </div>
           <div className="metric-content mt-4">
              <div className={`metric-value ${realtimeMetrics.criticalAlerts > 0 ? 'text-red-700' : ''}`}>{realtimeMetrics.criticalAlerts}</div>
-             <div className="metric-title">Critical Alerts</div>
-             <div className="metric-subtitle">Shortages / Absences</div>
+             <div className="metric-title">System Alerts</div>
+             <div className="metric-subtitle">Shortages or Issues</div>
           </div>
         </div>
       </div>

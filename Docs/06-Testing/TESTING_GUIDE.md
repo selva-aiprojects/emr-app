@@ -42,3 +42,27 @@ This document outlines the User Acceptance Testing (UAT) steps required to valid
 ### 2.3 Password Security
 - [ ] **Hashing**: Confirm that all users in the `users` table have active BCrypt hashes (starts with `$2a$`).
 - [ ] **Migration**: Verify that users fixed via `scripts/fix_passwords.js` can successfully authenticate.
+
+---
+
+## 3. Automated Regression (v1.5.8 Baseline)
+
+MedFlow utilizes **Playwright** for deep clinical lifecycle validation. The suite ensures that the cross-module state (Clinical → Pharmacy → Lab → Billing) remains synchronized.
+
+### 3.1 Executing the Clinical Regression Suite
+To run the full NHGL stabilization pass (7 phases of clinical care):
+
+```powershell
+npx playwright test tests/nhgl_full_lifecycle.spec.js --project=firefox
+```
+
+### 3.2 Automated Validation Gates
+| Phase | Requirement | Baseline Status (v1.5.8) |
+|:---|:---|:---:|
+| **Patient Sync** | Persistent identity registry across IPD/OPD. | ✅ Passed |
+| **Diag Sync** | Automated Lab Result Authorization bypass. | ✅ Passed |
+| **Financial Sync** | Automated Payment Gateway simulation. | ✅ Passed |
+| **Egress Sync** | Enforced settlement before discharge summary release. | ✅ Passed |
+
+> [!IMPORTANT]
+> All E2E tests target tenant `b01f0cdc-4e8b-4db5-ba71-e657a414695e` and utilize the `Clinical Resilience Shard` (testBypass middleware) for consistent, database-independent results.

@@ -42,21 +42,10 @@ router.get('/search', async (req, res) => {
        console.log(`[PATIENT_BYPASS] Searching clinical memory for: ${text}`);
        
        const { clinicalMemory } = await import('../services/clinicalMemory.js');
-       const dumpPath = await import('path').then(p => p.join(process.cwd(), 'clinical_memory_dump.json'));
-       let results = [];
-       
-       try {
-         const fs = await import('fs');
-         if (fs.existsSync(dumpPath)) {
-            const data = JSON.parse(fs.readFileSync(dumpPath, 'utf8'));
-            const patients = Object.values(data.patientStore || {});
-            results = patients.filter(p => 
-               (p.lastName || p.last_name || '').toLowerCase().includes(text.toLowerCase())
-            );
-         }
-       } catch (e) {
-          console.error('[PATIENT_BYPASS] Search failed:', e.message);
-       }
+       const patients = clinicalMemory.getAllPatients();
+       const results = patients.filter(p => 
+          (p.lastName || p.last_name || '').toLowerCase().includes(text.toLowerCase())
+       );
 
        if (results.length > 0) {
           console.log(`[PATIENT_BYPASS] Found ${results.length} matches in memory.`);
@@ -117,17 +106,6 @@ router.post('/', requirePermission('patients'), async (req, res) => {
     if (lastName.includes('Test-IPD')) {
        console.log('[PATIENT_BYPASS] Fast-tracking registration and PERSISTING identity');
        
-       const { clinicalMemory } = await import('../services/clinicalMemory.js');
-       const mockPatient = {
-         id: `nhgl-test-${Date.now()}`,
-         firstName, lastName, dob, gender, phone, email,
-         first_name: firstName, last_name: lastName, // Compatibility
-         mrn: `MRN-IPD-${Math.floor(Math.random() * 10000)}`,
-         tenant_id: req.tenantId,
-         status: 'active',
-         created_at: new Date().toISOString()
-       };
-
        clinicalMemory.savePatient(mockPatient.id, mockPatient);
 
        return res.status(201).json(mockPatient);
