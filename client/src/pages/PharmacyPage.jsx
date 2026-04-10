@@ -52,7 +52,7 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
       if (res._audit) {
         console.warn('[PHARMACY_AUDIT] Queue is empty! Backend Audit Report:', res._audit);
       }
-      setQueue(res.data || []);
+      setQueue(Array.isArray(res) ? res : res.data || []);
     } catch (err) {
       console.error(err);
       setQueue([]);

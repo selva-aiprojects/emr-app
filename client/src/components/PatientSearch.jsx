@@ -71,6 +71,7 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
 
             setPatients(finalResults);
             setIsOpen(true);
+            console.log(`[SEARCH_FORENSIC] Open: true, Results: ${finalResults.length}, Term: "${term}"`);
         } catch (error) {
             console.error("Search failed", error);
         } finally {
@@ -82,9 +83,10 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
     useEffect(() => {
         const timer = setTimeout(() => {
             if (searchTerm || dateFilter || typeFilter || statusFilter) {
+                console.log(`[SEARCH_FORENSIC] Triggering search for: "${searchTerm}"`);
                 handleSearch();
             } else {
-                setPatients([]);
+                setPatients(patients);
             }
         }, 400);
         return () => clearTimeout(timer);
@@ -129,13 +131,16 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
                             placeholder="Search by Name, MRN, or Phone..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            onFocus={() => setIsOpen(true)}
+                            onFocus={() => {
+                                console.log('[SEARCH_FORENSIC] Input Focused');
+                                setIsOpen(true);
+                            }}
                         />
                     </div>
 
                     <div className="flex gap-4">
                         <div className="flex-1 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-400">Context</label>
+                            <label className="text-[10px] font-black uppercase text-slate-400">Context</label>
                             <select className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                                 <option value="">Any</option>
                                 <option value="OPD">OPD</option>
@@ -144,7 +149,7 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
                             </select>
                         </div>
                         <div className="flex-1 space-y-1">
-                            <label className="text-[10px] font-bold uppercase text-slate-400">Arrival</label>
+                            <label className="text-[10px] font-black uppercase text-slate-400">Arrival</label>
                             <input className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white" type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
                         </div>
                     </div>
@@ -152,6 +157,12 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
             )}
 
             {/* Search Dropdown */}
+            {(() => {
+                if (isOpen && !selectedPatient && (searchTerm || patients.length > 0)) {
+                    console.log(`[SEARCH_FORENSIC] Rendering dropdown. Open: ${isOpen}, Term: "${searchTerm}", Results: ${patients.length}`);
+                }
+                return null;
+            })()}
             {isOpen && !selectedPatient && (searchTerm || patients.length > 0) && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-xl shadow-xl z-[9999] max-h-[300px] overflow-y-auto divide-y divide-slate-100">
                     {loading && <div className="p-4 text-center text-sm text-slate-500">🔍 Scouring clinical records...</div>}
@@ -181,11 +192,13 @@ export default function PatientSearch({ tenantId, onSelect, onRegister, initialP
                             onClick={() => selectPatient(p)}
                             className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition-colors"
                         >
-                            <div className="w-10 h-10 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center font-bold">{(p.firstName || 'P')[0]}</div>
+                            <div className="w-10 h-10 rounded-full bg-[var(--primary)]/10 text-[var(--primary)] flex items-center justify-center font-bold">{(p.firstName || p.first_name || 'P')[0]}</div>
                             <div className="flex-1 min-w-0">
-                                <div className="text-sm font-bold text-slate-800 truncate">{p.firstName} {p.lastName}</div>
+                                <div className="text-sm font-bold text-slate-800 truncate">
+                                    {p.firstName || p.first_name} {p.lastName || p.last_name}
+                                </div>
                                 <div className="text-xs text-slate-500 truncate">
-                                    {p.mrn} • {new Date().getFullYear() - new Date(p.dob).getFullYear()}Y • {p.gender}
+                                    {p.mrn} • {p.age || (p.dob ? (new Date().getFullYear() - new Date(p.dob).getFullYear()) : '??')}Y • {p.gender || p.sex || 'U'}
                                 </div>
                             </div>
                             <div className="shrink-0">

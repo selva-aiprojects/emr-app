@@ -3,6 +3,7 @@ export function currency(value) {
 }
 
 export function patientName(patientId, patients) {
+  if (!Array.isArray(patients)) return 'Unknown';
   const p = patients.find((x) => x.id === patientId);
   if (!p) return 'Unknown';
   
@@ -24,5 +25,6 @@ export function patientName(patientId, patients) {
 }
 
 export function userName(userId, users) {
+  if (!Array.isArray(users)) return 'Unknown';
   return users.find((x) => x.id === userId)?.name || 'Unknown';
 }

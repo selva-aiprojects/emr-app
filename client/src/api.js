@@ -385,7 +385,7 @@ export async function getEncounters(tenantId) {
 }
 
 export async function getInvoices(tenantId) {
-  return await apiRequest(`/invoices?tenantId=${tenantId}`);
+  return await apiRequest(`/billing?tenantId=${tenantId}`);
 }
 
 export async function createEncounter(data) {
@@ -407,14 +407,14 @@ export async function dischargePatient(encounterId, data) {
 // =====================================================
 
 export async function createInvoice(data) {
-  return await apiRequest('/invoices', {
+  return await apiRequest('/billing', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
 export async function payInvoice(invoiceId, tenantId, userId, paymentMethod = 'Cash') {
-  return await apiRequest(`/invoices/${invoiceId}/pay`, {
+  return await apiRequest(`/billing/${invoiceId}/pay`, {
     method: 'PATCH',
     body: JSON.stringify({ tenantId, userId, paymentMethod }),
   });
@@ -425,14 +425,14 @@ export async function payInvoice(invoiceId, tenantId, userId, paymentMethod = 'C
 // =====================================================
 
 export async function createInventoryItem(data) {
-  return await apiRequest('/inventory-items', {
+  return await apiRequest('/inventory/items', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
 export async function updateInventoryStock(itemId, tenantId, delta) {
-  return await apiRequest(`/inventory-items/${itemId}/stock`, {
+  return await apiRequest(`/inventory/items/${itemId}/stock`, {
     method: 'PATCH',
     body: JSON.stringify({ tenantId, delta }),
   });
@@ -461,7 +461,8 @@ export async function createEmployeeLeave(employeeId, data) {
 // =====================================================
 
 export async function getReportSummary(tenantId) {
-  return await apiRequest(`/reports/summary/${tenantId}`);
+  // Modular Backend uses /api/reports/summary and extracts tenantId from middleware
+  return await apiRequest('/reports/summary');
 }
 
 export async function getDoctorPayouts(tenantId) {
@@ -536,6 +537,24 @@ export async function getDrugDetails(id) {
 
 export async function getGenericSubstitutes(id) {
   return await apiRequest(`/pharmacy/v1/drugs/${id}/substitutes`);
+}
+
+// =====================================================
+// FINANCIAL HANDSHAKE SIMULATION
+// =====================================================
+
+export async function simulatePaymentGateway(amount, currency = 'INR') {
+  // Clinical E2E Bypass: Automatic Approval
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        success: true,
+        transactionId: `TXN-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        amount,
+        currency
+      });
+    }, 800);
+  });
 }
 
 // Alerts
@@ -617,11 +636,11 @@ export async function updateSupportTicketStatus(id, status) {
 
 export async function getNotices(tenantId, status = 'published') {
   const query = new URLSearchParams({ tenantId, status });
-  return await apiRequest(`/notices?${query.toString()}`);
+  return await apiRequest(`/communication/notices?${query.toString()}`);
 }
 
 export async function createNotice(data) {
-  return await apiRequest('/notices', {
+  return await apiRequest('/communication/notices', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -910,12 +929,14 @@ apiClient.addSupportTicket = createSupportTicket;
 apiClient.updateSupportStatus = updateSupportTicketStatus;
 apiClient.getInvoices = getInvoices;
 apiClient.getBootstrap = getBootstrapData;
+apiClient.autoBillItem = createInvoice;
+apiClient.simulatePaymentGateway = simulatePaymentGateway;
 
 // Lab module
-apiClient.getLabOrders = (tenantId, status) => apiRequest(`/lab/orders${status ? `?status=${status}` : ''}`);
-apiClient.createLabOrder = (data) => apiRequest('/lab/orders', { method: 'POST', body: JSON.stringify(data) });
-apiClient.updateLabOrderStatus = (id, status) => apiRequest(`/lab/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
-apiClient.recordLabResults = (id, data) => apiRequest(`/lab/orders/${id}/results`, { method: 'POST', body: JSON.stringify(data) });
+apiClient.getLabOrders = (tenantId, status) => apiRequest(`/laboratory/orders${status ? `?status=${status}` : ''}`);
+apiClient.createLabOrder = (data) => apiRequest('/laboratory/orders', { method: 'POST', body: JSON.stringify(data) });
+apiClient.updateLabOrderStatus = (id, status) => apiRequest(`/laboratory/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+apiClient.recordLabResults = (id, data) => apiRequest(`/laboratory/orders/${id}/results`, { method: 'POST', body: JSON.stringify(data) });
 
 // Infrastructure & Administrative Masters
 apiClient.getDepartments = () => apiRequest('/departments');

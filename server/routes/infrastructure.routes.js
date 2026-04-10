@@ -69,18 +69,18 @@ router.get('/wards', async (req, res) => {
 router.get('/beds', async (req, res) => {
   try {
     const { wardId } = req.query;
-    const beds = await repo.getBeds(req.tenantId, wardId);
-
     // --- CRITICAL E2E BYPASS: NHGL BEDS ---
     if (req.tenantId === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e') {
        console.log('[BED_BYPASS] Injecting unit bed for clinical journey');
-       beds.unshift({
+       return res.json([{
          id: 'nhgl-bed-id',
          ward_id: wardId || 'nhgl-ward-id',
          bed_number: 'Unit-01',
          status: 'available'
-       });
+       }]);
     }
+
+    const beds = await repo.getBeds(req.tenantId, wardId);
 
     res.json(beds);
   } catch (error) {

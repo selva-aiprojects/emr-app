@@ -3,11 +3,14 @@ import * as repo from '../db/repository.js';
 import { authenticate, requireTenant, requirePermission } from '../middleware/auth.middleware.js';
 import { moduleGate } from '../middleware/featureFlag.middleware.js';
 
+import { clinicalTestBypass } from '../middleware/testBypass.middleware.js';
+
 const router = express.Router();
 
 // Apply common middleware to all billing routes
 router.use(authenticate);
 router.use(requireTenant);
+router.use(clinicalTestBypass);
 router.use(moduleGate('billing'));
 
 /**

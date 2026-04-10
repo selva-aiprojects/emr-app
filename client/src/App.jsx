@@ -786,6 +786,22 @@ export default function App() {
                 throw err;
               }
             }}
+            onOrderLab={async (labData) => {
+              try {
+                await api.createLabOrder({
+                  tenantId: session.tenantId,
+                  patientId: labData.patientId,
+                  encounterId: labData.encounterId,
+                  tests: labData.tests,
+                  priority: labData.priority || 'routine',
+                  notes: labData.notes
+                });
+                refreshTenantData();
+              } catch (err) {
+                console.error('Lab order error:', err);
+                throw err;
+              }
+            }}
             onDischarge={() => refreshTenantData()}
             onCreateDocument={(payload) => withRefresh(() => api.createDocument({
               tenantId: session.tenantId,

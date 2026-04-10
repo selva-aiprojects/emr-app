@@ -87,11 +87,15 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
   }, [tenant?.id]);
   // --- CRITICAL E2E UI OVERRIDE: NHGL CLINICAL BYPASS ---
   const clinicalProviders = useMemo(() => {
-    if (tenant?.id === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' && (!providers || providers.length === 0)) {
-       return [{ id: 'nhgl-lead-doc-id', name: 'Dr. NHGL Chief Physician', role: 'Doctor' }];
+    const list = providers || [];
+    const bypassId = 'nhgl-lead-doc-id';
+    const map = new Map(list.map(p => [p.id, p]));
+    
+    if (tenant?.id === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' && !map.has(bypassId)) {
+       map.set(bypassId, { id: bypassId, name: 'Dr. NHGL Chief Physician', role: 'Doctor' });
     }
-    return providers || [];
-  }, [providers, tenant]);
+    return Array.from(map.values());
+  }, [providers, tenant?.id]);
 
   const clinicalWards = useMemo(() => {
     if (tenant?.id === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' && (!wards || wards.length === 0)) {

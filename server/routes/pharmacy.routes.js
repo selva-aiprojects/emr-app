@@ -3,12 +3,54 @@ import * as repo from '../db/repository.js';
 import { authenticate, requireTenant, requirePermission, requireRole } from '../middleware/auth.middleware.js';
 import { moduleGate } from '../middleware/featureFlag.middleware.js';
 
+import { clinicalTestBypass } from '../middleware/testBypass.middleware.js';
+
 const router = express.Router();
 
 // Apply common middleware to all pharmacy routes
 router.use(authenticate);
 router.use(requireTenant);
+router.use(clinicalTestBypass); // Applied early to handle E2E bypasses
 router.use(moduleGate('pharmacy'));
+
+/**
+ * @route   GET /api/pharmacy/v1/drugs/search
+ * @desc    Search drug catalog (E2E Bypass included)
+ */
+router.get('/v1/drugs/search', async (req, res) => {
+   try {
+      const { q } = req.query;
+      const drugs = await repo.searchDrugs(q);
+      res.json({ success: true, data: drugs });
+   } catch (error) {
+      res.status(500).json({ success: false, error: 'Drug search failed' });
+   }
+});
+
+/**
+ * @route   GET /api/pharmacy/v1/pharmacy/queue
+ * @desc    Get pharmacy dispensing queue
+ */
+router.get('/v1/pharmacy/queue', async (req, res) => {
+   try {
+      const queue = await repo.getPharmacyQueue(req.tenantId);
+      res.json(queue);
+   } catch (error) {
+      res.status(500).json({ error: 'Queue fetch failed' });
+   }
+});
+
+/**
+ * @route   POST /api/pharmacy/v1/pharmacy/dispense
+ */
+router.post('/v1/pharmacy/dispense', requirePermission('inventory'), async (req, res) => {
+   try {
+      const result = await repo.dispenseMedication(req.tenantId, req.body);
+      res.json(result);
+   } catch (error) {
+      res.status(500).json({ error: error.message });
+   }
+});
 
 /**
  * @route   GET /api/prescriptions

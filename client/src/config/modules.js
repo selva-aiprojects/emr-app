@@ -17,7 +17,7 @@ export const moduleMeta = {
   patient_profile: { title: 'Patient Profile', subtitle: 'Comprehensive patient journey' },
   find_doctor: { title: 'Find a Doctor', subtitle: 'Browse and book doctors' },
   doctor_availability: { title: 'Doctor Availability', subtitle: 'Check availability and book slots' },
-  lab_availability: { title: 'Laboratory / Diagnostics', subtitle: 'Book laboratory tests and view results' },
+  lab_availability: { title: 'Laboratory Booking', subtitle: 'Book laboratory tests and find slots' },
   emr: { title: 'Clinical Desk / EMR', subtitle: 'Diagnosis, history & e-Prescription' },
   inpatient: { title: 'IPD / Bed Management', subtitle: 'Admission, Ward & Bed tracker' },
   pharmacy: { title: 'Pharmacy / Drug Dispensing', subtitle: 'Prescription fulfillment' },
@@ -51,7 +51,7 @@ export const moduleMeta = {
 
 export const fallbackPermissions = {
   Superadmin: ['superadmin', 'tenant_management', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'reports', 'support', 'admin'],
-  Admin: ['dashboard', 'appointments', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings', 'admin_masters'],
+  Admin: ['dashboard', 'appointments', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'billing', 'insurance', 'inventory', 'pharmacy', 'employees', 'accounts', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'ambulance', 'service_catalog', 'ai_vision', 'donor', 'chat', 'departments', 'bed_management', 'hospital_settings', 'admin_masters', 'lab'],
   Doctor: ['dashboard', 'appointments', 'find_doctor', 'doctor_availability', 'lab_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'reports', 'pharmacy', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Nurse: ['dashboard', 'find_doctor', 'doctor_availability', 'patients', 'patient-profile', 'emr', 'inpatient', 'inventory', 'communication', 'documents', 'ambulance', 'ai_vision'],
   Lab: ['dashboard', 'patients', 'patient-profile', 'lab', 'lab_availability', 'lab_tests', 'reports', 'communication', 'documents'],

@@ -91,7 +91,7 @@ const navIcons = {
 const SIDEBAR_GROUPS_DEFAULT = [
   { name: "Clinical Overview", modules: ["dashboard", "reports"] },
   { name: "Patient Management", modules: ["patients", "appointments", "find_doctor", "doctor_availability"] },
-  { name: "Diagnostic Services", modules: ["lab_availability", "ai_vision"] },
+  { name: "Diagnostic Services", modules: ["lab", "lab_availability", "ai_vision"] },
   { name: "Clinical Care", modules: ["emr", "inpatient", "bed_management"] },
   { name: "Pharmacy & Supplies", modules: ["pharmacy", "inventory"] },
   { name: "Financial Operations", modules: ["billing", "accounts_receivable", "insurance", "accounts", "accounts_payable"] },
@@ -105,7 +105,7 @@ const SIDEBAR_GROUPS_DEFAULT = [
 const SIDEBAR_GROUPS_DOCTOR = [
   { name: "My Workspace", modules: ["doctor_workspace", "find_doctor", "doctor_availability"] },
   { name: "Patient Care", modules: ["patients", "appointments", "emr", "inpatient"] },
-  { name: "Diagnostics", modules: ["lab_availability", "ai_vision"] },
+  { name: "Diagnostics", modules: ["lab", "lab_availability", "ai_vision"] },
   { name: "Emergency", modules: ["ambulance"] },
   { name: "Communication", modules: ["communication", "documents"] },
 ];

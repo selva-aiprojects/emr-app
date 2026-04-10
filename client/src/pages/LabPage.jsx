@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
 import { api } from '../api';
 import '../styles/critical-care.css';
@@ -29,27 +29,40 @@ export default function LabPage({ tenant, activeUser }) {
   const [aiLoading, setAiLoading] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
 
-  useMemo(() => {
+  useEffect(() => {
     async function load() {
       if (!tenant?.id) return;
       setLoading(true);
       try {
         const data = await api.getLabOrders(tenant.id);
-        setLabOrders(data);
+        setLabOrders(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Diagnostic Feed Interrupted:', err);
+        setLabOrders([]);
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [tenant?.id]);
+  }, [tenant?.id, api]);
 
-  const stats = {
-    pending: labOrders.filter(o => o.status === 'pending').length,
-    critical: labOrders.filter(o => o.result_value && (o.result_value > 200 || o.result_value < 50)).length,
-    completed: labOrders.filter(o => o.status === 'completed').length
-  };
+  const stats = useMemo(() => {
+    try {
+      const orders = Array.isArray(labOrders) ? labOrders : [];
+      return {
+        pending: orders.filter(o => o && o.status === 'pending').length,
+        critical: orders.filter(o => {
+          if (!o) return false;
+          const val = Number(o.result_value);
+          return !isNaN(val) && (val > 200 || val < 50);
+        }).length,
+        completed: orders.filter(o => o && o.status === 'completed').length
+      };
+    } catch (e) {
+      console.error("Stats Calc Failure:", e);
+      return { pending: 0, critical: 0, completed: 0 };
+    }
+  }, [labOrders]);
 
   const handleRecordResult = (order) => {
     setSelectedOrder(order);
@@ -73,8 +86,42 @@ export default function LabPage({ tenant, activeUser }) {
     }
   };
 
+  const handleFinalizeResult = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const value = fd.get('resultValue');
+    const notes = fd.get('notes');
+    
+    if (!value) {
+      showToast({ message: 'Result value is required for clinical integrity.', type: 'error' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.recordLabResults(selectedOrder.id, {
+        results: { value: parseFloat(value), unit: selectedOrder.unit || 'mg/dL' },
+        notes,
+        criticalFlag: parseFloat(value) > 200 || parseFloat(value) < 50
+      });
+      
+      showToast({ message: 'Diagnostic outcome committed to persistence ledger.', type: 'success', title: 'Lab Network' });
+      setShowResultModal(false);
+      
+      // Refresh local state
+      const updated = await api.getLabOrders(tenant.id);
+      setLabOrders(Array.isArray(updated) ? updated : []);
+    } catch (err) {
+      console.error(err);
+      showToast({ message: 'Failed to authorize diagnostic outcome.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="page-shell-premium animate-fade-in">
+
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
            <h1 className="flex items-center gap-3">
@@ -172,7 +219,7 @@ export default function LabPage({ tenant, activeUser }) {
                       <tr key={order.id} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 30}ms` }}>
                         <td>
                            <div className="font-black text-slate-900">{order.patient_name || 'Clinical Subject'}</div>
-                           <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5 tabular-nums">Ref: {(order.id || 'X').slice(0, 8)}</div>
+                           <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5 tabular-nums">Ref: {String(order.id || 'X').slice(0, 8)}</div>
                         </td>
                         <td>
                            <div className="text-[13px] font-black text-slate-700">{order.test_name}</div>
@@ -346,7 +393,7 @@ export default function LabPage({ tenant, activeUser }) {
 
       {showResultModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowResultModal(false)}>
-          <div className="relative clinical-card w-full max-w-lg p-8 shadow-2xl space-y-8" onClick={e => e.stopPropagation()}>
+          <form className="relative clinical-card w-full max-w-lg p-8 shadow-2xl space-y-8" onClick={e => e.stopPropagation()} onSubmit={handleFinalizeResult}>
              <div>
                 <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Pathological Observation</h3>
                 <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Ref: {selectedOrder?.test_name} for {selectedOrder?.patient_name}</p>
@@ -356,22 +403,24 @@ export default function LabPage({ tenant, activeUser }) {
                 <div className="space-y-2">
                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Quantitiative Observation</label>
                    <div className="relative">
-                      <input type="number" step="0.01" className="input-field py-5 pr-16 bg-slate-50 border-none rounded-2xl text-lg font-black" placeholder="0.00" autoFocus />
+                      <input name="resultValue" type="number" step="0.01" className="input-field py-5 pr-16 bg-slate-50 border-none rounded-2xl text-lg font-black" placeholder="0.00" autoFocus required />
                       <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 uppercase tracking-widest">{selectedOrder?.unit || 'Units'}</span>
                    </div>
                 </div>
 
                 <div className="space-y-2">
                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Institutional Narrative</label>
-                   <textarea className="input-field py-5 h-32 bg-slate-50 border-none rounded-2xl resize-none font-medium" placeholder="Clinical findings, morphology, or pathalogic notes..."></textarea>
+                   <textarea name="notes" className="input-field py-5 h-32 bg-slate-50 border-none rounded-2xl resize-none font-medium" placeholder="Clinical findings, morphology, or pathalogic notes..."></textarea>
                 </div>
              </div>
 
              <div className="flex gap-4 pt-4">
-                <button className="clinical-btn bg-slate-900 text-white flex-1 rounded-2xl text-xs shadow-xl" onClick={() => setShowResultModal(false)}>Authorize Outcome</button>
-                <button className="clinical-btn bg-white border border-slate-200 text-slate-400 px-8 rounded-2xl text-xs" onClick={() => setShowResultModal(false)}>Cancel</button>
+                <button type="submit" className="clinical-btn bg-slate-900 text-white flex-1 rounded-2xl text-xs shadow-xl" disabled={loading}>
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Authorize Outcome'}
+                </button>
+                <button type="button" className="clinical-btn bg-white border border-slate-200 text-slate-400 px-8 rounded-2xl text-xs" onClick={() => setShowResultModal(false)}>Cancel</button>
              </div>
-          </div>
+          </form>
         </div>
       )}
     </div>

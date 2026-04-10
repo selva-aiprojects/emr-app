@@ -176,11 +176,12 @@ export default function BillingPage({
     );
   }
 
-  const sortedInvoices = [...invoices].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const invoicesData = Array.isArray(invoices) ? invoices : [];
+  const sortedInvoices = [...invoicesData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const stats = {
-    revenue: invoices.filter(i => i.status === 'paid').reduce((acc, curr) => acc + (Number(curr.total) || 0), 0),
-    outstanding: invoices.filter(i => i.status !== 'paid').reduce((acc, curr) => acc + (Number(curr.total) || 0), 0),
+    revenue: invoicesData.filter(i => i.status === 'paid').reduce((acc, curr) => acc + (Number(curr.total) || 0), 0),
+    outstanding: invoicesData.filter(i => i.status !== 'paid').reduce((acc, curr) => acc + (Number(curr.total) || 0), 0),
     pendingClearance: 3
   };
 
@@ -408,16 +409,16 @@ export default function BillingPage({
                       </td>
                     </tr>
                   ) : sortedInvoices.map((i, idx) => (
-                    <tr key={i.id} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }}>
+                    <tr key={i.id} data-testid="invoice-row" className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }}>
                       <td>
                         <div className="text-[13px] font-black text-slate-900 tabular-nums">{i.createdAt ? new Date(i.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Today'}</div>
                       </td>
                       <td><code className="text-[11px] font-black font-tabular text-slate-500 bg-slate-100 px-3 py-1 rounded-xl border border-slate-200">{i.number}</code></td>
                       <td>
                         <div className="font-black text-slate-800 cursor-pointer hover:text-emerald-600 transition-colors" onClick={() => { setActivePatientId(i.patientId); setView('patients'); }}>
-                          {patientName(i.patientId, patients) || 'Identity Shard Restricted'}
+                          {i.patient_name || patientName(i.patientId, patients) || 'Identity Shard Restricted'}
                         </div>
-                        <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">MRN: {(i.patientId || 'X').slice(0, 10).toUpperCase()}</div>
+                        <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1">MRN: {String(i.patientId || 'X').slice(0, 10).toUpperCase()}</div>
                       </td>
                       <td className="font-black text-slate-900 tabular-nums text-sm">{currency(i.total)}</td>
                       <td>

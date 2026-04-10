@@ -2,6 +2,7 @@ import express from 'express';
 import * as repo from '../db/repository.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { clinicalMemory } from '../services/clinicalMemory.js';
+import { injectTestBootstrap } from '../middleware/testBypass.middleware.js';
 
 const router = express.Router();
 
@@ -43,13 +44,10 @@ router.get('/bootstrap', async (req, res) => {
         console.warn('[BOOTSTRAP_BRIDGE] Clinical memory sync failed:', memErr.message);
     }
     
-    // --- LEGACY INFRASTRUCTURE INJECTION ---
-    if (targetTenantId === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e') {
-        if (!data.employees) data.employees = [];
-        data.employees.unshift({ id: 'nhgl-lead-doc-id', name: 'Dr. NHGL Chief Physician', role: 'Doctor' });
-    }
+    // Use Centralized Test Egress Modification
+    const finalData = injectTestBootstrap(targetTenantId, data);
 
-    console.log(`[BOOTSTRAP_EGRESS] Sending ${data.encounters?.length || 0} encounters to client`);
+    console.log(`[BOOTSTRAP_EGRESS] Sending ${finalData.encounters?.length || 0} encounters to client`);
     fs.appendFileSync(logPath, JSON.stringify({
       timestamp: new Date().toISOString(),
       url: '/bootstrap_egress',

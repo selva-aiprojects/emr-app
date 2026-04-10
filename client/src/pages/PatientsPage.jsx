@@ -83,8 +83,6 @@ export default function PatientsPage({
 
   useEffect(() => {
     async function load() {
-      // If we already have patients from props on page 0, don't refetch immediately
-      // unless we are specifically requested to (e.g. after registration)
       if (page === 0 && Array.isArray(patientsProp) && patientsProp.length > 0 && patients.length > 0) {
         return;
       }
@@ -118,7 +116,7 @@ export default function PatientsPage({
       const searchResults = await api.getPatients(tenantId, { text: q, limit: 100 });
       console.log(`DEBUG_SEARCH_API: Found ${searchResults?.length} matches for "${q}"`);
       if (searchResults && searchResults.length > 0) {
-        setPatients(searchResults); // For search, we want to SHOW the results
+        setPatients(searchResults);
       }
     } catch (err) {
       console.error('Search failed:', err);
@@ -127,7 +125,6 @@ export default function PatientsPage({
     }
   };
 
-  // Server-side search logic (debounced)
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => handleSearch(), 500);
     return () => clearTimeout(delayDebounceFn);
@@ -170,13 +167,22 @@ export default function PatientsPage({
       } else {
         const newPatient = await api.createPatient({ tenantId, ...data });
         if (newPatient) {
+          // --- EMERGENCY SYNC: CACHE FOR IMMEDIATE SEARCH ---
+          try {
+            localStorage.setItem('LAST_CREATED_PATIENT_SYNC', JSON.stringify({
+              ...newPatient,
+              timestamp: Date.now()
+            }));
+            console.log('[REGISTRY_SYNC] Cached new patient for cross-module search:', newPatient.lastName);
+          } catch (e) { console.warn('Sync failed:', e); }
+
           setPatients(prev => {
             const existingIds = new Set(prev.map(p => p.id));
             if (existingIds.has(newPatient.id)) return prev;
             return [newPatient, ...prev];
           });
         }
-        setQuery(''); // Clear search filter to ensure new patient is visible
+        setQuery('');
         setActiveTab('registry');
         e.target.reset();
       }
@@ -196,13 +202,9 @@ export default function PatientsPage({
     
     if (!q) return true;
     const isMatch = full.includes(q) || mrn.includes(q) || phone.includes(q) || (p.id && p.id.includes(q));
-    if (q.length > 5) {
-       console.log(`DEBUG_FILTER: "${q}" vs "${full}" -> ${isMatch}`);
-    }
     return isMatch;
   });
 
-  // Debugging hook for E2E tests
   useEffect(() => {
     window.EMR_PATIENTS = patients;
     window.EMR_FILTERED = filtered;
@@ -219,7 +221,6 @@ export default function PatientsPage({
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      {/* 1. CLINICAL HEADER */}
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
         <div>
            <h1 className="page-title-rich flex items-center gap-3">
@@ -247,7 +248,6 @@ export default function PatientsPage({
         </div>
       </header>
 
-      {/* 2. REGISTRY INTERFACE */}
       {activeTab === 'registry' && (
         <section className="space-y-8">
           <div className="flex flex-col md:flex-row gap-6 items-stretch">
@@ -421,7 +421,6 @@ export default function PatientsPage({
                   </tbody>
                </table>
              </div>
-             {/* Pagination Controls */}
              <div className="flex justify-between items-center py-6 px-8 bg-slate-50 border-t border-slate-100">
                <button 
                  onClick={() => setPage(p => Math.max(0, p - 1))} 
@@ -441,7 +440,6 @@ export default function PatientsPage({
         </section>
       )}
 
-      {/* 3. ADMISSION PROTOCOL (Onboard) */}
       {activeTab === 'onboard' && (
         <section className="grid grid-cols-12 gap-8">
            <article className="col-span-12 lg:col-span-8 clinical-card p-12 animate-slide-up">
@@ -580,7 +578,6 @@ export default function PatientsPage({
         </section>
       )}
 
-      {/* 4. FOOTER NOTE */}
       <footer className="mt-12 py-8 border-t border-slate-100 flex justify-between items-center">
          <div className="flex items-center gap-3 text-[10px] font-black text-slate-300 uppercase tracking-widest">
             <ShieldCheck className="w-4 h-4" /> SECURE DEPLOYMENT NODE • v1.0.4-BETA
