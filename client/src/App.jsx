@@ -18,7 +18,7 @@ const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const InsurancePage = lazy(() => import('./pages/InsurancePage.jsx'));
 const InventoryPage = lazy(() => import('./pages/InventoryPage.jsx'));
 const InpatientPage = lazy(() => import('./pages/InpatientPage.jsx'));
-const PharmacyPage = lazy(() => import('./pages/PharmacyPage.jsx'));
+const PharmacyPage = lazy(() => import('./pages/EnhancedPharmacyPage.jsx'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage.jsx'));
 const AccountsPage = lazy(() => import('./pages/AccountsPage.jsx'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'));
@@ -823,8 +823,8 @@ export default function App() {
         {view === 'pharmacy' && (
           <PharmacyPage
             tenant={tenant}
-            inventory={inventory}
-            onDispense={() => refreshTenantData()}
+            setView={setView}
+            activeUser={activeUser}
           />
         )}
 

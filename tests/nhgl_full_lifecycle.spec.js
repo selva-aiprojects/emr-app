@@ -42,12 +42,12 @@ test.describe('NHGL Clinical Command Center - Full Lifecycle E2E', () => {
     await page.click('button:has-text("Sign In to Workspace")');     
     
     // Increased timeout for dashboard hydration
-    await expect(page.locator('text=/Institutional Console/i').first()).toBeVisible({ timeout: 25000 });
+    await expect(page.locator('text=/Hospital Control Room/i').first()).toBeVisible({ timeout: 25000 });
     console.log('✅ Authentication successful.');
 
     // 2. Patient Registration
     console.log(`\n--- Phase 01: Patient Registration ---`);
-    await page.click('nav >> text=/Patients/i');
+    await page.click('nav >> text=/Patient Records/i');
     await page.click('button:has-text("New Registration")');
     
     await page.fill('input[name="firstName"]', TEST_PATIENT.firstName);
@@ -67,7 +67,7 @@ test.describe('NHGL Clinical Command Center - Full Lifecycle E2E', () => {
 
     // 3. Inpatient Admission
     console.log(`\n--- Phase 02: Inpatient Admission ---`);
-    await page.click('nav >> text=/IPD \\/ Bed Management/i');
+    await page.click('nav >> text=/Admissions & Beds/i');
     await page.click('button:has-text("New Admission")');
     
     // Search for the patient in the admission form (PatientSearch component)
@@ -92,12 +92,12 @@ test.describe('NHGL Clinical Command Center - Full Lifecycle E2E', () => {
     // Select lead physician (Physician Shard)
     await page.selectOption('select[name="providerId"]', { index: 0 }); // Use first available doctor
 
-    await page.click('button:has-text("CONFIRM CLINICAL ADMISSION")');
+    await page.click('button:has-text("Confirm Admission")');
     console.log('✅ Inpatient admission confirmed.');
 
     // 4. Clinical Desk / EMR Consultation
     console.log(`\n--- Phase 03: Clinical Desk (EMR) ---`);
-    await page.click('nav >> text=/Clinical Desk \\/ EMR/i');
+    await page.click('nav >> text=/Check-up & Prescription/i');
     await page.click('button:has-text("New Assessment")');
     
     // Identify subject for clinical documentation - context may be carried over from admission
@@ -145,25 +145,31 @@ test.describe('NHGL Clinical Command Center - Full Lifecycle E2E', () => {
 
     // Phase 04: Pharmacy Fulfillment
     console.log(`\n--- Phase 04: Pharmacy Dispensing ---`);
-    await page.click('nav >> text=/Pharmacy \\/ Drug/i');
+    await page.click('[data-testid="nav-pharmacy"]');
+    
+    // Switch to Prescriptions tab to see the pending orders
+    await page.click('[data-testid="tab-prescriptions"]');
     
     // Auto-accept confirmation handled by global listener
 
-    // Use robust wait for the patient row
-    const pharmacyRow = page.locator('tr').filter({ hasText: /Lifecycle/i }).first();
+    // Use robust wait for the patient card (cards used in the modernized UI)
+    const pharmacyCard = page.locator('.glass-panel').filter({ hasText: /Lifecycle/i }).first();
     try {
-      await pharmacyRow.waitFor({ state: 'visible', timeout: 10000 });
-      await pharmacyRow.locator('button:has-text("Dispense")').click();
+      await pharmacyCard.waitFor({ state: 'visible', timeout: 10000 });
+      await pharmacyCard.locator('[data-testid="dispense-button"]').click();
       await page.waitForTimeout(1000);
       await page.click('button:has-text("Confirm Fulfillment")');
       console.log('✅ Medication dispensed.');
     } catch (e) {
-      console.log('⚠️ Pharmacy row not found or interaction failed. Check button text.');
+      console.log('⚠️ Pharmacy card not found or interaction failed. Check data-testids.');
     }
 
     // 6. Laboratory Diagnostics
     console.log(`\n--- Phase 05: Laboratory Results ---`);
-    await page.click('nav >> text=/Laboratory \\/ Diagnostics/i');
+    await page.click('[data-testid="nav-lab"]');
+    
+    // Switch to Orders Queue tab
+    await page.click('button:has-text("Clinical Orders Queue")');
     
     const labRow = page.locator('tr').filter({ hasText: /Lifecycle/i }).first();
     try {
@@ -184,7 +190,7 @@ test.describe('NHGL Clinical Command Center - Full Lifecycle E2E', () => {
     }
 
     // Phase 06: Billing Clearance
-    await page.click('nav >> text=/Cashier (&|\\/) Billing/i');
+    await page.click('[data-testid="nav-billing"]');
     console.log('\n--- Phase 06: Billing Clearance ---');
     
     // Robust wait for ledger loading
@@ -209,7 +215,7 @@ test.describe('NHGL Clinical Command Center - Full Lifecycle E2E', () => {
     }
 
     // Phase 07: Discharge Authorization
-    await page.click('nav >> text=/IPD \\/ Bed Management/i');
+    await page.click('nav >> text=/Admissions & Beds/i');
     console.log('\n--- Phase 07: Discharge Authorization ---');
     
     // Wait for the ledger to render the active subject
@@ -221,7 +227,7 @@ test.describe('NHGL Clinical Command Center - Full Lifecycle E2E', () => {
     if (await dischargeBtn.isVisible()) {
         await dischargeBtn.click();
         await page.waitForSelector('text=Discharge Summary', { timeout: 5000 });
-        await page.click('button:has-text("Authorize Egress & Commit Billing")');
+        await page.click('button:has-text("Finalize Discharge & Billing")');
         await page.waitForTimeout(1000);
         console.log('✅ Discharge summary completed and egress authorized.');
     } else {

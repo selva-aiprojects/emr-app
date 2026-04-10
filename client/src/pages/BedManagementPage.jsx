@@ -84,7 +84,7 @@ export default function BedManagementPage({ tenant }) {
 
   return (
     <div className="page-shell-premium slide-up">
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium mb-0 pb-6">
         <div>
            <h1 className="page-title-rich flex items-center gap-3">
               <LayoutPanelTop className="w-8 h-8 text-slate-900" />
@@ -93,20 +93,6 @@ export default function BedManagementPage({ tenant }) {
            <p className="dim-label italic">Track patient beds, check availability, and manage wards for {tenant?.name || 'New Age Hospital'}.</p>
         </div>
         <div className="flex gap-4">
-           <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-100 gap-1 mr-4">
-              <button 
-                onClick={() => setViewMode('grid')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${viewMode === 'grid' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                 Resource Grid
-              </button>
-              <button 
-                onClick={() => setViewMode('plan')}
-                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${viewMode === 'plan' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                 Floor Plan
-              </button>
-           </div>
            <button 
              onClick={() => setShowAddWard(!showAddWard)}
              className="clinical-btn bg-slate-900 text-white px-8 rounded-2xl shadow-2xl hover:bg-slate-700 transition-all border-none"
@@ -115,6 +101,27 @@ export default function BedManagementPage({ tenant }) {
            </button>
         </div>
       </header>
+
+      {/* View Mode Selector Tabs */}
+      <div className="flex space-x-1 bg-slate-100 p-1 rounded-xl mb-10 w-fit">
+        {[
+          { id: 'grid', label: 'Resource Grid', icon: LayoutPanelTop },
+          { id: 'plan', label: 'Visual Floor Plan', icon: Building2 }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setViewMode(tab.id)}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${
+              viewMode === tab.id 
+                ? 'bg-white text-indigo-600 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {showAddWard && (
         <section className="clinical-card p-8 mb-10 bg-white border-2 border-slate-100 shadow-2xl animate-slide-in">
@@ -192,7 +199,7 @@ export default function BedManagementPage({ tenant }) {
 
          <main className="col-span-12 lg:col-span-9 space-y-8">
             <div className="clinical-card !p-0 bg-white border-2 border-slate-50 shadow-premium overflow-hidden">
-               <header className="p-8 border-b border-slate-50 flex justify-between items-center bg-slate-50/20">
+               <header className="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center bg-slate-50/20 gap-6">
                   <div className="flex items-center gap-4">
                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 shadow-sm">
                         <Bed size={24} />
@@ -204,6 +211,24 @@ export default function BedManagementPage({ tenant }) {
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Bed Availability Summary</p>
                      </div>
                   </div>
+
+                  {selectedWard && (
+                    <div className="flex items-center bg-slate-100 p-1.5 rounded-2xl shadow-inner">
+                      <button 
+                         onClick={() => setViewMode('grid')}
+                         className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'grid' ? 'bg-white text-indigo-600 shadow-lg' : 'text-slate-500'}`}
+                      >
+                         Resource Grid
+                      </button>
+                      <button 
+                         onClick={() => setViewMode('plan')}
+                         className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'plan' ? 'bg-white text-indigo-600 shadow-lg' : 'text-slate-500'}`}
+                      >
+                         Floor plan
+                      </button>
+                    </div>
+                  )}
+
                   {selectedWard && (
                     <form onSubmit={handleAddBed} className="flex gap-4 items-end">
                        <div>

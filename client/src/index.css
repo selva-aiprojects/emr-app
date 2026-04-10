@@ -75,10 +75,17 @@ body {
   font-family: var(--font-sans);
   background: var(--page-bg);
   color: var(--text-main);
-  line-height: 1.6;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   max-width: 100vw;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin-top: 0;
 }
 
 #root {
@@ -132,29 +139,30 @@ textarea {
   align-items: center;
   gap: 16px;
   width: 100%;
-  padding: 16px 20px;
+  padding: 12px 18px;
   border-radius: 18px;
   color: #94A3B8;
   font-weight: 600;
   transition: all 0.2s ease;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   background: transparent;
   border: none;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-family: var(--font-sans);
+  line-height: 1.3;
 }
 
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #00B4D8;
   /* Medical Teal on hover */
-  transform: translateX(6px);
+  transform: translateX(4px);
 }
 
 .nav-item.active {
   background: var(--clinical-blue);
   color: white;
-  box-shadow: 0 10px 25px rgba(0, 119, 182, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 119, 182, 0.3);
 }
 
 /* PREMIUM HEADER - GLASSMORPHISM */
@@ -280,28 +288,31 @@ textarea {
 body .page-shell-premium h1,
 body .page-content h1,
 .page-header-premium h1 {
-  font-size: 1.25rem !important;
-  letter-spacing: -0.01em !important;
+  font-size: 1.5rem !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.2 !important;
+  margin-bottom: 8px !important;
 }
 
 /* Unified Stat Cards */
 .stat-value {
   font-family: var(--font-sans);
-  font-size: 1.875rem;
+  font-size: 1.75rem;
   font-weight: 800;
   color: #0f172a;
-  line-height: 1;
+  line-height: 1.1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.05em;
+  margin-top: 4px;
 }
 
 /* ═══════════════════════════════════════════════════════════

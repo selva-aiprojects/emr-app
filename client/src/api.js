@@ -61,7 +61,7 @@ export function isAuthenticated() {
 /**
  * Make an API request with automatic token inclusion
  */
-async function apiRequest(endpoint, options = {}) {
+export async function apiRequest(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
 
   const headers = {

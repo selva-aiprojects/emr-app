@@ -328,7 +328,7 @@ export default function BillingPage({
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {patients.slice(0, 3).map((p, idx) => (
-                <div key={p.id} className="p-8 rounded-3xl border border-slate-100 bg-white shadow-sm hover:shadow-xl transition-all group animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
+                <div key={`${p.id}-${idx}`} className="p-8 rounded-3xl border border-slate-100 bg-white shadow-sm hover:shadow-xl transition-all group animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
                   <div className="flex justify-between items-start mb-8">
                     <div>
                       <div className="text-base font-black text-slate-900 mb-1">{p.firstName} {p.lastName}</div>
@@ -409,7 +409,7 @@ export default function BillingPage({
                       </td>
                     </tr>
                   ) : sortedInvoices.map((i, idx) => (
-                    <tr key={i.id} data-testid="invoice-row" className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }}>
+                    <tr key={`${i.id}-${idx}`} data-testid="invoice-row" className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 20}ms` }}>
                       <td>
                         <div className="text-[13px] font-black text-slate-900 tabular-nums">{i.createdAt ? new Date(i.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Today'}</div>
                       </td>

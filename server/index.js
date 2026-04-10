@@ -7,7 +7,8 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { testConnection, query } from './db/connection.js';
+import pool, { testConnection, query } from './db/connection.js';
+
 import { hashPassword, comparePassword, generateToken } from './services/auth.service.js';
 import { authenticate, requireRole, requireTenant, requirePermission, restrictPatientAccess, getPermissions } from './middleware/auth.middleware.js';
 import { evaluateAllFeatures, featureGate, moduleGate } from './middleware/featureFlag.middleware.js';

@@ -1,5 +1,6 @@
 // Enhanced API Functions for Insurance and Pharmacy Modules
 // Healthcare Standards Compliant
+import { apiRequest } from '../api';
 
 // ==========================================
 // ENHANCED INSURANCE API FUNCTIONS

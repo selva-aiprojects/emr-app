@@ -122,11 +122,58 @@ export async function query(text, params) {
     }
 }
 
+// Migration Registry to ensure scripts run only once
+async function ensureMigrationRegistry() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS emr.migrations_log (
+        id SERIAL PRIMARY KEY,
+        filename TEXT UNIQUE NOT NULL,
+        executed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+  } catch (err) {
+    console.warn('[MIGRATION_REGISTRY] Warning:', err.message);
+  }
+}
+
+async function runPendingMigrations() {
+  const fs = await import('fs');
+  const path = await import('path');
+  const { fileURLToPath } = await import('url');
+  
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const migrationsDir = path.join(__dirname, 'migrations');
+
+  if (!fs.existsSync(migrationsDir)) return;
+
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+  
+  for (const file of files) {
+    const checkRes = await pool.query('SELECT 1 FROM emr.migrations_log WHERE filename = $1', [file]);
+    if (checkRes.rowCount === 0) {
+      console.log(`[DATABASE_MIGRATION] Running: ${file}`);
+      try {
+        const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+        await pool.query(sql);
+        await pool.query('INSERT INTO emr.migrations_log (filename) VALUES ($1)', [file]);
+        console.log(`[DATABASE_MIGRATION] ✅ Success: ${file}`);
+      } catch (err) {
+        console.error(`[DATABASE_MIGRATION] ❌ Failed: ${file}`, err.message);
+      }
+    }
+  }
+}
+
 // Test connection function with Forced Migration
 export async function testConnection() {
   try {
-    const result = await query('SELECT NOW() as now');
+    const result = await pool.query('SELECT NOW() as now');
     console.log('✅ Database connection successful');
+    
+    // Auto-run migrations on startup
+    await ensureMigrationRegistry();
+    await runPendingMigrations();
 
     return true;
   } catch (error) {

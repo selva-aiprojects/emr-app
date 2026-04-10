@@ -47,7 +47,7 @@ export default function InventoryPage({ inventory, onAddItem, onRestock }) {
         />
       </section>
 
-      <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <section className="grid grid-cols-1 xl:grid-cols-12 gap-8 mt-12">
         <aside className="xl:col-span-4">
           <article className="glass-panel p-8 h-full">
             <div className="mb-8">

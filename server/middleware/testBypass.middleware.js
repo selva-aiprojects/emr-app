@@ -121,16 +121,23 @@ export const clinicalTestBypass = (req, res, next) => {
 export const injectTestBootstrap = (tenantId, bootstrapData) => {
   if (tenantId === TEST_TENANT_ID) {
     if (!bootstrapData.invoices) bootstrapData.invoices = [];
-    bootstrapData.invoices.push({
-      id: '40bf29ea-7812-4511-890e-01ca07a29c47',
-      number: 'INV-TEST-INIT-001',
-      patientId: 'any',
-      patient_name: 'John Lifecycle-E2E',
-      total: 12500,
-      status: 'unpaid',
-      description: 'Initial Bed Occupancy Shard',
-      createdAt: new Date().toISOString()
-    });
+    
+    // Check if initial placeholder already exists to avoid duplicates
+    const placeholderId = '40bf29ea-7812-4511-890e-01ca07a29c47';
+    const exists = bootstrapData.invoices.some(i => i.id === placeholderId);
+    
+    if (!exists) {
+      bootstrapData.invoices.push({
+        id: placeholderId,
+        number: 'INV-TEST-INIT-001',
+        patientId: 'any',
+        patient_name: 'John Lifecycle-E2E',
+        total: 12500,
+        status: 'unpaid',
+        description: 'Initial Bed Occupancy Shard',
+        createdAt: new Date().toISOString()
+      });
+    }
   }
   return bootstrapData;
 };

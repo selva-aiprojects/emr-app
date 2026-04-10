@@ -13,6 +13,7 @@ import * as patientService from './patient.service.js';
 import * as encounterService from './encounter.service.js';
 import * as billingService from './billing.service.js';
 import * as pharmacyService from './pharmacy.service.js';
+import * as prescriptionService from './prescription.service.js';
 import * as inventoryService from './inventory.service.js';
 import * as appointmentService from './appointment.service.js';
 import * as supportService from './support.service.js';
@@ -54,8 +55,13 @@ export const {
 
 export const {
   getPrescriptions, getPrescriptionById, createPrescription, updatePrescriptionStatus,
-  dispensePrescription, getPharmacyInventory, getEnhancedPrescriptions, dispenseEnhancedMedication,
-  addDrugBatch, getPharmacyDashboard, getExpiringInventory
+  dispensePrescription
+} = prescriptionService;
+
+export const {
+  getPharmacyInventory, getEnhancedPrescriptions, dispenseEnhancedMedication,
+  addDrugBatch, getPharmacyDashboard, getExpiringInventory, searchDrugs,
+  createEnhancedPrescription
 } = pharmacyService;
 
 export const {

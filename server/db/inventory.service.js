@@ -12,7 +12,7 @@ import { query } from './connection.js';
  */
 export async function getInventoryItems(tenantId) {
   const result = await query(
-    'SELECT * FROM emr.inventory_items WHERE tenant_id = $1 ORDER BY name',
+    'SELECT * FROM inventory_items WHERE tenant_id::text = $1 ORDER BY name',
     [tenantId]
   );
   return result.rows.map(row => ({
@@ -32,7 +32,7 @@ export async function getInventoryItems(tenantId) {
  */
 export async function createInventoryItem({ tenantId, userId, code, name, category, stock = 0, reorder = 0 }) {
   const sql = `
-    INSERT INTO emr.inventory_items (tenant_id, item_code, name, category, current_stock, reorder_level)
+    INSERT INTO inventory_items (tenant_id, item_code, name, category, current_stock, reorder_level)
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *
   `;
@@ -63,9 +63,9 @@ export async function createInventoryItem({ tenantId, userId, code, name, catego
  */
 export async function updateInventoryStock({ itemId, tenantId, userId, delta }) {
   const sql = `
-    UPDATE emr.inventory_items
+    UPDATE inventory_items
     SET current_stock = GREATEST(0, current_stock + $1), updated_at = NOW()
-    WHERE id = $2 AND tenant_id = $3
+    WHERE id::text = $2 AND tenant_id::text = $3
     RETURNING *
   `;
 
@@ -79,7 +79,7 @@ export async function updateInventoryStock({ itemId, tenantId, userId, delta }) 
 
   // Create transaction record
   await query(
-    `INSERT INTO emr.inventory_transactions (tenant_id, item_id, transaction_type, quantity, created_by)
+    `INSERT INTO inventory_transactions (tenant_id, item_id, transaction_type, quantity, created_by)
      VALUES ($1, $2, $3, $4, $5)`,
     [tenantId, itemId, transactionType, Math.abs(delta), userId]
   );

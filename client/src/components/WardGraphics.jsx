@@ -56,9 +56,9 @@ export default function WardGraphics({ beds, onBedClick }) {
 }
 
 function BedNode({ bed, onClick }) {
-  const isOccupied = bed.status === 'Occupied';
-  const isCleaning = bed.status === 'Cleaning';
-  const isMaintenance = bed.status === 'Maintenance';
+  const isOccupied = bed.status === 'occupied';
+  const isCleaning = bed.status === 'cleaning';
+  const isMaintenance = bed.status === 'maintenance';
 
   let statusColor = 'text-emerald-500';
   let bgColor = 'bg-white';

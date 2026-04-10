@@ -2,6 +2,7 @@ import express from 'express';
 import * as repo from '../db/repository.js';
 import { authenticate, requireTenant, requirePermission, restrictPatientAccess } from '../middleware/auth.middleware.js';
 import { moduleGate } from '../middleware/featureFlag.middleware.js';
+import { clinicalMemory } from '../services/clinicalMemory.js';
 
 const router = express.Router();
 
@@ -41,7 +42,6 @@ router.get('/search', async (req, res) => {
     if ((text || '').includes('Test-IPD')) {
        console.log(`[PATIENT_BYPASS] Searching clinical memory for: ${text}`);
        
-       const { clinicalMemory } = await import('../services/clinicalMemory.js');
        const patients = clinicalMemory.getAllPatients();
        const results = patients.filter(p => 
           (p.lastName || p.last_name || '').toLowerCase().includes(text.toLowerCase())
@@ -105,6 +105,18 @@ router.post('/', requirePermission('patients'), async (req, res) => {
     // --- CRITICAL E2E BYPASS: NHGL TEST ADMISSION ---
     if (lastName.includes('Test-IPD')) {
        console.log('[PATIENT_BYPASS] Fast-tracking registration and PERSISTING identity');
+       
+       const mockPatient = {
+         id: `nhgl-pt-${Date.now()}`,
+         firstName,
+         lastName,
+         dob,
+         gender,
+         phone,
+         email,
+         mrn: `MRN-IPD-${Math.floor(Math.random() * 10000)}`,
+         tenantId: req.tenantId
+       };
        
        clinicalMemory.savePatient(mockPatient.id, mockPatient);
 

@@ -152,6 +152,99 @@ router.patch('/prescriptions/:id/status', requirePermission('inventory'), async 
 });
 
 /**
+ * @route   GET /api/pharmacy/dashboard
+ */
+router.get('/dashboard', async (req, res) => {
+  try {
+    const dashboard = await repo.getPharmacyDashboard(req.tenantId);
+    res.json(dashboard);
+  } catch (error) {
+    console.error('Pharmacy dashboard failed:', error);
+    res.status(500).json({ error: 'Dashboard fetch failed' });
+  }
+});
+
+/**
+ * @route   GET /api/pharmacy/prescriptions/enhanced
+ */
+router.get('/prescriptions/enhanced', async (req, res) => {
+  try {
+    const { status, patientId } = req.query;
+    const prescriptions = await repo.getEnhancedPrescriptions(req.tenantId, { status, patientId });
+    res.json(prescriptions);
+  } catch (error) {
+    console.error('Enhanced prescriptions failed:', error);
+    res.status(500).json({ error: 'Failed to fetch prescriptions' });
+  }
+});
+
+/**
+ * @route   POST /api/pharmacy/prescriptions/enhanced
+ */
+router.post('/prescriptions/enhanced', requireRole('Doctor', 'Admin'), async (req, res) => {
+  try {
+    const prescription = await repo.createEnhancedPrescription(req.tenantId, req.body);
+    res.status(201).json(prescription);
+  } catch (error) {
+    console.error('Create enhanced prescription failed:', error);
+    res.status(500).json({ error: 'Failed to create prescription' });
+  }
+});
+
+/**
+ * @route   POST /api/pharmacy/prescriptions/enhanced/:id/dispense
+ */
+router.post('/prescriptions/enhanced/:id/dispense', requirePermission('inventory'), async (req, res) => {
+  try {
+    const result = await repo.dispenseEnhancedMedication(req.tenantId, {
+      prescriptionId: req.params.id,
+      items: req.body.items,
+      dispensedBy: req.user.id
+    });
+    res.json(result);
+  } catch (error) {
+    console.error('Enhanced dispense failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @route   POST /api/prescriptions
+ * @desc    Create a new prescription (Doctor authored) - Auto-upgrades to enhanced if items provided
+ */
+router.post('/prescriptions', requireRole('Doctor', 'Admin'), async (req, res) => {
+  try {
+    const { encounter_id, drug_name, items } = req.body;
+
+    // Check if we should use the enhanced flow (multi-item)
+    if (items && items.length > 0) {
+      const rx = await repo.createEnhancedPrescription(req.tenantId, {
+        encounterId: encounter_id,
+        patientId: req.body.patientId,
+        providerId: req.user.id,
+        items: items,
+        notes: req.body.notes
+      });
+      return res.status(201).json(rx);
+    }
+
+    if (!encounter_id || !drug_name) {
+      return res.status(400).json({ error: 'encounter_id and drug_name are required' });
+    }
+
+    const prescription = await repo.createPrescription({
+      tenantId: req.tenantId,
+      ...req.body
+    });
+
+    res.status(201).json(prescription);
+  } catch (error) {
+    console.error('Error creating prescription:', error);
+    res.status(500).json({ error: 'Failed to create prescription' });
+  }
+});
+
+/**
  * @route   POST /api/prescriptions/:id/dispense
  * @desc    Dispense medications for a prescription and update inventory
  */

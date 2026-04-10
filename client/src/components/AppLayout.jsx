@@ -138,14 +138,14 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
   if (visibleModules.length === 0) return null;
 
   return (
-    <div className="mb-1">
+    <div className="mb-4">
       {!sidebarCollapsed && (
         <button
           onClick={() => setOpen((o) => !o)}
           className="
             w-full flex items-center justify-between
             px-3 py-2 rounded-lg
-            text-[11px] font-black uppercase tracking-[0.18em]
+            text-[10px] font-black uppercase tracking-wider
             text-white/40 hover:text-white/70
             hover:bg-[var(--clinical-primary)]/15
             transition-all duration-150 select-none
@@ -166,7 +166,7 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
           ${sidebarCollapsed ? "block" : open ? "max-h-[600px] opacity-100" : "max-h-0 opacity-0"}
         `}
       >
-        <div className={`space-y-0.5 ${!sidebarCollapsed && open ? "pt-1 pb-2" : ""}`}>
+        <div className={`space-y-1.5 ${!sidebarCollapsed && open ? "pt-2 pb-4" : ""}`}>
           {visibleModules.map((moduleName) => {
             const Icon = navIcons[moduleName] || LayoutDashboard;
             const moduleInfo = moduleMeta[moduleName];
@@ -175,6 +175,7 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
             return (
               <button
                 key={moduleName}
+                data-testid={`nav-${moduleName}`}
                 onClick={() => {
                   setView(moduleName);
                   setMobileOpen(false);

@@ -14,7 +14,8 @@ import {
   ShieldAlert,
   BrainCircuit,
   Sparkles,
-  Loader2
+  Loader2,
+  BarChart3
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/index.jsx';
 
@@ -119,6 +120,8 @@ export default function LabPage({ tenant, activeUser }) {
     }
   };
 
+  const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard', 'orders'
+
   return (
     <div className="page-shell-premium animate-fade-in">
 
@@ -148,35 +151,94 @@ export default function LabPage({ tenant, activeUser }) {
         </div>
       </header>
 
-      {/* SYSTEM STATUS GRID */}
-      <section className="vitals-monitor mb-10">
-        <div className="vital-node vital-node--warning shadow-sm">
-           <div className="flex justify-between items-start">
-              <span className="vital-label">Pending Diagnostic Load</span>
-              <Clock className="w-4 h-4 text-amber-500 opacity-50" />
-           </div>
-           <span className="vital-value tabular-nums mt-1">{stats.pending}</span>
-           <p className="text-[10px] font-black text-amber-600 mt-2 uppercase">Mean turnaround: 42m</p>
-        </div>
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 bg-slate-100 p-1 rounded-xl mb-8 w-fit">
+        {[
+          { id: 'dashboard', label: 'Diagnostic Dashboard', icon: BarChart3 },
+          { id: 'orders', label: 'Clinical Orders Queue', icon: FileText }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${
+              activeTab === tab.id 
+                ? 'bg-white text-indigo-600 shadow-sm' 
+                : 'text-slate-500 hover:text-slate-900'
+            }`}
+          >
+            <tab.icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        <div className="vital-node vital-node--safe shadow-sm">
-           <div className="flex justify-between items-start">
-              <span className="vital-label">Validated Results</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 opacity-50" />
-           </div>
-           <span className="vital-value tabular-nums mt-1">{stats.completed}</span>
-           <p className="text-[10px] font-black text-emerald-600 mt-2 uppercase">24h Throughput stable</p>
-        </div>
+      {activeTab === 'dashboard' ? (
+        <div className="space-y-10 animate-fade-in">
+          {/* SYSTEM STATUS GRID */}
+          <section className="vitals-monitor">
+            <div className="vital-node vital-node--warning shadow-sm">
+               <div className="flex justify-between items-start">
+                  <span className="vital-label">Pending Diagnostic Load</span>
+                  <Clock className="w-4 h-4 text-amber-500 opacity-50" />
+               </div>
+               <span className="vital-value tabular-nums mt-1">{stats.pending}</span>
+               <p className="text-[10px] font-black text-amber-600 mt-2 uppercase">Mean turnaround: 42m</p>
+            </div>
 
-        <div className="vital-node vital-node--critical shadow-sm">
-           <div className="flex justify-between items-start">
-              <span className="vital-label">Adverse Pathologies</span>
-              <AlertCircle className="w-4 h-4 text-rose-500 opacity-50" />
-           </div>
-           <span className="vital-value tabular-nums mt-1">{stats.critical}</span>
-           <p className="text-[10px] font-black text-rose-600 mt-2 uppercase">Immediate clinical bypass</p>
+            <div className="vital-node vital-node--safe shadow-sm">
+               <div className="flex justify-between items-start">
+                  <span className="vital-label">Validated Results</span>
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 opacity-50" />
+               </div>
+               <span className="vital-value tabular-nums mt-1">{stats.completed}</span>
+               <p className="text-[10px] font-black text-emerald-600 mt-2 uppercase">24h Throughput stable</p>
+            </div>
+
+            <div className="vital-node vital-node--critical shadow-sm">
+               <div className="flex justify-between items-start">
+                  <span className="vital-label">Adverse Pathologies</span>
+                  <AlertCircle className="w-4 h-4 text-rose-500 opacity-50" />
+               </div>
+               <span className="vital-value tabular-nums mt-1">{stats.critical}</span>
+               <p className="text-[10px] font-black text-rose-600 mt-2 uppercase">Immediate clinical bypass</p>
+            </div>
+          </section>
+
+          <div className="grid grid-cols-12 gap-8">
+            <div className="col-span-12 lg:col-span-8">
+              <div className="clinical-card h-full flex flex-col items-center justify-center py-20 bg-slate-50/50 border-dashed">
+                <BarChart3 className="w-12 h-12 text-slate-200 mb-4" />
+                <h4 className="text-sm font-black text-slate-400 uppercase tracking-widest">Diagnostic Volume Analytics</h4>
+                <p className="text-[10px] text-slate-400 uppercase mt-1">Advanced pathological trends will appear here as the ledger grows</p>
+              </div>
+            </div>
+            <div className="col-span-12 lg:col-span-4 space-y-8">
+               <article className="clinical-card border-l-4 border-emerald-500">
+                  <div className="flex items-center gap-3 mb-8">
+                     <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                        <Terminal className="w-5 h-5" />
+                     </div>
+                     <div>
+                        <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Fast-Track Terminal</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Operational Bypass</p>
+                     </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                     <button className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-left group hover:border-emerald-200 hover:bg-white transition-all" onClick={() => setActiveTab('orders')}>
+                        <FlaskConical className="w-5 h-5 text-slate-300 mb-4 group-hover:text-emerald-500" />
+                        <span className="block text-[10px] font-black text-slate-900 uppercase tracking-widest">Process Orders</span>
+                     </button>
+                     <button className="p-4 bg-slate-50 border border-slate-100 rounded-2xl text-left group hover:border-emerald-200 hover:bg-white transition-all">
+                        <FileText className="w-5 h-5 text-slate-300 mb-4 group-hover:text-emerald-500" />
+                        <span className="block text-[10px] font-black text-slate-900 uppercase tracking-widest">Report Sync</span>
+                     </button>
+                  </div>
+               </article>
+            </div>
+          </div>
         </div>
-      </section>
+      ) : (
 
       <div className="grid grid-cols-12 gap-8">
         <main className="col-span-12 lg:col-span-8">
@@ -305,6 +367,7 @@ export default function LabPage({ tenant, activeUser }) {
            </article>
         </aside>
       </div>
+      )}
 
       {showAiModal && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-fade-in" onClick={() => setShowAiModal(false)}>
