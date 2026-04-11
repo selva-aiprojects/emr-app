@@ -110,6 +110,14 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [dischargeDiagnosis, setDischargeDiagnosis] = useState('');
   const [dischargeMeds, setDischargeMeds] = useState('');
+  const [formWardId, setFormWardId] = useState('');
+
+  // Auto-select first ward for the form if available
+  useEffect(() => {
+    if (clinicalWards.length > 0 && !formWardId) {
+      setFormWardId(clinicalWards[0].id);
+    }
+  }, [clinicalWards]);
 
   const handleDischarge = async (encounter) => {
     // Stage 1: Generate Discharge Summary
@@ -314,15 +322,48 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
                    <div className="space-y-8">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ward</label>
-                         <select name="wardId" className="input-field h-[60px] bg-slate-50 border-none font-black text-slate-800 rounded-2xl" required>
+                         <select 
+                           name="wardId" 
+                           value={formWardId}
+                           onChange={(e) => setFormWardId(e.target.value)}
+                           className="input-field h-[60px] bg-slate-50 border-none font-black text-slate-800 rounded-2xl" 
+                           required
+                         >
                            {clinicalWards.map(w => <option key={w.id} value={w.id}>{w.name} ({w.type})</option>)}
                          </select>
                       </div>
 
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bed Number</label>
-                        <input name="bedId" placeholder="e.g. Unit-01, ICU-B-04" className="input-field h-[60px] bg-slate-50 border-none font-black text-slate-800 rounded-2xl" required />
-                        <p className="text-[9px] font-black text-slate-400 uppercase mt-2 italic px-1">Verify occupancy map before assignment.</p>
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bed Allocation Protocol</label>
+                        <div className="relative group">
+                          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input 
+                            name="bedId"
+                            placeholder="Search bed number (e.g. 101)..." 
+                            className="input-field h-[60px] pl-12 bg-slate-50 border-none font-black text-slate-800 rounded-2xl" 
+                            required 
+                          />
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-2">
+                           {formWardId && (beds[formWardId] || [])
+                             .filter(b => !displayEncounters.some(e => e.bed_id === b.id))
+                             .slice(0, 6)
+                             .map(b => (
+                               <button 
+                                 key={b.id} 
+                                 type="button"
+                                 onClick={() => {
+                                   const input = document.querySelector('input[name="bedId"]');
+                                   if (input) input.value = b.bed_number;
+                                 }}
+                                 className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase border border-emerald-100"
+                               >
+                                 {b.bed_number}
+                               </button>
+                             ))
+                           }
+                        </div>
+                        <p className="text-[9px] font-black text-slate-400 uppercase mt-2 italic px-1">Only available shards in {clinicalWards.find(w => w.id === formWardId)?.name || 'selected ward'} are displayed.</p>
                       </div>
 
                       <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex items-start gap-4">

@@ -1,6 +1,6 @@
 /**
  * Database Repository Layer
- * Explicit Export Standard v1.2 - FINAL CLEAN STATE
+ * Explicit Export Standard v1.3 - MODULAR EXPANSION
  */
 
 import { query } from './connection.js';
@@ -25,6 +25,8 @@ import * as financialsService from './financials.service.js';
 import * as hrService from './hr.service.js';
 import * as infraService from './infrastructure.service.js';
 import * as bootstrapService from './bootstrap.service.js';
+import * as ambulanceService from './ambulance.service.js';
+import * as bloodbankService from './bloodbank.service.js';
 import { getSuperadminOverview as getManagementPlaneOverview } from '../services/superadminMetrics.service.js';
 
 // Explicitly export functions from each service to provide a stable repository interface
@@ -107,15 +109,12 @@ export const {
   getServices, createService
 } = infraService;
 
-// Institutional Module Stubs (Ambulance & Blood Bank)
-export const getAmbulances = () => Promise.resolve([]);
-export const createAmbulance = () => Promise.resolve({});
-export const updateAmbulanceStatus = () => Promise.resolve({});
-export const dispatchAmbulance = () => Promise.resolve({});
+export const {
+  getAmbulances, createAmbulance, updateAmbulanceStatus, dispatchAmbulance
+} = ambulanceService;
 
-export const getBloodInventory = () => Promise.resolve([]);
-export const getBloodUnits = () => Promise.resolve([]);
-export const createBloodUnit = () => Promise.resolve({});
-export const getBloodRequests = () => Promise.resolve([]);
+export const {
+  getBloodUnits, createBloodUnit, getBloodRequests, createBloodRequest
+} = bloodbankService;
 
 export { getManagementPlaneOverview as getSuperadminOverview };

@@ -221,15 +221,15 @@ export default function PatientsPage({
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium">
         <div>
            <h1 className="page-title-rich flex items-center gap-3">
               {isDoctor ? 'My Patients' : 'Patient Directory'}
-              <span className="text-meta-sm bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Patient Files</span>
+              <span className="text-meta-sm bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Patient Files</span>
            </h1>
            <p className="dim-label">View and manage all registered patients for {tenant?.name || 'Facility'}.</p>
-           <p className="text-meta-sm text-slate-400 mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Records verified • Directory Active
+           <p className="text-meta-sm text-white/60 mt-2 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Records verified • Directory Active
            </p>
         </div>
         <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">

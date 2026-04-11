@@ -142,12 +142,28 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
       mgmtUpdates.push(`logo_url = $${mgmtIdx++}`);
       mgmtValues.push(req_logo_url);
     }
+    if (theme !== undefined) {
+      mgmtUpdates.push(`theme = $${mgmtIdx++}`);
+      mgmtValues.push(JSON.stringify(theme));
+    }
+    if (features !== undefined) {
+      mgmtUpdates.push(`features = $${mgmtIdx++}`);
+      mgmtValues.push(JSON.stringify(features));
+    }
+    if (billingConfig !== undefined) {
+      mgmtUpdates.push(`billing_config = $${mgmtIdx++}`);
+      mgmtValues.push(JSON.stringify(billingConfig));
+    }
 
     if (mgmtUpdates.length > 0) {
       mgmtUpdates.push('updated_at = NOW()');
       mgmtValues.push(tenantId);
-      const mgmtSql = `UPDATE emr.management_tenants SET ${mgmtUpdates.join(', ')} WHERE id = $${mgmtIdx}`;
-      await query(mgmtSql, mgmtValues);
+      try {
+        const mgmtSql = `UPDATE emr.management_tenants SET ${mgmtUpdates.join(', ')} WHERE id = $${mgmtIdx}`;
+        await query(mgmtSql, mgmtValues);
+      } catch (syncErr) {
+        console.warn(`[SYNC_WARNING] Failed to propagate settings to management plane for ${tenantId}:`, syncErr.message);
+      }
     }
   }
 
@@ -199,41 +215,44 @@ export async function generateInvoiceNumber(tenantId) {
   return `INV-${tenantCode}-${sequence.toString().padStart(6, '0')}`;
 }
 
+export const getAllTenants = getTenants;
+
 export async function getTenants() {
   try {
-    const result = await query(`
+    // 1. Get modern management tenants with metrics
+    const mgmtRes = await query(`
       SELECT
-        t.id,
-        t.name,
-        t.code,
-        t.subdomain,
-        t.status,
-        t.created_at,
-        t.updated_at,
-        t.subscription_tier,
-        t.contact_email,
-        t.schema_name,
+        t.id, t.name, t.code, t.subdomain, t.status, t.created_at, t.updated_at,
+        t.subscription_tier, t.contact_email, t.schema_name,
         COALESCE(mtm.patients_count, 0) as patients,
         COALESCE(mtm.doctors_count, 0) as doctors,
         COALESCE(mtm.available_beds, 0) as "bedsAvailable",
         COALESCE(mtm.available_ambulances, 0) as "ambulancesAvailable",
-        COALESCE(mtm.insurance_capacity, 0) as insurance_capacity,
         COALESCE(mtm.active_users_count, 0) as active_users_count
       FROM emr.management_tenants t
-      LEFT JOIN emr.management_tenant_metrics mtm
-        ON mtm.tenant_id = t.id
+      LEFT JOIN emr.management_tenant_metrics mtm ON mtm.tenant_id = t.id
       ORDER BY t.name
     `);
-    return result.rows;
-  } catch (err) {
-    console.warn('[getTenants] Metrics table missing, using fallback:', err.message);
-    const result = await query(`
-      SELECT id, name, code, subdomain, 
-             status, created_at, updated_at, subscription_tier, contact_email,
+    
+    // 2. Fallback check: Grab everything from legacy emr.tenants
+    const legacyRes = await query(`
+      SELECT id, name, code, subdomain, status, created_at, updated_at, 
+             subscription_tier, contact_email, code as schema_name,
              0 as patients, 0 as doctors, 0 as "bedsAvailable",
-             0 as "ambulancesAvailable", 0 as insurance_capacity, 0 as active_users_count
-      FROM emr.management_tenants ORDER BY name
+             0 as "ambulancesAvailable", 0 as active_users_count
+      FROM emr.tenants 
+      ORDER BY name
     `);
+
+    // Merge: Prioritize Management Tenants, add missing Legacy ones
+    const tenantsMap = new Map();
+    legacyRes.rows.forEach(t => tenantsMap.set(t.id, t));
+    mgmtRes.rows.forEach(t => tenantsMap.set(t.id, t)); // Management overwrites legacy if dual-registered
+
+    return Array.from(tenantsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  } catch (err) {
+    console.error('[CRITICAL_REGISTRY_ERROR] Registry lookup failed:', err.message);
+    const result = await query(`SELECT id, name, code, subdomain, status FROM emr.tenants LIMIT 100`);
     return result.rows;
   }
 }

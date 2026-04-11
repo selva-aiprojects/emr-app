@@ -1,24 +1,32 @@
+import { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useToast } from '../hooks/useToast.jsx';
 import MetricCard from '../components/MetricCard';
 
 export default function InventoryPage({ inventory, onAddItem, onRestock }) {
   const { showToast } = useToast();
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const filteredInventory = inventory.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.category && item.category.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const totalItems = inventory.length;
   const lowStockItems = inventory.filter((item) => Number(item.stock) <= Number(item.reorder)).length;
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium">
         <div>
            <h1 className="flex items-center gap-3">
               Asset Logistics & Supply Chain
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Inventory Node</span>
+              <span className="text-[10px] bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Inventory Node</span>
            </h1>
            <p className="dim-label">Monitor clinical inventory, reorder thresholds, and asset registration with high-fidelity logistics tracking.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-indigo-500" /> Operational Readiness • Supply Chain oversight active
+           <p className="text-[11px] font-black text-white/60 uppercase tracking-widest mt-2 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Operational Readiness • Supply Chain oversight active
            </p>
         </div>
       </header>
@@ -142,6 +150,8 @@ export default function InventoryPage({ inventory, onAddItem, onRestock }) {
               <input
                 type="text"
                 placeholder="Filter clinical items..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="input-field py-3 w-72 bg-white"
               />
             </div>
@@ -158,13 +168,13 @@ export default function InventoryPage({ inventory, onAddItem, onRestock }) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {inventory.length === 0 ? (
+                  {filteredInventory.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="text-center py-24 text-slate-400 italic font-medium">
-                        No inventory units identified in the facility registry.
+                        {searchQuery ? 'No inventory units match your search criteria.' : 'No inventory units identified in the facility registry.'}
                       </td>
                     </tr>
-                  ) : inventory.map((item) => {
+                  ) : filteredInventory.map((item) => {
                     const isLow = Number(item.stock) <= Number(item.reorder);
                     const stockPct = Math.min(100, (Number(item.stock) / (Number(item.reorder) * 3 || 1)) * 100);
 

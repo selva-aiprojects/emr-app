@@ -71,7 +71,7 @@ export async function getUserByEmail(email, tenantId = null) {
     params = [email];
   } else {
     // Tenant user login
-    sql = 'SELECT * FROM emr.users WHERE LOWER(email) = LOWER($1) AND tenant_id = $2';
+    sql = 'SELECT * FROM emr.users WHERE LOWER(email) = LOWER($1) AND tenant_id::text = $2::text';
     params = [email, tenantId];
   }
 

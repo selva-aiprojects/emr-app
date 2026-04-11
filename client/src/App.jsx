@@ -16,13 +16,11 @@ const DoctorAvailabilityPage = lazy(() => import('./pages/DoctorAvailabilityPage
 const EmrPage = lazy(() => import('./pages/EmrPage.jsx'));
 const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const InsurancePage = lazy(() => import('./pages/InsurancePage.jsx'));
-const InventoryPage = lazy(() => import('./pages/InventoryPage.jsx'));
 const InpatientPage = lazy(() => import('./pages/InpatientPage.jsx'));
 const PharmacyPage = lazy(() => import('./pages/EnhancedPharmacyPage.jsx'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage.jsx'));
 const AccountsPage = lazy(() => import('./pages/AccountsPage.jsx'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage.jsx'));
-const AdminPage = lazy(() => import('./pages/AdminPage.jsx'));
 const UnifiedLoginPage = lazy(() => import('./pages/UnifiedLoginPage.jsx'));
 const UsersPage = lazy(() => import('./pages/UsersPage.jsx'));
 const LabPage = lazy(() => import('./pages/LabPage.jsx'));
@@ -37,11 +35,12 @@ const AIImageAnalysisPage = lazy(() => import('./pages/AIImageAnalysisPage.jsx')
 const DonorPage = lazy(() => import('./pages/DonorPage.jsx'));
 const ChatPage = lazy(() => import('./pages/ChatPage.jsx'));
 const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage.jsx'));
-const BedManagementPage = lazy(() => import('./pages/BedManagementPage.jsx'));
 const HospitalSettingsPage = lazy(() => import('./pages/HospitalSettingsPage.jsx'));
-const EmployeeMasterPage = lazy(() => import('./pages/EmployeeMasterPage.jsx'));
 const AdminMastersPage = lazy(() => import('./pages/AdminMastersPage.jsx'));
 const PatientProfilePage = lazy(() => import('./pages/PatientProfilePage.jsx'));
+const PayrollServicePage = lazy(() => import('./pages/PayrollServicePage.jsx'));
+const StaffManagementPage = lazy(() => import('./pages/StaffManagementPage.jsx'));
+const FinancialLedgerPage = lazy(() => import('./pages/FinancialLedgerPage.jsx'));
 
 export default function App() {
   const suspenseFallback = (
@@ -80,6 +79,7 @@ export default function App() {
   const [invoices, setInvoices] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [expenses, setExpenses] = useState([]);
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [superOverview, setSuperOverview] = useState(null);
@@ -329,6 +329,7 @@ export default function App() {
     setInvoices(bootstrap.invoices || []);
     setInventory(prev => mergeData(prev, bootstrap.inventory));
     setEmployees(prev => mergeData(prev, bootstrap.employees));
+    setExpenses(bootstrap.expenses || []);
     setEmployeeLeaves(prev => mergeData(prev, bootstrap.employeeLeaves));
     setInsuranceProviders(prev => mergeData(prev, bootstrap.insuranceProviders));
     setClaims(prev => mergeData(prev, bootstrap.claims));
@@ -346,17 +347,19 @@ export default function App() {
             })
           : Promise.resolve(null);
 
-        const [tenantUsers, reports, noticeFeed, documentFeed] = await Promise.all([
+        const [tenantUsers, reports, noticeFeed, documentFeed, expensesFeed] = await Promise.all([
           api.getUsers(tenantId).catch(() => []),
           reportsPromise,
           api.getNotices(tenantId, 'all').catch(() => []),
-          api.getDocuments(tenantId).catch(() => [])
+          api.getDocuments(tenantId).catch(() => []),
+          api.getExpenses(tenantId).catch(() => [])
         ]);
 
         setUsers(tenantUsers || []);
         setNotices(noticeFeed || []);
         setDocuments(documentFeed || []);
         setReportSummary(reports);
+        setExpenses(expensesFeed || []);
       })();
       return;
     }
@@ -368,17 +371,19 @@ export default function App() {
         })
       : Promise.resolve(null);
 
-    const [tenantUsers, reports, noticeFeed, documentFeed] = await Promise.all([
+    const [tenantUsers, reports, noticeFeed, documentFeed, expensesFeed] = await Promise.all([
       api.getUsers(tenantId).catch(() => []),
       reportsPromise,
       api.getNotices(tenantId, 'all').catch(() => []),
-      api.getDocuments(tenantId).catch(() => [])
+      api.getDocuments(tenantId).catch(() => []),
+      api.getExpenses(tenantId).catch(() => [])
     ]);
 
     setUsers(tenantUsers || []);
     setNotices(noticeFeed || []);
     setDocuments(documentFeed || []);
     setReportSummary(reports);
+    setExpenses(expensesFeed || []);
   }
 
   async function refreshSuperadmin() {
@@ -421,6 +426,31 @@ export default function App() {
       }
     }
   }, [session?.tenantId, session?.user?.id]);
+  
+  // Institutional Theme Sync
+  useEffect(() => {
+    if (tenant?.theme) {
+      try {
+        const themeConfig = typeof tenant.theme === 'string' ? JSON.parse(tenant.theme) : tenant.theme;
+        const { primary, accent, hero, text } = themeConfig;
+        if (primary) {
+          document.documentElement.style.setProperty('--clinical-primary', primary);
+          document.documentElement.style.setProperty('--clinical-primary-dark', primary); 
+        }
+        if (accent) {
+          document.documentElement.style.setProperty('--clinical-accent', accent);
+        }
+        if (hero) {
+          document.documentElement.style.setProperty('--clinical-hero', hero);
+        }
+        if (text) {
+          document.documentElement.style.setProperty('--clinical-text', text);
+        }
+      } catch (err) {
+        console.warn('[THEME_SYNC] Failed to parse institutional theme shard:', err);
+      }
+    }
+  }, [tenant]);
 
   useEffect(() => {
     console.log('PLATFORM_DIAGNOSTIC:', {
@@ -710,6 +740,7 @@ export default function App() {
             activeUser={activeUser}
             session={session}
             patients={scopedPatients}
+            providers={providers}
             onBookAppointment={(appointmentData) => {
               withRefresh(() => api.addAppointment({
                 tenantId: session.tenantId, userId: activeUser.id,
@@ -851,23 +882,7 @@ export default function App() {
           />
         )}
 
-        {view === 'inventory' && (
-          <InventoryPage
-            inventory={inventory}
-            onAddItem={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
-              withRefresh(() => api.addInventory({
-                tenantId: session.tenantId, userId: activeUser.id,
-                code: fd.get('code'), name: fd.get('name'), category: fd.get('category'),
-                stock: Number(fd.get('stock')), reorder: Number(fd.get('reorder'))
-              }));
-            }}
-            onRestock={(itemId) => withRefresh(() => api.updateInventoryStock(itemId, { tenantId: session.tenantId, userId: activeUser.id, delta: 10 }))}
-          />
-        )}
-
-        {['employees', 'employee_master', 'attendance', 'payroll'].includes(view) && (
+        {['employees', 'employee_master', 'attendance'].includes(view) && (
           <EmployeesPage
             tenant={tenant}
             employees={employees}
@@ -877,7 +892,7 @@ export default function App() {
               const fd = new FormData(e.target);
               withRefresh(() => api.addEmployee({
                 tenantId: session.tenantId,
-                name: fd.get('name'), code: fd.get('code'), department: fd.get('department'),
+                name: fd.get('name'), email: fd.get('email'), code: fd.get('code'), department: fd.get('department'),
                 designation: fd.get('designation'), joinDate: fd.get('joinDate'), shift: fd.get('shift'),
                 salary: Number(fd.get('salary'))
               }));
@@ -898,6 +913,28 @@ export default function App() {
                 tenantId: session.tenantId, from: fd.get('from'), to: fd.get('to'), type: fd.get('type')
               }));
             }}
+          />
+        )}
+
+        {view === 'staff_management' && (
+          <StaffManagementPage 
+            tenant={tenant} 
+            employees={employees} 
+          />
+        )}
+
+        {view === 'payroll_service' && (
+          <PayrollServicePage 
+            tenant={tenant} 
+            employees={employees} 
+          />
+        )}
+
+        {view === 'financial_ledger' && (
+          <FinancialLedgerPage 
+            tenant={tenant} 
+            invoices={invoices}
+            expenses={expenses} 
           />
         )}
 
@@ -942,7 +979,7 @@ export default function App() {
             activeUser={activeUser}
             tenant={tenant}
             onUpdateUserRole={(id, role) => withRefresh(() => api.updateUser(id, { role }))}
-        onResetPassword={async (userId) => {
+            onResetPassword={async (userId) => {
               const newPassword = window.prompt('Enter new password for this user (min 8 chars):');
               if (!newPassword || newPassword.length < 8) {
                 if (newPassword !== null) showToast({ message: 'Password must be at least 8 characters.', type: 'error' });
@@ -956,6 +993,12 @@ export default function App() {
               } catch (err) {
                 showToast({ message: 'Password reset failed: ' + err.message, type: 'error' });
               }
+            }}
+            onCreateUser={async (data) => {
+              await withRefresh(() => api.createUser({
+                tenantId: session.tenantId,
+                ...data
+              }));
             }}
           />
         )}
@@ -1002,12 +1045,24 @@ export default function App() {
           />
         )}
 
+        {view === 'support' && (
+          <SupportPage
+            tenant={tenant}
+            activeUser={activeUser}
+            tickets={tickets}
+            onCreateTicket={(payload) => withRefresh(() => api.createSupportTicket({
+              tenantId: session.tenantId,
+              ...payload
+            }))}
+          />
+        )}
+
         {['accounts', 'accounts_payable'].includes(view) && <AccountsPage tenant={tenant} initialTab={view === 'accounts_payable' ? 'record' : 'snapshot'} />}
         {view === 'ambulance' && <AmbulancePage tenant={tenant} />}
         {view === 'service_catalog' && <ServiceCatalogPage tenant={tenant} />}
         {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} patients={patients} />}
         
-        {view === 'admin_masters' && (
+        {['admin', 'admin_masters', 'bed_management'].includes(view) && (
           <AdminMastersPage 
             tenant={tenant} 
             onViewChange={(newView) => setView(newView)} 
@@ -1025,57 +1080,10 @@ export default function App() {
         
         {view === 'departments' && <DepartmentsPage tenant={tenant} />}
         
-        {view === 'employee_master' && <EmployeeMasterPage tenant={tenant} />}
-        
-        {view === 'bed_management' && <BedManagementPage tenant={tenant} />}
-
         {view === 'donor' && <DonorPage tenant={tenant} />}
         {view === 'chat' && <ChatPage activeUser={activeUser} />}
 
         {view === 'reports' && <ReportsPage reportSummary={reportSummary} tenant={tenant} slmInsights={slmInsights} superOverview={superOverview} />}
-
-        {view === 'admin' && (
-          <AdminPage
-            tenant={tenant}
-            patients={patients}
-            onSaveSettings={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
-              withRefresh(() => api.updateTenantSettings(session.tenantId, {
-                userId: activeUser.id,
-                displayName: fd.get('displayName'),
-                primaryColor: fd.get('primaryColor'),
-                accentColor: fd.get('accentColor'),
-                logo_url: fd.get('logo_url'),
-                featureInventory: fd.get('featureInventory') === 'on',
-                featureTelehealth: fd.get('featureTelehealth') === 'on',
-                billingConfig: {
-                  provider: fd.get('billingProvider'),
-                  currency: fd.get('billingCurrency'),
-                  gatewayKey: fd.get('billingKey'),
-                  accountStatus: fd.get('billingKey') ? 'linked' : 'unlinked'
-                }
-              }));
-            }}
-            onCreateUser={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
-              withRefresh(() => api.createUser({
-                tenantId: session.tenantId,
-                name: fd.get('name'), email: fd.get('email'), role: fd.get('role'),
-                patientId: fd.get('patientId') || null
-              }));
-            }}
-            onAddWard={async (data) => {
-              await api.createWard({ ...data, tenantId: session.tenantId });
-              refreshTenantData();
-            }}
-            onAddBed={async (data) => {
-              await api.createBed(data);
-              refreshTenantData();
-            }}
-          />
-        )}
         </Suspense>
         </ErrorBoundary>
       </AppLayout>

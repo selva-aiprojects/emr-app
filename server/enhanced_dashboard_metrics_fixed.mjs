@@ -10,6 +10,15 @@ function calculateGrowth(current, previous) {
   return Math.round(((curr - prev) / prev) * 100);
 }
 
+async function safeQuery(text, params) {
+  try {
+    return await query(text, params);
+  } catch (error) {
+    console.warn(`[METRICS_QUERY_WARN] Query failed: ${text.slice(0, 50)}... Error: ${error.message}`);
+    return { rows: [] };
+  }
+}
+
 export async function getRealtimeDashboardMetrics(tenantId) {
   try {
     console.log('🔍 Calculating real-time dashboard metrics...');
@@ -43,67 +52,75 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       prevMonthPatients
     ] = await Promise.all([
       // Today's appointments (scheduled_start)
-      query(`SELECT COUNT(*) as count FROM appointments WHERE tenant_id = $1 AND DATE(scheduled_start) = CURRENT_DATE`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM appointments WHERE tenant_id = $1 AND DATE(scheduled_start) = CURRENT_DATE`, [tenantId]),
       
       // Today's revenue
-      query(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE AND status = 'paid'`, [tenantId]),
+      safeQuery(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE AND status = 'paid'`, [tenantId]),
       
       // Today's patients
-      query(`SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE`, [tenantId]),
       
       // Today's admissions (using encounters table)
-      query(`SELECT COUNT(*) as count FROM encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'admission'`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'admission'`, [tenantId]),
       
       // Today's discharges (using encounters table)
-      query(`SELECT COUNT(*) as count FROM encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'discharge'`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'discharge'`, [tenantId]),
       
       // Occupied beds
-      query(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1 AND status = 'occupied'`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1 AND status = 'occupied'`, [tenantId]),
       
       // Available beds
-      query(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1 AND status != 'occupied'`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1 AND status != 'occupied'`, [tenantId]),
       
       // Total beds
-      query(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM beds WHERE tenant_id = $1`, [tenantId]),
       
-      // Critical lab results
-      query(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND (notes::jsonb->>'criticalFlag' = 'true' OR notes::text LIKE '%critical%') AND DATE(created_at) >= CURRENT_DATE - INTERVAL '24 hours'`, [tenantId]),
+      // Critical lab results (Safe JSON parsing)
+      safeQuery(`
+        SELECT COUNT(*) as count FROM service_requests 
+        WHERE tenant_id = $1 AND category = 'lab' 
+        AND (
+          (CASE WHEN notes ~ '^\{.*\}$' THEN (notes::jsonb->>'criticalFlag') ELSE 'false' END = 'true')
+          OR notes::text ILIKE '%critical%'
+        )
+        AND DATE(created_at) >= CURRENT_DATE - INTERVAL '24 hours'
+      `, [tenantId]),
 
       // Blood Bank Units
-      query(`SELECT COUNT(*) as count FROM blood_units WHERE tenant_id = $1`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM blood_units WHERE tenant_id = $1`, [tenantId]),
 
       // Lab Progress (Pending)
-      query(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND status = 'pending'`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND status = 'pending'`, [tenantId]),
 
       // Lab Progress (Total Today)
-      query(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND DATE(created_at) = CURRENT_DATE`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM service_requests WHERE tenant_id = $1 AND category = 'lab' AND DATE(created_at) = CURRENT_DATE`, [tenantId]),
 
       // Fleet Total
-      query(`SELECT COUNT(*) as count FROM ambulances WHERE tenant_id = $1`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM ambulances WHERE tenant_id = $1`, [tenantId]),
 
       // Fleet Available
-      query(`SELECT COUNT(*) as count FROM ambulances WHERE tenant_id = $1 AND (status = 'available' OR status = 'ONLINE')`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM ambulances WHERE tenant_id = $1 AND (status = 'available' OR status = 'ONLINE')`, [tenantId]),
 
       // Medicine Shortage (today)
-      query(`SELECT COUNT(*) as count FROM inventory_items WHERE tenant_id = $1 AND current_stock <= reorder_level`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM inventory_items WHERE tenant_id = $1 AND current_stock <= reorder_level`, [tenantId]),
 
       // Doctor Absence (today)
-      query(`SELECT COUNT(*) as count FROM attendance a JOIN employees e ON a.employee_id = e.id WHERE a.tenant_id = $1 AND a.date = CURRENT_DATE AND a.status = 'Absent' AND e.designation = 'Doctor'`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM attendance a JOIN employees e ON a.employee_id = e.id WHERE a.tenant_id = $1 AND a.date = CURRENT_DATE AND a.status = 'Absent' AND e.designation = 'Doctor'`, [tenantId]),
 
       // Low Blood Stock (below 5 units per group)
-      query(`SELECT COUNT(*) as count FROM (SELECT blood_group, COUNT(*) FROM blood_units WHERE tenant_id = $1 GROUP BY blood_group HAVING COUNT(*) < 5) as low_stock`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM (SELECT blood_group, COUNT(*) FROM blood_units WHERE tenant_id = $1 GROUP BY blood_group HAVING COUNT(*) < 5) as low_stock`, [tenantId]),
 
       // MTD Revenue
-      query(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE) AND status = 'paid'`, [tenantId]),
+      safeQuery(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE) AND status = 'paid'`, [tenantId]),
 
       // Prev Month Revenue
-      query(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND status = 'paid'`, [tenantId]),
+      safeQuery(`SELECT COALESCE(SUM(total), 0) as total FROM invoices WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND status = 'paid'`, [tenantId]),
 
       // MTD Patients
-      query(`SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)`, [tenantId]),
+      safeQuery(`SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE)`, [tenantId]),
 
       // Prev Month Patients
-      query(`SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'`, [tenantId])
+      safeQuery(`SELECT COUNT(*) as count FROM patients WHERE tenant_id = $1 AND date_trunc('month', created_at) = date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'`, [tenantId])
     ]);
     
     const labsTotal = parseInt(totalLabToday.rows[0]?.count || 0);

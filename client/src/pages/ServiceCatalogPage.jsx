@@ -69,24 +69,26 @@ export default function ServiceCatalogPage({ tenant }) {
   });
 
   return (
-    <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+    <div className="page-shell-premium animate-fade-in space-y-10 pb-20">
+      <header className="page-header-premium">
         <div>
-           <h1 className="page-title-rich flex items-center gap-3">
-              Institutional Service Catalog
-              <span className="text-meta-sm bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 shadow-lg">Revenue Engine</span>
+           <h1 className="flex items-center gap-4 text-white">
+              Masters: Revenue Service Catalog
+              <span className="system-shard-badge">Revenue Engine Shard</span>
            </h1>
-           <p className="dim-label italic">Manage standardized clinical procedures, diagnostic pricing, and facility service shards for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Fiscal Policy: Active • Currency: INR (₹)
+           <p className="dim-label">Centralized orchestration of clinical service shards, diagnostic pricing, and institutional fiscal policies for {tenant?.name || 'Authorized Facility'}.</p>
+           <p className="text-[10px] font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/50">
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" /> Fiscal Policy: Active • Ledger Sync: Real-time
            </p>
         </div>
-        <button 
-          onClick={() => setShowAdd(!showAdd)}
-          className="clinical-btn bg-slate-900 text-white px-8 rounded-2xl text-meta-sm shadow-2xl hover:bg-emerald-600 transition-all border-none"
-        >
-           <Plus className="w-4 h-4 mr-2" /> {showAdd ? 'Cancel' : 'Add Service Shard'}
-        </button>
+        <div className="flex items-center gap-4 relative z-20">
+          <button 
+            onClick={() => setShowAdd(!showAdd)}
+            className="clinical-btn bg-white !text-slate-900 px-8 rounded-2xl text-meta-sm shadow-2xl hover:bg-slate-50 transition-all border-none font-black min-w-[180px]"
+          >
+            {showAdd ? 'Abort Shard' : 'Provision Shard'}
+          </button>
+        </div>
       </header>
 
       {showAdd && (

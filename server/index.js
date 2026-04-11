@@ -101,7 +101,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/tenants', tenantRoutes);
 app.use('/api', infrastructureRoutes); // Fixed: Frontend calls /api/wards, not /api/infrastructure/wards
 app.use('/api/reports', reportRoutes);
-app.use('/api/hr', hrRoutes);
+app.use('/api', hrRoutes);
 app.use('/api/insurance', insuranceRoutes);
 app.use('/api', masterRoutes);
 app.use('/api/communication', communicationRoutes);
@@ -109,7 +109,7 @@ app.use('/api/laboratory', laboratoryRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/support', supportRoutes);
 app.use('/api/ambulances', ambulanceRoutes);
-app.use('/api/bloodbank', bloodbankRoutes);
+app.use('/api/blood-bank', bloodbankRoutes);
 app.use('/api/clinical', clinicalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/ai', aiRoutes);
@@ -142,6 +142,9 @@ try {
         const missing = [];
         if (!columns.includes('logo_url')) missing.push('ADD COLUMN logo_url TEXT');
         if (!columns.includes('status')) missing.push('ADD COLUMN status VARCHAR(32) DEFAULT \'active\'');
+        if (!columns.includes('theme')) missing.push('ADD COLUMN theme JSONB DEFAULT \'{}\'');
+        if (!columns.includes('features')) missing.push('ADD COLUMN features JSONB DEFAULT \'{}\'');
+        if (!columns.includes('billing_config')) missing.push('ADD COLUMN billing_config JSONB DEFAULT \'{}\'');
         
         if (missing.length > 0) {
           await query(`ALTER TABLE emr.tenants ${missing.join(', ')}`);

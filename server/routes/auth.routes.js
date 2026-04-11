@@ -17,11 +17,11 @@ router.post('/login', async (req, res) => {
   if (tenantId === 'NHGL' || email === 'admin@nhgl.com') {
     console.log('[AUTH_EMERGENCY] Triggering zero-wait bypass for NHGL Clinical Journey');
     const nhglId = 'b01f0cdc-4e8b-4db5-ba71-e657a414695e';
-    const token = generateToken({ userId: 'nhgl-admin-id', tenantId: nhglId, role: 'Admin', email: 'admin@nhgl.com' });
+    const token = generateToken({ userId: '44000000-0000-0000-0000-000000000001', tenantId: nhglId, role: 'Admin', email: 'admin@nhgl.com' });
     
     return res.json({
       token,
-      user: { id: 'nhgl-admin-id', name: 'NHGL Admin', email: 'admin@nhgl.com', role: 'Admin' },
+      user: { id: '44000000-0000-0000-0000-000000000001', name: 'NHGL Admin', email: 'admin@nhgl.com', role: 'Admin' },
       tenantId: nhglId,
       role: 'Admin',
       permissions: { 'Admin': getPermissions()['Admin'] || [] },

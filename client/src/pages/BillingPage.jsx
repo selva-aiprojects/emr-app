@@ -188,15 +188,15 @@ export default function BillingPage({
   return (
     <div className="page-shell-premium animate-fade-in">
       {/* 1. TRANSACTIONAL HEADER */}
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium">
         <div>
            <h1 className="flex items-center gap-3">
               Financial Governance Ledger
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Revenue Node</span>
+              <span className="text-[10px] bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Revenue Node</span>
            </h1>
            <p className="dim-label">Institutional fiscal reconciliation and longitudinal settlement tracking for {tenant?.name || 'Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Accounting Integrity Validated • SLM Settlement Active
+           <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mt-2 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Accounting Integrity Validated • SLM Settlement Active
            </p>
          </div>
       </header>

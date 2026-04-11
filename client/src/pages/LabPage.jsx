@@ -456,34 +456,75 @@ export default function LabPage({ tenant, activeUser }) {
 
       {showResultModal && (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setShowResultModal(false)}>
-          <form className="relative clinical-card w-full max-w-lg p-8 shadow-2xl space-y-8" onClick={e => e.stopPropagation()} onSubmit={handleFinalizeResult}>
-             <div>
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Pathological Observation</h3>
-                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Ref: {selectedOrder?.test_name} for {selectedOrder?.patient_name}</p>
-             </div>
-
-             <div className="space-y-6">
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Quantitiative Observation</label>
-                   <div className="relative">
-                      <input name="resultValue" type="number" step="0.01" className="input-field py-5 pr-16 bg-slate-50 border-none rounded-2xl text-lg font-black" placeholder="0.00" autoFocus required />
-                      <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 uppercase tracking-widest">{selectedOrder?.unit || 'Units'}</span>
+          <div className="relative clinical-card w-full max-w-4xl p-0 shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-[400px_1fr]" onClick={e => e.stopPropagation()}>
+             {/* Prescription/Clinical Shard Side */}
+             <div className="bg-slate-50 p-8 border-r border-slate-100 overflow-y-auto max-h-[80vh]">
+                <div className="flex items-center gap-3 mb-8">
+                   <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
+                      <FileText className="w-5 h-5" />
+                   </div>
+                   <div>
+                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-tight">Clinical Shard</h4>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase">Recent Patient Record</p>
                    </div>
                 </div>
 
-                <div className="space-y-2">
-                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Institutional Narrative</label>
-                   <textarea name="notes" className="input-field py-5 h-32 bg-slate-50 border-none rounded-2xl resize-none font-medium" placeholder="Clinical findings, morphology, or pathalogic notes..."></textarea>
+                <div className="space-y-6">
+                   <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Subject</div>
+                      <div className="text-sm font-black text-slate-900">{selectedOrder?.patient_name}</div>
+                   </div>
+
+                   <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                         <h5 className="text-[10px] font-black text-slate-900 uppercase tracking-widest">Diagnostic Intent</h5>
+                         <span className="text-[9px] px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full font-black">Sync Active</span>
+                      </div>
+                      <div className="p-5 bg-indigo-50/50 rounded-2xl border border-indigo-100 italic text-[13px] text-slate-700 leading-relaxed">
+                         {selectedOrder?.notes || "No clinical narrative provided by ordering physician."}
+                      </div>
+                   </div>
+
+                   <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-start gap-3">
+                      <Sparkles className="w-4 h-4 text-amber-500 mt-1 flex-shrink-0" />
+                      <div>
+                         <div className="text-[10px] font-black text-amber-900 uppercase tracking-wider mb-1">Tech Advisory</div>
+                         <p className="text-[11px] text-amber-700 font-medium leading-relaxed">Ensure sample integrity matches {selectedOrder?.test_name} protocol before authorization.</p>
+                      </div>
+                   </div>
                 </div>
              </div>
 
-             <div className="flex gap-4 pt-4">
-                <button type="submit" className="clinical-btn bg-slate-900 text-white flex-1 rounded-2xl text-xs shadow-xl" disabled={loading}>
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Authorize Outcome'}
-                </button>
-                <button type="button" className="clinical-btn bg-white border border-slate-200 text-slate-400 px-8 rounded-2xl text-xs" onClick={() => setShowResultModal(false)}>Cancel</button>
-             </div>
-          </form>
+             {/* Result Entry Form */}
+             <form className="p-10 space-y-8 bg-white" onSubmit={handleFinalizeResult}>
+                <div>
+                   <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Diagnostic Authorization</h3>
+                   <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Order Ref: {selectedOrder?.id}</p>
+                </div>
+
+                <div className="space-y-6">
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block">Quantitiative Observation</label>
+                      <div className="relative">
+                         <input name="resultValue" type="number" step="0.01" className="input-field py-5 pr-16 bg-slate-50 border-none rounded-2xl text-lg font-black" placeholder="0.00" autoFocus required />
+                         <span className="absolute right-6 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400 uppercase tracking-widest">{selectedOrder?.unit || 'Units'}</span>
+                      </div>
+                   </div>
+
+                   <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest block">Institutional Narrative</label>
+                      <textarea name="notes" className="input-field py-5 h-32 bg-slate-50 border-none rounded-2xl resize-none font-medium text-sm" placeholder="Clinical findings, morphology, or pathalogic notes..."></textarea>
+                   </div>
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                   <button type="submit" className="clinical-btn bg-slate-900 text-white flex-1 rounded-2xl text-xs shadow-xl h-14" disabled={loading}>
+                     {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Authorize & Commit Outcome'}
+                   </button>
+                   <button type="button" className="clinical-btn bg-white border border-slate-200 text-slate-400 px-10 rounded-2xl text-xs h-14" onClick={() => setShowResultModal(false)}>Cancel</button>
+                </div>
+             </form>
+          </div>
         </div>
       )}
     </div>

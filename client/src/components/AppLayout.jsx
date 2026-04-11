@@ -90,21 +90,20 @@ const navIcons = {
 /* ─── SIDEBAR GROUP DEFINITIONS ──────────────────────────────────── */
 const SIDEBAR_GROUPS_DEFAULT = [
   { name: "Hospital Summary", modules: ["dashboard", "reports"] },
-  { name: "Patient Desk", modules: ["patients", "appointments", "find_doctor", "doctor_availability"] },
+  { name: "Patient Desk", modules: ["patients", "find_doctor", "doctor_availability"] },
   { name: "Lab & Test Services", modules: ["lab", "lab_availability", "ai_vision"] },
   { name: "Bed & Patient Care", modules: ["emr", "inpatient", "bed_management"] },
   { name: "Medicine & Stock", modules: ["pharmacy", "inventory"] },
-  { name: "Billing & Payments", modules: ["billing", "accounts_receivable", "insurance", "accounts", "accounts_payable"] },
-  { name: "Staff & Office", modules: ["admin", "users", "employees", "employee_master", "attendance", "payroll"] },
-  { name: "Hospital Settings", modules: ["hospital_settings", "departments", "admin_masters"] },
-  { name: "Help & Messages", modules: ["support", "communication", "documents", "chat"] },
+  { name: "Billing & Finance", modules: ["billing", "accounts_receivable", "insurance", "accounts", "accounts_payable", "financial_ledger"] },
+  { name: "Personnel & Payroll", modules: ["staff_management", "employees", "employee_master", "attendance", "payroll_service"] },
+  { name: "Institutional Ops", modules: ["admin", "users", "hospital_settings", "departments", "admin_masters"] },
+  { name: "Help & Assets", modules: ["support", "communication", "documents", "chat", "service_catalog"] },
   { name: "Ambulance & Emergency", modules: ["ambulance", "donor"] },
-  { name: "Service List & Rates", modules: ["service_catalog"] },
 ];
 
 const SIDEBAR_GROUPS_DOCTOR = [
   { name: "My Workspace", modules: ["doctor_workspace", "find_doctor", "doctor_availability"] },
-  { name: "Patient Care", modules: ["patients", "appointments", "emr", "inpatient"] },
+  { name: "Patient Care", modules: ["patients", "emr", "inpatient"] },
   { name: "Diagnostics", modules: ["lab", "lab_availability", "ai_vision"] },
   { name: "Emergency", modules: ["ambulance"] },
   { name: "Communication", modules: ["communication", "documents"] },
@@ -288,21 +287,21 @@ export default function AppLayout({
     <div className="flex flex-col h-full bg-[var(--medical-navy)] border-r border-white/[0.05] shadow-2xl">
       <div className={`flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? "justify-center p-4" : "justify-between px-5 py-4"}`}>
         {!sidebarCollapsed && (
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-4 min-w-0">
             {tenant?.logo_url ? (
-              <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shadow-lg flex-shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-white p-2 flex items-center justify-center shadow-xl flex-shrink-0 animate-scale-in">
                 <img src={tenant.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
               </div>
             ) : (
-              <div className="w-8 h-8 rounded-lg bg-[var(--clinical-secondary)] flex items-center justify-center text-white shadow-lg flex-shrink-0">
-                <Activity size={16} />
+              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white shadow-lg flex-shrink-0">
+                <Activity size={20} />
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="text-[13px] font-black tracking-tight text-white uppercase leading-none" style={{ color: '#ffffff' }}>
+              <h1 className="text-[14px] font-black tracking-tight text-white uppercase leading-tight" style={{ color: '#ffffff', letterSpacing: '0.05em' }}>
                 {BRAND.name}
               </h1>
-              <p className="text-[10px] font-semibold text-white/30 uppercase tracking-widest truncate mt-0.5" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>
+              <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] truncate mt-1" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>
                 {facilityName}
               </p>
             </div>
@@ -311,12 +310,12 @@ export default function AppLayout({
 
         {sidebarCollapsed &&
           (tenant?.logo_url ? (
-            <div className="w-8 h-8 rounded-lg bg-white p-1 flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-lg">
               <img src={tenant.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
             </div>
           ) : (
-            <div className="w-8 h-8 rounded-lg bg-[var(--clinical-secondary)] flex items-center justify-center text-white">
-              <Activity size={16} />
+            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
+              <Activity size={18} />
             </div>
           ))}
 
@@ -401,74 +400,74 @@ export default function AppLayout({
           <div className="w-9" />
         </div>
 
-        <header className="flex-shrink-0 bg-white border-b border-[rgba(0,119,182,0.12)] px-6 h-16 flex items-center justify-between shadow-sm shadow-[rgba(0,119,182,0.04)]">
-          <div className="flex items-center gap-4">
+        <header className="flex-shrink-0 bg-white border-b border-[rgba(0,119,182,0.12)] px-6 h-20 flex items-center justify-between shadow-sm shadow-[rgba(0,119,182,0.04)]">
+          <div className="flex items-center gap-6 min-w-0 flex-shrink-0">
             <button
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all hidden lg:flex"
+              className="p-3 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all hidden lg:flex flex-shrink-0"
             >
-              <Menu size={18} />
+              <Menu size={22} />
             </button>
-            <div className="flex flex-col justify-center">
-              <h2 className="text-sm font-black tracking-tight text-slate-900 leading-none flex items-center gap-3">
+            <div className="flex flex-col justify-center min-w-0">
+              <h2 className="text-base lg:text-lg font-black tracking-tight text-slate-900 leading-none flex items-center gap-2 truncate">
                 {currentModule}
-                {sidebarCollapsed && (
-                  <span className="text-[9px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full border border-slate-201 uppercase tracking-tighter font-black animate-fade-in shadow-sm">
-                    {facilityName}
-                  </span>
-                )}
               </h2>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[var(--clinical-secondary)] leading-none">
-                  Hospital Control Room
-                </span>
-                <span className="w-0.5 h-0.5 rounded-full bg-[var(--clinical-secondary)]/20" />
-                <span className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-700 leading-none bg-[var(--clinical-secondary)]/8 px-1.5 py-0.5 rounded-md">
+              <div className="hidden sm:flex items-center gap-2 mt-2 overflow-hidden">
+                <span 
+                  className="text-[11px] font-black uppercase tracking-tight text-white px-3 py-1 rounded-lg shadow-md flex-shrink-0"
+                  style={{ backgroundColor: tenant?.theme?.primary || '#0f5a6e' }}
+                >
                   {facilityName}
                 </span>
-                <span className="w-0.5 h-0.5 rounded-full bg-[var(--clinical-secondary)]/20" />
-                <span className="text-[8px] font-bold text-slate-400 leading-none uppercase tracking-widest">{today}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none truncate opacity-60">
+                  Secure Control Room
+                </span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-6">
-            <div className="hidden lg:flex items-center pr-4 border-r border-slate-100">
-              <img src="/healthezee-logo.png" alt="Healthezee Logo" className="h-7 w-auto object-contain" />
+          <div className="flex items-center flex-1 justify-end gap-3 lg:gap-10 min-w-0 ml-6 h-12">
+            <div className="hidden md:block w-48 lg:w-56 flex-shrink">
+              <SmartSearch
+                onSearch={handleSearchResult}
+                placeholder="Search resources..."
+                patients={patients}
+                appointments={appointments}
+              />
+            </div>
+            
+            <div className="flex items-center gap-4 lg:gap-6 flex-shrink-0">
+              <NotificationSystem />
+              <ActionMenu
+                trigger={
+                  <div className="flex items-center gap-3 hover:bg-slate-50 p-1.5 rounded-2xl cursor-pointer transition-colors">
+                    <div className="w-10 h-10 rounded-[12px] bg-[var(--clinical-secondary)]/10 text-[var(--clinical-secondary)] flex items-center justify-center font-black text-[12px] border border-[var(--clinical-secondary)]/20 uppercase shadow-sm">
+                      {(activeUser?.name || "A").charAt(0)}
+                    </div>
+                    <ChevronDown className="hidden md:block w-4 h-4 text-slate-400" />
+                  </div>
+                }
+                actions={[
+                  { label: "Settings", onClick: () => setView("admin") },
+                  { label: "Sign Out", onClick: onLogout },
+                ]}
+              />
             </div>
 
-            <div className="hidden lg:block w-64">
-              <SmartSearch
-                onSearch={handleSearchResult}
-                placeholder="Search patients, records..."
-                patients={patients}
-                appointments={appointments}
+            <div className="hidden md:flex items-center pl-6 border-l border-slate-100 flex-shrink-0">
+              <span className="text-[10px] font-black uppercase tracking-tighter text-slate-300 mr-3">Powered by</span>
+              <img 
+                src={(() => {
+                  const pColor = tenant?.theme?.primary?.toLowerCase() || '';
+                  if (pColor.includes('red') || pColor.startsWith('#e') || pColor.startsWith('#f4')) return '/healthezee-logo-red.png';
+                  if (pColor.includes('white') || pColor === '#ffffff' || pColor.startsWith('#f9')) return '/healthezee-logo-light.png';
+                  return '/healthezee-logo-reg.png';
+                })()} 
+                alt="Healthezee" 
+                style={{ height: '32px', maxHeight: '32px', width: 'auto', display: 'block' }}
+                className="hover:scale-105 transition-transform" 
               />
             </div>
-            <div className="lg:hidden w-full max-w-xs">
-              <SmartSearch
-                onSearch={handleSearchResult}
-                placeholder="Search patients, records..."
-                patients={patients}
-                appointments={appointments}
-              />
-            </div>
-            <NotificationSystem />
-            <ActionMenu
-              trigger={
-                <div className="flex items-center gap-2 hover:bg-slate-50 p-1.5 rounded-xl cursor-pointer transition-colors">
-                  <div className="w-8 h-8 rounded-[10px] bg-[var(--clinical-secondary)]/10 text-[var(--clinical-secondary)] flex items-center justify-center font-black text-[10px] border border-[var(--clinical-secondary)]/20 uppercase shadow-sm">
-                    {(activeUser?.name || "A").charAt(0)}
-                  </div>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </div>
-              }
-              actions={[
-                { label: "My Clinical Profile", onClick: () => setView("doctor_workspace") },
-                { label: "System Preferences", onClick: () => setView("admin") },
-                { label: "Sign Out Session", onClick: onLogout },
-              ]}
-            />
           </div>
         </header>
 

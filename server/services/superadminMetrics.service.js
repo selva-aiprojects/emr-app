@@ -34,9 +34,18 @@ CREATE TABLE IF NOT EXISTS emr.management_tenants (
   contact_email varchar(128) NULL,
   subscription_tier varchar(50) NOT NULL DEFAULT 'Professional',
   subscription_id uuid NULL REFERENCES emr.management_subscriptions(id) ON DELETE SET NULL,
+  logo_url text NULL,
+  theme jsonb DEFAULT '{}'::jsonb,
+  features jsonb DEFAULT '{}'::jsonb,
+  billing_config jsonb DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+ALTER TABLE emr.management_tenants ADD COLUMN IF NOT EXISTS logo_url text NULL;
+ALTER TABLE emr.management_tenants ADD COLUMN IF NOT EXISTS theme jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE emr.management_tenants ADD COLUMN IF NOT EXISTS features jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE emr.management_tenants ADD COLUMN IF NOT EXISTS billing_config jsonb DEFAULT '{}'::jsonb;
 
 -- 2. Precision Telemetry Matrix (THE METRICS TABLE)
 CREATE TABLE IF NOT EXISTS emr.management_tenant_metrics (

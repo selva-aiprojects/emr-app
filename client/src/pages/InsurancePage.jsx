@@ -227,10 +227,10 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
            </p>
         </div>
         <div className="flex items-center gap-3">
-           <button className="clinical-btn !rounded-2xl px-8 shadow-xl shadow-blue-500/10 min-w-[200px]" onClick={() => setShowRegister(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Provision New Payer
-           </button>
+            <button className="clinical-btn !rounded-xl px-6 py-2.5 shadow-lg shadow-blue-500/10 min-w-[160px] text-[10px] font-black uppercase tracking-widest" onClick={() => setShowRegister(true)}>
+               <Plus className="w-3.5 h-3.5 mr-2" />
+               Provision Payer
+            </button>
         </div>
       </header>
 

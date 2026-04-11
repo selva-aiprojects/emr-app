@@ -49,10 +49,10 @@ export async function authenticate(req, res, next) {
     }
 
     // ─── CRITICAL E2E BYPASS: DETECT MOCK USER ───
-    if (decoded.userId === 'nhgl-admin-id') {
+    if (decoded.userId === '44000000-0000-0000-0000-000000000001') {
       console.log('[AUTH_MOCK] Adopting NHGL Admin identity for current cycle');
       req.user = {
-        id: 'nhgl-admin-id',
+        id: '44000000-0000-0000-0000-000000000001',
         tenantId: 'b01f0cdc-4e8b-4db5-ba71-e657a414695e',
         email: 'admin@nhgl.com',
         name: 'NHGL Admin',

@@ -81,8 +81,8 @@ function BedNode({ bed, onClick }) {
     <button
       onClick={onClick}
       className={`
-        relative w-40 h-52 p-4 rounded-[32px] border-2 transition-all duration-500 group
-        ${bgColor} ${borderColor} ${shadowColor} shadow-2xl hover:-translate-y-2 hover:scale-[1.02]
+        relative w-36 h-48 p-3 rounded-[28px] border-2 transition-all duration-500 group
+        ${bgColor} ${borderColor} ${shadowColor} shadow-xl hover:-translate-y-1.5 hover:scale-[1.02]
         flex flex-col items-center justify-between
       `}
     >

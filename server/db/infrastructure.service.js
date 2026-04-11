@@ -10,7 +10,7 @@ import { createAuditLog } from './tenant.service.js';
  * Department Functions
  */
 export async function getDepartments(tenantId) {
-  const sql = 'SELECT * FROM emr.departments WHERE tenant_id = $1 ORDER BY name';
+  const sql = 'SELECT * FROM emr.departments WHERE tenant_id::text = $1::text ORDER BY name';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
@@ -39,7 +39,7 @@ export async function createDepartment({ tenantId, name, code, hod_user_id }) {
  * Ward Functions
  */
 export async function getWards(tenantId) {
-  const sql = 'SELECT * FROM emr.wards WHERE tenant_id = $1 ORDER BY name';
+  const sql = 'SELECT * FROM emr.wards WHERE tenant_id::text = $1::text ORDER BY name';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
@@ -60,10 +60,10 @@ export async function createWard({ tenantId, name, type, base_rate }) {
 export async function getBeds(tenantId, wardId = null) {
   let sql, params;
   if (wardId) {
-    sql = 'SELECT * FROM emr.beds WHERE tenant_id = $1 AND ward_id = $2 ORDER BY bed_number';
+    sql = 'SELECT * FROM emr.beds WHERE tenant_id::text = $1::text AND ward_id::text = $2::text ORDER BY bed_number';
     params = [tenantId, wardId];
   } else {
-    sql = 'SELECT * FROM emr.beds WHERE tenant_id = $1 ORDER BY bed_number';
+    sql = 'SELECT * FROM emr.beds WHERE tenant_id::text = $1::text ORDER BY bed_number';
     params = [tenantId];
   }
   const result = await query(sql, params);
@@ -84,7 +84,7 @@ export async function updateBedStatus(tenantId, bedId, status) {
   const sql = `
     UPDATE emr.beds 
     SET status = $1, updated_at = NOW() 
-    WHERE tenant_id = $2 AND id = $3 
+    WHERE tenant_id::text = $2::text AND id::text = $3::text 
     RETURNING *
   `;
   const result = await query(sql, [status, tenantId, bedId]);
@@ -95,7 +95,7 @@ export async function updateBedStatus(tenantId, bedId, status) {
  * Service Catalog
  */
 export async function getServices(tenantId) {
-  const sql = 'SELECT * FROM emr.services WHERE tenant_id = $1 ORDER BY category, name';
+  const sql = 'SELECT * FROM emr.services WHERE tenant_id::text = $1::text ORDER BY category, name';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }

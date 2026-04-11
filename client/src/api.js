@@ -647,7 +647,7 @@ export async function createNotice(data) {
 }
 
 export async function updateNoticeStatus(id, status, tenantId) {
-  return await apiRequest(`/notices/${id}/status`, {
+  return await apiRequest(`/communication/notices/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status, tenantId }),
   });

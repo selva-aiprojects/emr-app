@@ -244,7 +244,7 @@ export default function EnhancedLoginPage({ onLogin, tenants, loading: propLoadi
         {/* Footer */}
         <div className="login-footer">
           <p className="footer-text">
-            © {new Date().getFullYear()} {BRAND.name}. Secure healthcare platform.
+            © {new Date().getFullYear()} {BRAND.name}. Secure hospital management system.
           </p>
         </div>
       </div>

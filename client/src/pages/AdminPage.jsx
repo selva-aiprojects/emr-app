@@ -3,16 +3,16 @@ import '../styles/critical-care.css';
 
 export default function AdminPage({ tenant, patients, onSaveSettings, onCreateUser }) {
   return (
-    <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+    <div className="page-shell-premium animate-fade-in space-y-10 pb-20">
+      <header className="page-header-premium">
         <div>
-           <h1 className="flex items-center gap-3">
-              Facility Governance & Control
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">System Root</span>
+           <h1 className="flex items-center gap-4 text-white">
+              Institutional Control Plane
+              <span className="system-shard-badge">Governance Root Shard</span>
            </h1>
-           <p className="dim-label">Organizational control and strategic tenant trajectory configuration for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Administrative Integrity Verified • System wide overrides active
+           <p className="dim-label">Organizational orchestration and strategic tenant trajectory configuration for {tenant?.name || 'Authorized Facility'}.</p>
+           <p className="text-[10px] font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/50">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Administrative Integrity: Verified • Real-time Monitoring Active
            </p>
         </div>
       </header>

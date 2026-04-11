@@ -27,6 +27,16 @@ async function setup() {
       const tenantId = tenantRes.rows[0].id;
       console.log(`✅ Tenant [${t.code}] ready as ${t.tier}`);
 
+      // 1.1 Sync to Management Registry (Institutional Control Plane)
+      await query(`
+        INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier)
+        VALUES ($1, $2, $3, $3, $3, 'active', $4, $5)
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          status = 'active',
+          subscription_tier = EXCLUDED.subscription_tier
+      `, [tenantId, t.name, t.code, t.email, t.tier]);
+
       // 2. Upsert Admin User
       const userRes = await query(`
         INSERT INTO emr.users (tenant_id, email, password_hash, role, name, is_active)

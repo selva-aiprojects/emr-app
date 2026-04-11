@@ -45,12 +45,12 @@ export async function searchPatients(tenantId, searchTermOrFilters, filters = {}
       p.id, p.first_name, p.last_name, p.date_of_birth, p.gender, p.phone, p.email, p.address, p.mrn, p.blood_group, p.medical_history, p.emergency_contact, p.insurance, p.created_at, p.updated_at, p.is_archived,
       u.name as primary_doctor_name
     FROM patients p
-    LEFT JOIN emr.users u ON p.primary_doctor_id = u.id
-    WHERE 1=1
+    LEFT JOIN emr.users u ON p.primary_doctor_id::text = u.id::text
+    WHERE p.tenant_id::text = $1::text
   `;
 
-  const params = [];
-  let paramIndex = 1;
+  const params = [tenantId];
+  let paramIndex = 2;
 
   // Search term
   if (searchTerm) {
@@ -103,8 +103,8 @@ export async function getPatientById(id, tenantId, userRole = null) {
     SELECT 
       p.*, u.name as primary_doctor_name
     FROM patients p
-    LEFT JOIN emr.users u ON p.primary_doctor_id = u.id
-    WHERE p.id = $1 AND p.tenant_id = $2
+    LEFT JOIN emr.users u ON p.primary_doctor_id::text = u.id::text
+    WHERE p.id::text = $1::text AND p.tenant_id::text = $2::text
   `;
 
   // Note: role-based access scoping is handled at the application layer

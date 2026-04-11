@@ -13,14 +13,14 @@
   --medical-surface-solid: #FFFFFF;
   
   /* STRONG HEALTHCARE ACCENTS - ULTRA-PREMIUM */
-  --clinical-primary: #011627;     /* Deepest Midnight Navy */
+  --clinical-primary: #011627;     /* Inherit fallback */
   --clinical-secondary: #0077B6;   /* Rich Clinical Blue */
   --clinical-accent: #00B4D8;      /* Vibrant Medical Teal */
   --clinical-accent-soft: #E0F2FE;
   
   /* PLATFORM ADMIN PALETTE */
-  --platform-primary: #1a365d;    /* Deep trust blue */
-  --platform-accent: #3182ce;     /* Medical blue */
+  --platform-primary: var(--clinical-primary);
+  --platform-accent: var(--clinical-accent);
   --platform-surface: #f7fafc;    /* Clean white */
   --glass: rgba(255,255,255,0.1);  /* Glass effect */
   

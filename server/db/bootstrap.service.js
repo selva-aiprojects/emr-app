@@ -84,7 +84,7 @@ export async function getBootstrapData(tenantId, userId) {
   ]);
 
   const user = userResult.rows[0];
-  const isE2EAdmin = userId && userId.toLowerCase() === 'nhgl-admin-id';
+  const isE2EAdmin = userId && userId.toLowerCase() === '44000000-0000-0000-0000-000000000001';
 
   if (!user && !isE2EAdmin) {
     // If user is not found, it might be a session mismatch after a db reset

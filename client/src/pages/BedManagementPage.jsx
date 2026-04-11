@@ -17,6 +17,8 @@ export default function BedManagementPage({ tenant }) {
   const [bedForm, setBedForm] = useState({ bed_number: '' });
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState('plan'); // 'grid' | 'plan'
+  const [searchTerm, setSearchTerm] = useState('');
+  const [availableOnly, setAvailableOnly] = useState(false);
 
   useEffect(() => {
     loadWards();
@@ -80,7 +82,16 @@ export default function BedManagementPage({ tenant }) {
     }
   }
 
-  const currentBeds = selectedWard ? (beds[selectedWard.id] || []) : [];
+  const currentBeds = React.useMemo(() => {
+    let list = selectedWard ? (beds[selectedWard.id] || []) : [];
+    if (searchTerm) {
+      list = list.filter(b => b.bed_number?.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+    if (availableOnly) {
+      list = list.filter(b => b.status !== 'occupied');
+    }
+    return list;
+  }, [selectedWard, beds, searchTerm, availableOnly]);
 
   return (
     <div className="page-shell-premium slide-up">
@@ -93,6 +104,28 @@ export default function BedManagementPage({ tenant }) {
            <p className="dim-label italic">Track patient beds, check availability, and manage wards for {tenant?.name || 'New Age Hospital'}.</p>
         </div>
         <div className="flex gap-4">
+           {/* Global Bed Search */}
+           <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+              <input 
+                type="text"
+                placeholder="Locate specific bed..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="input-field h-[50px] !rounded-2xl pl-12 w-64 bg-white/50 border-slate-200 focus:bg-white shadow-sm transition-all text-xs font-bold"
+              />
+           </div>
+
+           <button 
+             onClick={() => setAvailableOnly(!availableOnly)}
+             className={`px-6 h-[50px] rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all gap-2 flex items-center shadow-sm border ${
+               availableOnly ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-white text-slate-500 border-slate-200'
+             }`}
+           >
+              <ShieldCheck className={`w-4 h-4 ${availableOnly ? 'animate-pulse' : ''}`} />
+              {availableOnly ? 'Ready Beds Only' : 'Show All Beds'}
+           </button>
+
            <button 
              onClick={() => setShowAddWard(!showAddWard)}
              className="clinical-btn bg-slate-900 text-white px-8 rounded-2xl shadow-2xl hover:bg-slate-700 transition-all border-none"

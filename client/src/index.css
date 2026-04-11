@@ -59,6 +59,14 @@
   --shadow-premium: 0 25px 50px -12px rgba(1, 22, 39, 0.12);
   --header-height: 96px;
   --sidebar-width: 320px;
+
+  /* MODULAR THEME TOKENS - SET BY TENANT SETTINGS */
+  --clinical-primary: #0B2545;  /* Default: Deep Medical Navy */
+  --clinical-primary-dark: #011627;
+  --clinical-accent: #0077B6;   /* Default: Clinical Blue */
+  --clinical-accent-soft: rgba(0, 119, 182, 0.1);
+  --clinical-hero: #0B2545;
+  --clinical-text: #1E293B;
 }
 
 * {
@@ -74,7 +82,7 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   background: var(--page-bg);
-  color: var(--text-main);
+  color: var(--clinical-text);
   line-height: 1.5;
   letter-spacing: -0.01em;
   -webkit-font-smoothing: antialiased;
@@ -108,10 +116,10 @@ textarea {
   top: 0;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, var(--medical-navy-light) 0%, var(--medical-navy) 100%);
+  background: linear-gradient(180deg, var(--clinical-primary) 0%, var(--clinical-primary-dark) 100%);
   color: white;
   z-index: 50;
-  border-right: 2px solid var(--clinical-blue);
+  border-right: 2px solid var(--clinical-accent);
   box-shadow: 10px 0 40px rgba(0, 0, 0, 0.4);
   font-family: var(--font-sans);
 }
@@ -171,7 +179,10 @@ textarea {
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--border);
-  padding: 0 40px;
+  padding: 0 16px;
+  @media (min-width: 1024px) {
+    padding: 0 40px;
+  }
   display: flex;
   align-items: center;
   position: sticky;
@@ -485,6 +496,213 @@ body .page-content h1,
 
 .chat-msg-bot {
   align-items: flex-start;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UNIVERSAL RESPONSIVE RECOVERY (Fixing edge-cutting)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Prevent containers from forcing page width */
+.flex-1.min-w-0 {
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
+/* Force charts and cards to contain themselves */
+.dashboard-card,
+.premium-card,
+.platform-metric-card {
+  max-width: 100% !important;
+  overflow-x: hidden; /* Standard cards shouldn't scroll x unless explicitly tables */
+}
+
+/* Explicitly handle chart areas to allow internal scaling */
+.chart-area {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: visible;
+}
+
+/* Ensure images and SVGs never exceed parent */
+img, svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   HUB HERO SECTIONS - THE "SMALL & SLEEK" IDENTITY
+   Ensure visual uniformity across administrative shards
+   ═══════════════════════════════════════════════════════════ */
+.page-header-premium {
+  background: linear-gradient(135deg, var(--clinical-hero) 0%, var(--clinical-primary-dark) 100%);
+  padding: 3rem !important;
+  border-radius: 32px !important;
+  color: white !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+  position: relative;
+  overflow: hidden !important;
+  margin-bottom: 3.5rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.page-header-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, var(--clinical-accent), transparent 50%),
+              radial-gradient(circle at bottom left, var(--clinical-accent), transparent 40%);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.page-header-premium h1, 
+.page-header-premium h2,
+.page-header-premium h3,
+.page-header-premium p, 
+.page-header-premium .dim-label,
+.page-header-premium span:not(.live-indicator),
+.page-header-premium .text-slate-300 {
+  color: white !important;
+  opacity: 1 !important;
+  position: relative;
+  z-index: 10;
+}
+
+.page-header-premium .dim-label {
+  opacity: 0.9 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-weight: 500;
+  max-width: 600px;
+}
+
+.system-shard-badge {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM TABLES & INTERFACES
+   ═══════════════════════════════════════════════════════════ */
+.premium-table-container {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  margin-top: 1rem;
+}
+
+.premium-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.premium-table th {
+  background: #F8FAFC !important;
+  padding: 16px 24px;
+  text-align: left;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748B !important;
+  border-bottom: 2px solid #F1F5F9;
+}
+
+.premium-table td {
+  padding: 16px 24px;
+  color: var(--text-main);
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.premium-table tr:hover td {
+  background: #F1F5F9;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PREMIUM TABS & NAVIGATION
+   ═══════════════════════════════════════════════════════════ */
+.premium-tab-bar {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 0.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  overflow-x: auto;
+  margin-bottom: 2.5rem;
+  width: fit-content;
+}
+
+.premium-tab-item {
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  color: var(--text-soft);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.premium-tab-item:hover {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--text-main);
+}
+
+.premium-tab-item.active {
+  background: var(--medical-navy);
+  color: white;
+  box-shadow: 0 4px 12px rgba(1, 22, 39, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   UNIVERSAL UTILITIES
+   ═══════════════════════════════════════════════════════════ */
+.glass-panel { 
+  background: rgba(255, 255, 255, 0.7); 
+  backdrop-filter: blur(12px); 
+  border-radius: 24px; 
+  border: 1px solid rgba(255, 255, 255, 0.3); 
+}
+
+.clinical-card {
+  background: white;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  padding: 2rem;
+  box-shadow: var(--shadow-premium);
+}
+
+.tabular-nums { 
+  font-family: var(--font-mono); 
+  font-variant-numeric: tabular-nums; 
+}
+
+@media (max-width: 768px) {
+  .page-header-premium {
+    padding: 2rem !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1.5rem !important;
+  }
 }
 
 .chat-bubble {

@@ -17,15 +17,9 @@ export default function FindDoctorPage({
   const [selectedSpecialty, setSelectedSpecialty] = useState('All');
   const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showBookingModal, setShowBookingModal] = useState(false);
   const [showAvailabilityPage, setShowAvailabilityPage] = useState(false);
   const [selectedDoctor, setSelectedDoctor] = useState(null);
-  const [selectedPatientId, setSelectedPatientId] = useState('');
-  const [bookingData, setBookingData] = useState({
-    date: '',
-    time: '',
-    reason: ''
-  });
+  const [showAddDoctorModal, setShowAddDoctorModal] = useState(false);
 
   const isPatient = activeUser.role === 'Patient';
 
@@ -114,14 +108,6 @@ export default function FindDoctorPage({
 
   const handleFinalBooking = async (appointmentData) => {
     try {
-      const finalData = {
-        providerId: appointmentData.providerId,
-        patientId: appointmentData.patientId,
-        start: `${appointmentData.date}T${appointmentData.startTime}`,
-        end: `${appointmentData.date}T${appointmentData.endTime}`,
-        reason: appointmentData.reason
-      };
-
       if (isPatient) {
         await onSelfAppointment({ preventDefault: () => {}, target: new FormData() });
       } else {
@@ -134,12 +120,6 @@ export default function FindDoctorPage({
     } catch (err) {
       showToast({ message: 'Booking failed: ' + err.message, type: 'error' });
     }
-  };
-
-  const calculateEndTime = (startTime) => {
-    const [hours, minutes] = startTime.split(':');
-    const endHours = parseInt(hours) + 1; // Assuming 1 hour consultation
-    return `${endHours.toString().padStart(2, '0')}:${minutes}`;
   };
 
   const renderStars = (rating) => {
@@ -178,6 +158,67 @@ export default function FindDoctorPage({
 
   return (
     <div className="page-shell-premium animate-fade-in">
+      {/* Add Doctor Modal */}
+      {showAddDoctorModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in" onClick={() => setShowAddDoctorModal(false)}>
+          <div className="clinical-card w-full max-w-md p-10 shadow-2xl animate-scale-up" onClick={e => e.stopPropagation()}>
+            <div className="mb-8">
+              <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Register New Provider</h3>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Institutional Credentialing Node</p>
+            </div>
+            <form className="space-y-6" onSubmit={(e) => {
+              e.preventDefault();
+              const fd = new FormData(e.target);
+              const newDoc = {
+                id: Date.now(),
+                name: fd.get('name'),
+                specialty: fd.get('specialty'),
+                experience: fd.get('experience'),
+                consultationFee: fd.get('fee'),
+                location: fd.get('location'),
+                rating: 5.0,
+                availableDays: ['Mon', 'Wed', 'Fri'],
+                image: null
+              };
+              setDoctors([newDoc, ...doctors]);
+              showToast({ message: 'Doctor registered successfully!', type: 'success', title: 'Provider Registry' });
+              setShowAddDoctorModal(false);
+            }}>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Full Nomenclature</label>
+                <input name="name" className="input-field py-4 bg-slate-50 border-none rounded-xl font-bold" placeholder="Dr. Jane Smith" required />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Specialty</label>
+                  <select name="specialty" className="input-field h-[56px] bg-slate-50 border-none rounded-xl font-bold">
+                    {specialties.filter(s => s !== 'All').map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Experience (Yrs)</label>
+                  <input name="experience" type="number" className="input-field py-4 bg-slate-50 border-none rounded-xl" placeholder="10" required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Consultation Fee (₹)</label>
+                  <input name="fee" type="number" className="input-field py-4 bg-slate-50 border-none rounded-xl" placeholder="500" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Location</label>
+                  <input name="location" className="input-field py-4 bg-slate-50 border-none rounded-xl" placeholder="Wing A" required />
+                </div>
+              </div>
+              <div className="pt-6 border-t border-slate-50 flex gap-4">
+                <button type="button" onClick={() => setShowAddDoctorModal(false)} className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Abort</button>
+                <button type="submit" className="flex-2 btn-primary py-4 px-8 text-[10px] uppercase tracking-widest shadow-xl">Confirm Registration</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="mb-8">
         <h1 className="text-2xl font-black text-slate-900 mb-2">Find a Doctor</h1>
@@ -214,8 +255,11 @@ export default function FindDoctorPage({
           </div>
 
           {/* Add Doctor Button */}
-          <button className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2">
-            <Plus className="w-5 h-5" />
+          <button 
+            onClick={() => setShowAddDoctorModal(true)}
+            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center gap-2 text-[11px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20"
+          >
+            <Plus className="w-4 h-4" />
             Add Doctor
           </button>
         </div>
@@ -299,7 +343,7 @@ export default function FindDoctorPage({
             <div className="p-6">
               <button
                 onClick={() => handleBookAppointment(doctor)}
-                className="w-full py-4 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all font-black text-sm uppercase tracking-wider shadow-lg hover:shadow-xl"
+                className="w-full py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-all font-black text-[10px] uppercase tracking-wider shadow-lg hover:shadow-xl"
               >
                 Book Appointment
               </button>

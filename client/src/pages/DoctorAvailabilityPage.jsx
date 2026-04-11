@@ -19,15 +19,17 @@ import {
 import "../styles/critical-care.css";
 
 export default function DoctorAvailabilityPage({
-  selectedDoctor,
+  selectedDoctor: initialDoctor,
   activeUser,
   session,
+  providers = [],
   patients = [],
   onBookAppointment,
   onBack,
 }) {
   const { showToast } = useToast();
 
+  const [internalDoctor, setInternalDoctor] = useState(initialDoctor);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -38,25 +40,28 @@ export default function DoctorAvailabilityPage({
   const [doctorInfo, setDoctorInfo] = useState(null);
 
   const isPatient = activeUser?.role === "Patient";
+  const isAdmin = ["Admin", "Nurse", "Superadmin"].includes(activeUser?.role);
+
+  const doctors = useMemo(() => providers.filter(p => p.role === "Doctor"), [providers]);
 
   const mockDoctorInfo = useMemo(
     () => ({
-      id: selectedDoctor?.id || 1,
-      name: selectedDoctor?.name || "Dr. Sarah Johnson",
-      specialty: selectedDoctor?.specialty || "Cardiologist",
-      experience: selectedDoctor?.experience || 15,
-      rating: selectedDoctor?.rating || 4.8,
-      consultationFee: selectedDoctor?.consultationFee || 500,
-      availableDays: selectedDoctor?.availableDays || ["Mon", "Wed", "Fri"],
-      location: selectedDoctor?.location || "Main Hospital Building",
-      education: selectedDoctor?.education || "MD - Harvard Medical School",
-      languages: selectedDoctor?.languages || ["English", "Hindi", "Tamil"],
+      id: internalDoctor?.id || 1,
+      name: internalDoctor?.name || "Dr. Sarah Johnson",
+      specialty: internalDoctor?.specialty || "Cardiologist",
+      experience: internalDoctor?.experience || 15,
+      rating: internalDoctor?.rating || 4.8,
+      consultationFee: internalDoctor?.consultationFee || 500,
+      availableDays: internalDoctor?.availableDays || ["Mon", "Wed", "Fri"],
+      location: internalDoctor?.location || "Main Hospital Building",
+      education: internalDoctor?.education || "MD - Harvard Medical School",
+      languages: internalDoctor?.languages || ["English", "Hindi", "Tamil"],
       image: null,
       bio:
-        selectedDoctor?.bio ||
+        internalDoctor?.bio ||
         "Focused on preventive, diagnostic, and continuity care with a patient-first clinical workflow.",
     }),
-    [selectedDoctor]
+    [internalDoctor]
   );
 
   const generateMockSlots = (date) => {
@@ -190,9 +195,8 @@ export default function DoctorAvailabilityPage({
   return (
     <div className="page-shell-premium animate-fade-in">
       {/* HERO */}
-      <div className="relative overflow-hidden rounded-[32px] border border-white/60 bg-gradient-to-br from-slate-950 via-indigo-950 to-blue-950 p-6 md:p-8 shadow-[0_30px_80px_rgba(15,23,42,0.22)] mb-8">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.8),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.65),transparent_30%)]" />
-        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div className="page-header-premium stagger-entrance">
+        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 w-full">
           <div className="flex items-start gap-4">
             <button
               onClick={onBack}
@@ -208,9 +212,24 @@ export default function DoctorAvailabilityPage({
               <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
                 Doctor Availability
               </h1>
-              <p className="text-slate-300 mt-2 max-w-2xl">
-                Review consultation availability, choose a clinical slot, and complete your appointment booking in one clean flow.
-              </p>
+              {isAdmin && (
+                <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-4 max-w-md">
+                   <div className="text-[10px] uppercase tracking-widest text-slate-400 font-black">Institutional Picker</div>
+                   <select 
+                      className="flex-1 bg-transparent border-none text-white font-black text-sm outline-none cursor-pointer"
+                      value={internalDoctor?.id || ""}
+                      onChange={(e) => {
+                        const doc = doctors.find(d => String(d.id) === e.target.value);
+                        if (doc) setInternalDoctor(doc);
+                      }}
+                   >
+                      <option value="" className="text-slate-900" disabled>Select Clinical Shard...</option>
+                      {doctors.map(d => (
+                        <option key={d.id} value={d.id} className="text-slate-900">{d.name} ({d.specialty || 'General'})</option>
+                      ))}
+                   </select>
+                </div>
+              )}
             </div>
           </div>
 

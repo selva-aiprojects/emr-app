@@ -335,27 +335,33 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
     <div className="page-shell-premium animate-fade-in overflow-x-hidden">
       {loading && <DashboardLoader />}
       
-      {/* 1. CLINICAL GOVERNANCE HEADER */}
-      <header className="page-header-premium mb-10 pb-6 border-b border-[var(--accent-soft)] flex justify-between items-end">
-        <div className="animate-slide-down">
-           <div className="flex items-center gap-2 mb-3">
+      {/* 1. CLINICAL GOVERNANCE HERO BANNER */}
+      <div className="page-header-premium stagger-entrance flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="animate-slide-down text-center md:text-left">
+           <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
               <span className="live-indicator"></span>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-600">Active Sync: {secondsSinceSync}s ago</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/80">Active Ecosystem Sync: {secondsSinceSync}s ago</span>
            </div>
-           <h1 className="flex items-center gap-3 text-2xl font-black">
-              {getGreeting()}, {activeUser?.name?.split(' ')[0] || 'Admin'}
-              <span className="text-[10px] bg-[var(--clinical-primary)] text-white px-2.5 py-1 rounded-lg border border-white/10 uppercase tracking-wide font-black shadow-lg">Hospital Control Room</span>
+           <h1 className="flex flex-col md:flex-row items-center gap-3 text-3xl font-black text-white">
+              <span className="opacity-90">{getGreeting()},</span>
+              <span>{activeUser?.name?.split(' ')[0] || 'Admin'}</span>
+              <span className="text-[11px] bg-white/20 text-white px-3 py-1.5 rounded-xl border border-white/20 uppercase tracking-widest font-black shadow-lg backdrop-blur-md">
+                Institutional Control Plane
+              </span>
            </h1>
-           <p className="dim-label text-[13px] mt-1 font-medium opacity-70">Hospital Daily Summary for {tenant?.name || 'Authorized Centre'}</p>
+           <p className="text-[14px] mt-3 font-medium text-white/70 max-w-xl">
+             Daily Clinical Summary & Operational Intelligence for <span className="text-white font-bold">{tenant?.name || 'Authorized Centre'}</span>
+           </p>
         </div>
-        <div className="flex items-center gap-4 animate-slide-left">
-          <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+        
+        <div className="flex flex-col items-center md:items-end gap-4 animate-slide-left">
+          <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10">
              {['daily', 'weekly', 'monthly', 'yearly'].map(filter => (
                <button
                  key={filter}
                  onClick={() => setTimeFilter(filter)}
                  disabled={loading}
-                 className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${timeFilter === filter ? 'bg-white shadow-sm text-[var(--clinical-primary)]' : 'text-slate-400 hover:text-slate-600'}`}
+                 className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${timeFilter === filter ? 'bg-white shadow-xl text-[var(--clinical-primary)]' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                >
                  {filter}
                </button>
@@ -363,13 +369,13 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           </div>
           <button 
             onClick={handleExportReport}
-            className="px-6 py-2.5 bg-white border border-[var(--accent-soft)] rounded-2xl hover:bg-[var(--accent-soft)]/40 transition-all text-xs font-black uppercase tracking-widest text-[var(--clinical-secondary)] shadow-sm flex items-center"
+            className="px-8 py-3 bg-white text-[var(--clinical-primary)] rounded-2xl hover:bg-slate-50 transition-all text-xs font-black uppercase tracking-[0.2em] shadow-2xl flex items-center group active:scale-95"
           >
-            <FileText className="w-4 h-4 mr-2" />
-            Export Report
+            <FileText className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
+            Generate Executive Report
           </button>
         </div>
-      </header>
+      </div>
 
       {/* 2. NAVIGATION OVERLAYS */}
       <div className="mb-10 overflow-x-auto pb-2 scrollbar-hide">
@@ -422,13 +428,13 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
              </div>
              <div className="text-right">
                 <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none">Active</div>
-                <div className="text-[9px] text-slate-400 font-bold">Planned Today</div>
+                <div className="text-[9px] text-slate-400 font-bold">In Local Registry</div>
              </div>
           </div>
           <div className="metric-content mt-4">
-             <div className="metric-value">{realtimeMetrics.totalAppointments}</div>
+             <div className="metric-value">{appointments.length || realtimeMetrics.totalAppointments}</div>
              <div className="metric-title">Check-up Bookings</div>
-             <div className="metric-subtitle">Scheduled doctor visits today</div>
+             <div className="metric-subtitle">Scheduled doctor visits found</div>
           </div>
         </div>
 
@@ -442,11 +448,11 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
                 <div className={`text-[10px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.growth?.patients >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
                    {realtimeMetrics.growth?.patients >= 0 ? 'Growing' : 'Stable'}
                 </div>
-                <div className="text-[9px] text-slate-400 font-bold">{realtimeMetrics.growth?.patients}% MoM Growth</div>
+                <div className="text-[9px] text-slate-400 font-bold">Live Patient Shards</div>
              </div>
           </div>
           <div className="metric-content mt-4">
-             <div className="metric-value">{realtimeMetrics.totalPatients}</div>
+             <div className="metric-value">{patients.length || realtimeMetrics.totalPatients}</div>
              <div className="metric-title">Total Registered Patients</div>
              <div className="metric-subtitle">All patient records in system</div>
           </div>
@@ -584,9 +590,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       </div>
 
       {/* NEW: TOP METRICS ROW */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
         {/* Top Diagnoses */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px]">
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px] overflow-hidden">
            <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Top 10 Diagnoses</h3>
               <FileText className="w-4 h-4 text-purple-500" />
@@ -597,7 +603,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         </div>
 
         {/* Top Services (Revenue Mix) */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px]">
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px] overflow-hidden">
            <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Revenue Mix by Service</h3>
               <span className="text-2xl font-bold text-emerald-500">₹</span>
@@ -609,9 +615,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       </div>
 
       {/* NEW: STAFF & JOURNEY METRICS */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
         {/* Staff Distribution */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[400px]">
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[400px] overflow-hidden">
            <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Staffing Distribution</h3>
               <Users className="w-4 h-4 text-indigo-500" />
@@ -622,7 +628,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         </div>
 
         {/* Patient Journey Lifecycle */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[400px]">
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[400px] overflow-hidden">
            <div className="flex justify-between items-center mb-4">
               <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Clinical Workflow Funnel</h3>
               <Activity className="w-4 h-4 text-emerald-500" />
@@ -634,9 +640,9 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       </div>
 
       {/* NEW: ANALYTICS ROW - No-Show Rate + Doctor Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
         {/* No-Show Rate Analysis */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px]">
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px] overflow-hidden">
            <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">No-Show Rate Analysis</h3>
@@ -650,7 +656,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         </div>
 
         {/* Doctor Performance */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px]">
+        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px] overflow-hidden">
            <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Doctor Performance</h3>

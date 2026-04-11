@@ -4,6 +4,7 @@
  */
 
 import { query } from './connection.js';
+import { createUser } from './user.service.js';
 
 /**
  * Get all employees for a tenant
@@ -30,7 +31,7 @@ export async function getEmployees(tenantId) {
  * @param {Object} data - Employee details
  * @returns {Promise<Object>} - Created employee record
  */
-export async function createEmployee({ tenantId, name, code, department, designation, joinDate, shift, salary }) {
+export async function createEmployee({ tenantId, name, code, department, designation, joinDate, shift, salary, email }) {
   const sql = `
     INSERT INTO emr.employees (tenant_id, name, code, department, designation, join_date, shift, salary, leave_balance)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 12)
@@ -49,6 +50,21 @@ export async function createEmployee({ tenantId, name, code, department, designa
   ]);
 
   const employee = result.rows[0];
+
+  // IF IT IS A DOCTOR, PROVISION USER AUTOMATICALLY
+  if (designation?.toLowerCase() === 'doctor' && email) {
+    try {
+      await createUser({
+        tenantId,
+        name,
+        email,
+        role: 'Doctor'
+      });
+    } catch (err) {
+      console.error('[AUTH_SYNC_FAILURE] Could not provision user for doctor:', err);
+    }
+  }
+
   return {
     ...employee,
     salary: parseFloat(employee.salary),

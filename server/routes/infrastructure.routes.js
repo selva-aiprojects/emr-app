@@ -137,4 +137,32 @@ router.post('/beds', requirePermission('admin'), async (req, res) => {
   }
 });
 
+/**
+ * @route   GET /api/services
+ * @desc    Get all clinical services/price list for a tenant
+ */
+router.get('/services', async (req, res) => {
+  try {
+    const services = await repo.getServices(req.tenantId);
+    res.json(services);
+  } catch (error) {
+    console.error('Error fetching services:', error);
+    res.status(500).json({ error: 'Failed to fetch services' });
+  }
+});
+
+/**
+ * @route   POST /api/services
+ * @desc    Add a new service to the catalog
+ */
+router.post('/services', requirePermission('admin'), async (req, res) => {
+  try {
+    const service = await repo.createService({ ...req.body, tenantId: req.tenantId });
+    res.status(201).json(service);
+  } catch (error) {
+    console.error('Error creating service:', error);
+    res.status(500).json({ error: 'Failed to create service' });
+  }
+});
+
 export default router;

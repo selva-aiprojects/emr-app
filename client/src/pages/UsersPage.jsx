@@ -4,12 +4,13 @@ import { ShieldCheck, Mail, Shield, UserX, UserCheck, Search, Filter, MoreVertic
 import { userName } from '../utils/format.js';
 import { EmptyState } from '../components/ui/index.jsx';
 
-export default function UsersPage({ users = [], activeUser, tenant, onUpdateUserRole, onResetPassword }) {
+export default function UsersPage({ users = [], activeUser, tenant, onUpdateUserRole, onResetPassword, onCreateUser }) {
   const { showToast } = useToast();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const pageSize = 10;
 
   const filteredUsers = useMemo(() => {
@@ -84,9 +85,78 @@ export default function UsersPage({ users = [], activeUser, tenant, onUpdateUser
           </div>
         </div>
         <div className="flex gap-2">
-           {/* Add user button could go here, currently handled in AdminPage but could move here */}
+           <button 
+             onClick={() => setShowCreateModal(true)}
+             className="clinical-btn bg-slate-900 !text-white px-8 rounded-2xl shadow-xl hover:shadow-2xl transition-all"
+           >
+              <UserCheck className="w-4 h-4 mr-2" />
+              Provision Identity
+           </button>
         </div>
       </div>
+
+      {showCreateModal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 backdrop-blur-md bg-slate-900/60 animate-fade-in">
+           <div className="glass-panel w-full max-w-xl p-10 shadow-3xl animate-scale-in">
+              <header className="mb-10 flex justify-between items-start">
+                 <div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight uppercase">Identity Provisioning</h3>
+                    <p className="dim-label uppercase tracking-widest text-[10px] mt-1 font-black">Authorized User Authorization Shard</p>
+                 </div>
+                 <button className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 hover:bg-slate-200" onClick={() => setShowCreateModal(false)}>
+                    <UserX className="w-5 h-5" />
+                 </button>
+              </header>
+
+              <form className="space-y-8" onSubmit={async (e) => {
+                 e.preventDefault();
+                 const fd = new FormData(e.target);
+                 try {
+                   await onCreateUser({
+                     name: fd.get('name'),
+                     email: fd.get('email'),
+                     role: fd.get('role'),
+                     password: fd.get('password')
+                   });
+                   setShowCreateModal(false);
+                   showToast({ message: 'Personnel identity shard authorized!', type: 'success' });
+                 } catch (err) {
+                   showToast({ message: 'Provisioning failed: ' + err.message, type: 'error' });
+                 }
+              }}>
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Legal Name</label>
+                    <input name="name" className="input-field h-14 bg-slate-50 border-none font-bold" placeholder="E.g. Dr. Alexander Pierce" required />
+                 </div>
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Institutional E-Mail</label>
+                    <input name="email" type="email" className="input-field h-14 bg-slate-50 border-none font-bold" placeholder="alex.p@facility.com" required />
+                 </div>
+                 <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-1.5">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Operational Role</label>
+                       <select name="role" className="input-field h-14 bg-slate-50 border-none font-black uppercase tracking-widest text-[10px]" required>
+                          <option value="Admin">Admin</option>
+                          <option value="Doctor">Doctor</option>
+                          <option value="Nurse">Nurse</option>
+                          <option value="Front Office">Front Office</option>
+                          <option value="Lab">Lab</option>
+                          <option value="Pharmacy">Pharmacy</option>
+                       </select>
+                    </div>
+                    <div className="space-y-1.5">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Temporary Password</label>
+                       <input name="password" type="password" className="input-field h-14 bg-slate-50 border-none font-bold" placeholder="••••••••" required />
+                    </div>
+                 </div>
+                 <div className="pt-6 flex gap-4">
+                    <button type="button" onClick={() => setShowCreateModal(false)} className="flex-1 py-5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-colors">Abort Access</button>
+                    <button type="submit" className="flex-[2] clinical-btn bg-slate-900 text-white rounded-2xl py-5 text-[11px] font-black uppercase tracking-widest">Commit Identity</button>
+                 </div>
+              </form>
+           </div>
+        </div>
+      )}
 
       <main className="glass-panel p-0 overflow-hidden">
         <div className="premium-table-container overflow-x-hidden">

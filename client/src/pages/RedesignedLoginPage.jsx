@@ -54,8 +54,8 @@ export default function RedesignedLoginPage({ onLogin, tenants, loading: propLoa
             <div className="hero-content">
               <h2 className="hero-title">
                 Next-Gen <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Healthcare</span> <br />
-                Platform
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Hospital</span> <br />
+                Management System
               </h2>
               <p className="hero-description">
                 Empowering healthcare providers with intelligent EMR solutions for precision care delivery and operational excellence.

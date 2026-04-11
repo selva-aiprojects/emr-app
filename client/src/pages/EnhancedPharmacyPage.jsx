@@ -37,47 +37,44 @@ export default function EnhancedPharmacyPage({ tenant, setView, activeUser }) {
   const [prescriptions, setPrescriptions] = useState([]);
   const [expiringDrugs, setExpiringDrugs] = useState([]);
 
-  // Load data based on active tab
+  // Load all data on mount and whenever critical filters/tenant changes
   useEffect(() => {
     if (!tenant?.id) return;
     
-    const loadData = async () => {
+    const loadAllData = async () => {
       setLoading(true);
       try {
-        switch (activeTab) {
-          case 'dashboard':
-            const dashboardData = await getPharmacyDashboard(tenant.id);
-            setDashboard(dashboardData);
-            break;
-          case 'inventory':
-            const inventoryData = await getEnhancedPharmacyInventory(tenant.id, { 
-              stockStatus: stockFilter,
-              genericName: searchTerm
-            });
-            setInventory(inventoryData);
-            break;
-          case 'prescriptions':
-            const prescriptionsData = await getEnhancedPrescriptions(tenant.id, { 
-              status: statusFilter,
-              prescriptionNumber: searchTerm
-            });
-            setPrescriptions(prescriptionsData);
-            break;
-          case 'expiring':
-            const expiringData = await getExpiringDrugs(tenant.id, 90);
-            setExpiringDrugs(expiringData);
-            break;
-        }
+        console.log(`[PHARMACY_HYDRATION] Initializing full data sync for tenant: ${tenant.id}`);
+        
+        const [dashboardData, inventoryData, prescriptionsData, expiringData] = await Promise.all([
+          getPharmacyDashboard(tenant.id),
+          getEnhancedPharmacyInventory(tenant.id, { 
+            stockStatus: stockFilter,
+            genericName: searchTerm
+          }),
+          getEnhancedPrescriptions(tenant.id, { 
+            status: statusFilter,
+            prescriptionNumber: searchTerm
+          }),
+          getExpiringDrugs(tenant.id, 90)
+        ]);
+
+        setDashboard(dashboardData);
+        setInventory(inventoryData);
+        setPrescriptions(prescriptionsData);
+        setExpiringDrugs(expiringData);
+        
+        console.log(`[PHARMACY_HYDRATION] Sync Complete: ${inventoryData.length} items, ${prescriptionsData.length} prescriptions.`);
       } catch (error) {
-        console.error('Error loading data:', error);
-        showToast('Failed to load data', 'error');
+        console.error('Error loading pharmacy data:', error);
+        showToast('Failed to synchronize pharmacy data', 'error');
       } finally {
         setLoading(false);
       }
     };
 
-    loadData();
-  }, [tenant?.id, activeTab, statusFilter, stockFilter, searchTerm]);
+    loadAllData();
+  }, [tenant?.id, statusFilter, stockFilter, searchTerm]);
 
   const handleDispenseSubmit = async () => {
     if (!showDispenseModal || !tenant?.id) return;
@@ -124,6 +121,19 @@ export default function EnhancedPharmacyPage({ tenant, setView, activeUser }) {
       return matchesSearch && matchesStock;
     });
   }, [inventory, searchTerm, stockFilter]);
+
+  const stats = useMemo(() => {
+    return {
+      total: inventory.length,
+      critical: inventory.filter(item => 
+        item.current_stock <= item.minimum_stock_level || item.stock_status === 'CRITICAL'
+      ).length,
+      activePrescriptions: prescriptions.filter(p => 
+        p.current_status === 'ACTIVE'
+      ).length,
+      revenue: dashboard.today_revenue || 0
+    };
+  }, [inventory, prescriptions, dashboard.today_revenue]);
 
   const selectedPrescription = useMemo(() => 
     prescriptions.find(p => p.id === selectedPrescriptionId), 
@@ -183,46 +193,30 @@ export default function EnhancedPharmacyPage({ tenant, setView, activeUser }) {
   }
 
   return (
-    <div className="page-shell-premium animate-fade-in">
-      {/* Header */}
-      <header className="page-header-premium mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="page-title-rich flex items-center gap-3">
-              <Pill className="w-8 h-8 text-green-500" />
-              Pharmacy & Drug Management
-              <span className="text-meta-sm bg-green-600 text-white px-3 py-1 rounded-full border border-white/10 shadow-lg shadow-green-500/20">
-                Healthcare Standards Compliant
-              </span>
-            </h1>
-            <p className="dim-label italic">
-              Pharmacy Act compliant drug management, prescription processing, and clinical safety for {tenant?.name || 'Healthcare Facility'}
-            </p>
-          </div>
-          <div className="flex gap-3">
+    <div className="page-shell-premium animate-fade-in space-y-10 pb-20">
+      <header className="page-header-premium">
+        <div>
+           <h1 className="flex items-center gap-4 text-white">
+              Pharmacy Inventory Intelligence
+              <span className="system-shard-badge">Supply Chain Shard</span>
+           </h1>
+           <p className="dim-label">High-fidelity pharmaceutical tracking, automated reorder triggers, and institutional procurement for {tenant?.name || 'Healthcare Facility'}.</p>
+           <p className="text-[10px] font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/50">
+              <Activity className="w-3.5 h-3.5 text-emerald-400" /> Operational Mesh: ACTIVE • Real-time Inventory Ledger Synced
+           </p>
+        </div>
+        <div className="flex gap-4">
             <button 
-              onClick={() => setView('reports')}
-              className="btn-secondary py-2 px-4 text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all border-slate-200"
+              onClick={() => showToast('Generating institutional drug audit...', 'info')}
+              className="premium-tab-item bg-white/10 text-white border border-white/20 hover:bg-white/20"
             >
               <FileText className="w-4 h-4 mr-2" />
-              Inventory Report
+              DRUG AUDIT
             </button>
-            <button 
-              onClick={() => {
-                showToast('Advanced Analytics context active. Reviewing drug flow patterns...', 'info');
-                setActiveTab('dashboard');
-              }}
-              className="btn-secondary py-2 px-4 text-[10px] uppercase tracking-widest hover:bg-slate-50 transition-all border-slate-200"
-            >
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Analytics
-            </button>
-          </div>
         </div>
       </header>
 
-      {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-slate-100 p-1 rounded-xl mb-8">
+      <div className="premium-tab-bar">
         {[
           { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
           { id: 'inventory', label: 'Inventory', icon: Package },
@@ -233,14 +227,10 @@ export default function EnhancedPharmacyPage({ tenant, setView, activeUser }) {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             data-testid={`tab-${tab.id}`}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-[12px] font-bold transition-all ${
-              activeTab === tab.id 
-                ? 'bg-white text-green-700 shadow-md' 
-                : 'text-slate-600 hover:text-slate-900 active:scale-95'
-            }`}
+            className={`premium-tab-item ${activeTab === tab.id ? 'active' : ''}`}
           >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
+            <tab.icon className="w-4 h-4 mr-2 inline" />
+            {tab.label.toUpperCase()}
           </button>
         ))}
       </div>
@@ -258,8 +248,8 @@ export default function EnhancedPharmacyPage({ tenant, setView, activeUser }) {
                 <span className="text-xs font-medium text-slate-500">Total Items</span>
               </div>
               <h3 className="text-2xl font-bold text-slate-900">
-                {dashboard.total_inventory_items || 0}
-                {(dashboard.total_inventory_items || 0) === 0 && (
+                {stats.total}
+                {stats.total === 0 && (
                   <span className="ml-2 text-[10px] font-black uppercase text-amber-500 bg-amber-50 px-2 py-0.5 rounded border border-amber-100 animate-pulse">
                     Awaiting Sync
                   </span>
@@ -267,7 +257,7 @@ export default function EnhancedPharmacyPage({ tenant, setView, activeUser }) {
               </h3>
               <p className="text-sm text-slate-600">Inventory Items</p>
             </div>
-
++
             <div className="glass-panel p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
@@ -275,10 +265,10 @@ export default function EnhancedPharmacyPage({ tenant, setView, activeUser }) {
                 </div>
                 <span className="text-xs font-medium text-slate-500">Critical</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900">{dashboard.critical_stock_items || 0}</h3>
+              <h3 className="text-2xl font-bold text-slate-900">{stats.critical}</h3>
               <p className="text-sm text-slate-600">Low Stock Items</p>
             </div>
-
++
             <div className="glass-panel p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -286,7 +276,7 @@ export default function EnhancedPharmacyPage({ tenant, setView, activeUser }) {
                 </div>
                 <span className="text-xs font-medium text-slate-500">Active</span>
               </div>
-              <h3 className="text-2xl font-bold text-slate-900">{dashboard.active_prescriptions || 0}</h3>
+              <h3 className="text-2xl font-bold text-slate-900">{stats.activePrescriptions}</h3>
               <p className="text-sm text-slate-600">Prescriptions</p>
             </div>
 
@@ -354,36 +344,36 @@ export default function EnhancedPharmacyPage({ tenant, setView, activeUser }) {
       {/* Inventory Tab */}
       {activeTab === 'inventory' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex-1 max-w-md">
+          <div className="flex items-center justify-between bg-white/50 p-6 rounded-2xl border border-slate-100">
+             <div className="flex items-center gap-6">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest whitespace-nowrap">Clinical Stock Vault</h3>
+                <div className="h-8 w-px bg-slate-200" />
                 <div className="relative">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 w-4 h-4" />
                   <input
                     type="text"
-                    placeholder="Search drugs..."
+                    placeholder="Filter stock by name, ID or category..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-4 pr-10 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="input-field pl-6 pr-12 w-64 text-xs font-bold bg-white h-10 border-slate-100"
                   />
                 </div>
-              </div>
-              <select
-                value={stockFilter}
-                onChange={(e) => setStockFilter(e.target.value)}
-                className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              >
-                <option value="">All Stock Status</option>
-                <option value="CRITICAL">Critical Stock</option>
-                <option value="LOW">Low Stock</option>
-                <option value="EXPIRING_SOON">Expiring Soon</option>
-                <option value="NORMAL">Normal</option>
-              </select>
-            </div>
-            <button className="btn-primary py-2 px-6 text-[10px] uppercase tracking-widest shadow-lg">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Stock
-            </button>
+                <select
+                  value={stockFilter}
+                  onChange={(e) => setStockFilter(e.target.value)}
+                  className="px-4 h-10 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-200 text-xs font-bold bg-white"
+                >
+                  <option value="">All Stock Status</option>
+                  <option value="CRITICAL">Critical Stock</option>
+                  <option value="LOW">Low Stock</option>
+                  <option value="EXPIRING_SOON">Expiring Soon</option>
+                  <option value="NORMAL">Normal</option>
+                </select>
+             </div>
+             <button className="premium-tab-item bg-slate-900 text-white shadow-xl shadow-slate-900/20 px-8">
+               <Plus className="w-4 h-4 mr-2" />
+               PROVISION SHARD
+             </button>
           </div>
 
           <div className="glass-panel overflow-hidden">
