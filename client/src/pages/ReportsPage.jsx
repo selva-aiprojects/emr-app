@@ -67,29 +67,28 @@ export default function ReportsPage({ reportSummary, tenant, slmInsights, superO
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      {/* 1. ANALYTICS HEADER */}
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium mb-10">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
               {isSuper ? 'Platform Intelligence Registry' : 'Executive Clinical Analytics'}
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">
                 {isSuper ? 'Global Node' : 'Institutional Shard'}
               </span>
            </h1>
-           <p className="dim-label">
+           <p className="dim-label text-white/70">
               {isSuper
-                ? 'Cross-facility operational trajectory and network node health'
+                ? 'Cross-facility operational trajectory and network node health monitoring.'
                 : `Real-time performance metrics and institutional financial trajectory for ${tenant?.name || 'Facility'}.`}
            </p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> {isSuper ? 'Global Sync Active' : 'SLM Insights Enabled'} • Data Integrity Verified
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> {isSuper ? 'Global Sync Active' : 'SLM Insights Enabled'} • Data Integrity Verified
            </p>
         </div>
-        <div className="flex bg-white shadow-sm p-1 rounded-2xl border border-slate-200">
-           <div className="px-5 py-2 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-xs font-black uppercase tracking-widest text-slate-600">
-                {isSuper ? 'Network Active' : 'SLM Engine Ready'}
+        <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+           <div className="px-6 py-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-white/80">
+                {isSuper ? 'Network Link Active' : 'Telemetry Link Ready'}
               </span>
            </div>
         </div>

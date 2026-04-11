@@ -28,39 +28,48 @@ export default function CommunicationPage({ activeUser, notices = [], onCreateNo
   }, [statusFilter, notices]);
 
   return (
-    <section className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <div className="page-shell-premium animate-fade-in">
+      <header className="page-header-premium mb-10">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Communication Center</h1>
-          <p className="text-sm font-semibold text-slate-500 mt-1">Notices, operational alerts and audience-targeted internal communication.</p>
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
+              Communication Center
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Operational Node</span>
+           </h1>
+           <p className="dim-label">Notices, operational alerts and audience-targeted internal communication.</p>
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldAlert className="w-3.5 h-3.5 text-cyan-300" /> Administrative Integrity Validated • Real-time Broadcast Active
+           </p>
         </div>
-        {canManageNotices(activeUser?.role) && (
-          <button
-            type="button"
-            onClick={() => setShowComposer((v) => !v)}
-            className="rounded-lg bg-slate-900 text-white px-4 py-2 text-sm font-bold hover:bg-slate-800 transition"
-          >
-            {showComposer ? 'Close Composer' : '+ New Notice'}
-          </button>
-        )}
+        <div className="flex flex-col items-end gap-3">
+          {canManageNotices(activeUser?.role) && (
+            <button
+              type="button"
+              onClick={() => setShowComposer((v) => !v)}
+              className="px-8 py-3 bg-white text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl hover:bg-slate-50 flex items-center gap-2"
+            >
+              <Megaphone className="w-4 h-4" />
+              {showComposer ? 'Close Composer' : 'New Notice Shard'}
+            </button>
+          )}
+          
+          <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+            {['published', 'draft', 'archived', 'all'].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setStatusFilter(tab)}
+                className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  statusFilter === tab
+                    ? 'bg-white text-slate-900 shadow-xl'
+                    : 'text-white/60 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
       </header>
-
-      <article className="premium-panel flex flex-wrap gap-2">
-        {['published', 'draft', 'archived', 'all'].map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setStatusFilter(tab)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition ${
-              statusFilter === tab
-                ? 'bg-slate-900 text-white'
-                : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </article>
 
       {showComposer && canManageNotices(activeUser?.role) && (
         <article className="premium-panel">
@@ -82,7 +91,6 @@ export default function CommunicationPage({ activeUser, notices = [], onCreateNo
                   .filter(Boolean)
               });
               e.target.reset();
-              showToast({ message: 'Notice published successfully!', type: 'success', title: 'Communication' });
               setShowComposer(false);
             }}
           >
@@ -161,7 +169,6 @@ export default function CommunicationPage({ activeUser, notices = [], onCreateNo
                         className="text-xs font-bold text-rose-600 hover:text-rose-700"
                         onClick={async () => {
                           await onSetNoticeStatus(notice.id, 'archived');
-                          showToast({ message: 'Notice archived.', type: 'success', title: 'Communication' });
                         }}
                       >
                         Archive
@@ -178,6 +185,6 @@ export default function CommunicationPage({ activeUser, notices = [], onCreateNo
           </div>
         )}
       </article>
-    </section>
+    </div>
   );
 }

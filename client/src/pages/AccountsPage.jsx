@@ -114,20 +114,19 @@ export default function AccountsPage({ tenant, initialTab = 'snapshot' }) {
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      {/* 1. SURGICAL CALM HEADER */}
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium mb-10">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
               Treasury & Accounts Governance
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Fiscal Node</span>
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Fiscal Shard</span>
            </h1>
-           <p className="dim-label">Centralized treasury governance, institutional expenditure ledgers, and cashflow monitoring for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Fiscal Integrity Validated • Treasury sync operational
+           <p className="dim-label text-white/70">Centralized treasury governance, institutional expenditure ledgers, and cashflow monitoring.</p>
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Fiscal Integrity Validated • Treasury sync operational
            </p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1">
+        <div className="flex flex-col items-end gap-3">
+          <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
              {[
                { id: 'snapshot', label: 'Treasury Snapshot', icon: PieChart },
                { id: 'record', label: 'Authorized Outflow', icon: Plus },
@@ -135,20 +134,19 @@ export default function AccountsPage({ tenant, initialTab = 'snapshot' }) {
              ].map(tab => (
                <button
                  key={tab.id}
-                 className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+                 className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
                  onClick={() => setActiveTab(tab.id)}
                >
-                 <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
+                 <tab.icon className="w-3.5 h-3.5" /> {tab.label.split(' ')[1]}
                </button>
              ))}
           </div>
-          <div className="relative">
-            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <div className="relative group bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden px-4">
             <input
               type="month"
               value={currentMonth.slice(0, 7)}
               onChange={e => setCurrentMonth(e.target.value + '-01')}
-              className="input-field pl-11 py-3 bg-white border border-slate-200 rounded-xl font-black text-xs uppercase tracking-widest w-48 shadow-sm cursor-pointer"
+              className="bg-transparent text-white font-black text-[10px] uppercase tracking-widest h-10 outline-none cursor-pointer"
             />
           </div>
         </div>

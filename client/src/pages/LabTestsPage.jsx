@@ -191,10 +191,36 @@ export default function LabTestsPage({ tenant, activeUser }) {
   return (
     <div className="page-shell-premium animate-fade-in">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-black text-slate-900 mb-2">Lab Tests</h1>
-        <p className="text-slate-600">Book laboratory tests and diagnostic services</p>
-      </div>
+      <header className="page-header-premium mb-8">
+        <div>
+          <h1 className="page-title-rich flex items-center gap-3">
+            Service Catalog
+            <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Lab Tests</span>
+          </h1>
+          <p className="dim-label">
+            Book laboratory tests and diagnostic services with real-time pricing and preparation guides.
+          </p>
+          <div className="flex flex-wrap items-center gap-4 mt-4">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-cyan-300">
+              <TestTube className="w-3.5 h-3.5" /> {mockTests.length} Standardized Tests
+            </div>
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/60">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> NABL Accredited • Quality Verified
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden lg:grid grid-cols-2 gap-3 min-w-[320px]">
+          <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-black mb-1">Categories</div>
+            <div className="text-xl font-black text-white">{categories.length - 1} Shards</div>
+          </div>
+          <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-black mb-1">Pricing</div>
+            <div className="text-xl font-black text-white">Institutional</div>
+          </div>
+        </div>
+      </header>
 
       {/* Search and Filter */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">

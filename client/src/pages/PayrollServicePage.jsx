@@ -41,42 +41,58 @@ export default function PayrollServicePage({ tenant, employees = [], attendance 
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium mb-10">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-             <Receipt className="w-8 h-8 text-white/80" />
-             <h1 className="text-3xl font-black text-white uppercase tracking-tight">Payroll & Statutory Hub</h1>
-          </div>
-          <p className="dim-label text-white/70">Institutional financial engine for {tenant?.name}. Manage fiscal year payouts, statutory benefits, and employee disbursements.</p>
+      <header className="page-header-premium mb-8">
+        <div>
+           <h1 className="page-title-rich flex items-center gap-4 text-white">
+              Payroll & Statutory Hub
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Fiscal Shard</span>
+           </h1>
+           <p className="dim-label">Institutional financial engine for {tenant?.name}. Manage fiscal year payouts and statutory benefits.</p>
+           <p className="text-xs font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/60">
+              <ShieldCheck className="w-4 h-4 text-cyan-300" /> Fiscal Audit Validated • 100% Payroll Health
+           </p>
         </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col items-end gap-1">
-            <span className="text-[10px] font-black text-white/40 uppercase tracking-widest">Selected Fiscal Shard</span>
-            <div className="relative group">
-              <select 
-                value={fiscalYear}
-                onChange={(e) => setFiscalYear(e.target.value)}
-                className="appearance-none bg-white/10 hover:bg-white/20 border border-white/20 text-white px-6 py-3 pr-10 rounded-2xl text-sm font-black transition-all cursor-pointer outline-none"
+
+        <div className="flex flex-col items-end gap-3">
+          <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+            {[
+              { id: 'ledger', label: 'Ledger', icon: Receipt },
+              { id: 'payslips', label: 'Payslips', icon: FileText },
+              { id: 'attendance', label: 'Attendance', icon: Clock },
+              { id: 'statutory', label: 'Statutory', icon: ShieldCheck },
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+                onClick={() => setActiveTab(tab.id)}
               >
-                {fiscalYears.map(yr => <option key={yr} value={yr} className="text-slate-900">{yr}</option>)}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
-            </div>
+                <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3 p-1.5 bg-white/10 border border-white/10 rounded-2xl backdrop-blur-sm">
+            <span className="text-[9px] font-black text-white/60 uppercase tracking-widest pl-3">Fiscal Year</span>
+            <select 
+              value={fiscalYear}
+              onChange={(e) => setFiscalYear(e.target.value)}
+              className="bg-slate-900/40 border border-white/10 text-white font-black text-[11px] rounded-xl px-4 py-1.5 outline-none cursor-pointer hover:bg-slate-900/60 transition-all"
+            >
+              {fiscalYears.map(yr => <option key={yr} value={yr} className="text-slate-900">{yr}</option>)}
+            </select>
           </div>
         </div>
       </header>
-
+      
       {/* STRATEGIC FISCAL TILES */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         {stats.map((stat, i) => (
           <div key={i} className="glass-panel p-6 border-none shadow-premium relative overflow-hidden group hover:scale-[1.02] transition-all">
             <div className={`absolute top-0 right-0 w-32 h-32 bg-${stat.color}-500/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-${stat.color}-500/10 transition-all`} />
             <div className="flex items-center justify-between mb-4">
-              <div className={`w-10 h-10 rounded-xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center`}>
+              <div className={`w-10 h-10 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center`}>
                 <stat.icon size={20} />
               </div>
-              <span className={`text-[10px] font-black uppercase tracking-widest text-${stat.color}-600/60`}>Live Shard</span>
+              <span className={`text-[10px] font-black uppercase tracking-widest text-slate-400`}>Live Shard</span>
             </div>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-2">{stat.label}</p>
             <p className="text-2xl font-black text-slate-900 tabular-nums leading-none tracking-tight">{stat.value}</p>
@@ -86,25 +102,6 @@ export default function PayrollServicePage({ tenant, employees = [], attendance 
           </div>
         ))}
       </section>
-
-      {/* TABBED INTERFACE */}
-      <nav className="premium-tab-bar mb-8">
-        {[
-          { id: 'ledger', label: 'Payroll Ledger', icon: Receipt },
-          { id: 'payslips', label: 'Payslip Portal', icon: FileText },
-          { id: 'attendance', label: 'Attendance & Shifts', icon: Clock },
-          { id: 'statutory', label: 'Statutory Dues', icon: ShieldCheck },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`premium-tab-item flex items-center gap-2 ${activeTab === tab.id ? 'active' : ''}`}
-          >
-            <tab.icon size={14} />
-            {tab.label}
-          </button>
-        ))}
-      </nav>
 
       <main className="space-y-8">
         {activeTab === 'ledger' && (

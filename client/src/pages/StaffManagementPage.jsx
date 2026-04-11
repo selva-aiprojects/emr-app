@@ -29,37 +29,37 @@ export default function StaffManagementPage({ tenant, employees = [] }) {
     <div className="page-shell-premium animate-fade-in">
       <header className="page-header-premium mb-10">
         <div>
-           <div className="flex items-center gap-3 mb-2">
-              <ShieldCheck className="w-8 h-8 text-white/80" />
-              <h1 className="text-3xl font-black text-white uppercase tracking-tight">Staff Governance & Workforce</h1>
-           </div>
-           <p className="dim-label text-white/70">Institutional custodianship for {tenant?.name}. Manage workforce contracts, employee documentation, and retirement benefits.</p>
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
+              Staff Governance & Workforce
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Custodian Node</span>
+           </h1>
+           <p className="dim-label">Institutional custodianship for {tenant?.name}. Manage workforce contracts and documentation.</p>
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Administrative Logic Active • Workforce Secure
+           </p>
         </div>
-        <div className="flex items-center gap-4">
-           <button className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10 inline-flex items-center gap-2">
+
+        <div className="flex flex-col items-end gap-3">
+           <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+            {[
+              { id: 'offers', label: 'Offers', icon: UserPlus },
+              { id: 'docs', label: 'Docs', icon: FileText },
+              { id: 'benefits', label: 'Benefits', icon: Archive },
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
+              </button>
+            ))}
+          </div>
+          <button className="px-8 py-3 bg-white text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl hover:bg-slate-50 inline-flex items-center gap-2">
               <UserPlus size={14} /> New Offer Deployment
-           </button>
+          </button>
         </div>
       </header>
-
-      {/* GOVERNANCE TABS */}
-      <nav className="premium-tab-bar mb-10">
-        {[
-          { id: 'offers', label: 'Offer Management', icon: UserPlus },
-          { id: 'docs', label: 'Employee Documentation', icon: FileText },
-          { id: 'benefits', label: 'Gratuity & Retirement', icon: Archive },
-          { id: 'compliance', label: 'Audit & Compliance', icon: ShieldCheck },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`premium-tab-item flex items-center gap-2 ${activeTab === tab.id ? 'active' : ''}`}
-          >
-            <tab.icon size={14} />
-            {tab.label}
-          </button>
-        ))}
-      </nav>
 
       <main className="space-y-10">
         {activeTab === 'offers' && (

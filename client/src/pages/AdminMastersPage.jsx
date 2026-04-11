@@ -88,17 +88,20 @@ export default function AdminMastersPage({ tenant, onViewChange }) {
 
   return (
     <div className="page-shell-premium slide-up">
-      <header className="page-header-premium mb-12 border-b border-slate-100 pb-8">
+      <header className="page-header-premium mb-12">
         <div>
-          <h1 className="page-title-rich flex items-center gap-3">
-             <Database className="w-8 h-8 text-slate-900" />
-             Institutional Master Data Hub
-          </h1>
-          <p className="dim-label italic">Centralized control center for {tenant?.name}'s core operational constraints and master registries.</p>
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
+              Institutional Master Data Hub
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Registry Node</span>
+           </h1>
+           <p className="dim-label text-white/70">Centralized control center for {tenant?.name}'s core operational constraints and master registries.</p>
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Operational Constraints Validated • Master Shard Healthy
+           </p>
         </div>
-        <div className="flex items-center gap-3 text-xs font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-6 py-3 rounded-2xl border border-slate-100">
-           <Activity className="w-4 h-4 text-emerald-500 animate-pulse" />
-           Live Data Synchronization Active
+        <div className="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-white/50 bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10">
+           <Activity className="w-4 h-4 text-cyan-400 animate-pulse" />
+           Master Data Shard: Real-Time Sync
         </div>
       </header>
 

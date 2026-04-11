@@ -188,33 +188,34 @@ export default function BillingPage({
   return (
     <div className="page-shell-premium animate-fade-in">
       {/* 1. TRANSACTIONAL HEADER */}
-      <header className="page-header-premium">
+      <header className="page-header-premium mb-10">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
               Financial Governance Ledger
-              <span className="text-[10px] bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Revenue Node</span>
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Revenue Node</span>
            </h1>
            <p className="dim-label">Institutional fiscal reconciliation and longitudinal settlement tracking for {tenant?.name || 'Facility'}.</p>
-           <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mt-2 flex items-center gap-2">
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-2 flex items-center gap-2">
               <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Accounting Integrity Validated • SLM Settlement Active
            </p>
          </div>
+
+         <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+          {[
+            { id: 'list', label: 'Ledger', icon: History },
+            { id: 'create', label: 'New Statement', icon: Plus },
+            { id: 'settlement', label: 'Bed Settlement', icon: Scale }
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === tab.id ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setActiveView(tab.id)}
+            >
+              <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
+            </button>
+          ))}
+        </div>
       </header>
-      <div className="flex bg-white/50 backdrop-blur-sm p-1.5 rounded-2xl border border-slate-200 shadow-sm gap-1 w-fit mb-10">
-        {[
-          { id: 'list', label: 'Ledger', icon: History },
-          { id: 'create', label: 'New Statement', icon: Plus },
-          { id: 'settlement', label: 'Bed Settlement', icon: Scale }
-        ].map(tab => (
-          <button 
-            key={tab.id}
-            className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeView === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setActiveView(tab.id)}
-          >
-            <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
-          </button>
-        ))}
-      </div>
 
       {/* 2. REVENUE VITALS */}
       <section className="vitals-monitor mb-10">

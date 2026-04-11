@@ -232,15 +232,15 @@ export default function PatientsPage({
               <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Records verified • Directory Active
            </p>
         </div>
-        <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">
+        <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
           <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'registry' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'registry' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
             onClick={() => setActiveTab('registry')}
           >
             <ClipboardList className="w-3.5 h-3.5 mr-2" /> Patient List
           </button>
           <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'onboard' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'onboard' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
             onClick={() => setActiveTab('onboard')}
           >
             <UserPlus className="w-3.5 h-3.5 mr-2" /> New Registration

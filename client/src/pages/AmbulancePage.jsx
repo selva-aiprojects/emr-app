@@ -92,25 +92,40 @@ export default function AmbulancePage({ tenant }) {
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium">
+      <header className="page-header-premium mb-8">
         <div>
-           <h1 className="flex items-center gap-4 text-white">
+           <h1 className="page-title-rich flex items-center gap-4 text-white">
               Ambulance Dispatch Hub
-              <span className="system-shard-badge">GPS Mesh Shard</span>
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">GPS Mesh Shard</span>
            </h1>
            <p className="dim-label">Real-time emergency fleet orchestration and predictive logistics for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/50">
+           <p className="text-xs font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/60">
               <Activity className="w-4 h-4 text-emerald-400" /> GPS Mesh Active • Response Readiness: 98.4%
            </p>
         </div>
-        <div className="flex items-center gap-4 relative z-20">
-           <button 
-             onClick={() => setShowRegModal(true)}
-             className="clinical-btn bg-white !text-slate-900 px-8 rounded-2xl text-meta-sm shadow-2xl hover:bg-slate-50 transition-all border-none font-black min-w-[180px]"
-           >
-              <Plus className="w-4 h-4 mr-2" />
-              Enroll Vehicle
-           </button>
+
+        <div className="flex flex-col items-end gap-3">
+          <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+            {[
+              { id: 'live', label: 'Live Response', icon: Navigation },
+              { id: 'fleet', label: 'Fleet Registry', icon: Truck }
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'live' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
+              </button>
+            ))}
+          </div>
+          <button 
+            onClick={() => setShowRegModal(true)}
+            className="px-8 py-3 bg-white text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl hover:bg-slate-50 border-none min-w-[180px]"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Enroll Vehicle
+          </button>
         </div>
       </header>
 
@@ -141,10 +156,6 @@ export default function AmbulancePage({ tenant }) {
         </div>
       </section>
 
-      <div className="premium-tab-bar mb-8">
-        <button data-testid="tab-live" className={`premium-tab-item ${activeTab === 'live' ? 'active' : ''}`} onClick={() => setActiveTab('live')}>Live Response</button>
-        <button data-testid="tab-fleet" className={`premium-tab-item ${activeTab === 'fleet' ? 'active' : ''}`} onClick={() => setActiveTab('fleet')}>Fleet Registry</button>
-      </div>
 
       {activeTab === 'live' && (
         <article className="glass-panel h-[600px] relative bg-slate-50 overflow-hidden flex items-center justify-center group border-2 border-slate-100 border-dashed">

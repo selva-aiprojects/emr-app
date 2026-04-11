@@ -214,21 +214,20 @@ export default function InsurancePage({ providers = [], claims = [], onCreatePro
 
   return (
     <div className="page-shell-premium animate-fade-in">
-       {/* HEADER SECTION */}
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium mb-10">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
               Insurance & Payer Governance
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Fiscal Node</span>
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Fiscal Shard</span>
            </h1>
-           <p className="dim-label">Institutional payer relationships, coverage thresholds, and clinical claim ecosystems for {providers[0]?.tenant_name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Payer Connectivity Active • Claim endpoints operational
+           <p className="dim-label">Institutional payer relationships and clinical claim ecosystems for {providers[0]?.tenant_name || 'Authorized Facility'}.</p>
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Payer Connectivity Active • Claim endpoints operational
            </p>
         </div>
         <div className="flex items-center gap-3">
-            <button className="clinical-btn !rounded-xl px-6 py-2.5 shadow-lg shadow-blue-500/10 min-w-[160px] text-[10px] font-black uppercase tracking-widest" onClick={() => setShowRegister(true)}>
-               <Plus className="w-3.5 h-3.5 mr-2" />
+            <button className="px-8 py-3 bg-white text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl hover:bg-slate-50 inline-flex items-center gap-2" onClick={() => setShowRegister(true)}>
+               <Plus className="w-3.5 h-3.5" />
                Provision Payer
             </button>
         </div>

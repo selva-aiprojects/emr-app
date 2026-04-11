@@ -172,36 +172,34 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
   return (
     <div className="relative min-h-screen bg-slate-50 font-sans selection:bg-indigo-100">
       
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium mb-10">
         <div>
-           <h1 className="flex items-center gap-3">
-              Admissions & Bed Management
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Ward Overview</span>
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
+              Admissions & Bed Governance
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Ward Node</span>
            </h1>
            <p className="dim-label">Track admitted patients and manage hospital beds for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> All Beds Synced • Updated Live
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> All Beds Synced • Updated Live
            </p>
         </div>
-        <div className="flex bg-white shadow-sm p-1.5 rounded-2xl border border-slate-200 gap-1 w-fit">
-          <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'ledger' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setActiveTab('ledger')}
-          >
-            Admission Ledger
-          </button>
-          <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'occupancy' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setActiveTab('occupancy')}
-          >
-            Occupancy Map
-          </button>
-          <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'admit' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
-            onClick={() => setActiveTab('admit')}
-          >
-            <UserPlus className="w-3.5 h-3.5 mr-2" /> New Admission
-          </button>
+
+        <div className="flex flex-col items-end gap-3">
+          <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+            {[
+              { id: 'ledger', label: 'Ledger', icon: Grid },
+              { id: 'occupancy', label: 'Occupancy', icon: BedIcon },
+              { id: 'admit', label: 'Admission', icon: UserPlus },
+            ].map(tab => (
+              <button 
+                key={tab.id}
+                className={`clinical-btn !min-h-[40px] px-6 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 

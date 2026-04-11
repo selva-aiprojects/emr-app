@@ -168,12 +168,12 @@ export default function AppointmentsPage({
           providers={providers}
         />
       )}
-      <header className="page-header-premium">
+      <header className="page-header-premium mb-10">
         <div>
-           <h1 className="flex items-center gap-3">
-              {isDoctor ? 'My Appointment Schedule' : 'Appointments & Scheduling'}
-              <span className="text-[10px] bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">
-                {isDoctor ? 'Doctor View' : 'Reception Desk'}
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
+              {isDoctor ? 'Clinical Appointment Schedule' : 'Appointments & Scheduling Hub'}
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">
+                {isDoctor ? 'Clinical Node' : 'Reception Shard'}
               </span>
            </h1>
            <p className="dim-label">
@@ -181,30 +181,30 @@ export default function AppointmentsPage({
                ? 'Your scheduled consultations and patient encounters.'
                : `Manage hospital appointments and walk-in patient flow for ${session?.tenantName || 'Authorized Facility'}.`}
            </p>
-           <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> System Online • Reception Active
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> System Online • Reception Protocol Active
            </p>
         </div>
-        <div className="flex bg-white shadow-sm p-1 rounded-xl border border-slate-200 gap-1 w-fit">
+        <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
           <button 
-            className={`clinical-btn !min-h-[38px] px-6 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'appointments' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'appointments' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
             onClick={() => setActiveTab('appointments')}
           >
-            <Calendar className="w-3 h-3 mr-2" /> {isDoctor ? 'Book Slot' : 'Appointments'}
+            <Calendar className="w-3.5 h-3.5" /> {isDoctor ? 'Book Slot' : 'Appointments'}
           </button>
           {!isPatient && !isDoctor && (
             <button 
-              className={`clinical-btn !min-h-[38px] px-6 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'walkins' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'walkins' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
               onClick={() => setActiveTab('walkins')}
             >
-              <Users className="w-3 h-3 mr-2" /> Reception Queue
+              <Users className="w-3.5 h-3.5" /> Reception Queue
             </button>
           )}
           <button 
-            className={`clinical-btn !min-h-[38px] px-6 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'availability' ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-800'}`}
+            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'availability' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
             onClick={() => setActiveTab('availability')}
           >
-            <Calendar className="w-3 h-3 mr-2" /> Doctor Availability
+            <Clock3 className="w-3.5 h-3.5" /> Availability
           </button>
         </div>
       </header>

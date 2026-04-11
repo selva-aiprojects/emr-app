@@ -125,52 +125,41 @@ export default function LabPage({ tenant, activeUser }) {
   return (
     <div className="page-shell-premium animate-fade-in">
 
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium mb-10">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
               Laboratory & Diagnostic Hub
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Laboratory Network</span>
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Diagnostic Shard</span>
            </h1>
-           <p className="dim-label">Manage lab test orders, view test results, and generate diagnostic reports for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldAlert className="w-3 h-3 text-indigo-500" /> Lab Integrity Verified • Diagnostic feeds operational
+           <p className="dim-label">Manage lab test orders and diagnostic reports for {tenant?.name || 'Authorized Facility'}.</p>
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldAlert className="w-3.5 h-3.5 text-cyan-300" /> Lab Integrity Verified • Diagnostic feeds operational
            </p>
         </div>
-        <div className="flex items-center gap-4">
-           {/* No-click critical counts */}
-           <div className="flex bg-white shadow-sm rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="px-5 py-3 border-r border-slate-100 bg-slate-50/50">
-                 <span className="stat-label block mb-1">Awaiting Samples</span>
-                 <span className="stat-value-sm tabular-nums">{stats.pending}</span>
-              </div>
-              <div className="px-5 py-3 bg-white">
-                 <span className="stat-label block mb-1">Critical Findings</span>
-                 <span className="stat-value-sm text-rose-600 tabular-nums">{stats.critical}</span>
-              </div>
-           </div>
+        
+        <div className="flex flex-col items-end gap-4">
+           {/* Tab Navigation */}
+           <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+            {[
+              { id: 'dashboard', label: 'Monitor', icon: BarChart3 },
+              { id: 'orders', label: 'Clinical Orders', icon: FileText }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  activeTab === tab.id 
+                    ? 'bg-white text-slate-900 shadow-xl' 
+                    : 'text-white/60 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <tab.icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
-
-      {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-slate-100 p-1 rounded-xl mb-8 w-fit">
-        {[
-          { id: 'dashboard', label: 'Diagnostic Dashboard', icon: BarChart3 },
-          { id: 'orders', label: 'Clinical Orders Queue', icon: FileText }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-2 px-6 py-2 rounded-lg text-[11px] font-black uppercase tracking-widest transition-all ${
-              activeTab === tab.id 
-                ? 'bg-white text-indigo-600 shadow-sm' 
-                : 'text-slate-500 hover:text-slate-900'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-          </button>
-        ))}
-      </div>
 
       {activeTab === 'dashboard' ? (
         <div className="space-y-10 animate-fade-in">

@@ -48,14 +48,17 @@ export default function FinancialLedgerPage({ tenant, invoices = [], expenses = 
     <div className="page-shell-premium animate-fade-in">
       <header className="page-header-premium mb-10">
         <div>
-           <div className="flex items-center gap-3 mb-2">
-              <Building2 className="w-8 h-8 text-white/80" />
-              <h1 className="text-3xl font-black text-white uppercase tracking-tight">Institutional Ledger & Governance</h1>
-           </div>
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
+              Institutional Ledger & Governance
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Fiscal Node</span>
+           </h1>
            <p className="dim-label text-white/70">Centralized financial command for {tenant?.name}. Governance over Payables, Receivables, and P&L performance.</p>
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Fiscal Integrity Validated • Treasury sync operational
+           </p>
         </div>
-        <div className="flex items-center gap-4">
-           <div className="bg-white/10 px-6 py-3 rounded-2xl border border-white/10 flex items-center gap-3">
+        <div className="flex flex-col items-end gap-3">
+           <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-2xl border border-white/10 flex items-center gap-3">
               <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">Reporting Period</span>
               <input 
                 type="month" 
@@ -64,46 +67,26 @@ export default function FinancialLedgerPage({ tenant, invoices = [], expenses = 
                 className="bg-transparent text-white font-black text-sm outline-none cursor-pointer" 
               />
            </div>
+           
+           <nav className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+            {[
+              { id: 'pl', label: 'P&L Shard', icon: PieChart },
+              { id: 'receivable', label: 'Receivables', icon: ArrowUpRight },
+              { id: 'payable', label: 'Payables', icon: ArrowDownLeft },
+              { id: 'ledger', label: 'Journal', icon: History },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+              >
+                <tab.icon size={14} />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
         </div>
       </header>
-
-      {/* FINANCIAL HEALTH TILES */}
-      <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {stats.map((stat, i) => (
-          <div key={i} className="glass-panel p-8 border-none shadow-premium group hover:translate-y-[-4px] transition-all">
-            <div className="flex items-center justify-between mb-6">
-              <div className={`w-12 h-12 rounded-2xl bg-${stat.color}-50 text-${stat.color}-600 flex items-center justify-center shadow-sm`}>
-                <stat.icon size={24} />
-              </div>
-              <span className={`text-[10px] font-black px-3 py-1 bg-${stat.color}-50 text-${stat.color}-600 rounded-lg uppercase tracking-widest`}>
-                {stat.trend}
-              </span>
-            </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{stat.label}</p>
-            <p className="text-2xl font-black text-slate-900 tabular-nums leading-none tracking-tight">{stat.value}</p>
-            <p className="text-[10px] font-bold text-slate-400 mt-4 uppercase tracking-tighter opacity-60">{stat.sub}</p>
-          </div>
-        ))}
-      </section>
-
-      {/* LEDGER NAVIGATION */}
-      <nav className="premium-tab-bar mb-10">
-        {[
-          { id: 'pl', label: 'Profit & Loss (P&L)', icon: PieChart },
-          { id: 'receivable', label: 'Accounts Receivable', icon: ArrowUpRight },
-          { id: 'payable', label: 'Accounts Payable', icon: ArrowDownLeft },
-          { id: 'ledger', label: 'Daily Transaction Ledger', icon: History },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`premium-tab-item flex items-center gap-2 ${activeTab === tab.id ? 'active' : ''}`}
-          >
-            <tab.icon size={14} />
-            {tab.label}
-          </button>
-        ))}
-      </nav>
 
       <main className="space-y-10">
         {activeTab === 'pl' && (

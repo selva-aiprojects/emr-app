@@ -195,58 +195,58 @@ export default function DoctorAvailabilityPage({
   return (
     <div className="page-shell-premium animate-fade-in">
       {/* HERO */}
-      <div className="page-header-premium stagger-entrance">
-        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 w-full">
-          <div className="flex items-start gap-4">
+      <header className="page-header-premium mb-8">
+        <div className="flex flex-col md:flex-row md:items-center gap-6">
+          {onBack && (
             <button
               onClick={onBack}
               className="h-12 w-12 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center transition-all"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200 mb-3">
-                <Stethoscope className="w-3.5 h-3.5" />
-                Specialist Booking Console
+          )}
+          <div>
+            <h1 className="page-title-rich flex items-center gap-3">
+              Doctor Availability
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Specialist Console</span>
+            </h1>
+            <p className="dim-label">
+              Focused on preventive, diagnostic, and continuity care with a patient-first clinical workflow.
+            </p>
+            {isAdmin && (
+              <div className="inline-flex items-center gap-3 mt-4 p-1.5 bg-white/10 border border-white/10 rounded-2xl backdrop-blur-sm">
+                <div className="text-[9px] uppercase tracking-widest text-white/60 font-black pl-3">Institutional Picker</div>
+                <select 
+                  className="bg-slate-900/40 border border-white/10 text-white font-black text-[11px] rounded-xl px-4 py-1.5 outline-none cursor-pointer hover:bg-slate-900/60 transition-all"
+                  value={internalDoctor?.id || ""}
+                  onChange={(e) => {
+                    const doc = doctors.find(d => String(d.id) === e.target.value);
+                    if (doc) setInternalDoctor(doc);
+                  }}
+                >
+                  <option value="" className="text-slate-900" disabled>Select Shard...</option>
+                  {doctors.map(d => (
+                    <option key={d.id} value={d.id} className="text-slate-900">{d.name}</option>
+                  ))}
+                </select>
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-                Doctor Availability
-              </h1>
-              {isAdmin && (
-                <div className="mt-6 p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center gap-4 max-w-md">
-                   <div className="text-[10px] uppercase tracking-widest text-slate-400 font-black">Institutional Picker</div>
-                   <select 
-                      className="flex-1 bg-transparent border-none text-white font-black text-sm outline-none cursor-pointer"
-                      value={internalDoctor?.id || ""}
-                      onChange={(e) => {
-                        const doc = doctors.find(d => String(d.id) === e.target.value);
-                        if (doc) setInternalDoctor(doc);
-                      }}
-                   >
-                      <option value="" className="text-slate-900" disabled>Select Clinical Shard...</option>
-                      {doctors.map(d => (
-                        <option key={d.id} value={d.id} className="text-slate-900">{d.name} ({d.specialty || 'General'})</option>
-                      ))}
-                   </select>
-                </div>
-              )}
-            </div>
+            )}
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 gap-3 md:min-w-[360px]">
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
-              <div className="text-[10px] uppercase tracking-[0.2em] text-slate-300 font-black mb-2">Consultation Fee</div>
-              <div className="text-2xl font-black text-white">₹{doctorInfo?.consultationFee || 0}</div>
-            </div>
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
-              <div className="text-[10px] uppercase tracking-[0.2em] text-slate-300 font-black mb-2">Selected Date</div>
-              <div className="text-sm font-black text-white">
-                {selectedDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-              </div>
+        <div className="hidden lg:grid grid-cols-2 gap-3 min-w-[320px]">
+          <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-black mb-1">Consultation Fee</div>
+            <div className="text-xl font-black text-white">₹{doctorInfo?.consultationFee || 0}</div>
+          </div>
+          <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-black mb-1">Schedule Shard</div>
+            <div className="text-xl font-black text-white">
+              {selectedDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
       <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-8">
         {/* LEFT PANEL */}

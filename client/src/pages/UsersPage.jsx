@@ -42,21 +42,21 @@ export default function UsersPage({ users = [], activeUser, tenant, onUpdateUser
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
+      <header className="page-header-premium mb-10">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
               Identity & Access Governance
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Security Node</span>
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Security Node</span>
            </h1>
            <p className="dim-label">Personnel authorization, role-based access control, and identity lifecycle management for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Identity Logic Active • Multi-factor authentication ready
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-2 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Identity Logic Active • Multi-factor authentication ready
            </p>
         </div>
         <div className="flex items-center gap-3">
-           <div className="flex bg-white shadow-sm px-5 py-3 rounded-2xl border border-slate-200 overflow-hidden">
-              <span className="text-[11px] font-black uppercase text-slate-600 tracking-wider flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-emerald-500" /> {filteredUsers.length} Identities Active
+           <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+              <span className="px-6 py-2.5 text-[10px] font-black uppercase text-white tracking-[0.2em] flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-emerald-400" /> {filteredUsers.length} Identities Active
               </span>
            </div>
         </div>

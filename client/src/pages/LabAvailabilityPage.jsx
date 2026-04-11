@@ -292,44 +292,50 @@ export default function LabAvailabilityPage({
   return (
     <div className="page-shell-premium animate-fade-in">
       {/* HERO */}
-      <div className="relative overflow-hidden rounded-[32px] border border-white/60 bg-gradient-to-br from-slate-950 via-blue-950 to-cyan-950 p-6 md:p-8 shadow-[0_30px_80px_rgba(15,23,42,0.22)] mb-8">
-        <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.8),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(99,102,241,0.65),transparent_30%)]" />
-        <div className="relative flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div className="flex items-start gap-4">
+      <header className="page-header-premium mb-8">
+        <div className="flex flex-col md:flex-row md:items-center gap-6">
+          {onBack && (
             <button
               onClick={onBack}
               className="h-12 w-12 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/10 text-white flex items-center justify-center transition-all"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.2em] text-cyan-200 mb-3">
-                <FlaskConical className="w-3.5 h-3.5" />
-                Diagnostic Booking Console
+          )}
+          <div>
+            <h1 className="page-title-rich flex items-center gap-3">
+              Lab Availability & Timing
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Diagnostic Console</span>
+            </h1>
+            <p className="dim-label">
+              Choose the right lab, pick a test, lock a slot, and confirm your diagnostic appointment in a clean guided flow.
+            </p>
+            <div className="flex flex-wrap items-center gap-4 mt-4">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-cyan-300">
+                <Zap className="w-3.5 h-3.5 text-cyan-300" /> {MOCK_LABS.length} Specialized Labs Active
               </div>
-              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">
-                Book Lab Test
-              </h1>
-              <p className="text-slate-300 mt-2 max-w-2xl">
-                Choose the right lab, pick a test, lock a slot, and confirm your diagnostic appointment in a clean guided flow.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 md:min-w-[360px]">
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
-              <div className="text-[10px] uppercase tracking-[0.2em] text-slate-300 font-black mb-2">Labs Available</div>
-              <div className="text-2xl font-black text-white">{MOCK_LABS.length}</div>
-            </div>
-            <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
-              <div className="text-[10px] uppercase tracking-[0.2em] text-slate-300 font-black mb-2">Selected Date</div>
-              <div className="text-sm font-black text-white">
-                {selectedDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/60">
+                <Calendar className="w-3.5 h-3.5" /> Bookings open for {selectedDate.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}
               </div>
             </div>
           </div>
         </div>
-      </div>
+
+        <div className="hidden lg:grid grid-cols-2 gap-3 min-w-[320px]">
+          <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-black mb-2 flex items-center gap-2">
+              <Clock className="w-3 h-3" /> Quickest TAT
+            </div>
+            <div className="text-xl font-black text-white">12 Hours</div>
+          </div>
+          <div className="rounded-2xl bg-white/10 border border-white/10 p-4 backdrop-blur-sm">
+            <div className="text-[10px] uppercase tracking-[0.2em] text-white/60 font-black mb-2 flex items-center gap-2">
+              <Activity className="w-3 h-3" /> Availability
+            </div>
+            <div className="text-xl font-black text-white">88% Live</div>
+          </div>
+        </div>
+      </header>
 
       {/* GRID */}
       <div className="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-8">

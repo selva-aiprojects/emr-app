@@ -29,23 +29,23 @@ export default function EmployeesPage({ tenant, employees = [], onCreateEmployee
 
   return (
     <div className="page-shell-premium animate-fade-in">
-       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100/50">
+      <header className="page-header-premium mb-10">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
               Institutional Personnel Hub
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Authorized Node</span>
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Workforce Shard</span>
            </h1>
            <p className="dim-label">Workforce deployment, clinical credentialing, and payroll shard management for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-500" /> Administrative Integrity Validated • Real-time Attendance Active
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Administrative Integrity Validated • Real-time Attendance Active
            </p>
         </div>
         <div className="flex items-center gap-3">
            <button 
              onClick={() => setShowRegModal(true)}
-             className="clinical-btn !rounded-2xl px-10 shadow-2xl shadow-blue-500/10 min-w-[200px]"
+             className="px-8 py-3 bg-white text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl hover:bg-slate-50 flex items-center gap-2"
            >
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4" />
               Enroll Workforce
            </button>
         </div>
