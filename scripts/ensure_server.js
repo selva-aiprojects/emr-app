@@ -3,7 +3,8 @@
  */
 import http from 'http';
 
-const URL = 'http://127.0.0.1:4000/api/health';
+const PORT = process.env.PORT || 4005;
+const URL = process.env.API_HEALTH_URL || `http://127.0.0.1:${PORT}/api/health`;
 const MAX_ATTEMPTS = 30;
 const DELAY = 1000;
 

@@ -15,6 +15,7 @@ import {
   FlaskConical,
   MapPin,
   IndianRupee,
+  Activity,
 } from "lucide-react";
 import "../styles/critical-care.css";
 

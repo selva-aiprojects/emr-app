@@ -947,6 +947,8 @@ apiClient.getBeds = (wardId) => apiRequest(`/beds?wardId=${wardId}`);
 apiClient.createBed = (data) => apiRequest('/beds', { method: 'POST', body: JSON.stringify(data) });
 apiClient.getServices = () => apiRequest('/services');
 apiClient.createService = (data) => apiRequest('/services', { method: 'POST', body: JSON.stringify(data) });
+apiClient.updateService = (id, data) => apiRequest(`/services/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+apiClient.deleteService = (id) => apiRequest(`/services/${id}`, { method: 'DELETE' });
 
 // Generic HTTP methods
 apiClient.get = (url) => apiRequest(url);

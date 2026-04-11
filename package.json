@@ -9,9 +9,9 @@
   },
   "scripts": {
     "postinstall": "npm run prisma:generate",
-    "dev": "concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
+    "dev": "node cleanup_dev_ports.js && concurrently -k \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "node --watch --watch-path=server server/index.js",
-    "dev:client": "vite client --port 5175",
+    "dev:client": "vite client --host 127.0.0.1 --port 5175",
     "build": "cd client && npm install && cd .. && vite build client --config client/vite.config.js",
     "preview": "vite preview client --config client/vite.config.js",
     "prestart": "npm run prisma:generate",
@@ -87,3 +87,5 @@
     "concurrently": "^9.2.1"
   }
 }
+
+

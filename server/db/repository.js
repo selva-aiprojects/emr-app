@@ -88,7 +88,14 @@ export const {
 } = labsService;
 
 export const {
-  getDoctorAvailability, updateDoctorAvailability, getTimeSlots
+  getDoctorAvailability,
+  createDoctorAvailability,
+  generateDoctorAvailabilitySlots,
+  updateDoctorAvailabilitySlot,
+  incrementAppointmentCount,
+  decrementAppointmentCount,
+  getAvailableSlotsForDoctor,
+  getDoctorAvailabilityCalendar
 } = docAvailService;
 
 export const {
@@ -106,8 +113,11 @@ export const {
 
 export const {
   getDepartments, createDepartment, getWards, createWard, getBeds, createBed, updateBedStatus,
-  getServices, createService
+  getServices, createService, updateService, deleteService
 } = infraService;
+
+export const updateDoctorAvailability = updateDoctorAvailabilitySlot;
+export const getTimeSlots = getAvailableSlotsForDoctor;
 
 export const {
   getAmbulances, createAmbulance, updateAmbulanceStatus, dispatchAmbulance

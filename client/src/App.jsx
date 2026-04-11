@@ -41,6 +41,7 @@ const PatientProfilePage = lazy(() => import('./pages/PatientProfilePage.jsx'));
 const PayrollServicePage = lazy(() => import('./pages/PayrollServicePage.jsx'));
 const StaffManagementPage = lazy(() => import('./pages/StaffManagementPage.jsx'));
 const FinancialLedgerPage = lazy(() => import('./pages/FinancialLedgerPage.jsx'));
+const EmployeeMasterPage = lazy(() => import('./pages/EmployeeMasterPage.jsx'));
 
 export default function App() {
   const suspenseFallback = (
@@ -271,6 +272,16 @@ export default function App() {
       });
     }
     return merged;
+  }
+
+  function extractFormPayload(input) {
+    if (!input) return {};
+    if (typeof input.preventDefault === 'function' && input.target) {
+      input.preventDefault();
+      const fd = new FormData(input.target);
+      return Object.fromEntries(fd.entries());
+    }
+    return input;
   }
 
   async function refreshTenantData(
@@ -652,13 +663,12 @@ export default function App() {
             users={users}
             setView={setView}
             setActivePatientId={setActivePatientId}
-            onCreateAppointment={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
+            onCreateAppointment={(input) => {
+              const data = extractFormPayload(input);
               withRefresh(() => api.addAppointment({
                 tenantId: session.tenantId, userId: activeUser.id,
-                patientId: fd.get('patientId'), providerId: fd.get('providerId'),
-                start: fd.get('start'), end: fd.get('end'), reason: fd.get('reason')
+                patientId: data.patientId, providerId: data.providerId,
+                start: data.start, end: data.end, reason: data.reason
               }));
             }}
             onCreatePatient={async (data) => {
@@ -680,12 +690,11 @@ export default function App() {
                 name: fd.get('name'), phone: fd.get('phone'), reason: fd.get('reason')
               }));
             }}
-            onSelfAppointment={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
+            onSelfAppointment={(input) => {
+              const data = extractFormPayload(input);
               withRefresh(() => api.addSelfAppointment({
                 tenantId: session.tenantId, userId: activeUser.id, patientId: activeUser.patientId,
-                providerId: fd.get('providerId'), start: fd.get('start'), end: fd.get('end'), reason: fd.get('reason')
+                providerId: data.providerId, start: data.start, end: data.end, reason: data.reason
               }));
             }}
             onConvertWalkin={async (walkinId) => {
@@ -745,7 +754,9 @@ export default function App() {
               withRefresh(() => api.addAppointment({
                 tenantId: session.tenantId, userId: activeUser.id,
                 patientId: appointmentData.patientId, providerId: appointmentData.providerId,
-                start: appointmentData.start, end: appointmentData.end, reason: appointmentData.reason
+                start: appointmentData.start || `${appointmentData.date}T${appointmentData.startTime}`,
+                end: appointmentData.end || `${appointmentData.date}T${appointmentData.endTime}`,
+                reason: appointmentData.reason
               }));
             }}
             onBack={() => setView('find_doctor')}
@@ -812,6 +823,7 @@ export default function App() {
                   }
                 }
                 refreshTenantData();
+                return encounterRes;
               } catch (err) {
                 console.error('Encounter error:', err);
                 throw err;
@@ -1008,12 +1020,21 @@ export default function App() {
             activeUser={activeUser}
             patients={scopedPatients}
             onBookAppointment={(appointmentData) => {
-              withRefresh(() => api.addAppointment({
-                tenantId: session.tenantId, 
-                userId: activeUser.id,
-                urgent: appointmentData.urgent,
-                fasting: appointmentData.fasting,
-                price: appointmentData.price
+              withRefresh(() => api.createLabOrder({
+                tenantId: session.tenantId,
+                patientId: appointmentData.patientId,
+                tests: [{
+                  code: appointmentData.testType?.toUpperCase().replace(/\s+/g, '_') || 'LAB',
+                  name: appointmentData.testType || appointmentData.labName || 'Lab Test'
+                }],
+                priority: appointmentData.urgent ? 'urgent' : 'routine',
+                notes: [
+                  `Lab: ${appointmentData.labName}`,
+                  `Date: ${appointmentData.date}`,
+                  `Slot: ${appointmentData.startTime} - ${appointmentData.endTime}`,
+                  appointmentData.fasting ? 'Fasting required' : null,
+                  appointmentData.reason
+                ].filter(Boolean).join(' | ')
               }));
             }}
           />}
@@ -1078,6 +1099,15 @@ export default function App() {
           />
         )}
         
+        {view === 'employee_master' && (
+          <EmployeeMasterPage 
+            tenant={tenant}
+            employees={employees}
+            activeUser={activeUser}
+            onBack={() => setView('dashboard')}
+          />
+        )}
+
         {view === 'departments' && <DepartmentsPage tenant={tenant} />}
         
         {view === 'donor' && <DonorPage tenant={tenant} />}

@@ -1,146 +1,217 @@
 import { test, expect } from '@playwright/test';
 
-const TEST_PATIENT = {
-  firstName: 'John',
-  lastName: `Lifecycle-Test-IPD-${Date.now()}`,
-  dob: '1990-05-15',
-  gender: 'Male',
-  phone: '9988776655',
-  email: `test-${Date.now()}@example.com`,
-  address: '123 Cloud Street, Tech City',
-  emergencyContact: 'Jane Doe (+91-9000000001)',
-  allergies: 'None Identified',
-  history: 'No significant past medical history'
+const ADMIN = {
+  tenantCode: 'NHGL',
+  email: 'admin@nhgl.com',
+  password: 'Test@123',
 };
 
-test.describe('NHGL Institutional Lifecycle', () => {
-  
-  test('Complete Clinical Journey Registration Encounter Discharge', async ({ page }) => {
-    // 1. Authentication
-    console.log(`\n--- Phase 00: Authentication ---`);
-    await page.goto('http://localhost:5175/');
-    await page.selectOption('select[name="tenantId"]', 'NHGL');
-    await page.fill('input[name="email"]', 'admin@nhgl.com');        
-    await page.fill('input[name="password"]', 'Test@123');
-    await page.click('button:has-text("Sign In to Workspace")');     
-    
-    await expect(page.locator('text=/Institutional Control Plane/i').first()).toBeVisible({ timeout: 25000 });
-    console.log('✅ Authentication successful.');
+function buildPatient(prefix) {
+  const stamp = Date.now();
+  return {
+    firstName: 'John',
+    lastName: `${prefix}-${stamp}`,
+    dob: '1990-05-15',
+    gender: 'Male',
+    phone: `99${String(stamp).slice(-8)}`,
+    email: `${prefix.toLowerCase()}-${stamp}@example.com`,
+  };
+}
 
-    // 2. Patient Registration
-    console.log(`\n--- Phase 01: Patient Registration ---`);
-    await page.click('[data-testid="nav-patients"]');
+async function loginAsAdmin(page) {
+  await page.goto('http://localhost:5175/');
+  await page.selectOption('select[name="tenantId"]', ADMIN.tenantCode);
+  await page.fill('input[name="email"]', ADMIN.email);
+  await page.fill('input[name="password"]', ADMIN.password);
+  await page.click('button:has-text("Sign In to Workspace")');
+  await expect(page.locator('text=/Institutional Control Plane/i').first()).toBeVisible({ timeout: 30000 });
+}
+
+async function openNav(page, moduleName, headingPattern) {
+  await page.locator(`[data-testid="nav-${moduleName}"]`).first().click({ force: true });
+  if (headingPattern) {
+    await expect(page.locator(headingPattern).first()).toBeVisible({ timeout: 15000 });
+  }
+}
+
+async function selectPatientFromSearch(page, patientLastName) {
+  const searchInput = page.locator('input[placeholder*="Search by Name, MRN, or Phone"]').first();
+  await searchInput.click();
+  await searchInput.fill('');
+  await searchInput.type(patientLastName, { delay: 40 });
+  await page.waitForTimeout(800);
+  const result = page.locator('div[data-testid="search-result"]', { hasText: patientLastName }).first();
+  await expect(result).toBeVisible({ timeout: 15000 });
+  await result.click();
+}
+
+test.describe.serial('NHGL Complete Lifecycle Coverage', () => {
+  test('covers outpatient, inpatient, diagnostics, pharmacy, billing, and major navigation tabs', async ({ page }) => {
+    test.setTimeout(360000);
+    const patient = buildPatient('Lifecycle-Patient');
+
+    await loginAsAdmin(page);
+
+    await openNav(page, 'dashboard', 'text=/Institutional Control Plane|Hospital Summary/i');
+    await openNav(page, 'find_doctor', 'h1:has-text("Find a Doctor")');
+    await openNav(page, 'doctor_availability', 'text=/Doctor Timing|Availability|Doctor/i');
+
+    await openNav(page, 'patients', 'text=/Patient Records|Patient Desk|Registration/i');
     await page.click('button:has-text("New Registration")');
-    
-    await page.fill('input[name="firstName"]', TEST_PATIENT.firstName);
-    await page.fill('input[name="lastName"]', TEST_PATIENT.lastName);
-    await page.fill('input[name="dob"]', TEST_PATIENT.dob);
-    await page.selectOption('select[name="gender"]', TEST_PATIENT.gender);
-    await page.fill('input[name="phone"]', TEST_PATIENT.phone);
-    await page.fill('input[name="email"]', TEST_PATIENT.email);
+    await page.fill('input[name="firstName"]', patient.firstName);
+    await page.fill('input[name="lastName"]', patient.lastName);
+    await page.fill('input[name="dob"]', patient.dob);
+    await page.selectOption('select[name="gender"]', patient.gender);
+    await page.fill('input[name="phone"]', patient.phone);
+    await page.fill('input[name="email"]', patient.email);
     await page.check('input[name="consent"]');
-    
     await page.click('button:has-text("REGISTER PATIENT")');
-    await expect(page.locator(`text=${TEST_PATIENT.lastName}`)).toBeVisible({ timeout: 15000 });
-    console.log(`✅ Patient registered.`);
+    const patientRow = page.locator('tr[data-testid="patient-row"]', { hasText: patient.lastName }).first();
+    await expect(patientRow).toBeVisible({ timeout: 15000 });
+    await patientRow.click();
 
-    // 2.5 Find a Doctor & Availability (Consolidated Workflow)
-    console.log(`\n--- Phase 01.5: Provider Discovery ---`);
-    await page.click('[data-testid="nav-find_doctor"]');
-    await expect(page.locator('h1:has-text("Find a Doctor")')).toBeVisible();
-
-    // 2.7 Inpatient Admission & Bed Allocation 
-    console.log(`\n--- Phase 01.7: Inpatient Bed Allocation ---`);
-    await page.click('[data-testid="nav-inpatient"]');
-    await page.click('button:has-text("New Admission")');
-    
-    // Patient Search in Admission context
-    const admissionSearch = page.locator('input[placeholder*="Search by Name, MRN, or Phone"]');
-    await admissionSearch.fill(TEST_PATIENT.lastName);
-    await page.click(`text=${TEST_PATIENT.lastName}`);
-    
-    // Bed Allocation Protocol (Searchable & Available Only)
-    // Fixed: specify the h3 to avoid strict mode collision with labels
-    await expect(page.locator('h3:has-text("Bed Allocation Protocol")')).toBeVisible();
-    const bedSearch = page.locator('input[placeholder*="Search bed number"]');
-    await bedSearch.fill('101'); // Search for a specific available node
-    
-    await page.selectOption('select[name="wardId"]', { index: 0 });
-    await page.click('button:has-text("Confirm Admission")');
-    console.log('✅ Inpatient Admission & Bed Allocation complete.');
-
-    // 3. Clinical Encounter (EMR)
-    console.log(`\n--- Phase 02: Clinical Encounter (EMR) ---`);
-    await page.click('[data-testid="nav-emr"]');
+    await expect(page.locator('button:has-text("New Assessment")')).toBeVisible({ timeout: 15000 });
+    await page.click('button:has-text("Active Patients")');
+    await page.click('button:has-text("Past Visits")');
     await page.click('button:has-text("New Assessment")');
-    
-    const emrSearchInput = page.locator('input[placeholder*="Search by Name, MRN, or Phone"]');
-    await emrSearchInput.focus();
-    await emrSearchInput.click();
-    await page.keyboard.type(TEST_PATIENT.lastName, { delay: 100 });
-    
-    const emrResultItem = page.locator('div[data-testid="search-result"]', { hasText: TEST_PATIENT.lastName }).first();
-    await expect(emrResultItem).toBeVisible({ timeout: 15000 });
-    await emrResultItem.click();
-    
-    await page.waitForTimeout(2000); // Stabilization for clinical context shard
-
+    await page.selectOption('select[name="type"]', 'Out-patient');
     await page.fill('input[name="bp"]', '120/80');
     await page.fill('input[name="hr"]', '72');
-    await page.fill('[name="complaint"]', 'Institutional Lifecycle Validation');
-    await page.fill('[name="diagnosis"]', 'E2E Stability Verified');
-    
-    // Add Lab Investigation
-    await page.selectOption('select:has-text("Select investigation...")', 'Complete Blood Count');
-    
-    // Add Medication
+    await page.fill('[name="complaint"]', 'NHGL outpatient validation');
+    await page.fill('[name="diagnosis"]', 'Stable for workflow validation');
+    await page.selectOption('select:has-text("Select investigation")', 'Complete Blood Count');
     await page.fill('input[placeholder*="Search drug catalog"]', 'Amoxicillin');
     await page.waitForSelector('text=Amoxicillin', { timeout: 10000 });
     await page.click('text=Amoxicillin');
-    
     await page.click('button[type="submit"]:has-text("Commit")');
-    console.log('✅ Clinical Encounter committed.');
+    await expect(page.locator(`text=${patient.lastName}`).first()).toBeVisible({ timeout: 15000 });
+    await page.click('button:has-text("Clinical Timeline")');
+    await expect(page.locator(`text=${patient.lastName}`).first()).toBeVisible({ timeout: 15000 });
 
-    // 4. Pharmacy Fulfillment (Medicine & Store)
-    console.log(`\n--- Phase 03: Medicine & Store Fulfillment ---`);
-    await page.click('[data-testid="nav-pharmacy"]');
-    await page.click('[data-testid="tab-queue"]');
-    
-    const pharmacyRow = page.locator('tr').filter({ hasText: TEST_PATIENT.lastName }).first();
-    await pharmacyRow.waitFor({ state: 'visible', timeout: 15000 });
-    await pharmacyRow.locator('button:has-text("Release Node")').click();
-    await page.click('button:has-text("Authorize Release")');
-    console.log('✅ Pharmacy fulfillment complete.');
+    await openNav(page, 'inpatient', 'h1:has-text("Admissions & Bed Governance")');
+    await page.locator('button:has-text("Ledger")').last().click({ force: true });
+    await page.locator('button:has-text("Occupancy")').last().click({ force: true });
+    await page.locator('button:has-text("Admission")').last().click({ force: true });
+    await expect(page.locator('h3:has-text("Bed Allocation Protocol")')).toBeVisible();
+    await selectPatientFromSearch(page, patient.lastName);
+    const wardSelect = page.locator('select[name="wardId"]');
+    const wardCount = await wardSelect.locator('option').count();
+    await wardSelect.selectOption({ index: wardCount > 1 ? 1 : 0 });
+    const bedSelect = page.locator('input[name="bedId"] ~ div select').first();
+    await expect(bedSelect).toBeVisible();
+    const bedOptions = bedSelect.locator('option');
+    await expect.poll(async () => await bedOptions.count()).toBeGreaterThan(1);
+    await bedSelect.selectOption({ index: 1 });
+    await page.click('button:has-text("Confirm Admission")');
+    await page.locator('button:has-text("Ledger")').last().click({ force: true });
+    await expect(page.locator(`tr[data-patient-name="${patient.firstName} ${patient.lastName}"]`)).toBeVisible({ timeout: 15000 });
 
-    // 5. Laboratory Shard (Lab & Test Reports)
-    console.log(`\n--- Phase 04: Lab Diagnostics Shard ---`);
-    await page.click('[data-testid="nav-lab"]');
-    await page.click('button:has-text("Clinical Orders Queue")');
-    
-    const labRow = page.locator('tr').filter({ hasText: TEST_PATIENT.lastName }).first();
-    await labRow.waitFor({ state: 'visible' });
+    await openNav(page, 'lab', 'h1:has-text("Laboratory & Diagnostic Hub")');
+    await page.locator('button:has-text("Monitor")').last().click({ force: true });
+    await page.locator('button:has-text("Clinical Orders")').last().click({ force: true });
+    const labRow = page.locator('tr').filter({ hasText: patient.lastName }).first();
+    await expect(labRow).toBeVisible({ timeout: 20000 });
     await labRow.locator('button:has-text("Record Observation")').click();
-    
-    // Verify visibility of Clinical Shards in the results modal
-    await expect(page.locator('text=/Clinical Shard/i').first()).toBeVisible();
-    await expect(page.locator('text=/Recent Patient Record/i')).toBeVisible();
-
     await page.fill('input[name="resultValue"]', '14.5');
     await page.click('button:has-text("Authorize & Commit Outcome")');
-    console.log('✅ Lab diagnostic outcome authorized.');
 
-    // 6. Institutional Billing (Bills & Payments)
-    console.log(`\n--- Phase 05: Institutional Billing ---`);
-    await page.click('[data-testid="nav-billing"]');
-    await page.waitForTimeout(2000); 
-    
-    const billingRows = page.locator('tr[data-testid="invoice-row"]');
-    if (await billingRows.count() > 0) {
-        await billingRows.first().locator('button:has-text("PayLink")').click();
-        await page.click('button:has-text("Commit Settlement Shard")');
-        console.log('✅ Billing settlement finalized.');
-    }
+    await openNav(page, 'pharmacy', 'text=/Pharmacy Inventory Intelligence|Pharmacy/i');
+    await page.click('[data-testid="tab-dashboard"]');
+    await page.click('[data-testid="tab-inventory"]');
+    await page.click('[data-testid="tab-prescriptions"]');
+    const prescriptionCard = page.locator(`text=${patient.lastName}`).first();
+    await expect(prescriptionCard).toBeVisible({ timeout: 20000 });
+    const patientPrescription = page.locator('div').filter({ hasText: patient.lastName }).locator('[data-testid="dispense-button"]').first();
+    await patientPrescription.click();
+    await page.click('button:has-text("Confirm Fulfillment")');
+    await page.click('[data-testid="tab-expiring"]');
 
-    console.log(`\n--- Full Clinical Lifecycle Complete for ${TEST_PATIENT.lastName} ---`);
+    await openNav(page, 'billing', 'text=/Revenue Cycle Hub|Billing/i');
+    await page.click('button:has-text("New Statement")');
+    await selectPatientFromSearch(page, patient.lastName);
+    await page.fill('input[name="description"]', 'Lifecycle validation invoice');
+    await page.fill('input[name="amount"]', '1500');
+    await page.fill('input[name="taxPercent"]', '5');
+    await page.selectOption('select[name="paymentMethod"]', 'Cash');
+    await page.click('button:has-text("FINALISE & AUTHORISE STATEMENT")');
+    await page.click('button:has-text("Ledger")');
+    const invoiceRow = page.locator('tr[data-testid="invoice-row"]').filter({ hasText: patient.lastName }).first();
+    await expect(invoiceRow).toBeVisible({ timeout: 15000 });
+    await invoiceRow.locator('button:has-text("PayLink")').click();
+    await page.click('button:has-text("Commit Settlement Shard")');
+  });
+
+  test('covers users, system configuration, departments, services, accounts, and admin navigation', async ({ page }) => {
+    test.setTimeout(360000);
+    const stamp = Date.now();
+    const userEmail = `qa.user.${stamp}@nhgl.local`;
+    const departmentName = `QA Department ${stamp}`;
+    const departmentCode = `QA${String(stamp).slice(-4)}`;
+    const serviceName = `QA Service ${stamp}`;
+    const serviceCode = `QAS-${String(stamp).slice(-4)}`;
+
+    await loginAsAdmin(page);
+
+    await openNav(page, 'admin', 'text=/Institutional Master Data Hub|Master Data Hub/i');
+    await page.click('text=Department Shards');
+    await expect(page.locator('h1:has-text("Institutional Departments Master")')).toBeVisible({ timeout: 15000 });
+
+    await openNav(page, 'users', 'h1:has-text("Identity & Access Governance")');
+    await page.fill('input[placeholder*="name, email or operational role"]', 'admin');
+    await page.click('button:has-text("Provision Identity")');
+    await page.fill('input[name="name"]', `QA User ${stamp}`);
+    await page.fill('input[name="email"]', userEmail);
+    await page.selectOption('select[name="role"]', 'Admin');
+    await page.fill('input[name="password"]', 'Admin@123');
+    await page.click('button:has-text("Commit Identity")');
+    await page.fill('input[placeholder*="name, email or operational role"]', userEmail);
+    await expect(page.locator(`text=${userEmail}`)).toBeVisible({ timeout: 15000 });
+
+    await openNav(page, 'hospital_settings', 'text=/Institutional Branding & Settings/i');
+    await page.fill('input[type="password"][placeholder*="sk_test"]', `qa-key-${stamp}`);
+    await page.click('button:has-text("Synchronize Institutional Environment")');
+    await expect(page.locator('text=/Institutional Branding & Settings/i')).toBeVisible({ timeout: 15000 });
+
+    await openNav(page, 'departments', 'h1:has-text("Institutional Departments Master")');
+    await page.click('button:has-text("Add Department Shard")');
+    await page.fill('input[placeholder*="Cardiology"]', departmentName);
+    await page.fill('input[placeholder*="CARD-01"]', departmentCode);
+    await page.click('button:has-text("Persist Shard")');
+    await expect(page.locator(`text=${departmentName}`)).toBeVisible({ timeout: 15000 });
+
+    await openNav(page, 'service_catalog', 'text=/Revenue Service Catalog|Service Catalog/i');
+    await page.locator('button:has-text("clinical")').last().click({ force: true });
+    await page.locator('button:has-text("laboratory")').last().click({ force: true });
+    await page.locator('button:has-text("emergency")').last().click({ force: true });
+    await page.locator('button:has-text("ipd")').last().click({ force: true });
+    await page.locator('button:has-text("all")').last().click({ force: true });
+    await page.click('button:has-text("Provision Shard")');
+    await page.fill('input[placeholder*="CBC Test"]', serviceName);
+    await page.fill('input[placeholder*="LAB-001"]', serviceCode);
+    await page.locator('section form select').first().selectOption('Clinical');
+    await page.locator('section form input[type="number"]').first().fill('999');
+    await page.click('button:has-text("Persist Shard")');
+    const serviceRow = page.locator('tr').filter({ hasText: serviceName }).first();
+    await expect(serviceRow).toBeVisible({ timeout: 15000 });
+    await serviceRow.hover();
+    await serviceRow.locator('button').first().click();
+    await page.fill('input[placeholder*="CBC Test"]', `${serviceName} Updated`);
+    await page.locator('section form input[type="number"]').first().fill('1299');
+    await page.click('button:has-text("Update Shard")');
+    await expect(page.locator('tr').filter({ hasText: `${serviceName} Updated` }).first()).toBeVisible({ timeout: 15000 });
+    page.once('dialog', dialog => dialog.accept());
+    const updatedRow = page.locator('tr').filter({ hasText: `${serviceName} Updated` }).first();
+    await updatedRow.hover();
+    await updatedRow.locator('button').nth(1).click();
+    await expect(page.locator('tr').filter({ hasText: `${serviceName} Updated` })).toHaveCount(0, { timeout: 15000 });
+
+    await openNav(page, 'financial_ledger', 'text=/Institutional Ledger & Governance|Institutional Ledger/i');
+    await page.click('button:has-text("P&L Shard")');
+    await page.click('button:has-text("Receivables")');
+    await page.click('button:has-text("Payables")');
+    await page.click('button:has-text("Journal")');
+    await expect(page.locator('text=/Institutional Ledger & Governance|Institutional Ledger/i').first()).toBeVisible({ timeout: 15000 });
+
+    await openNav(page, 'reports', 'text=/Reports|Analysis|Hospital Summary/i');
   });
 });

@@ -12,8 +12,8 @@ import { query } from './connection.js';
 export async function getEncounters(tenantId) {
   const sql = `
     SELECT e.*, p.first_name, p.last_name, u.name as provider_name
-    FROM encounters e
-    LEFT JOIN patients p ON e.patient_id = p.id
+    FROM emr.encounters e
+    LEFT JOIN emr.patients p ON e.patient_id = p.id
     LEFT JOIN emr.users u ON e.provider_id = u.id
     WHERE e.tenant_id = $1
     ORDER BY e.created_at DESC
@@ -41,7 +41,7 @@ export async function createEncounter({
   bedId
 }) {
   const sql = `
-    INSERT INTO encounters (
+    INSERT INTO emr.encounters (
       tenant_id,
       patient_id,
       provider_id,
@@ -71,7 +71,7 @@ export async function createEncounter({
 
   // If a bed is specified, mark it as occupied
   if (bedId) {
-    await query(`UPDATE beds SET status = 'occupied' WHERE id = $1`, [bedId]);
+    await query(`UPDATE emr.beds SET status = 'occupied' WHERE id = $1`, [bedId]);
   }
 
   return result.rows[0];
@@ -86,12 +86,12 @@ export async function dischargePatient({
   followUpDate,
 }) {
   // 1. Get the encounter to find the bedId
-  const encRes = await query('SELECT bed_id FROM encounters WHERE id = $1', [encounterId]);
+  const encRes = await query('SELECT bed_id FROM emr.encounters WHERE id = $1', [encounterId]);
   const bedId = encRes.rows[0]?.bed_id;
 
   // 2. Update encounter status
   const sql = `
-    UPDATE encounters 
+    UPDATE emr.encounters 
     SET
       status = 'discharged',
       discharge_type = $1,
@@ -114,7 +114,7 @@ export async function dischargePatient({
 
   // 3. If a bed was assigned, set it back to available
   if (bedId) {
-    await query(`UPDATE beds SET status = 'available' WHERE id = $1`, [bedId]);
+    await query(`UPDATE emr.beds SET status = 'available' WHERE id = $1`, [bedId]);
   }
 
   return result.rows[0];
@@ -127,8 +127,8 @@ export async function getEncounterById(encounterId, tenantId) {
       p.first_name || ' ' || p.last_name as patient_name,
       p.phone as patient_phone,
       u.name as provider_name
-    FROM encounters e
-    LEFT JOIN patients p ON e.patient_id = p.id
+    FROM emr.encounters e
+    LEFT JOIN emr.patients p ON e.patient_id = p.id
     LEFT JOIN emr.users u ON e.provider_id = u.id
     WHERE e.id = $1 AND e.tenant_id = $2
   `;

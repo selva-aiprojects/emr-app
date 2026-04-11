@@ -128,7 +128,7 @@ export default function EmrPage({ tenant, activeUser, selectedId, patients, prov
     console.log('[EMR_FORENSIC] selectedId Prop Triggered:', selectedId);
     if (selectedId && selectedId !== selectedPatientId) {
       setSelectedPatientId(selectedId);
-      if (activeTab === 'active') setActiveTab('new');
+      // Removed auto-tab switch to allow manual changes without jarring redirection
     }
   }, [selectedId]);
 
@@ -281,7 +281,11 @@ export default function EmrPage({ tenant, activeUser, selectedId, patients, prov
         });
       }
 
-      setLastSaved({ ...data, createdAt: new Date().toISOString() });
+      setLastSaved({ 
+        ...data, 
+        patientName: patientName(selectedPatientId, patients),
+        createdAt: new Date().toISOString() 
+      });
       setPrescriptionItems([]);
       setLabOrders([]);
       setSafetyData({ safetyCheck: null, overrideSafety: false });
@@ -770,7 +774,8 @@ export default function EmrPage({ tenant, activeUser, selectedId, patients, prov
                          <p className="text-xs font-black text-slate-300 uppercase tracking-[0.2em]">No clinical event logs detected in the patient history.</p>
                       </td></tr>
                     ) : (activeTab === 'active' ? activeEncounters : paginatedPastEncounters).map((e, idx) => {
-                      const pat = patients.find(p => p.id === (e.patient_id || e.patientId));
+                      const pId = e.patient_id || e.patientId;
+                      const pat = patients.find(p => p.id === pId || p.mrn === pId);
                       return (
                         <tr key={e.id} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 30}ms` }}>
                           <td>

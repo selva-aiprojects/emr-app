@@ -168,6 +168,8 @@ export async function getAvailableSlotsForDoctor(tenantId, doctorId, date) {
   const sql = `
     SELECT 
       id,
+      doctor_id,
+      date,
       start_time,
       end_time,
       slot_duration_minutes,

@@ -239,6 +239,52 @@ router.get('/doctor-availability', requirePermission('appointments'), async (req
   }
 });
 
+router.get('/doctor-availability/calendar', requirePermission('appointments'), async (req, res) => {
+  try {
+    const { doctorId, startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'startDate and endDate are required' });
+    }
+
+    const calendar = await repo.getDoctorAvailabilityCalendar(req.tenantId, doctorId || null, startDate, endDate);
+    res.json(calendar);
+  } catch (error) {
+    console.error('Error fetching doctor availability calendar:', error);
+    res.status(500).json({ error: 'Failed to fetch doctor availability calendar' });
+  }
+});
+
+router.post('/doctor-availability', requirePermission('appointments'), async (req, res) => {
+  try {
+    const { doctorId, date, startTime, endTime, slotDurationMinutes = 15, maxAppointments = 1, notes } = req.body;
+    if (!doctorId || !date || !startTime || !endTime) {
+      return res.status(400).json({ error: 'doctorId, date, startTime, and endTime are required' });
+    }
+
+    const slots = await repo.generateDoctorAvailabilitySlots({
+      tenantId: req.tenantId,
+      doctorId,
+      date,
+      startTime,
+      endTime,
+      slotDurationMinutes,
+      maxAppointmentsPerSlot: maxAppointments,
+      createdBy: req.user.id
+    });
+
+    if (notes) {
+      await Promise.all(
+        slots.map((slot) => repo.updateDoctorAvailabilitySlot(slot.id, req.tenantId, { notes }))
+      );
+    }
+
+    res.status(201).json(slots);
+  } catch (error) {
+    console.error('Error creating doctor availability:', error);
+    res.status(500).json({ error: 'Failed to create doctor availability' });
+  }
+});
+
 /**
  * @route   GET /api/doctor-availability/slots
  * @desc    Get specific available slots for a doctor/date

@@ -165,4 +165,31 @@ router.post('/services', requirePermission('admin'), async (req, res) => {
   }
 });
 
+router.patch('/services/:id', requirePermission('admin'), async (req, res) => {
+  try {
+    const service = await repo.updateService({
+      ...req.body,
+      tenantId: req.tenantId,
+      serviceId: req.params.id
+    });
+    res.json(service);
+  } catch (error) {
+    console.error('Error updating service:', error);
+    res.status(500).json({ error: error.message || 'Failed to update service' });
+  }
+});
+
+router.delete('/services/:id', requirePermission('admin'), async (req, res) => {
+  try {
+    const service = await repo.deleteService({
+      tenantId: req.tenantId,
+      serviceId: req.params.id
+    });
+    res.json(service);
+  } catch (error) {
+    console.error('Error deleting service:', error);
+    res.status(500).json({ error: error.message || 'Failed to delete service' });
+  }
+});
+
 export default router;

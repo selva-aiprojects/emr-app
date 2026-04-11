@@ -16,12 +16,14 @@ router.get('/', async (req, res) => {
   try {
      const nhglId = 'b01f0cdc-4e8b-4db5-ba71-e657a414695e';
      const nhglTenant = { id: nhglId, name: 'NHGL Healthcare Institute', code: 'NHGL', subdomain: 'nhgl', logo_url: '' };
+     const nahTenant = { id: 'nah-demo-fallback', name: 'New Age Hospital', code: 'NAH', subdomain: 'nah', logo_url: '' };
 
      // If superadmin, show all management tenants
      if (req.user?.role === 'Superadmin') {
        const tenants = await repo.getAllTenants();
        // Ensure NHGL is present in the list
        if (!tenants.some(t => t.id === nhglId)) tenants.push(nhglTenant);
+       if (!tenants.some(t => t.code === 'NAH' || t.name === 'New Age Hospital')) tenants.push(nahTenant);
        return res.json(tenants);
      }
      
@@ -37,6 +39,9 @@ router.get('/', async (req, res) => {
      // Inject NHGL if missing
      if (!tenantsRows.some(t => t.id === nhglId)) {
        tenantsRows.unshift(nhglTenant);
+     }
+     if (!tenantsRows.some(t => t.code === 'NAH' || t.name === 'New Age Hospital')) {
+       tenantsRows.push(nahTenant);
      }
 
      res.json(tenantsRows);

@@ -112,7 +112,7 @@ export default function AmbulancePage({ tenant }) {
             ].map(tab => (
               <button 
                 key={tab.id}
-                className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'live' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+                className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
                 onClick={() => setActiveTab(tab.id)}
               >
                 <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
@@ -230,7 +230,12 @@ export default function AmbulancePage({ tenant }) {
                            </div>
                         </td>
                         <td className="text-right">
-                           <button className="p-3 bg-white border border-slate-200 text-slate-400 rounded-2xl hover:bg-slate-50 hover:text-rose-500 transition-all shadow-sm">
+                           <button
+                             type="button"
+                             disabled={!unit.contact_number}
+                             onClick={() => unit.contact_number && window.open(`tel:${unit.contact_number}`, '_self')}
+                             className="p-3 bg-white border border-slate-200 text-slate-400 rounded-2xl hover:bg-slate-50 hover:text-rose-500 transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                           >
                               <Phone size={16} />
                            </button>
                         </td>

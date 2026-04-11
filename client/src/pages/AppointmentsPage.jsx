@@ -83,9 +83,9 @@ export default function AppointmentsPage({
       };
       
       if (isPatient) {
-        await onSelfAppointment({ preventDefault: () => {}, target: new FormData() });
+        await onSelfAppointment(appointmentData);
       } else {
-        await onCreateAppointment({ preventDefault: () => {}, target: new FormData() });
+        await onCreateAppointment(appointmentData);
       }
       
       showToast({ message: 'Appointment booked successfully!', type: 'success' });

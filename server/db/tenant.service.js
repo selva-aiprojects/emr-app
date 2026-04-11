@@ -72,12 +72,13 @@ export async function setTenantFeatureOverride(tenantId, featureFlag, enabled) {
 }
 
 export async function createAuditLog({ tenantId, userId, userName, action, entityName, entityId, details, ipAddress, userAgent }) {
+  const safeUserId = userId === '44000000-0000-0000-0000-000000000001' ? null : userId;
   const sql = `
     INSERT INTO emr.audit_logs (tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
   `;
-  const result = await query(sql, [tenantId, userId, userName, action, entityName, entityId, details, ipAddress, userAgent]);
+  const result = await query(sql, [tenantId, safeUserId, userName, action, entityName, entityId, details, ipAddress, userAgent]);
   return result.rows[0];
 }
 

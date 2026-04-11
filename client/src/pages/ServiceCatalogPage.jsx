@@ -29,6 +29,7 @@ export default function ServiceCatalogPage({ tenant }) {
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ name: '', code: '', category: 'Clinical', base_rate: 0, tax_percent: 0 });
   const [submitting, setSubmitting] = useState(false);
+  const [editingServiceId, setEditingServiceId] = useState(null);
 
   useEffect(() => {
     loadServices();
@@ -50,15 +51,47 @@ export default function ServiceCatalogPage({ tenant }) {
     e.preventDefault();
     try {
       setSubmitting(true);
-      const service = await api.createService(form);
-      setServices([...services, service]);
-      showToast({ message: 'Service saved successfully!', type: 'success', title: 'Service Catalog' });
+      if (editingServiceId) {
+        const service = await api.updateService(editingServiceId, form);
+        setServices((prev) => prev.map((item) => (item.id === editingServiceId ? service : item)));
+        showToast({ message: 'Service updated successfully!', type: 'success', title: 'Service Catalog' });
+      } else {
+        const service = await api.createService(form);
+        setServices([...services, service]);
+        showToast({ message: 'Service saved successfully!', type: 'success', title: 'Service Catalog' });
+      }
       setShowAdd(false);
+      setEditingServiceId(null);
       setForm({ name: '', code: '', category: 'Clinical', base_rate: 0, tax_percent: 0 });
     } catch (err) {
       console.error('Failed to create service:', err);
+      showToast({ message: err.message || 'Failed to save service', type: 'error', title: 'Service Catalog' });
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function startEditing(service) {
+    setEditingServiceId(service.id);
+    setForm({
+      name: service.name || '',
+      code: service.code || '',
+      category: service.category || 'Clinical',
+      base_rate: Number(service.base_rate || 0),
+      tax_percent: Number(service.tax_percent || 0)
+    });
+    setShowAdd(true);
+  }
+
+  async function handleDelete(service) {
+    if (!window.confirm(`Delete service "${service.name}"?`)) return;
+    try {
+      await api.deleteService(service.id);
+      setServices((prev) => prev.filter((item) => item.id !== service.id));
+      showToast({ message: 'Service removed successfully!', type: 'success', title: 'Service Catalog' });
+    } catch (err) {
+      console.error('Failed to delete service:', err);
+      showToast({ message: err.message || 'Failed to delete service', type: 'error', title: 'Service Catalog' });
     }
   }
 
@@ -83,7 +116,15 @@ export default function ServiceCatalogPage({ tenant }) {
         </div>
         <div className="flex items-center gap-4 relative z-20">
           <button 
-            onClick={() => setShowAdd(!showAdd)}
+            onClick={() => {
+              if (showAdd) {
+                setShowAdd(false);
+                setEditingServiceId(null);
+                setForm({ name: '', code: '', category: 'Clinical', base_rate: 0, tax_percent: 0 });
+                return;
+              }
+              setShowAdd(true);
+            }}
             className="clinical-btn bg-white !text-slate-900 px-8 rounded-2xl text-meta-sm shadow-2xl hover:bg-slate-50 transition-all border-none font-black min-w-[180px]"
           >
             {showAdd ? 'Abort Shard' : 'Provision Shard'}
@@ -143,7 +184,7 @@ export default function ServiceCatalogPage({ tenant }) {
                 disabled={submitting}
                 className="clinical-btn bg-emerald-600 !text-white rounded-2xl h-[60px] shadow-lg hover:shadow-2xl transition-all"
               >
-                 {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Persist Shard'}
+                 {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : editingServiceId ? 'Update Shard' : 'Persist Shard'}
               </button>
            </form>
         </section>
@@ -219,8 +260,8 @@ export default function ServiceCatalogPage({ tenant }) {
                              <td><span className="text-[10px] font-black text-slate-400 tabular-nums">+{svc.tax_percent}% GST</span></td>
                              <td className="text-right">
                                 <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                   <button className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-slate-900 rounded-xl shadow-sm"><Edit2 size={12} /></button>
-                                   <button className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-rose-500 rounded-xl shadow-sm"><Trash2 size={12} /></button>
+                                   <button type="button" onClick={() => startEditing(svc)} className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-slate-900 rounded-xl shadow-sm"><Edit2 size={12} /></button>
+                                   <button type="button" onClick={() => handleDelete(svc)} className="p-2.5 bg-white border border-slate-100 text-slate-400 hover:text-rose-500 rounded-xl shadow-sm"><Trash2 size={12} /></button>
                                 </div>
                              </td>
                           </tr>

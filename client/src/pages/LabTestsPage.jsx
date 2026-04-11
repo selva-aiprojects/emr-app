@@ -17,7 +17,8 @@ import {
   Edit,
   Trash2,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  ShieldCheck
 } from 'lucide-react';
 import '../styles/critical-care.css';
 

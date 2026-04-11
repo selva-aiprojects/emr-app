@@ -119,3 +119,53 @@ export async function createService({ tenantId, name, code, category, base_rate,
 
   return service;
 }
+
+export async function updateService({ tenantId, serviceId, name, code, category, base_rate, tax_percent }) {
+  const sql = `
+    UPDATE emr.services
+    SET name = $1,
+        code = $2,
+        category = $3,
+        base_rate = $4,
+        tax_percent = $5,
+        updated_at = NOW()
+    WHERE tenant_id::text = $6::text AND id::text = $7::text
+    RETURNING *
+  `;
+  const result = await query(sql, [name, code, category, base_rate, tax_percent || 0, tenantId, serviceId]);
+  const service = result.rows[0];
+
+  if (!service) throw new Error('Service not found');
+
+  await createAuditLog({
+    tenantId,
+    action: 'service.update',
+    entityName: 'service',
+    entityId: service.id,
+    details: { name, code, category, base_rate }
+  });
+
+  return service;
+}
+
+export async function deleteService({ tenantId, serviceId }) {
+  const sql = `
+    DELETE FROM emr.services
+    WHERE tenant_id::text = $1::text AND id::text = $2::text
+    RETURNING *
+  `;
+  const result = await query(sql, [tenantId, serviceId]);
+  const service = result.rows[0];
+
+  if (!service) throw new Error('Service not found');
+
+  await createAuditLog({
+    tenantId,
+    action: 'service.delete',
+    entityName: 'service',
+    entityId: service.id,
+    details: { name: service.name, code: service.code, category: service.category }
+  });
+
+  return service;
+}

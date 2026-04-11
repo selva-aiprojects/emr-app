@@ -9,7 +9,7 @@ export default defineConfig({
     workers: process.env.CI ? 1 : undefined,
     reporter: 'list',
     use: {
-        baseURL: process.env.UI_BASE_URL || 'http://localhost:5175', // UI Base URL
+        baseURL: process.env.UI_BASE_URL || 'http://127.0.0.1:5175',
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
     },
@@ -27,10 +27,10 @@ export default defineConfig({
             use: { ...devices['Desktop Safari'] },
         },
     ],
-    /* webServer: {
+    webServer: {
         command: 'npm run dev',
-        url: 'http://localhost:5174',
+        url: 'http://127.0.0.1:5175',
         reuseExistingServer: true,
-        timeout: 120 * 1000,
-    }, */
+        timeout: 180 * 1000,
+    },
 });

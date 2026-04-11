@@ -111,6 +111,7 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
   const [dischargeDiagnosis, setDischargeDiagnosis] = useState('');
   const [dischargeMeds, setDischargeMeds] = useState('');
   const [formWardId, setFormWardId] = useState('');
+  const [selectedBedId, setSelectedBedId] = useState('');
 
   // Auto-select first ward for the form if available
   useEffect(() => {
@@ -118,6 +119,19 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
       setFormWardId(clinicalWards[0].id);
     }
   }, [clinicalWards]);
+
+  useEffect(() => {
+    const availableBeds = formWardId
+      ? (beds[formWardId] || []).filter((bed) => !displayEncounters.some((encounter) => encounter.bed_id === bed.id))
+      : [];
+    if (availableBeds.length === 0) {
+      setSelectedBedId('');
+      return;
+    }
+    if (!availableBeds.some((bed) => bed.id === selectedBedId)) {
+      setSelectedBedId(availableBeds[0].id);
+    }
+  }, [formWardId, beds, displayEncounters, selectedBedId]);
 
   const handleDischarge = async (encounter) => {
     // Stage 1: Generate Discharge Summary
@@ -130,12 +144,13 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
     try {
       setLoading(true);
       // Bypass billing for test encounters
-      if (!encounterId.startsWith('enc-test-')) {
-          await api.autoBillItem(tenant.id, {
+      if (!encounterId.startsWith('enc-test-') && !encounterId.includes('static-row')) {
+          await api.createInvoice({
+            tenantId: tenant.id,
             patientId: showSummary.patient_id,
             description: `Final Discharge Settlement: ${showSummary.ward_name || 'General Ward'}`,
             amount: 5000, 
-            type: 'service'
+            paymentMethod: 'Insurance'
           });
       }
       
@@ -333,14 +348,24 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
 
                       <div className="space-y-4">
                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Bed Allocation Protocol</label>
+                        <input type="hidden" name="bedId" value={selectedBedId} />
                         <div className="relative group">
                           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                          <input 
-                            name="bedId"
-                            placeholder="Search bed number (e.g. 101)..." 
-                            className="input-field h-[60px] pl-12 bg-slate-50 border-none font-black text-slate-800 rounded-2xl" 
-                            required 
-                          />
+                          <select
+                            value={selectedBedId}
+                            onChange={(e) => setSelectedBedId(e.target.value)}
+                            className="input-field h-[60px] pl-12 bg-slate-50 border-none font-black text-slate-800 rounded-2xl"
+                            required
+                          >
+                            <option value="">Select available bed...</option>
+                            {(beds[formWardId] || [])
+                              .filter((bed) => !displayEncounters.some((encounter) => encounter.bed_id === bed.id))
+                              .map((bed) => (
+                                <option key={bed.id} value={bed.id}>
+                                  {bed.bed_number}
+                                </option>
+                              ))}
+                          </select>
                         </div>
                         <div className="flex flex-wrap gap-2 mt-2">
                            {formWardId && (beds[formWardId] || [])
@@ -350,10 +375,7 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
                                <button 
                                  key={b.id} 
                                  type="button"
-                                 onClick={() => {
-                                   const input = document.querySelector('input[name="bedId"]');
-                                   if (input) input.value = b.bed_number;
-                                 }}
+                                 onClick={() => setSelectedBedId(b.id)}
                                  className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase border border-emerald-100"
                                >
                                  {b.bed_number}
@@ -498,7 +520,7 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
 
       {activeTab === 'occupancy' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-fade-in">
-           {wards.map(ward => (
+           {clinicalWards.map(ward => (
              <article key={ward.id} className="clinical-card">
                 <header className="flex items-center justify-between mb-8 pb-4 border-b border-slate-50">
                    <div>
