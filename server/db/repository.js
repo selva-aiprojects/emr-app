@@ -63,7 +63,7 @@ export const {
 export const {
   getPharmacyInventory, getEnhancedPrescriptions, dispenseEnhancedMedication,
   addDrugBatch, getPharmacyDashboard, getExpiringInventory, searchDrugs,
-  createEnhancedPrescription
+  createEnhancedPrescription, getPharmacyAlerts
 } = pharmacyService;
 
 export const {

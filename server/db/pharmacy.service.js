@@ -19,6 +19,18 @@ export async function searchDrugs(queryText) {
   return result.rows;
 }
 
+export async function getPharmacyAlerts(tenantId) {
+  const sql = `
+    SELECT id, alert_type, message, severity, is_read, created_at, updated_at
+    FROM demo_emr.pharmacy_alerts 
+    WHERE tenant_id = $1 
+    ORDER BY created_at DESC 
+    LIMIT 50
+  `;
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
 export async function createEnhancedPrescription(tenantId, data) {
   await query('BEGIN');
   try {

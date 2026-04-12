@@ -45,13 +45,54 @@ export function ActionMenu({ trigger, actions = [], className = "" }) {
 
 export function NotificationSystem() {
   const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const rootRef = useRef(null);
 
-  const notifications = [
-    { id: 1, title: "New Patient Admission", time: "5m ago", type: "info" },
-    { id: 2, title: "Lab Results Ready", time: "12m ago", type: "success" },
-    { id: 3, title: "Critical Stock Alert", time: "1h ago", type: "danger" }
-  ];
+  // Fetch dynamic notifications from the database
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const session = JSON.parse(localStorage.getItem('medflow_session') || '{}');
+        if (session?.tenantId) {
+          const response = await fetch(`/api/tenants/${session.tenantId}/pharmacy-alerts`);
+          const data = await response.json();
+          
+          // Transform pharmacy alerts to notification format
+          const transformedNotifications = data.map(alert => ({
+            id: alert.id,
+            title: alert.message,
+            time: new Date(alert.created_at).toLocaleString([], { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: false 
+            }),
+            type: alert.severity === 'critical' ? 'danger' : 
+                  alert.severity === 'high' ? 'warning' : 
+                  alert.severity === 'medium' ? 'info' : 'success'
+          }));
+          
+          setNotifications(transformedNotifications);
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+        // Fallback to static notifications if API fails
+        setNotifications([
+          { id: 1, title: "New Patient Admission", time: "5m ago", type: "info" },
+          { id: 2, title: "Lab Results Ready", time: "12m ago", type: "success" },
+          { id: 3, title: "Critical Stock Alert", time: "1h ago", type: "danger" }
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+    
+    // Refresh notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -63,6 +104,16 @@ export function NotificationSystem() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  if (loading) {
+    return (
+      <div className="relative flex h-11 w-11 items-center justify-center rounded-xl">
+        <div className="animate-spin">
+          <Bell className="w-5 h-5 text-[var(--text-muted)]" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -72,9 +123,11 @@ export function NotificationSystem() {
         title="Notifications"
       >
         <Bell className="w-5 h-5" />
-        <span className="absolute right-1.5 top-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--danger)] px-1 text-xs font-bold text-white">
-          {notifications.length}
-        </span>
+        {notifications.length > 0 && (
+          <span className="absolute right-1.5 top-1.5 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--danger)] px-1 text-xs font-bold text-white">
+            {notifications.length}
+          </span>
+        )}
       </button>
 
       {open && (
@@ -84,18 +137,35 @@ export function NotificationSystem() {
             <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-soft)]">Live Stream</span>
           </div>
           <div className="max-h-[360px] overflow-y-auto">
-            {notifications.map((n) => (
-              <button
-                key={n.id}
-                className="w-full p-4 flex items-start gap-3 hover:bg-[var(--surface-muted)] transition-colors border-b border-[var(--border)] last:border-none text-left"
-              >
-                <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${n.type === 'danger' ? 'bg-[var(--danger)] shadow-[0_0_8px_var(--danger)]' : n.type === 'success' ? 'bg-[var(--success)] shadow-[0_0_8px_var(--success)]' : 'bg-[var(--clinical-blue)] shadow-[0_0_8px_var(--clinical-blue)]'}`} />
-                <div>
-                  <p className="text-sm font-bold text-[var(--text-main)] leading-tight">{n.title}</p>
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1 font-medium">{n.time}</p>
-                </div>
-              </button>
-            ))}
+            {notifications.length === 0 ? (
+              <div className="p-8 text-center text-[var(--text-muted)]">
+                <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No active notifications</p>
+                <p className="text-xs mt-1">All systems operating normally</p>
+              </div>
+            ) : (
+              notifications.map((n) => (
+                <button
+                  key={n.id}
+                  className="w-full p-4 flex items-start gap-3 hover:bg-[var(--surface-muted)] transition-colors border-b border-[var(--border)] last:border-none text-left"
+                >
+                  <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${n.type === 'danger' ? 'bg-[var(--danger)] shadow-[0_0_8px_var(--danger)]' : n.type === 'success' ? 'bg-[var(--success)] shadow-[0_0_8px_var(--success)]' : 'bg-[var(--clinical-blue)] shadow-[0_0_8px_var(--clinical-blue)]'}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-[var(--text-main)] leading-tight break-words">{n.title}</p>
+                    <p className="text-[11px] text-[var(--text-muted)] mt-1 font-medium">
+                      {typeof n.time === 'string' ? n.time : 
+                       new Date(n.time).toLocaleString([], { 
+                         month: 'short', 
+                         day: 'numeric', 
+                         hour: '2-digit', 
+                         minute: '2-digit',
+                         hour12: false 
+                       })}
+                    </p>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
           <button className="w-full py-3 bg-[var(--primary-soft)] text-[var(--clinical-blue)] text-xs font-bold uppercase tracking-widest hover:bg-[var(--accent-soft)] transition-colors">
             View All Notifications

@@ -41,6 +41,19 @@ router.get('/v1/pharmacy/queue', async (req, res) => {
 });
 
 /**
+ * @route   GET /api/pharmacy/v1/pharmacy/alerts
+ * @desc    Get pharmacy alerts for notifications
+ */
+router.get('/v1/pharmacy/alerts', async (req, res) => {
+   try {
+      const alerts = await repo.getPharmacyAlerts(req.tenantId);
+      res.json(alerts);
+   } catch (error) {
+      res.status(500).json({ error: 'Alerts fetch failed' });
+   }
+});
+
+/**
  * @route   POST /api/pharmacy/v1/pharmacy/dispense
  */
 router.post('/v1/pharmacy/dispense', requirePermission('inventory'), async (req, res) => {

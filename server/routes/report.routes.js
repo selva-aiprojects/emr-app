@@ -4,6 +4,7 @@ import { query, calculatePerformanceScore } from '../db/repository.js';
 import { authenticate, requireTenant, requirePermission } from '../middleware/auth.middleware.js';
 import { moduleGate } from '../middleware/featureFlag.middleware.js';
 import { getRealtimeDashboardMetrics } from '../enhanced_dashboard_metrics_fixed.mjs';
+import { queryWithTenantSchema } from '../utils/tenant-schema-helper.js';
 
 const router = express.Router();
 
@@ -68,7 +69,13 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
 
     // Helper for safe query execution inside this route
     const safeQuery = async (q, p) => {
-      try { return await query(q, p); }
+      try { 
+        // Use queryWithTenantSchema for queries with {schema} placeholder
+        if (q.includes('{schema}')) {
+          return await queryWithTenantSchema(tenantId, q, p);
+        }
+        return await query(q, p); 
+      }
       catch (e) { return { rows: [] }; }
     };
 
@@ -91,15 +98,15 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
       topDiagnosesResult,
       topServicesResult
     ] = await Promise.all([
-      safeQuery(`SELECT COUNT(*)::int as count FROM emr.patients WHERE tenant_id = $1`, [tenantId]),
-      safeQuery(`SELECT COUNT(*)::int as count FROM emr.appointments WHERE tenant_id = $1`, [tenantId]),
-      safeQuery(`SELECT COALESCE(SUM(total), 0) as total FROM emr.invoices WHERE tenant_id = $1 AND status IN ('paid', 'partially_paid')`, [tenantId]),
+      safeQuery(`SELECT COUNT(*)::int as count FROM {schema}.patients WHERE tenant_id = $1`, [tenantId]),
+      safeQuery(`SELECT COUNT(*)::int as count FROM {schema}.appointments WHERE tenant_id = $1`, [tenantId]),
+      safeQuery(`SELECT COALESCE(SUM(total), 0) as total FROM {schema}.invoices WHERE tenant_id = $1 AND status IN ('paid', 'partially_paid')`, [tenantId]),
       
       safeQuery(`
         SELECT 
           COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END)::int as new_patients,
           COUNT(CASE WHEN created_at < CURRENT_DATE - INTERVAL '30 days' THEN 1 END)::int as returning_patients
-        FROM emr.patients 
+        FROM {schema}.patients 
         WHERE tenant_id = $1
       `, [tenantId]),
 
@@ -109,7 +116,7 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
           COUNT(CASE WHEN status = 'completed' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END)::int as completed_today,
           COUNT(CASE WHEN status = 'cancelled' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END)::int as cancelled_today,
           COUNT(CASE WHEN status = 'no-show' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END)::int as no_show_today
-        FROM emr.appointments 
+        FROM {schema}.appointments 
         WHERE tenant_id = $1
       `, [tenantId]),
 
@@ -117,7 +124,7 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
         SELECT 
           COUNT(CASE WHEN status = 'occupied' THEN 1 END)::int as occupied,
           COUNT(CASE WHEN status = 'available' THEN 1 END)::int as available
-        FROM emr.beds 
+        FROM {schema}.beds 
         WHERE tenant_id = $1
       `, [tenantId]),
 
@@ -136,29 +143,29 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
           COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (a.scheduled_end - a.scheduled_start)) / 60) FILTER (WHERE a.status = 'completed')), 0)::int as "avgTime",
           95::int as satisfaction
         FROM emr.users u
-        LEFT JOIN emr.appointments a ON a.provider_id = u.id AND a.tenant_id = u.tenant_id
+        LEFT JOIN {schema}.appointments a ON a.provider_id = u.id AND a.tenant_id = u.tenant_id
         WHERE u.tenant_id = $1 AND lower(u.role) = 'doctor'
         GROUP BY u.id, u.name, u.role, u.is_active
         ORDER BY consultations DESC
       `, [tenantId]),
 
-      safeQuery(`SELECT designation as name, COUNT(*)::int as count FROM emr.employees WHERE tenant_id = $1 GROUP BY designation`, [tenantId]),
+      safeQuery(`SELECT designation as name, COUNT(*)::int as count FROM {schema}.employees WHERE tenant_id = $1 GROUP BY designation`, [tenantId]),
       
       safeQuery(`
         SELECT
-          (SELECT COUNT(*) FROM emr.departments WHERE tenant_id = $1)::int as departments,
-          (SELECT COUNT(*) FROM emr.wards WHERE tenant_id = $1)::int as wards,
-          (SELECT COUNT(*) FROM emr.beds WHERE tenant_id = $1)::int as beds,
-          (SELECT COUNT(*) FROM emr.services WHERE tenant_id = $1)::int as services,
+          (SELECT COUNT(*) FROM {schema}.departments WHERE tenant_id = $1)::int as departments,
+          (SELECT COUNT(*) FROM {schema}.wards WHERE tenant_id = $1)::int as wards,
+          (SELECT COUNT(*) FROM {schema}.beds WHERE tenant_id = $1)::int as beds,
+          (SELECT COUNT(*) FROM {schema}.services WHERE tenant_id = $1)::int as services,
           (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1)::int as total_staff
       `, [tenantId]),
 
-      safeQuery(`SELECT status, COUNT(*)::int as count FROM emr.encounters WHERE tenant_id = $1 GROUP BY status`, [tenantId]),
+      safeQuery(`SELECT status, COUNT(*)::int as count FROM {schema}.encounters WHERE tenant_id = $1 GROUP BY status`, [tenantId]),
 
       safeQuery(`
         SELECT TO_CHAR(gs, 'Mon') as label, COALESCE(SUM(i.total), 0) as value
         FROM generate_series(date_trunc('month', CURRENT_DATE) - INTERVAL '5 months', date_trunc('month', CURRENT_DATE), INTERVAL '1 month') gs
-        LEFT JOIN emr.invoices i ON date_trunc('month', i.created_at) = gs AND i.tenant_id = $1 AND i.status IN ('paid', 'partially_paid')
+        LEFT JOIN {schema}.invoices i ON date_trunc('month', i.created_at) = gs AND i.tenant_id = $1 AND i.status IN ('paid', 'partially_paid')
         GROUP BY gs ORDER BY gs
       `, [tenantId]),
 
@@ -167,8 +174,8 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
                COUNT(p.id) FILTER (WHERE date_trunc('month', p.created_at) = gs) as value1,
                COUNT(e.id) FILTER (WHERE date_trunc('month', p.created_at) < gs) as value2
         FROM generate_series(date_trunc('month', CURRENT_DATE) - INTERVAL '5 months', date_trunc('month', CURRENT_DATE), INTERVAL '1 month') gs
-        CROSS JOIN (SELECT id, created_at FROM emr.patients WHERE tenant_id = $1) p
-        LEFT JOIN emr.appointments e ON e.patient_id = p.id AND date_trunc('month', e.scheduled_start) = gs
+        CROSS JOIN (SELECT id, created_at FROM {schema}.patients WHERE tenant_id = $1) p
+        LEFT JOIN {schema}.appointments e ON e.patient_id = p.id AND date_trunc('month', e.scheduled_start) = gs
         GROUP BY gs ORDER BY gs
       `, [tenantId]),
 
@@ -177,14 +184,14 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
                COUNT(a.id) FILTER (WHERE lower(a.status) = 'no-show') as "noShow",
                CASE WHEN COUNT(a.id) > 0 THEN (COUNT(dist.id) FILTER (WHERE lower(dist.status) = 'no-show') * 100 / COUNT(dist.id)) ELSE 0 END as rate
         FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') gs
-        LEFT JOIN emr.appointments a ON DATE(a.scheduled_start) = gs AND a.tenant_id = $1
-        LEFT JOIN emr.appointments dist ON DATE(dist.scheduled_start) = gs AND dist.tenant_id = $1
+        LEFT JOIN {schema}.appointments a ON DATE(a.scheduled_start) = gs AND a.tenant_id = $1
+        LEFT JOIN {schema}.appointments dist ON DATE(dist.scheduled_start) = gs AND dist.tenant_id = $1
         GROUP BY gs ORDER BY gs
       `, [tenantId]),
 
-      safeQuery(`SELECT diagnosis as name, COUNT(*)::int as value FROM emr.encounters WHERE tenant_id = $1 AND diagnosis IS NOT NULL GROUP BY diagnosis ORDER BY value DESC LIMIT 10`, [tenantId]),
+      safeQuery(`SELECT diagnosis as name, COUNT(*)::int as value FROM {schema}.encounters WHERE tenant_id = $1 AND diagnosis IS NOT NULL GROUP BY diagnosis ORDER BY value DESC LIMIT 10`, [tenantId]),
       
-      safeQuery(`SELECT category as name, COUNT(*)::int as value FROM emr.service_requests WHERE tenant_id = $1 AND category IS NOT NULL GROUP BY category ORDER BY value DESC LIMIT 8`, [tenantId])
+      safeQuery(`SELECT category as name, COUNT(*)::int as value FROM {schema}.service_requests WHERE tenant_id = $1 AND category IS NOT NULL GROUP BY category ORDER BY value DESC LIMIT 8`, [tenantId])
     ]);
 
     const totalPatients = parseInt(trueTotalPatients.rows[0]?.count || 0);
