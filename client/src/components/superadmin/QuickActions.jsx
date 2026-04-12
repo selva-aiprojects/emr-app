@@ -14,7 +14,6 @@ import {
   Database,
   Bell
 } from 'lucide-react';
-import '../../styles/superadmin.css';
 import { useToast } from '../../hooks/useToast.jsx';
 
 export default function QuickActions() {

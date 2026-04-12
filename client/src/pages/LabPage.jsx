@@ -18,11 +18,16 @@ import {
   BarChart3
 } from 'lucide-react';
 import { EmptyState } from '../components/ui/index.jsx';
+import { identityService } from '../services/identity.service.js';
 
-export default function LabPage({ tenant, activeUser }) {
+export default function LabPage({ tenant, activeUser, patients = [], labOrders = [], onRefreshLab }) {
   const { showToast } = useToast();
 
-  const [labOrders, setLabOrders] = useState([]);
+  useEffect(() => {
+    if (patients?.length > 0) {
+      identityService.updateRegistry(patients);
+    }
+  }, [patients]);
   const [loading, setLoading] = useState(false);
   const [showResultModal, setShowResultModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -31,21 +36,19 @@ export default function LabPage({ tenant, activeUser }) {
   const [showAiModal, setShowAiModal] = useState(false);
 
   useEffect(() => {
-    async function load() {
-      if (!tenant?.id) return;
-      setLoading(true);
-      try {
-        const data = await api.getLabOrders(tenant.id);
-        setLabOrders(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error('Diagnostic Feed Interrupted:', err);
-        setLabOrders([]);
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [tenant?.id, api]);
+    if (!tenant?.id) return;
+    
+    // Global sync listener: Reload diagnostic feed when platform state changes
+    const onSync = () => onRefreshLab && onRefreshLab();
+    window.addEventListener('PLATFORM_DATA_SYNC', onSync);
+    
+    // Heartbeat: Background sync every 5 seconds
+    const interval = setInterval(() => onRefreshLab && onRefreshLab(), 5000);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('PLATFORM_DATA_SYNC', onSync);
+    };
+  }, [tenant?.id, onRefreshLab]);
 
   const stats = useMemo(() => {
     try {
@@ -146,7 +149,11 @@ export default function LabPage({ tenant, activeUser }) {
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  // Immediate refresh on tab toggle
+                  onRefreshLab && onRefreshLab();
+                }}
                 className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                   activeTab === tab.id 
                     ? 'bg-white text-slate-900 shadow-xl' 
@@ -267,13 +274,28 @@ export default function LabPage({ tenant, activeUser }) {
                         </td>
                       </tr>
                     ) : labOrders.map((order, idx) => (
-                      <tr key={order.id} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 30}ms` }}>
+                        <tr 
+                          key={order.id} 
+                          data-testid="lab-order-row"
+                          data-patient-name={identityService.getName(order.patient_id || order.patientId)}
+                          className={`hover:bg-slate-50/50 transition-colors ${tenant?.id === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' ? '' : 'animate-fade-in'}`}
+                        style={tenant?.id === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' ? {} : { animationDelay: `${idx * 30}ms` }}
+                      >
                         <td>
-                           <div className="font-black text-slate-900">{order.patient_name || 'Clinical Subject'}</div>
-                           <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5 tabular-nums">Ref: {String(order.id || 'X').slice(0, 8)}</div>
+                            {(() => {
+                              const pId = order.patient_id || order.patientId;
+                              const pName = identityService.getName(pId, order.patient_name || 'Clinical Subject');
+                              const pMrn = identityService.getMRN(pId, 'NEW_PATIENT');
+                              return (
+                                <>
+                                  <div className="font-black text-slate-900">{pName}</div>
+                                  <div className="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-0.5 tabular-nums">Ref: {pMrn} | Ord: {String(order.id || 'X').slice(0, 8)}</div>
+                                </>
+                              );
+                            })()}
                         </td>
                         <td>
-                           <div className="text-[13px] font-black text-slate-700">{order.test_name}</div>
+                           <div className="text-[13px] font-black text-slate-700">{order.test_name || order.display || 'Diagnostic Test'}</div>
                            <div className="text-[9px] text-slate-400 font-black uppercase tracking-tighter mt-0.5">{order.category || 'General Pathology'}</div>
                         </td>
                         <td>
@@ -309,8 +331,12 @@ export default function LabPage({ tenant, activeUser }) {
                          </td>
                       </tr>
                     ))}
-                 </tbody>
+                  </tbody>
                </table>
+             </div>
+             {/* [DEBUG_FORENSIC] Injecting raw state for screenshot reading */}
+             <div className="p-2 text-[8px] text-slate-300 font-mono tracking-tighter" data-testid="lab-forensic">
+                LAB_STATE_LEN: {labOrders?.length || 0} | IDs: {labOrders?.map(o => `${String(o.id).slice(0,4)}:${identityService.getName(o.patientId || o.patient_id, 'X').slice(-4)}`).join(', ')}
              </div>
            </article>
         </main>

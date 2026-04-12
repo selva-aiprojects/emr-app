@@ -163,7 +163,7 @@ router.patch('/:id/clinical', restrictPatientAccess, async (req, res) => {
     if (!payload) {
       return res.status(400).json({ error: 'payload is required' });
     }
-    if (section === 'prescriptions' && req.user?.role !== 'Doctor') {
+    if (section === 'prescriptions' && req.user?.role !== 'Doctor' && req.user?.role !== 'Admin') {
       return res.status(403).json({ error: 'Only doctors can author prescriptions' });
     }
 

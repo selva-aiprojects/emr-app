@@ -116,15 +116,15 @@ test.describe.serial('NHGL Complete Lifecycle Coverage', () => {
     await page.click('button:has-text("Authorize & Commit Outcome")');
 
     await openNav(page, 'pharmacy', 'text=/Pharmacy Inventory Intelligence|Pharmacy/i');
-    await page.click('[data-testid="tab-dashboard"]');
-    await page.click('[data-testid="tab-inventory"]');
-    await page.click('[data-testid="tab-prescriptions"]');
-    const prescriptionCard = page.locator(`text=${patient.lastName}`).first();
-    await expect(prescriptionCard).toBeVisible({ timeout: 20000 });
-    const patientPrescription = page.locator('div').filter({ hasText: patient.lastName }).locator('[data-testid="dispense-button"]').first();
-    await patientPrescription.click();
-    await page.click('button:has-text("Confirm Fulfillment")');
-    await page.click('[data-testid="tab-expiring"]');
+    await page.click('[data-testid="tab-queue"]');
+    
+    const prescriptionRow = page.locator('tr').filter({ hasText: patient.lastName }).first();
+    await expect(prescriptionRow).toBeVisible({ timeout: 20000 });
+    
+    await prescriptionRow.locator('button:has-text("Release Node")').click();
+    await expect(page.locator('h3:has-text("Release Protocol")')).toBeVisible();
+    await page.click('button:has-text("Authorize Release")');
+    await expect(page.locator('text=Medication dispensed successfully')).toBeVisible({ timeout: 15000 });
 
     await openNav(page, 'billing', 'text=/Revenue Cycle Hub|Billing/i');
     await page.click('button:has-text("New Statement")');
@@ -139,6 +139,40 @@ test.describe.serial('NHGL Complete Lifecycle Coverage', () => {
     await expect(invoiceRow).toBeVisible({ timeout: 15000 });
     await invoiceRow.locator('button:has-text("PayLink")').click();
     await page.click('button:has-text("Commit Settlement Shard")');
+
+    // 7. INPATIENT DISCHARGE (Lifecycle Graduation)
+    await openNav(page, 'inpatient', 'h1:has-text("Admissions & Bed Governance")');
+    await page.locator('button:has-text("Ledger")').last().click({ force: true });
+    const admittedRow = page.locator('tr').filter({ hasText: patient.lastName }).first();
+    await expect(admittedRow).toBeVisible({ timeout: 15000 });
+    await admittedRow.locator('button[data-testid="discharge-btn"]').click();
+    await expect(page.locator('h3:has-text("Patient Discharge Summary")')).toBeVisible({ timeout: 15000 });
+    await page.click('button:has-text("Finalize Discharge & Billing")');
+    await expect(page.locator('text=/Discharged|Released/i').first()).toBeVisible({ timeout: 15000 });
+  });
+
+  test('covers hr, employee master, and doctor appointment booking flow', async ({ page }) => {
+    test.setTimeout(300000);
+    const stamp = Date.now();
+    const patient = buildPatient('Appointment-Patient');
+
+    await loginAsAdmin(page);
+
+    // 1. Employee Master Verification
+    await openNav(page, 'admin_masters', 'h1:has-text("Institutional Master Data Hub")');
+    await page.locator('article', { hasText: 'Employee Master' }).click();
+    await expect(page.locator('h1:has-text("Employee Master - Doctor Credentials")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('text=Dr. Sarah Johnson')).toBeVisible();
+
+    // 2. Doctor Appointment Booking Workflow
+    await openNav(page, 'find_doctor', 'h1:has-text("Find a Doctor")');
+    await page.fill('input[placeholder*="Search doctors"]', 'Sarah');
+    const doctorCard = page.locator('.clinical-card', { hasText: 'Dr. Sarah Johnson' }).first();
+    await expect(doctorCard).toBeVisible();
+    await doctorCard.locator('button:has-text("Book Appointment")').click();
+    
+    await expect(page.locator('h1:has-text("Doctor Availability")')).toBeVisible({ timeout: 15000 });
+    await page.click('text=Confirm Appointment'); // Check if modal opens
   });
 
   test('covers users, system configuration, departments, services, accounts, and admin navigation', async ({ page }) => {

@@ -156,12 +156,19 @@ export async function updatePatient({ tenantId, id, updates }) {
   return result.rows[0];
 }
 
-export async function addClinicalRecord({ tenantId, patientId, userId, recordType, diagnosis, treatment, notes, attachments }) {
+export async function addClinicalRecord({ tenantId, patientId, userId, section, content }) {
+  // Gracefully map the generic 'payload' into the rigidly structured clinical_records table
+  const recordType = section || 'caseHistory';
+  const diagnosis = content?.diagnosis || 'No Diagnosis Provided';
+  const treatment = content?.medications ? JSON.stringify(content.medications) : 'None';
+  const notes = content?.notes || 'No specific clinical notes documented.';
+  const attachments = content?.vitals ? JSON.stringify(content.vitals) : '{}';
+
   const sql = `
     INSERT INTO clinical_records (
       tenant_id, patient_id, created_by, record_type, diagnosis, treatment, notes, attachments
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, CAST($8 AS JSONB))
     RETURNING *
   `;
 

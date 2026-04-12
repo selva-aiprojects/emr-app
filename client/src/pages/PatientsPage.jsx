@@ -158,12 +158,21 @@ export default function PatientsPage({
       if (onCreatePatient) {
         setIsSubmitting(true);
         try {
-          await onCreatePatient(data);
+          const newPatient = await onCreatePatient(data);
+          // Optimistically inject into local state immediately (don't wait for prop sync)
+          if (newPatient && newPatient.id) {
+            setPatients(prev => {
+              const exists = prev.some(p => p.id === newPatient.id);
+              return exists ? prev : [newPatient, ...prev];
+            });
+          }
+          setQuery('');
           setActiveTab('registry');
           e.target.reset();
         } finally {
           setIsSubmitting(false);
         }
+
       } else {
         const newPatient = await api.createPatient({ tenantId, ...data });
         if (newPatient) {

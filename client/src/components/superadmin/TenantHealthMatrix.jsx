@@ -11,7 +11,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import '../../styles/superadmin.css';
+import { api } from '../../api.js';
 
 export default function TenantHealthMatrix({ tenants: propTenants = [], users = [] }) {
   const [loading, setLoading] = useState(true);

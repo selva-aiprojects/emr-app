@@ -11,7 +11,7 @@ import {
   Clock,
   Zap
 } from 'lucide-react';
-import '../../styles/superadmin.css';
+import { api } from '../../api.js';
 
 export default function SystemPerformance() {
   const [performance, setPerformance] = useState({
