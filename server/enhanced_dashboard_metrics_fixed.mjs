@@ -69,7 +69,7 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'admission'`, [tenantId]),
       
       // Today's discharges (using encounters table)
-      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'discharge'`, [tenantId])
+      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'discharge'`, [tenantId]),
       
       // Occupied beds
       safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.beds WHERE tenant_id = $1 AND status = 'occupied'`, [tenantId]),

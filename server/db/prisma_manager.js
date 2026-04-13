@@ -6,8 +6,8 @@ import pg from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 dotenv.config();
 
-const { PrismaClient: ManagementClient } = require('../../node_modules/@generated/management/index.js');
-const { PrismaClient: TenantClient } = require('../../node_modules/@generated/tenant/index.js');
+const { PrismaClient: ManagementClient } = require('@prisma/client');
+const { PrismaClient: TenantClient } = require('@prisma/client');
 
 /**
  * Cache for tenant Prisma clients to prevent connection leaks.

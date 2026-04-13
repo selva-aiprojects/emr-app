@@ -133,6 +133,11 @@ END;
 $$;
 
 -- 6. FUNCTION: Precision Shard Scan (Universal Data Recovery)
+DROP FUNCTION IF EXISTS emr.refresh_management_tenant_metrics(varchar, varchar) CASCADE;
+DROP FUNCTION IF EXISTS emr.refresh_management_tenant_metrics(uuid, text) CASCADE;
+DROP FUNCTION IF EXISTS emr.refresh_management_tenant_metrics() CASCADE;
+DROP FUNCTION IF EXISTS emr.refresh_all_management_tenant_metrics() CASCADE;
+DROP FUNCTION IF EXISTS emr.refresh_tenant_metrics_trigger() CASCADE;
 CREATE OR REPLACE FUNCTION emr.refresh_management_tenant_metrics(target_tenant_id uuid, target_schema text DEFAULT NULL)
 RETURNS void
 LANGUAGE plpgsql
@@ -160,15 +165,15 @@ BEGIN
 
     IF found_sc IS NOT NULL THEN
       BEGIN EXECUTE format('SELECT count(*)::int FROM %I.patients', found_sc) INTO p_count; EXCEPTION WHEN OTHERS THEN p_count := 0; END;
-      BEGIN EXECUTE format('SELECT count(*)::int FROM %I.users WHERE lower(role) LIKE %s', found_sc, '''%doctor%''') INTO d_count; EXCEPTION WHEN OTHERS THEN d_count := 0; END;
+      BEGIN EXECUTE format('SELECT count(*)::int FROM %I.employees WHERE lower(designation) LIKE %s', found_sc, '''%doctor%''') INTO d_count; EXCEPTION WHEN OTHERS THEN d_count := 0; END;
       BEGIN EXECUTE format('SELECT count(*)::int FROM %I.beds WHERE status = ''available''', found_sc) INTO b_count; EXCEPTION WHEN OTHERS THEN b_count := 0; END;
-      BEGIN EXECUTE format('SELECT count(*)::int FROM %I.ambulances WHERE status = ''active''', found_sc) INTO a_count; EXCEPTION WHEN OTHERS THEN a_count := 0; END;
+      BEGIN EXECUTE format('SELECT count(*)::int FROM %I.ambulances WHERE status = ''active'' OR status = ''ONLINE''', found_sc) INTO a_count; EXCEPTION WHEN OTHERS THEN a_count := 0; END;
     END IF;
   END IF;
 
   -- B. SCAN CONTROL PLANE (Safety Fallback)
   p_count := p_count + COALESCE((SELECT count(*)::int FROM emr.patients WHERE tenant_id = target_tenant_id), 0);
-  d_count := d_count + COALESCE((SELECT count(*)::int FROM emr.users WHERE tenant_id = target_tenant_id AND (lower(role) LIKE '%doctor%' OR name LIKE 'Dr.%')), 0);
+  d_count := d_count + COALESCE((SELECT count(*)::int FROM emr.employees WHERE tenant_id = target_tenant_id AND lower(designation) LIKE '%doctor%'), 0);
 
   INSERT INTO emr.management_tenant_metrics (
     tenant_id, tenant_code, tenant_name, schema_name,
@@ -192,6 +197,7 @@ END;
 $$;
 
 -- 7. FUNCTION: Universal Shard Sync (Master Refresh)
+DROP FUNCTION IF EXISTS emr.refresh_all_management_tenant_metrics();
 CREATE OR REPLACE FUNCTION emr.refresh_all_management_tenant_metrics()
 RETURNS void
 LANGUAGE plpgsql
