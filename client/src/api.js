@@ -277,6 +277,12 @@ export async function syncSuperadminMetrics() {
   });
 }
 
+export async function megaSeedInstitutional() {
+  return await apiRequest('/superadmin/mega-seed', {
+    method: 'POST'
+  });
+}
+
 // =====================================================
 // PATIENTS
 // =====================================================

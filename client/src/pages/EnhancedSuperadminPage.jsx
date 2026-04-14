@@ -45,6 +45,19 @@ export default function EnhancedSuperadminPage({
     { id: 'support',           label: 'Support',        icon: HelpCircle },
   ];
 
+  const handleMegaSeed = async () => {
+    try {
+      if (apiClient.megaSeedInstitutional) {
+        const res = await apiClient.megaSeedInstitutional();
+        if (res && res.success) {
+           window.location.reload();
+        }
+      }
+    } catch (e) {
+      console.error('Simulation Error:', e);
+    }
+  };
+
   const renderContent = () => {
     switch (activeView) {
       case 'superadmin':
@@ -70,65 +83,9 @@ export default function EnhancedSuperadminPage({
   };
 
   return (
-    <div className="fixed inset-0 flex bg-[#f8fafc] text-[#1e293b] font-sans selection:bg-indigo-100 overflow-hidden">
-      {/* PROFESSIONAL SIDEBAR (Glassmorphism) */}
-      <aside className="w-[260px] border-r border-slate-200 bg-white flex flex-col z-50 shrink-0 shadow-sm">
-        <div className="p-8 pb-4">
-          <div className="flex items-center gap-3 mb-10 group">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(79,70,229,0.4)] group-hover:scale-110 transition-transform">
-              <Shield className="text-white w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-[14px] font-black tracking-[-0.02em] text-white">CORE NEXUS</h1>
-              <p className="text-[10px] font-black text-slate-500 tracking-[0.2em] uppercase">Control Plane</p>
-            </div>
-          </div>
-
-          <nav className="space-y-1">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeView === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveView(item.id)}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${
-                    isActive 
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200' 
-                      : 'text-slate-500 hover:text-indigo-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-400' : 'group-hover:text-indigo-300'} transition-colors`} />
-                    <span className="text-[11px] font-bold uppercase tracking-widest">{item.label}</span>
-                  </div>
-                  {isActive && <div className="w-1 h-4 rounded-full bg-indigo-500" />}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="mt-auto p-8 border-t border-white/5">
-          <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 space-y-3">
-             <div className="flex items-center justify-between">
-                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Shard Status</span>
-                <div className="flex gap-1">
-                   <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                   <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                   <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                </div>
-             </div>
-             <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full w-[88%] bg-indigo-500/50" />
-             </div>
-             <p className="text-[9px] font-bold text-slate-400 italic leading-tight">88% Memory Efficiency Load Balancing Active</p>
-          </div>
-        </div>
-      </aside>
-
+    <div className="flex flex-col min-h-screen bg-transparent">
       {/* MAIN VIEWPORT */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
+      <main className="flex-1 flex flex-col relative">
         {/* TOP COMMAND BAR */}
         <header className="h-[80px] border-b border-slate-200 flex items-center justify-between px-10 z-40 bg-white/80 backdrop-blur-md">
            <div className="relative group w-[400px]">
@@ -143,6 +100,13 @@ export default function EnhancedSuperadminPage({
            </div>
 
            <div className="flex items-center gap-6">
+              <button 
+                onClick={handleMegaSeed}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 transition-all group"
+              >
+                 <Shield className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                 Institutional Simulation
+              </button>
               <button className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-indigo-600 transition-all group">
                  <Bell className="w-5 h-5 group-hover:scale-110 transition-transform" />
                  {tickets.filter(t => t.status !== 'resolved').length > 0 && (

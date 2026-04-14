@@ -111,4 +111,17 @@ router.get('/logs', async (req, res) => {
   }
 });
 
+/**
+ * Mega Seed — Full institutional lifecycle simulation
+ */
+router.post('/mega-seed', async (req, res) => {
+  try {
+    const { runMegaSeed } = await import('../scripts/mega_seeder.js');
+    const result = await runMegaSeed();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

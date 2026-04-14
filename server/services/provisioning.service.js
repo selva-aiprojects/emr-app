@@ -17,47 +17,47 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * This is the canonical way to initialize a new tenant's database.
  */
 async function executeTenantBaseSchema(schemaName) {
-  const sqlPath = join(__dirname, '../../database/tenant_base_schema.sql');
+  const sqlPath = join(__dirname, '../../config/tenant_plane_provisioning.sql');
   const sql = readFileSync(sqlPath, 'utf8');
   
-  // Set search_path to the tenant schema first, then execute all DDL
-  await query(`SET search_path TO "${schemaName}", public`);
+  // Set search_path and run the entire DDL block as a single operation to preserve functions/triggers
+  const ddl = `
+    SET search_path TO "${schemaName}", public;
+    ${sql}
+  `;
   
-  // Split on semicolons and run each statement
-  const statements = sql
-    .split(';')
-    .map(s => s.trim())
-    .filter(s => s.length > 0 && !s.startsWith('--'));
-  
-  for (const stmt of statements) {
-    try {
-      await query(stmt);
-    } catch (e) {
-      // Log but continue — some statements may already exist
-      if (!e.message.includes('already exists')) {
-        console.warn(`[SCHEMA_WARN] ${e.message.substring(0, 100)}`);
-      }
-    }
+  try {
+    await query(ddl);
+  } catch (e) {
+    console.error(`[SCHEMA_FATAL] Base schema deployment failed for ${schemaName}:`, e.message);
+    throw e;
   }
-  
-  // Reset search_path to default
-  await query(`SET search_path TO "${schemaName}", emr, public`);
 }
 
 const DEFAULT_ROLE_DEFINITIONS = [
   {
     name: 'Admin',
-    description: 'Tenant administrator with full access',
+    description: 'Institutional Administrator with governance access',
     is_system: true
   },
   {
     name: 'Doctor',
-    description: 'Clinical staff with patient care access',
+    description: 'Clinical Practitioner with patient care access',
     is_system: true
   },
   {
     name: 'Nurse',
-    description: 'Nursing staff with operational care access',
+    description: 'Nursing Staff with operational care access',
+    is_system: true
+  },
+  {
+    name: 'Lab',
+    description: 'Laboratory Technician with diagnostic access',
+    is_system: true
+  },
+  {
+    name: 'Pharmacy',
+    description: 'Pharmacist with inventory management access',
     is_system: true
   }
 ];
@@ -111,7 +111,7 @@ export async function provisionNewTenant(tenantData, adminData) {
       schemaName,
       'active',
       tenantData.contactEmail,
-      tenantData.subscriptionTier || 'Professional'
+      tenantData.subscriptionTier || 'Enterprise'
     ]);
     
     tenant = createdTenant;

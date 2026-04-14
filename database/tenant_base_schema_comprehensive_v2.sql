@@ -1,28 +1,15 @@
 -- ============================================================
--- COMPREHENSIVE TENANT BASE SCHEMA - MedFlow EMR v2.0
+-- 0. SCHEMA INITIALIZATION & SHARED UTILITIES
 -- ============================================================
--- This script is executed ONCE per tenant on creation.
--- It creates ALL tables required inside the tenant's isolated
--- PostgreSQL schema (e.g., "demo_emr", "nhgl", "client_xyz").
---
--- DYNAMIC SCHEMA NAMING:
---   - NHGL tenant code -> nhgl schema
---   - Other tenants -> <code>_emr schema
---   - Schema is determined by tenant.code from emr.tenants table
---
--- ARCHITECTURE:
---   emr.*            = Global shared tables (auth, management, config)
---   <schema>.*       = Tenant-isolated operational data (this file)
---
--- USAGE:
---   1. CREATE SCHEMA IF NOT EXISTS "<schema_name>";
---   2. SET search_path TO tenant_schema;
---   3. Execute this script
---   4. Update tenant record with schema_name
---
--- LAST UPDATED: 2025-04-12
--- COVERAGE: All EMR modules with complete relationships
--- ============================================================
+
+-- Function to automatically update timestamp on row update
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
 
 -- ============================================================
 -- 1. CORE CLINICAL MODULES
@@ -52,11 +39,17 @@ CREATE TABLE IF NOT EXISTS patients (
     updated_at timestamp with time zone DEFAULT now()
 );
 
+-- Trigger for patients updated_at
+DROP TRIGGER IF EXISTS tr_patients_updated_at ON patients;
+CREATE TRIGGER tr_patients_updated_at 
+BEFORE UPDATE ON patients 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- WALKIN PATIENTS
 CREATE TABLE IF NOT EXISTS walkins (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    patient_id uuid REFERENCES patients(id),
+    patient_id uuid REFERENCES patients(id) ON DELETE CASCADE,
     token_number integer NOT NULL,
     triage_category character varying(20),
     chief_complaint text,
@@ -72,7 +65,7 @@ CREATE TABLE IF NOT EXISTS walkins (
 CREATE TABLE IF NOT EXISTS appointments (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    patient_id uuid NOT NULL REFERENCES patients(id),
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
     provider_id uuid,
     appointment_type character varying(50) DEFAULT 'consultation',
     scheduled_start timestamp with time zone NOT NULL,
@@ -84,18 +77,24 @@ CREATE TABLE IF NOT EXISTS appointments (
     reason text,
     notes text,
     cancellation_reason text,
-    rescheduled_from uuid REFERENCES appointments(id),
+    rescheduled_from uuid REFERENCES appointments(id) ON DELETE SET NULL,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
 );
+
+-- Trigger for appointments updated_at
+DROP TRIGGER IF EXISTS tr_appointments_updated_at ON appointments;
+CREATE TRIGGER tr_appointments_updated_at 
+BEFORE UPDATE ON appointments 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ENCOUNTERS (Clinical Visits)
 CREATE TABLE IF NOT EXISTS encounters (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    patient_id uuid NOT NULL REFERENCES patients(id),
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
     provider_id uuid,
-    appointment_id uuid REFERENCES appointments(id),
+    appointment_id uuid REFERENCES appointments(id) ON DELETE SET NULL,
     encounter_type character varying(50) NOT NULL,
     visit_date date NOT NULL,
     start_time timestamp with time zone,
@@ -110,12 +109,18 @@ CREATE TABLE IF NOT EXISTS encounters (
     updated_at timestamp with time zone DEFAULT now()
 );
 
+-- Trigger for encounters updated_at
+DROP TRIGGER IF EXISTS tr_encounters_updated_at ON encounters;
+CREATE TRIGGER tr_encounters_updated_at 
+BEFORE UPDATE ON encounters 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- CLINICAL RECORDS
 CREATE TABLE IF NOT EXISTS clinical_records (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    patient_id uuid NOT NULL REFERENCES patients(id),
-    encounter_id uuid REFERENCES encounters(id),
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter_id uuid REFERENCES encounters(id) ON DELETE CASCADE,
     record_type character varying(50) NOT NULL,
     category character varying(50),
     content jsonb NOT NULL,
@@ -125,12 +130,18 @@ CREATE TABLE IF NOT EXISTS clinical_records (
     updated_at timestamp with time zone DEFAULT now()
 );
 
+-- Trigger for clinical_records updated_at
+DROP TRIGGER IF EXISTS tr_clinical_records_updated_at ON clinical_records;
+CREATE TRIGGER tr_clinical_records_updated_at 
+BEFORE UPDATE ON clinical_records 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- PRESCRIPTIONS
 CREATE TABLE IF NOT EXISTS prescriptions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    encounter_id uuid NOT NULL REFERENCES encounters(id),
-    patient_id uuid NOT NULL REFERENCES patients(id),
+    encounter_id uuid NOT NULL REFERENCES encounters(id) ON DELETE CASCADE,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
     provider_id uuid,
     drug_name text NOT NULL,
     dosage text,
@@ -141,6 +152,8 @@ CREATE TABLE IF NOT EXISTS prescriptions (
     dispensed boolean DEFAULT false,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
+);
+
 );
 
 -- DRUG ALLERGIES
@@ -174,27 +187,39 @@ CREATE TABLE IF NOT EXISTS wards (
     updated_at timestamp with time zone DEFAULT now()
 );
 
+-- Trigger for wards updated_at
+DROP TRIGGER IF EXISTS tr_wards_updated_at ON wards;
+CREATE TRIGGER tr_wards_updated_at 
+BEFORE UPDATE ON wards 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- BEDS
 CREATE TABLE IF NOT EXISTS beds (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    ward_id uuid NOT NULL REFERENCES wards(id),
+    ward_id uuid NOT NULL REFERENCES wards(id) ON DELETE CASCADE,
     bed_number character varying(20) NOT NULL,
     type character varying(50),
     status character varying(20) DEFAULT 'available',
-    patient_id uuid REFERENCES patients(id),
+    patient_id uuid REFERENCES patients(id) ON DELETE SET NULL,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
 );
+
+-- Trigger for beds updated_at
+DROP TRIGGER IF EXISTS tr_beds_updated_at ON beds;
+CREATE TRIGGER tr_beds_updated_at 
+BEFORE UPDATE ON beds 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ADMISSIONS
 CREATE TABLE IF NOT EXISTS admissions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    patient_id uuid NOT NULL REFERENCES patients(id),
-    encounter_id uuid REFERENCES encounters(id),
-    ward_id uuid REFERENCES wards(id),
-    bed_id uuid REFERENCES beds(id),
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter_id uuid REFERENCES encounters(id) ON DELETE CASCADE,
+    ward_id uuid REFERENCES wards(id) ON DELETE SET NULL,
+    bed_id uuid REFERENCES beds(id) ON DELETE SET NULL,
     admission_date timestamp with time zone NOT NULL,
     discharge_date timestamp with time zone,
     admission_type character varying(50),
@@ -204,13 +229,19 @@ CREATE TABLE IF NOT EXISTS admissions (
     updated_at timestamp with time zone DEFAULT now()
 );
 
+-- Trigger for admissions updated_at
+DROP TRIGGER IF EXISTS tr_admissions_updated_at ON admissions;
+CREATE TRIGGER tr_admissions_updated_at 
+BEFORE UPDATE ON admissions 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- DISCHARGES
 CREATE TABLE IF NOT EXISTS discharges (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    patient_id uuid NOT NULL REFERENCES patients(id),
-    encounter_id uuid REFERENCES encounters(id),
-    admission_id uuid REFERENCES admissions(id),
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter_id uuid REFERENCES encounters(id) ON DELETE CASCADE,
+    admission_id uuid REFERENCES admissions(id) ON DELETE CASCADE,
     discharge_date date NOT NULL,
     discharge_type character varying(50) NOT NULL,
     final_diagnosis text,
@@ -219,6 +250,12 @@ CREATE TABLE IF NOT EXISTS discharges (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
 );
+
+-- Trigger for discharges updated_at
+DROP TRIGGER IF EXISTS tr_discharges_updated_at ON discharges;
+CREATE TRIGGER tr_discharges_updated_at 
+BEFORE UPDATE ON discharges 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================
 -- 3. DEPARTMENTS & SERVICES
@@ -277,7 +314,7 @@ CREATE TABLE IF NOT EXISTS frontdesk_visits (
 CREATE TABLE IF NOT EXISTS invoices (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    patient_id uuid NOT NULL REFERENCES patients(id),
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
     invoice_number character varying(50) NOT NULL UNIQUE,
     description text,
     subtotal numeric(10,2) NOT NULL,
@@ -291,6 +328,12 @@ CREATE TABLE IF NOT EXISTS invoices (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
 );
+
+-- Trigger for invoices updated_at
+DROP TRIGGER IF EXISTS tr_invoices_updated_at ON invoices;
+CREATE TRIGGER tr_invoices_updated_at 
+BEFORE UPDATE ON invoices 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- INVOICE ITEMS
 CREATE TABLE IF NOT EXISTS invoice_items (
@@ -396,17 +439,96 @@ CREATE TABLE IF NOT EXISTS inventory_purchases (
     updated_at timestamp with time zone DEFAULT now()
 );
 
--- SERVICE REQUESTS (Pharmacy)
+-- SERVICE REQUESTS (Lab, Radiology, Pharmacy, etc.)
 CREATE TABLE IF NOT EXISTS service_requests (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
-    patient_id uuid NOT NULL REFERENCES patients(id),
-    request_type character varying(50) NOT NULL,
-    request_details jsonb,
-    priority character varying(20) DEFAULT 'routine',
-    status character varying(20) DEFAULT 'pending',
-    requested_by uuid,
-    assigned_to uuid,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter_id uuid REFERENCES encounters(id) ON DELETE SET NULL,
+    requester_id uuid,
+    category character varying(64) DEFAULT 'lab',
+    code character varying(64),
+    display character varying(255),
+    status character varying(32) DEFAULT 'pending',
+    priority character varying(32) DEFAULT 'routine',
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- DRUG ALLERGIES
+CREATE TABLE IF NOT EXISTS drug_allergies (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    allergen text NOT NULL,
+    severity character varying(20) NOT NULL DEFAULT 'mild',
+    reaction text,
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- MEDICATION ADMINISTRATIONS
+CREATE TABLE IF NOT EXISTS medication_administrations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    medication_name text NOT NULL,
+    dosage text,
+    route character varying(32),
+    administered_by uuid,
+    administered_at timestamp with time zone DEFAULT now(),
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- CONDITIONS
+CREATE TABLE IF NOT EXISTS conditions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    code character varying(64),
+    display character varying(255),
+    category character varying(32),
+    severity character varying(16),
+    onset_date date,
+    status character varying(16) NOT NULL DEFAULT 'active',
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- PROCEDURES
+CREATE TABLE IF NOT EXISTS procedures (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter_id uuid REFERENCES encounters(id) ON DELETE SET NULL,
+    code character varying(64),
+    display character varying(255),
+    category character varying(32),
+    performed_by uuid,
+    performed_at timestamp with time zone,
+    status character varying(16) NOT NULL DEFAULT 'scheduled',
+    notes text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- OBSERVATIONS (Vitals, Lab Results, etc.)
+CREATE TABLE IF NOT EXISTS observations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter_id uuid REFERENCES encounters(id) ON DELETE SET NULL,
+    category character varying(32),
+    observation_type character varying(32),
+    value numeric(12,4),
+    unit character varying(16),
+    notes text,
+    recorded_by uuid,
+    recorded_at timestamp with time zone DEFAULT now(),
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now()
 );
@@ -654,6 +776,12 @@ CREATE TABLE IF NOT EXISTS employees (
     updated_at timestamp with time zone DEFAULT now()
 );
 
+-- Trigger for employees updated_at
+DROP TRIGGER IF EXISTS tr_employees_updated_at ON employees;
+CREATE TRIGGER tr_employees_updated_at 
+BEFORE UPDATE ON employees 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- EMPLOYEE LEAVES
 CREATE TABLE IF NOT EXISTS employee_leaves (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -888,7 +1016,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp);
 
 -- ============================================================
--- 15. TRIGGERS FOR AUTOMATIC UPDATES
+-- 15. TRIGGERS FOR THE DATA PLANE
 -- ============================================================
 
 -- Update updated_at timestamp trigger function
@@ -900,21 +1028,32 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Apply updated_at trigger to all relevant tables
-CREATE TRIGGER update_patients_updated_at BEFORE UPDATE ON patients FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_encounters_updated_at BEFORE UPDATE ON encounters FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_invoices_updated_at BEFORE UPDATE ON invoices FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_employees_updated_at BEFORE UPDATE ON employees FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_attendance_updated_at BEFORE UPDATE ON attendance FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_inventory_items_updated_at BEFORE UPDATE ON inventory_items FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_beds_updated_at BEFORE UPDATE ON beds FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_wards_updated_at BEFORE UPDATE ON wards FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_prescriptions_updated_at BEFORE UPDATE ON prescriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_expenses_updated_at BEFORE UPDATE ON expenses FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_ambulances_updated_at BEFORE UPDATE ON ambulances FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_blood_units_updated_at BEFORE UPDATE ON blood_units FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_pharmacy_alerts_updated_at BEFORE UPDATE ON pharmacy_alerts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Create individual triggers for automatic timestamp management
+CREATE TRIGGER tr_patients_updated_at BEFORE UPDATE ON patients FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_appointments_updated_at BEFORE UPDATE ON appointments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_encounters_updated_at BEFORE UPDATE ON encounters FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_clinical_records_updated_at BEFORE UPDATE ON clinical_records FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_prescriptions_updated_at BEFORE UPDATE ON prescriptions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_wards_updated_at BEFORE UPDATE ON wards FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_beds_updated_at BEFORE UPDATE ON beds FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_admissions_updated_at BEFORE UPDATE ON admissions FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_discharges_updated_at BEFORE UPDATE ON discharges FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_invoices_updated_at BEFORE UPDATE ON invoices FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_employees_updated_at BEFORE UPDATE ON employees FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_service_requests_updated_at BEFORE UPDATE ON service_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_lab_tests_updated_at BEFORE UPDATE ON lab_tests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_diagnostic_reports_updated_at BEFORE UPDATE ON diagnostic_reports FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_donors_updated_at BEFORE UPDATE ON donors FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_blood_units_updated_at BEFORE UPDATE ON blood_units FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_blood_requests_updated_at BEFORE UPDATE ON blood_requests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_ambulances_updated_at BEFORE UPDATE ON ambulances FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_pharmacy_alerts_updated_at BEFORE UPDATE ON pharmacy_alerts FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_support_tickets_updated_at BEFORE UPDATE ON support_tickets FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER tr_notices_updated_at BEFORE UPDATE ON notices FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================
+-- END OF TENANT BASE SCHEMA
+-- ============================================================
 
 -- ============================================================
 -- 16. CONSTRAINTS & VALIDATIONS
@@ -993,44 +1132,6 @@ ORDER BY month DESC;
 -- 18. BASE DATA SEEDING (Optional)
 -- ============================================================
 
--- Insert basic departments (can be customized per tenant)
-INSERT INTO departments (tenant_id, name, code, type) VALUES
-    ('{tenant_id_placeholder}', 'General Medicine', 'GM', 'Clinical'),
-    ('{tenant_id_placeholder}', 'Emergency', 'ER', 'Clinical'),
-    ('{tenant_id_placeholder}', 'Intensive Care', 'ICU', 'Clinical'),
-    ('{tenant_id_placeholder}', 'Laboratory', 'LAB', 'Diagnostic'),
-    ('{tenant_id_placeholder}', 'Radiology', 'RAD', 'Diagnostic'),
-    ('{tenant_id_placeholder}', 'Pharmacy', 'PHM', 'Support'),
-    ('{tenant_id_placeholder}', 'Administration', 'ADM', 'Administrative')
-ON CONFLICT (tenant_id, code) DO NOTHING;
-
--- Insert basic services (can be customized per tenant)
-INSERT INTO services (tenant_id, name, category, price, duration_minutes) VALUES
-    ('{tenant_id_placeholder}', 'General Consultation', 'Consultation', 500.00, 30),
-    ('{tenant_id_placeholder}', 'Specialist Consultation', 'Consultation', 800.00, 45),
-    ('{tenant_id_placeholder}', 'Emergency Consultation', 'Emergency', 1000.00, 60),
-    ('{tenant_id_placeholder}', 'Complete Blood Count', 'Laboratory', 350.00, 0),
-    ('{tenant_id_placeholder}', 'X-Ray Chest', 'Radiology', 300.00, 0)
-ON CONFLICT DO NOTHING;
-
--- Insert basic lab tests (can be customized per tenant)
-INSERT INTO lab_tests (tenant_id, test_name, category, normal_range, price) VALUES
-    ('{tenant_id_placeholder}', 'Complete Blood Count', 'Hematology', 'RBC: 4.5-5.5, WBC: 4-11', 500.00),
-    ('{tenant_id_placeholder}', 'Lipid Profile', 'Biochemistry', 'Total Cholesterol: <200 mg/dL', 800.00),
-    ('{tenant_id_placeholder}', 'ECG', 'Cardiology', 'Normal rhythm', 1200.00),
-    ('{tenant_id_placeholder}', 'X-Ray Chest', 'Radiology', 'Normal findings', 1500.00),
-    ('{tenant_id_placeholder}', 'Blood Sugar', 'Pathology', 'Fasting: 70-100 mg/dL', 300.00),
-    ('{tenant_id_placeholder}', 'Liver Function Test', 'Biochemistry', 'SGOT: <40 U/L, SGPT: <40 U/L', 600.00),
-    ('{tenant_id_placeholder}', 'Kidney Function Test', 'Biochemistry', 'Creatinine: 0.6-1.2 mg/dL', 700.00),
-    ('{tenant_id_placeholder}', 'Thyroid Profile', 'Endocrinology', 'TSH: 0.4-4.0 mIU/L', 900.00),
-    ('{tenant_id_placeholder}', 'Urine Routine', 'Pathology', 'Color: Pale yellow, pH: 4.5-8', 200.00),
-    ('{tenant_id_placeholder}', 'Vitamin D', 'Biochemistry', '30-100 ng/mL', 1000.00)
-ON CONFLICT DO NOTHING;
-
--- Insert basic conditions (can be customized per tenant)
-INSERT INTO conditions (tenant_id, name, description, category, severity) VALUES
-    ('{tenant_id_placeholder}', 'Hypertension', 'High blood pressure condition', 'Cardiovascular', 'High'),
-    ('{tenant_id_placeholder}', 'Diabetes Mellitus', 'Diabetes condition', 'Endocrine', 'High'),
     ('{tenant_id_placeholder}', 'Asthma', 'Respiratory condition', 'Respiratory', 'Medium'),
     ('{tenant_id_placeholder}', 'Arthritis', 'Joint inflammation condition', 'Musculoskeletal', 'Medium'),
     ('{tenant_id_placeholder}', 'Anemia', 'Low blood count condition', 'Hematology', 'Low')

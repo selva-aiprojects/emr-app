@@ -8,8 +8,8 @@ This document summarizes the comprehensive updates made to implement a dynamic m
 ### 1. Dynamic Schema Helper (`server/utils/tenant-schema-helper.js`)
 - **Purpose**: Dynamically determines tenant schema names based on tenant code
 - **Logic**: 
-  - NHGL tenant code (`NHGL`) -> `nhgl` schema
-  - Other tenants (`DEMO`, etc.) -> `<code>_emr` schema
+  - Institutional Tenant Codes -> Normalized `<tenant_code>` schema
+  - Standardized naming convention: `[tenant_code]` or `[tenant_code]_emr`
 - **Features**: Schema existence verification, query helper functions
 
 ### 2. Updated Report Routes (`server/routes/report.routes.js`)
@@ -22,49 +22,36 @@ This document summarizes the comprehensive updates made to implement a dynamic m
 - **Features**: Real-time metrics calculation for any tenant schema
 - **Benefits**: Dashboard works for both DEMO and NHGL tenants
 
-### 4. Updated Schema File (`database/tenant_base_schema_comprehensive_v2.sql`)
-- **Added**: Missing tables required for Reports functionality:
-  - `conditions` - Medical conditions
-  - `drug_allergies` - Patient drug allergies
-  - `notices` - System notices
-  - `pharmacy_alerts` - Pharmacy alerts
-  - `support_tickets` - Support ticket system
-- **Fixed**: `lab_tests` table with correct column types
-- **Enhanced**: Base data seeding with lab tests and conditions
-- **Documented**: Dynamic schema naming logic explained
+### 4. Comprehensive Tenant Schema (`database/tenant_base_schema_comprehensive_v2.sql`)
+- **Resolved**: Synchronized `service_requests` table structure with the Laboratory/Pharmacy modules (fixed column mismatches).
+- **Expanded**: Integrated remaining clinical and operational tables from the business logic:
+  - `medication_administrations` - Tracking the execution of prescriptions
+  - `drug_allergies` - Patient safety and allergy tracking
+  - `procedures` - Documenting medical interventions
+  - `observations` - Standardized clinical measurements (vitals, etc.)
+- **Vision**: This file is now the **Canonical Source of Truth** for the Tenant Plane (Data Plane).
 
-### 5. Comprehensive Tenant Provisioning (`scripts/provision_new_tenant_comprehensive.js`)
-- **Purpose**: Complete tenant provisioning with all tables and data
-- **Features**: 
-  - Dynamic schema creation
-  - Comprehensive schema execution
-  - Admin user creation
-  - Initial data seeding
-  - Verification and reporting
+### 6. Synchronized Auto-Migration (`server/auto_migrate.js`)
+- **Refactored**: Removed the dependency on `emr` (Master Plane) templates for table creation.
+- **Logic**: The sharding engine now executes the `tenant_base_schema_comprehensive_v2.sql` script directly for each tenant shard.
+- **Benefit**: Keeps the `emr` schema clean—only containing management/orchestration tables and no business-logic clinical tables.
 
 ## Tenant Schema Architecture
 
-### DEMO Tenant
-- **Tenant ID**: `20d07615-8de9-49b4-9929-ec565197e6f4`
-- **Schema Name**: `demo_emr`
-- **Admin Email**: `admin@demo.hospital`
-- **Admin Password**: `Demo@123`
-- **Data Status**: Fully populated with 299 patients, 1,023 appointments, 17 lab tests
-
-### NHGL Tenant
-- **Tenant ID**: `b01f0cdc-4e8b-4db5-ba71-e657a414695e`
-- **Schema Name**: `nhgl`
-- **Admin Email**: `admin@nhgl.hospital`
-- **Admin Password**: `Admin@123`
-- **Data Status**: Fully populated with 561 patients, 247 appointments, 10 lab tests
+## Standardized Tenant Architecture
+ 
+### Institutional Shards (Data Plane)
+- **Tenant Registry**: Managed via the Control Plane (`emr.management_tenants`).
+- **Schema Mapping**: Every institutional node is assigned a dedicated PostgreSQL schema based on its unique code.
+- **Isolation**: Direct cross-schema querying is restricted; all clinical and operational data is strictly isolated to the respective shard.
+- **Data Status**: Provisioned as a clean baseline from the `v2.sql` canonical schema, ensuring visual and functional parity across all tenants.
 
 ## Reports & Analysis Page Fix
 
-### Issues Resolved
-1. **Blank Reports Page**: Fixed by ensuring all required tables exist in both schemas
-2. **Missing Lab Tests**: Created `lab_tests` table in NHGL schema with proper structure
-3. **Dynamic Schema Resolution**: Reports API now uses tenant-specific schemas
-4. **Data Population**: Both tenants have complete data for all dashboard cards
+### Operational Resilience Resolved
+1. **Dynamic Dashboard Rendering**: Fixed by ensuring all required baseline tables exist in every shard.
+2. **Schema-Agnostic Routing**: Integrated dynamic schema resolution for all APIs.
+3. **Canonical Data Population**: Every provisioned shard contains the full set of institutional masters (lab tests, procedures, categories).
 
 ### Dashboard Cards Status
 Both tenants now have complete data for:
@@ -93,11 +80,11 @@ const result = await provisionNewTenant(newTenant);
 
 ### Dynamic Schema Resolution
 The system automatically:
-1. Identifies tenant from login credentials
-2. Looks up tenant code from `emr.tenants` table
-3. Determines schema name (nhgl or <code>_emr)
-4. Routes all queries to correct schema
-5. Returns tenant-specific data
+1. Identifies tenant context from login credentials
+2. Resolves the unique `code` from the shared management registry
+3. Determines the target `schema_name`
+4. Redirects the database `search_path` to the specific shard
+5. Ensures data isolation and institutional privacy
 
 ## Files Modified
 
@@ -135,21 +122,34 @@ The system automatically:
 - Comprehensive initial data seeding
 - Verification and reporting capabilities
 
-## Next Steps
+## Master Plane (EMR) vs. Tenant Plane Architecture
 
-1. **Restart Backend Server**: Apply all changes
-2. **Test Both Tenants**: Verify login and dashboard functionality
-3. **Test New Tenant Provisioning**: Use the comprehensive script for new tenants
-4. **Monitor Performance**: Ensure dynamic schema resolution is efficient
-5. **Document for Users**: Provide clear instructions for tenant management
+### Control Plane (emr.*)
+- **Responsibility**: Orchestration, Auth, Multi-tenancy, Superadmin Dashboard.
+- **Key Tables**: `management_tenants`, `users`, `roles`, `tenant_resources`.
+- **Note**: No clinical patient data or business features exist here.
+
+### Data Plane (<tenant_schema>.*)
+- **Responsibility**: Healthcare operations, clinical records, pharmacy, laboratory, billing.
+- **Key Tables**: `patients`, `encounters`, `service_requests`, `invoices`, `inventory`.
+- **Integrity**: Every shard is identical in structure, provisioned from the `v2.sql` baseline.
+
+## Next Steps
+1. **Infrastructure Audit**: Periodically verify that all shard structures remain in sync with the canonical `v2.sql`.
+2. **Migration Discipline**: Ensure any new clinical tables are added to the `v2.sql` file first, then propagated via `auto_migrate.js`.
+3. **Restart Backend Server**: Apply all changes
+4. **Test Both Tenants**: Verify login and dashboard functionality
+5. **Test New Tenant Provisioning**: Use the comprehensive script for new tenants
+6. **Monitor Performance**: Ensure dynamic schema resolution is efficient
+7. **Document for Users**: Provide clear instructions for tenant management
 
 ## Technical Notes
 
 ### Schema Naming Convention
 ```
-NHGL -> nhgl
-DEMO -> demo_emr
-OTHER -> <code>_emr
+PRIMARY -> [tenant_code]
+SECONDARY -> [tenant_code]_emr
+FALLBACK -> public
 ```
 
 ### Critical Tables for Reports

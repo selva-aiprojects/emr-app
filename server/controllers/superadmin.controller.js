@@ -206,26 +206,61 @@ export async function syncLegacyTenants(req, res) {
 
 /**
  * Strategic Communication Dispatch
+ * Dispatches a formal protocol to a specific hospital node (Email + In-App Notice)
  */
 export async function sendCommunication(req, res) {
   const { tenantCode, templateId, metadata } = req.body;
   
   try {
     const { sendTenantWelcomeEmail } = await import('../services/mail.service.js');
+    const { query } = await import('../db/connection.js');
+    
     console.log(`[COMMUNICATION_HUB] Dispatching Shard [${templateId}] to Node [${tenantCode}]`, metadata);
     
+    // 1. Fetch Tenant Identity & Schema
+    const tenantRes = await query('SELECT id, schema_name, name FROM emr.management_tenants WHERE code = $1', [tenantCode]);
+    const tenant = tenantRes.rows[0];
+    if (!tenant) return res.status(404).json({ error: 'Institutional Node not found.' });
+
     const recipient = metadata.recipientEmail || `admin@${tenantCode.toLowerCase()}.com`;
+    const templateName = metadata.templateName || templateId;
+
+    // 2. DISPATCH EMAIL SHARD
+    try {
+      await sendTenantWelcomeEmail(
+        recipient,
+        tenant.name,
+        tenantCode.toLowerCase(),
+        { 
+          email: recipient, 
+          password: `[PROTOCOL_ACTIVE: ${templateId.toUpperCase()}]` 
+        }
+      );
+    } catch (mailErr) {
+      console.warn(`[COMMUNICATION_HUB] Email dispatch failed for ${tenantCode}, falling back to In-App notice only.`, mailErr.message);
+    }
     
-    // Using the welcome email as a generic sender for now, but in a real app we'd have specialized templates
-    await sendTenantWelcomeEmail(
-      recipient,
-      metadata.tenantName || tenantCode,
-      tenantCode.toLowerCase(),
-      { 
-        email: recipient, 
-        password: `[PROTOCOL_ACTIVE: ${templateId.toUpperCase()}]` 
-      }
-    );
+    // 3. INJECT IN-APP DIRECTIVE (Schema Ingress)
+    const directiveTitle = `[DIRECTIVE] :: ${templateName}`;
+    const directiveBody = `This institutional directive regarding "${templateName}" has been authorized by the Root Nexus. Please review the attached protocol parameters and synchronize your local node accordingly.`;
+    
+    try {
+      await query(`
+        INSERT INTO "${tenant.schema_name}"."notices" 
+        (tenant_id, title, body, audience_roles, starts_at, status, priority, created_by)
+        VALUES ($1, $2, $3, $4, NOW(), 'published', $5, $6)
+      `, [
+        tenant.id, 
+        directiveTitle, 
+        directiveBody, 
+        JSON.stringify(['Admin', 'Management']), 
+        templateId === 'isolation' ? 'critical' : 'high',
+        req.user?.id || null
+      ]);
+      console.log(`[COMMUNICATION_HUB] In-App directive successfully injected into schema: ${tenant.schema_name}`);
+    } catch (dbErr) {
+      console.error(`[COMMUNICATION_HUB] Failed to inject directive into schema: ${tenant.schema_name}`, dbErr.message);
+    }
     
     res.json({ 
       success: true, 
@@ -234,6 +269,96 @@ export async function sendCommunication(req, res) {
     });
   } catch (error) {
     console.error('Communication dispatch error:', error);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Global Broadcast — fires a templated directive to ALL active institutional nodes
+ */
+export async function broadcastToAllTenants(req, res) {
+  const { templateId, subject, body: msgBody } = req.body;
+
+  try {
+    const { sendTenantWelcomeEmail } = await import('../services/mail.service.js');
+    const { query } = await import('../db/connection.js');
+    
+    const tenantsRes = await query(
+      `SELECT id, name, code, subdomain, schema_name, contact_email FROM emr.management_tenants WHERE status = 'active'`
+    );
+    const tenants = tenantsRes.rows;
+
+    let dispatched = 0;
+    let failed = 0;
+    const results = [];
+
+    const broadcastTitle = subject || `[GLOBAL_BROADCAST] :: Institutional Update`;
+    const broadcastBody = msgBody || `A universal directive has been issued across all platform nodes. Please verify compliance with the latest protocol updates.`;
+
+    for (const t of tenants) {
+      const recipient = t.contact_email || `admin@${t.subdomain}.com`;
+      let inAppSuccess = false;
+      let emailSuccess = false;
+
+      // 1. DISPATCH EMAIL
+      try {
+        await sendTenantWelcomeEmail(
+          recipient,
+          t.name,
+          t.subdomain,
+          { email: recipient, password: `[${templateId?.toUpperCase() || 'BROADCAST'}]` }
+        );
+        emailSuccess = true;
+      } catch (mailErr) {
+        console.warn(`Broadcast Email failed for ${t.code}`);
+      }
+
+      // 2. DISPATCH IN-APP NOTICE (Multi-Schema Pivot)
+      try {
+        await query(`
+          INSERT INTO "${t.schema_name}"."notices" 
+          (tenant_id, title, body, audience_roles, starts_at, status, priority, created_by)
+          VALUES ($1, $2, $3, $4, NOW(), 'published', 'high', $5)
+        `, [
+          t.id,
+          broadcastTitle,
+          broadcastBody,
+          JSON.stringify(['*']),
+          req.user?.id || null
+        ]);
+        inAppSuccess = true;
+      } catch (dbErr) {
+        console.error(`Broadcast In-App injection failed for ${t.schema_name}`);
+      }
+
+      if (emailSuccess || inAppSuccess) {
+        dispatched++;
+        results.push({ code: t.code, status: 'dispatched', email: emailSuccess, app: inAppSuccess });
+      } else {
+        failed++;
+        results.push({ code: t.code, status: 'failed' });
+      }
+    }
+
+    // Log the broadcast event
+    try {
+      await query(`
+        INSERT INTO emr.management_system_logs (event, details)
+        VALUES ('GLOBAL_BROADCAST', $1)
+      `, [JSON.stringify({ templateId, subject, dispatched, failed, total: tenants.length })]);
+    } catch (err) {
+       console.warn('[BROADCAST_WARN] Log deferred:', err.message);
+    }
+
+    res.json({ 
+      success: true, 
+      dispatched, 
+      failed,
+      total: tenants.length,
+      results 
+    });
+  } catch (error) {
+    console.error('[BROADCAST_ERROR]', error);
     res.status(500).json({ error: error.message });
   }
 }
@@ -472,63 +597,6 @@ export async function deleteTenant(req, res) {
     });
   } catch (error) {
     console.error('[DELETE_TENANT_ERROR]', error);
-    res.status(500).json({ error: error.message });
-  }
-}
-
-/**
- * Global Broadcast — fires a templated email to all active tenants
- */
-export async function broadcastToAllTenants(req, res) {
-  const { templateId, subject, body: msgBody } = req.body;
-
-  try {
-    const { sendTenantWelcomeEmail } = await import('../services/mail.service.js');
-    const tenantsRes = await query(
-      `SELECT id, name, code, subdomain, contact_email FROM emr.management_tenants WHERE status = 'active'`
-    );
-    const tenants = tenantsRes.rows;
-
-    let dispatched = 0;
-    let failed = 0;
-    const results = [];
-
-    for (const t of tenants) {
-      const recipient = t.contact_email || `admin@${t.subdomain}.com`;
-      try {
-        await sendTenantWelcomeEmail(
-          recipient,
-          t.name,
-          t.subdomain,
-          { email: recipient, password: `[${templateId?.toUpperCase() || 'BROADCAST'}]` }
-        );
-        dispatched++;
-        results.push({ code: t.code, status: 'sent', recipient });
-      } catch (mailErr) {
-        failed++;
-        results.push({ code: t.code, status: 'failed', error: mailErr.message });
-      }
-    }
-
-    // Log the broadcast event
-    try {
-      await query(`
-        INSERT INTO emr.management_system_logs (event, details)
-        VALUES ('GLOBAL_BROADCAST', $1)
-      `, [JSON.stringify({ templateId, subject, dispatched, failed, total: tenants.length })]);
-    } catch (err) {
-       console.warn('[BROADCAST_WARN] Log deferred:', err.message);
-    }
-
-    res.json({ 
-      success: true, 
-      dispatched, 
-      failed,
-      total: tenants.length,
-      results 
-    });
-  } catch (error) {
-    console.error('[BROADCAST_ERROR]', error);
     res.status(500).json({ error: error.message });
   }
 }

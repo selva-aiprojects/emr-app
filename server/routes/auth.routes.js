@@ -260,4 +260,30 @@ router.get('/debug-token', async (req, res) => {
   }
 });
 
+/**
+ * @route   POST /api/seed-admin
+ * @desc    Temporary backdoor to seed tenant admin (FOR TESTING ONLY)
+ */
+router.post('/seed-admin', async (req, res) => {
+  const { tenantId, email, password, name } = req.body;
+  
+  if (!tenantId || !email || !password) {
+    return res.status(400).json({ error: 'tenantId, email, and password are required' });
+  }
+
+  try {
+    const passwordHash = await hashPassword(password);
+    await query(
+      `INSERT INTO emr.users (id, tenant_id, email, password_hash, role, name, is_active)
+       VALUES (gen_random_uuid(), $1, $2, $3, 'Admin', $4, true)
+       ON CONFLICT (tenant_id, email) 
+       DO UPDATE SET role = 'Admin', password_hash = $3, is_active = true`,
+      [tenantId, email, passwordHash, name || 'Tenant Admin']
+    );
+    res.json({ success: true, message: `Admin seeded for tenant ${tenantId}` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

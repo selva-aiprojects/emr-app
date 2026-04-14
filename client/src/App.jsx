@@ -810,11 +810,11 @@ export default function App() {
                 
                 if (canPrescribe && data.medications && data.medications.length > 0) {
                   // A. Legacy clinical record logic
-                  await api.addPatientClinical(data.patientId, {
-                    tenantId: session.tenantId,
-                    userId: activeUser.id,
-                    section: 'prescriptions',
-                    payload: {
+                  await api.addPatientClinical(
+                    data.patientId, 
+                    session.tenantId, 
+                    'prescriptions', 
+                    {
                       date: new Date().toISOString().slice(0, 10),
                       vitals: { bp: data.bp, hr: data.hr },
                       medications: data.medications,
@@ -823,7 +823,7 @@ export default function App() {
                       wardId: data.wardId,
                       bedId: data.bedId
                     }
-                  });
+                  );
 
                   // B. New Pharmacy Microservice logic
                   try {
@@ -1127,7 +1127,7 @@ export default function App() {
         
         {view === 'lab_tests' && <LabTestsPage tenant={tenant} activeUser={activeUser} />}
         
-        {view === 'communication' && (
+        {view === 'communication' && activeUser?.role !== 'Superadmin' && (
           <CommunicationPage
             activeUser={activeUser}
             notices={notices}

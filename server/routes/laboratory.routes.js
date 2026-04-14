@@ -23,9 +23,9 @@ router.get('/orders', async (req, res) => {
     const { status } = req.query;
     let sql = `
       SELECT sr.*, p.first_name as patient_first_name, p.last_name as patient_last_name, u.name as ordered_by_name
-      FROM emr.service_requests sr
-      LEFT JOIN emr.patients p ON sr.patient_id = p.id
-      LEFT JOIN emr.users u ON sr.requester_id = u.id
+      FROM service_requests sr
+      LEFT JOIN patients p ON sr.patient_id = p.id
+      LEFT JOIN users u ON sr.requester_id = u.id
       WHERE sr.tenant_id = $1 AND sr.category = 'lab'
     `;
     const params = [req.tenantId];
@@ -54,7 +54,7 @@ router.post('/orders', async (req, res) => {
       await query('BEGIN');
       for (const test of tests) {
         const r = await query(
-          `INSERT INTO emr.service_requests (tenant_id, patient_id, encounter_id, requester_id, category, code, display, status, priority, notes)
+          `INSERT INTO service_requests (tenant_id, patient_id, encounter_id, requester_id, category, code, display, status, priority, notes)
            VALUES ($1,$2,$3,$4,'lab',$5,$6,'pending',$7,$8) RETURNING *`,
           [req.tenantId, patientId, encounterId || null, req.user.id, test.code || 'LAB', test.name || test.display, priority, notes || null]
         );
@@ -81,7 +81,7 @@ router.patch('/orders/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     const r = await query(
-      `UPDATE emr.service_requests SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 RETURNING *`,
+      `UPDATE service_requests SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 RETURNING *`,
       [status, id, req.tenantId]
     );
     if (!r.rows.length) return res.status(404).json({ error: 'Order not found' });
@@ -102,7 +102,7 @@ router.post('/orders/:id/results', async (req, res) => {
     const { results, notes, criticalFlag = false } = req.body;
     
     const r = await query(
-      `UPDATE emr.service_requests SET status = 'completed', notes = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 RETURNING *`,
+      `UPDATE service_requests SET status = 'completed', notes = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 RETURNING *`,
       [JSON.stringify({ results, criticalFlag, enteredBy: req.user.id, enteredAt: new Date(), notes }), id, req.tenantId]
     );
     
