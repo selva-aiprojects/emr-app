@@ -52,6 +52,13 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
   }, []);
 
   useEffect(() => {
+    // Reset hasSavedChanges when tenant changes
+    if (tenant) {
+      setHasSavedChanges(false);
+    }
+  }, [tenant?.id]);
+
+  useEffect(() => {
     // Only initialize form from tenant prop if no changes have been saved yet
     if (tenant && !hasSavedChanges) {
       setForm({
