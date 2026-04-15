@@ -82,6 +82,22 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
           accountStatus: tenant?.billingConfig?.accountStatus || 'unlinked'
         }
       });
+      
+      // Apply CSS variables during initial load
+      const root = document.documentElement;
+      if (tenant?.theme?.primary) {
+        root.style.setProperty('--clinical-primary', tenant.theme.primary);
+        root.style.setProperty('--medical-navy', tenant.theme.primary);
+      }
+      if (tenant?.theme?.accent) {
+        root.style.setProperty('--clinical-accent', tenant.theme.accent);
+      }
+      if (tenant?.theme?.hero) {
+        root.style.setProperty('--clinical-hero', tenant.theme.hero);
+      }
+      if (tenant?.theme?.text) {
+        root.style.setProperty('--clinical-text', tenant.theme.text);
+      }
     }
   }, [tenant, hasSavedChanges]);
 
