@@ -14,7 +14,7 @@ export async function getUsers(tenantId = null) {
   let users = [];
   if (tenantId) {
     const result = await query(
-      'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at, last_login FROM emr.users WHERE tenant_id = $1 ORDER BY name',
+      'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at, last_login FROM emr.users WHERE tenant_id::text = $1::text ORDER BY name',
       [tenantId]
     );
     users = result.rows;
@@ -50,7 +50,7 @@ export async function getUsers(tenantId = null) {
  */
 export async function getUserById(id) {
   const result = await query(
-    'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at, last_login FROM emr.users WHERE id = $1',
+    'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at, last_login FROM emr.users WHERE id::text = $1::text',
     [id]
   );
   return result.rows[0];
@@ -109,7 +109,7 @@ export async function createUser({ tenantId, email, passwordHash, name, role, pa
  * @returns {Promise<void>}
  */
 export async function updateUserLastLogin(userId) {
-  await query('UPDATE emr.users SET last_login = NOW() WHERE id = $1', [userId]);
+  await query('UPDATE emr.users SET last_login = NOW() WHERE id::text = $1::text', [userId]);
 }
 
 /**
@@ -120,7 +120,7 @@ export async function updateUserLastLogin(userId) {
  */
 export async function updateUserStatus(userId, isActive) {
   const result = await query(
-    'UPDATE emr.users SET is_active = $1, updated_at = NOW() WHERE id = $2 RETURNING id, is_active',
+    'UPDATE emr.users SET is_active = $1, updated_at = NOW() WHERE id::text = $2::text RETURNING id, is_active',
     [isActive, userId]
   );
   return result.rows[0];

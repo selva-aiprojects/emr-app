@@ -26,7 +26,7 @@ router.get('/orders', async (req, res) => {
       FROM service_requests sr
       LEFT JOIN patients p ON sr.patient_id = p.id
       LEFT JOIN users u ON sr.requester_id = u.id
-      WHERE sr.tenant_id = $1 AND sr.category = 'lab'
+      WHERE sr.tenant_id::text = $1::text AND sr.category = 'lab'
     `;
     const params = [req.tenantId];
     if (status) { sql += ` AND sr.status = $2`; params.push(status); }

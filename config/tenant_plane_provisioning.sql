@@ -21,7 +21,7 @@ $$ language 'plpgsql';
 -- Identity & Authorization Shards (Institutional Roles)
 CREATE TABLE IF NOT EXISTS roles (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id uuid NOT NULL,
+    tenant_id uuid,
     name text NOT NULL UNIQUE,
     description text,
     is_system boolean DEFAULT false,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS role_permissions (
 
 CREATE TABLE IF NOT EXISTS users (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id uuid NOT NULL,
+    tenant_id uuid,
     email text NOT NULL UNIQUE,
     password_hash text NOT NULL,
     name text NOT NULL,

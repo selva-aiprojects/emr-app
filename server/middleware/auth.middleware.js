@@ -249,7 +249,7 @@ export function requirePermission(permission) {
            `SELECT rp.permission 
             FROM emr.role_permissions rp
             JOIN emr.roles r ON rp.role_id = r.id
-            WHERE r.name = $1 AND (r.tenant_id = $2 OR r.is_system = true)`, 
+            WHERE r.name = $1 AND (r.tenant_id::text = $2::text OR r.is_system = true)`, 
            [req.user.role, req.user.tenantId]
          );
          

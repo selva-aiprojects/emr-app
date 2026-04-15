@@ -21,7 +21,7 @@ export async function getPrescriptions(tenantId, filters = {}) {
     JOIN emr.encounters e ON pr.encounter_id = e.id
     JOIN emr.patients p ON e.patient_id = p.id
     LEFT JOIN emr.users u ON e.provider_id = u.id
-    WHERE pr.tenant_id = $1
+    WHERE pr.tenant_id::text = $1::text
   `;
   
   const params = [tenantId];
@@ -53,7 +53,7 @@ export async function getPrescriptionById(id, tenantId) {
     JOIN emr.encounters e ON pr.encounter_id = e.id
     JOIN emr.patients p ON e.patient_id = p.id
     LEFT JOIN emr.users u ON e.provider_id = u.id
-    WHERE pr.id = $1 AND pr.tenant_id = $2
+    WHERE pr.id::text = $1::text AND pr.tenant_id::text = $2::text
   `;
   
   const result = await query(sql, [id, tenantId]);
@@ -111,7 +111,7 @@ export async function dispensePrescription({ id, tenantId, userId, itemId, quant
     await query(`
       UPDATE emr.inventory 
       SET current_stock = current_stock - $1, updated_at = NOW()
-      WHERE id = $2 AND tenant_id = $3
+      WHERE id::text = $2::text AND tenant_id::text = $3::text
     `, [quantity, itemId, tenantId]);
   }
   

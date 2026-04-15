@@ -56,7 +56,7 @@ export async function query(text, params) {
         try {
           // Check Management Plane (Newest)
           let res = await pool.query({
-            text: 'SELECT schema_name FROM emr.management_tenants WHERE id = $1 OR code = $1',
+            text: 'SELECT schema_name FROM emr.management_tenants WHERE id::text = $1 OR code = $1',
             values: [tenantId],
             timeout: 5000 // Short timeout for routing lookup to avoid hanging
           });
@@ -64,7 +64,7 @@ export async function query(text, params) {
           if (res.rows.length === 0) {
             // Check Legacy Tenants table (fallback to LOWER(code) as schema)
             res = await pool.query({
-              text: 'SELECT code as schema_name FROM emr.tenants WHERE id = $1',
+              text: 'SELECT code as schema_name FROM emr.tenants WHERE id::text = $1',
               values: [tenantId],
               timeout: 5000
             });
@@ -146,6 +146,23 @@ async function runPendingMigrations() {
   const migrationsDir = path.join(__dirname, 'migrations');
 
   if (!fs.existsSync(migrationsDir)) return;
+
+  // A. ENSURE NEXUS MASTER BASELINE FIRST
+  const nexusBaseline = path.join(__dirname, '../../database/NEXUS_MASTER_BASELINE.sql');
+  if (fs.existsSync(nexusBaseline)) {
+    const baselineCheck = await pool.query('SELECT 1 FROM emr.migrations_log WHERE filename = $1', ['baseline/nexus_master']);
+    if (baselineCheck.rowCount === 0) {
+      console.log('[DATABASE_BASELINE] Applying Nexus Master Baseline...');
+      try {
+        const sql = fs.readFileSync(nexusBaseline, 'utf8');
+        await pool.query(sql);
+        await pool.query('INSERT INTO emr.migrations_log (filename) VALUES ($1)', ['baseline/nexus_master']);
+        console.log('[DATABASE_BASELINE] ✅ Nexus Master Baseline Success.');
+      } catch (err) {
+        console.error('[DATABASE_BASELINE] ❌ Nexus Master Baseline Failed:', err.message);
+      }
+    }
+  }
 
   const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
   

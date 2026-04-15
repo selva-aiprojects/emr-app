@@ -42,6 +42,13 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
   const [error, setError] = useState('');
+  const [catalog, setCatalog] = useState({ plans: [], modules: [] });
+
+  useEffect(() => {
+    api.apiRequest('/tenants/subscription-catalog').then(res => {
+      if (res && res.plans) setCatalog(res);
+    }).catch(e => console.warn('Catalog restricted', e));
+  }, []);
 
   useEffect(() => {
     if (tenant) {
@@ -237,25 +244,53 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
             </section>
 
             <section className="clinical-card p-8">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600"><ShieldCheck size={20} /></div>
-                <div><h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Operational Shards</h3><p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Feature Activation</p></div>
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600"><ShieldCheck size={20} /></div>
+                  <div><h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Subscription Matrix</h3><p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Platform Feature Access</p></div>
+                </div>
+                <div className="px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-[10px] font-black text-indigo-700 uppercase tracking-widest">
+                  Active Tier: {tenant?.subscription_tier || 'Professional'}
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                {[
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(catalog.modules.length > 0 ? catalog.modules : [
                   { key: 'inventory', label: 'Pharmacy Hub' },
                   { key: 'telehealth', label: 'Telemedicine' },
                   { key: 'payroll', label: 'Payroll Hub' },
                   { key: 'staff_governance', label: 'Staff Governance' },
                   { key: 'institutional_ledger', label: 'Institutional Ledger' }
-                ].map(f => (
-                  <div key={f.key} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100">
-                    <span className="text-[10px] font-black text-slate-600 uppercase">{f.label}</span>
-                    <button type="button" onClick={() => setForm(p => ({ ...p, features: { ...p.features, [f.key]: !p.features[f.key] } }))} className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${form.features[f.key] ? 'bg-emerald-500' : 'bg-slate-200'}`}>
-                      <span className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${form.features[f.key] ? 'translate-x-5' : 'translate-x-1'}`} />
-                    </button>
-                  </div>
-                ))}
+                ]).map(f => {
+                  const plansWithFeature = catalog.plans.filter(p => (p.moduleKeys || []).includes(f.key));
+                  const myPlanTier = (tenant?.subscription_tier || 'Professional').toLowerCase();
+                  const myPlanObj = catalog.plans.find(p => p.id === myPlanTier);
+                  
+                  // If catalog didn't load gracefully fallback to enabling all
+                  const hasAccess = catalog.plans.length === 0 || (myPlanObj && (myPlanObj.moduleKeys || []).includes(f.key));
+                  const minPlan = plansWithFeature.length > 0 ? plansWithFeature[0] : null;
+
+                  return (
+                    <div key={f.key} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${hasAccess ? 'bg-slate-50/50 border-slate-100' : 'bg-slate-50/30 border-dashed border-slate-200 opacity-60 grayscale cursor-not-allowed'}`}>
+                      <div>
+                        <span className="text-[10px] font-black text-slate-800 uppercase block">{f.label}</span>
+                        {!hasAccess && minPlan && (
+                           <span className="text-[9px] font-bold text-amber-600 uppercase tracking-widest">Requires {minPlan.name} Plan</span>
+                        )}
+                        {hasAccess && (
+                           <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-[0.2em] opacity-50">Included</span>
+                        )}
+                      </div>
+                      <button type="button" 
+                        disabled={!hasAccess}
+                        onClick={() => {
+                          if (hasAccess) setForm(p => ({ ...p, features: { ...p.features, [f.key]: !p.features[f.key] } }));
+                        }} 
+                        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${!hasAccess ? 'bg-slate-200' : form.features[f.key] ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                        <span className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${form.features[f.key] && hasAccess ? 'translate-x-5' : 'translate-x-1'}`} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </section>
 

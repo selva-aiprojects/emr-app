@@ -20,7 +20,7 @@ export async function getAppointments(tenantId, filters = {}) {
     FROM appointments a
     LEFT JOIN patients p ON a.patient_id = p.id
     LEFT JOIN emr.users u ON a.provider_id = u.id
-    WHERE a.tenant_id = $1
+    WHERE a.tenant_id::text = $1::text
   `;
   
   const params = [tenantId];
@@ -70,7 +70,7 @@ export async function updateAppointmentStatus(appointmentId, tenantId, status) {
   const sql = `
     UPDATE appointments 
     SET status = $1, updated_at = NOW() 
-    WHERE id = $2 AND tenant_id = $3
+    WHERE id::text = $2::text AND tenant_id::text = $3::text
     RETURNING *
   `;
   
@@ -131,7 +131,7 @@ export async function rescheduleAppointment({ appointmentId, tenantId, userId, s
       scheduled_end = $2, 
       reason = COALESCE($3, reason),
       updated_at = NOW()
-    WHERE id = $4 AND tenant_id = $5
+    WHERE id::text = $4::text AND tenant_id::text = $5::text
     RETURNING *
   `;
   

@@ -21,7 +21,7 @@ export async function getInvoices(tenantId, filters = {}) {
     LEFT JOIN patients p ON i.patient_id = p.id
     LEFT JOIN encounters e ON i.encounter_id = e.id
     LEFT JOIN emr.users u ON e.provider_id = u.id
-    WHERE i.tenant_id = $1
+    WHERE i.tenant_id::text = $1::text
   `;
   
   const params = [tenantId];
@@ -110,7 +110,7 @@ export async function updateInvoiceStatus(invoiceId, tenantId, status, additiona
   const sql = `
     UPDATE invoices
     SET ${setClause}
-    WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex++}
+    WHERE id::text = $${paramIndex++}::text AND tenant_id::text = $${paramIndex++}::text
     RETURNING *
   `;
   
@@ -122,7 +122,7 @@ export async function payInvoice({ tenantId, invoiceId, paymentMethod, paymentAm
   const sql = `
     UPDATE invoices 
     SET status = 'paid', payment_method = $1, paid = $2, transaction_id = $3, payment_date = NOW(), payment_notes = $4, paid_by = $5, updated_at = NOW()
-    WHERE id = $6 AND tenant_id = $7
+    WHERE id::text = $6::text AND tenant_id::text = $7::text
     RETURNING *
   `;
   
@@ -139,7 +139,7 @@ export async function getInvoiceById(invoiceId, tenantId) {
     FROM invoices i
     LEFT JOIN patients p ON i.patient_id = p.id
     LEFT JOIN emr.users u ON i.doctor_id = u.id
-    WHERE i.id = $1 AND i.tenant_id = $2
+    WHERE i.id::text = $1::text AND i.tenant_id::text = $2::text
   `;
   
   const result = await query(sql, [invoiceId, tenantId]);

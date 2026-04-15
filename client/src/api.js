@@ -181,7 +181,7 @@ export async function getTenants() {
 }
 
 export async function createTenant(data) {
-  return await apiRequest('/tenants', {
+  return await apiRequest('/superadmin/tenants', {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -493,7 +493,7 @@ export async function getPrescriptions(tenantId, filters = {}) {
 }
 
 export async function createPrescription(tenantId, data) {
-  return await apiRequest('/pharmacy/v1/prescriptions', {
+  return await apiRequest('/pharmacy/prescriptions', {
     method: 'POST',
     headers: { 'x-tenant-id': tenantId },
     body: JSON.stringify(data)
@@ -501,7 +501,7 @@ export async function createPrescription(tenantId, data) {
 }
 
 export async function validatePrescription(tenantId, data) {
-  return await apiRequest('/pharmacy/v1/prescriptions/validate', {
+  return await apiRequest('/pharmacy/prescriptions/validate', {
     method: 'POST',
     headers: { 'x-tenant-id': tenantId },
     body: JSON.stringify(data)
@@ -811,6 +811,7 @@ const apiClient = {
   // Superadmin
   getSuperadminOverview,
   syncSuperadminMetrics,
+  megaSeedInstitutional,
 
   // Patients
   getPatients,

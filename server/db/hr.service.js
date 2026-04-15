@@ -13,7 +13,7 @@ import { createUser } from './user.service.js';
  */
 export async function getEmployees(tenantId) {
   const result = await query(
-    'SELECT * FROM emr.employees WHERE tenant_id = $1 ORDER BY name',
+    'SELECT * FROM emr.employees WHERE tenant_id::text = $1::text ORDER BY name',
     [tenantId]
   );
   return result.rows.map(row => ({
@@ -82,7 +82,7 @@ export async function createEmployee({ tenantId, name, code, department, designa
  */
 export async function getEmployeeLeaves(tenantId) {
   const result = await query(
-    'SELECT * FROM emr.employee_leaves WHERE tenant_id = $1 ORDER BY from_date DESC',
+    'SELECT * FROM emr.employee_leaves WHERE tenant_id::text = $1::text ORDER BY from_date DESC',
     [tenantId]
   );
   return result.rows.map(row => ({

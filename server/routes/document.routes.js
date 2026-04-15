@@ -15,7 +15,7 @@ router.use(requireTenant);
 router.get('/', async (req, res) => {
   try {
     const { category, includeDeleted = 'false', patientId } = req.query;
-    const conditions = ['d.tenant_id = $1'];
+    const conditions = ['d.tenant_id::text = $1::text'];
     const params = [req.tenantId];
     if (category) { params.push(category); conditions.push(`d.category = $${params.length}`); }
     if (patientId) { params.push(patientId); conditions.push(`d.patient_id = $${params.length}`); }

@@ -175,7 +175,7 @@ router.post('/login', async (req, res) => {
         const roleResult = await query(
           `SELECT rp.permission FROM emr.role_permissions rp
            JOIN emr.roles r ON rp.role_id = r.id
-           WHERE r.name = $1 AND (r.tenant_id = $2 OR r.is_system = true)`,
+           WHERE r.name = $1 AND (r.tenant_id::text = $2::text OR r.is_system = true)`,
           [finalRole, user.tenant_id]
         );
         if (roleResult.rows.length > 0) {

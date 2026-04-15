@@ -24,5 +24,6 @@ CREATE INDEX IF NOT EXISTS idx_service_requests_status ON emr.service_requests(s
 CREATE INDEX IF NOT EXISTS idx_service_requests_category ON emr.service_requests(category);
 
 -- Foreign Key Constraints (References established tables)
+-- Neutralized to support architectural isolation (Master Plane Cleanup)
 ALTER TABLE emr.service_requests ADD CONSTRAINT sr_tenant_fkey FOREIGN KEY (tenant_id) REFERENCES emr.tenants(id) ON DELETE CASCADE;
-ALTER TABLE emr.service_requests ADD CONSTRAINT sr_patient_fkey FOREIGN KEY (patient_id) REFERENCES emr.patients(id) ON DELETE CASCADE;
+-- ALTER TABLE emr.service_requests ADD CONSTRAINT sr_patient_fkey FOREIGN KEY (patient_id) REFERENCES emr.patients(id) ON DELETE CASCADE;

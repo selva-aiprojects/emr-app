@@ -154,16 +154,22 @@ router.patch('/:id/clinical', restrictPatientAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const { section, payload } = req.body;
+    
+    console.log('[DEBUG_CLINICAL] Incoming request:', { id, section, payload: !!payload });
 
-    const validSections = ['caseHistory', 'medications', 'prescriptions', 'recommendations', 'feedbacks', 'testReports'];
-    if (!section || !validSections.includes(section)) {
-      return res.status(400).json({ error: 'Invalid section' });
+    const normalize = (s) => (s || '').toLowerCase().trim();
+    const validSections = ['casehistory', 'medications', 'prescriptions', 'recommendations', 'feedbacks', 'testreports', 'medicalHistory'];
+    
+    if (!section || !validSections.map(s => s.toLowerCase()).includes(normalize(section))) {
+      console.warn(`[DEBUG_CLINICAL] Invalid section detected: "${section}"`);
+      return res.status(400).json({ error: 'Invalid section', received: section, valid: validSections });
     }
 
     if (!payload) {
       return res.status(400).json({ error: 'payload is required' });
     }
-    if (section === 'prescriptions' && req.user?.role !== 'Doctor' && req.user?.role !== 'Admin') {
+    const userRole = (req.user?.role || '').toLowerCase();
+    if (normalize(section) === 'prescriptions' && userRole !== 'doctor' && userRole !== 'admin') {
       return res.status(403).json({ error: 'Only doctors can author prescriptions' });
     }
 

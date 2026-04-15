@@ -132,12 +132,20 @@ export async function createNewTenant(req, res) {
   try {
     const { tenantData, adminData } = req.body;
     const result = await provisionNewTenant(tenantData, adminData);
-    res.json(result);
+    // Guard against watchdog having already sent a 503 response
+    if (!res.headersSent) {
+      res.json(result);
+    }
   } catch (error) {
     if (error.code === 'P2002' || error.code === '23505' || (error.message && (error.message.includes('Unique constraint failed') || error.message.includes('duplicate key value violates unique constraint')))) {
-      return res.status(400).json({ error: 'A tenant with this code or subdomain already exists. Please choose a unique identifier.' });
+      if (!res.headersSent) {
+        return res.status(400).json({ error: 'A tenant with this code or subdomain already exists. Please choose a unique identifier.' });
+      }
+      return;
     }
-    res.status(500).json({ error: error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
   }
 }
 
@@ -369,7 +377,7 @@ export async function broadcastToAllTenants(req, res) {
 export async function getTenantAdmin(req, res) {
   const { id } = req.params;
   try {
-    const tenantRes = await query('SELECT schema_name, code FROM emr.management_tenants WHERE id = $1', [id]);
+    const tenantRes = await query('SELECT schema_name, code FROM emr.management_tenants WHERE id::text = $1::text', [id]);
     const tenant = tenantRes.rows[0];
     if (!tenant) return res.status(404).json({ error: 'Shard not found.' });
 
@@ -439,8 +447,8 @@ export async function updateTenantSubscription(req, res) {
   const { id } = req.params;
   const { tier } = req.body;
   try {
-    await query('UPDATE emr.management_tenants SET status = status WHERE id = $1', [id]); // Verify exists
-    await query('UPDATE emr.tenants SET subscription_tier = $1 WHERE id = $2', [tier, id]);
+    await query('UPDATE emr.management_tenants SET updated_at = NOW() WHERE id::text = $1::text', [id]); // Verify exists
+    await query('UPDATE emr.tenants SET subscription_tier = $1 WHERE id::text = $2::text', [tier, id]);
     
     try {
        await query(`
@@ -531,7 +539,7 @@ export async function updateTenant(req, res) {
 
     values.push(id);
     const result = await query(
-      `UPDATE emr.management_tenants SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`,
+      `UPDATE emr.management_tenants SET ${fields.join(', ')} WHERE id::text = $${idx}::text RETURNING *`,
       values
     );
 
@@ -562,32 +570,39 @@ export async function deleteTenant(req, res) {
 
   try {
     // 1. Fetch tenant info
-    const tenantRes = await query('SELECT * FROM emr.management_tenants WHERE id = $1', [id]);
+    const tenantRes = await query('SELECT * FROM emr.management_tenants WHERE id::text = $1::text', [id]);
     const tenant = tenantRes.rows[0];
     if (!tenant) return res.status(404).json({ error: 'Tenant not found.' });
 
     const schemaName = tenant.schema_name;
 
-    // 2. Log decommission BEFORE purge (FK safe order)
+    // 2. Remove FK-dependent rows first to prevent constraint violations on delete
+    await query('DELETE FROM emr.management_tenant_metrics WHERE tenant_id::text = $1::text', [id]).catch(() => {});
+    await query('DELETE FROM emr.management_system_logs WHERE tenant_id::text = $1::text', [id]).catch(() => {});
+
+    // 3. Log decommission to catch-all (no FK now)
     try {
        await query(`
-         INSERT INTO emr.management_system_logs (event, tenant_id, details)
-         VALUES ('TENANT_DECOMMISSIONED', $1, $2)
-       `, [id, JSON.stringify({ tenantId: id, tenantCode: tenant.code, schemaName })]);
+         INSERT INTO emr.management_system_logs (event, details)
+         VALUES ('TENANT_DECOMMISSIONED', $1)
+       `, [JSON.stringify({ tenantId: id, tenantCode: tenant.code, schemaName })]);
     } catch (err) {
        console.warn('[DELETE_WARN] Log deferred:', err.message);
     }
 
-    // 3. Drop the tenant's isolated schema
-    await managementClient.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+    // 4. Also remove from emr.users (the global auth plane entry created during provisioning)
+    await query('DELETE FROM emr.users WHERE tenant_id::text = $1::text', [id]).catch(() => {});
 
-    // 4. Purge tenant from management metadata
-    await query('DELETE FROM emr.management_tenants WHERE id = $1', [id]);
+    // 5. Drop the tenant's isolated schema
+    await query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
 
-    // 5. Also remove from legacy table if present
-    await query('DELETE FROM emr.tenants WHERE id = $1', [id]).catch(() => {});
+    // 6. Purge tenant from management metadata
+    await query('DELETE FROM emr.management_tenants WHERE id::text = $1::text', [id]);
 
-    // 6. Release any cached Prisma client for this schema
+    // 7. Also remove from legacy table if present
+    await query('DELETE FROM emr.tenants WHERE id::text = $1::text', [id]).catch(() => {});
+
+    // 8. Release any cached Prisma client for this schema
     const { releaseTenantClient } = await import('../db/prisma_manager.js');
     releaseTenantClient(schemaName);
 

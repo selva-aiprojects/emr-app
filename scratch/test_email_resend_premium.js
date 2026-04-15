@@ -1,20 +1,18 @@
 import dotenv from 'dotenv';
-import nodemailer from 'nodemailer';
 import fetch from 'node-fetch';
-import fs from 'fs';
-import path from 'path';
 
 dotenv.config();
 
 /**
- * Send Tenant Welcome Email
- * Prioritizes Resend API, falls back to SMTP, then Mock
+ * Diagnostic script to test the NEW Premium Resend template
+ * Run with: node scratch/test_email_resend_premium.js
  */
-export async function sendTenantWelcomeEmail(email, tenantName, subdomain, credentials) {
-  const fromName = "Healthezee Platform";
-  // Explicitly force the verified domain instead of relying on .env file fallback
-  const fromEmail = "Healthezee Platform <care@cognivectra.com>";
-  const subject = `Welcome to Healthezee: ${tenantName} Workspace Initialized`;
+async function diagnosticTest() {
+  const apiKey = process.env.RESEND_API_KEY;
+  const testEmail = 'b.selvakumar.aws@gmail.com'; 
+  const tenantName = "Premium Diagnostic Lab";
+  const subdomain = "premium-lab";
+  const password = "Secur3_Pass_!2026";
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -73,7 +71,7 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
               </div>
               <div class="credential-item" style="border-bottom: none; margin-top: 12px; padding-top: 12px; border-top: 2px dashed #e2e8f0;">
                 <span class="label" style="font-weight: 600; color: #0f172a;">Temporary Security Key</span>
-                <span class="password-badge">${credentials.password}</span>
+                <span class="password-badge">${password}</span>
               </div>
             </div>
 
@@ -95,77 +93,34 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
     </html>
   `;
 
-  // --- LOCAL DUMP (Best for checking delivery content instantly) ---
+  console.log('--- Resend Premium Template Test ---');
+  
   try {
-    const dumpPath = path.join(process.cwd(), 'server', 'logs');
-    if (!fs.existsSync(dumpPath)) fs.mkdirSync(dumpPath, { recursive: true });
-    const fileName = `latest_mail_preview.html`;
-    fs.writeFileSync(path.join(dumpPath, fileName), htmlContent);
-    console.log(`✉️ [MAIL_PREVIEW] Local copy saved: server/logs/${fileName}`);
-  } catch (err) {
-    console.warn('⚠️ [MAIL_PREVIEW_ERR] Failed to save local copy:', err.message);
-  }
-
-  // --- STRATEGY 1: RESEND API (High Reliability) ---
-  if (process.env.RESEND_API_KEY) {
-    try {
-      // In Resend free tier, you can only send to the verified email.
-      // We force it to 'b.selvakumar.aws@gmail.com' per the Resend validation error.
-      const overrideEmail = 'b.selvakumar.aws@gmail.com';
-      
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
-        },
-        body: JSON.stringify({
-          from: "onboarding@resend.dev",
-          to: [overrideEmail],
-          subject: subject,
-          html: htmlContent
-        })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`✉️ [RESEND_SUCCESS] Email dispatched via API to ${overrideEmail}:`, data.id);
-        return { success: true, messageId: data.id };
-      } else {
-        const error = await response.text();
-        console.warn('⚠️ [RESEND_API_FAIL] status:', response.status, error);
-      }
-    } catch (e) {
-      console.warn('⚠️ [RESEND_BRIDGE_ERROR]', e.message);
-    }
-  }
-
-  // --- STRATEGY 2: SMTP (Standard Nodemailer) ---
-  if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
-    try {
-      const transporter = nodemailer.createTransport({
-        service: 'gmail', // or use host/port if provided
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_APP_PASSWORD
-        }
-      });
-
-      const info = await transporter.sendMail({
-        from: fromEmail,
-        to: email,
-        subject: subject,
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        from: "onboarding@resend.dev",
+        to: [testEmail],
+        subject: `Welcome to Healthezee: ${tenantName} Workspace Initialized`,
         html: htmlContent
-      });
+      })
+    });
 
-      console.log('✉️ [SMTP_SUCCESS] Email dispatched:', info.messageId);
-      return { success: true, messageId: info.messageId };
-    } catch (smtpErr) {
-      console.warn('⚠️ [SMTP_ERROR] Failed to send via SMTP:', smtpErr.message);
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log('✅ Success! Message ID:', data.id);
+      console.log('Check your verified inbox for the NEW premium design.');
+    } else {
+      console.error('❌ API Error:', response.status, data);
     }
+  } catch (error) {
+    console.error('❌ Network Error:', error.message);
   }
-
-  // --- MOCK FAIL-SAFE ---
-  console.log('✉️ [MAIL_MOCK] Reverting to mock log. Resend/SMTP failed or not configured.');
-  return { success: true, mocked: true };
 }
+
+diagnosticTest();

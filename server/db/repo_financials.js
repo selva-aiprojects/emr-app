@@ -37,7 +37,7 @@ export async function addExpense({ tenantId, category, description, amount, date
 }
 
 export async function getExpenses(tenantId, filters = {}) {
-    let sql = `SELECT * FROM expenses WHERE tenant_id = $1`;
+    let sql = `SELECT * FROM expenses WHERE tenant_id::text = $1::text`;
     const params = [tenantId];
     if (filters.month) {
         sql += ` AND DATE_TRUNC('month', date) = $2`;
@@ -53,7 +53,7 @@ export async function getFinancialSummary(tenantId, month) {
     const incomeSql = `
     SELECT COALESCE(SUM(paid), 0) as total_income 
     FROM invoices 
-    WHERE tenant_id = $1 AND status IN ('paid', 'partially_paid') 
+    WHERE tenant_id::text = $1::text AND status IN ('paid', 'partially_paid') 
     AND DATE_TRUNC('month', created_at) = $2::timestamp
   `;
 
@@ -61,14 +61,14 @@ export async function getFinancialSummary(tenantId, month) {
     const expenseSql = `
     SELECT category, COALESCE(SUM(amount), 0) as total 
     FROM expenses 
-    WHERE tenant_id = $1 
+    WHERE tenant_id::text = $1::text 
     AND DATE_TRUNC('month', date) = $2::timestamp 
     GROUP BY category
   `;
 
     // 3. Salaries (Estimated from Employee Master)
     const salarySql = `
-    SELECT COALESCE(SUM(salary), 0) as total_salaries FROM employees WHERE tenant_id = $1
+    SELECT COALESCE(SUM(salary), 0) as total_salaries FROM employees WHERE tenant_id::text = $1::text
   `;
 
     const [incomeRes, expenseRes, salaryRes] = await Promise.all([

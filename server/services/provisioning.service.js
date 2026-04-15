@@ -17,22 +17,81 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * This is the canonical way to initialize a new tenant's database.
  */
 async function executeTenantBaseSchema(schemaName) {
-  const sqlPath = join(__dirname, '../../config/tenant_plane_provisioning.sql');
+  const sqlPath = join(__dirname, '../../database/SHARD_MASTER_BASELINE.sql');
   const sql = readFileSync(sqlPath, 'utf8');
-  
-  // Set search_path and run the entire DDL block as a single operation to preserve functions/triggers
-  const ddl = `
-    SET search_path TO "${schemaName}", public;
-    ${sql}
-  `;
-  
+
+  const pool = (await import('../db/connection.js')).default;
+  const client = await pool.connect();
   try {
-    await query(ddl);
+    await client.query('BEGIN');
+    // SET LOCAL keeps the search_path within this transaction only
+    await client.query(`SET LOCAL search_path TO "${schemaName}", public`);
+
+    // Split SQL into individual statements, respecting $$ dollar-quoted PL/pgSQL blocks
+    const statements = [];
+    let current = '';
+    let inDollarQuote = false;
+    let dollarTag = '';
+
+    for (let i = 0; i < sql.length; i++) {
+      const ch = sql[i];
+      current += ch;
+
+      if (!inDollarQuote) {
+        const dollarMatch = sql.slice(i).match(/^\$[^$]*\$/);
+        if (dollarMatch) {
+          inDollarQuote = true;
+          dollarTag = dollarMatch[0];
+          current += dollarTag.slice(1);
+          i += dollarTag.length - 1;
+          continue;
+        }
+        if (ch === ';') {
+          const stmt = current.trim().slice(0, -1).trim();
+          if (stmt.length > 0 && !stmt.replace(/^--.*$/mg, '').trim().startsWith('--')) {
+            statements.push(stmt);
+          }
+          current = '';
+        }
+      } else {
+        if (sql.slice(i - dollarTag.length + 1, i + 1) === dollarTag) {
+          inDollarQuote = false;
+          dollarTag = '';
+        }
+      }
+    }
+    const trailing = current.trim();
+    if (trailing.length > 0) statements.push(trailing);
+
+    let executed = 0;
+    for (const stmt of statements) {
+      // Use SAVEPOINT per statement: a failed statement only rolls back itself,
+      // the transaction stays alive and subsequent statements continue normally.
+      await client.query('SAVEPOINT sp');
+      try {
+        await client.query(stmt);
+        await client.query('RELEASE SAVEPOINT sp');
+        executed++;
+      } catch (stmtErr) {
+        await client.query('ROLLBACK TO SAVEPOINT sp');
+        // Only log unexpected errors, not routine "already exists" notices
+        if (!stmtErr.message.includes('already exists')) {
+          console.warn(`[SCHEMA_WARN] ${schemaName}: ${stmtErr.message.substring(0, 120)}`);
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+    console.log(`✅ [SCHEMA_OK] Deployed ${executed}/${statements.length} statements to schema: ${schemaName}`);
   } catch (e) {
+    await client.query('ROLLBACK');
     console.error(`[SCHEMA_FATAL] Base schema deployment failed for ${schemaName}:`, e.message);
     throw e;
+  } finally {
+    client.release();
   }
 }
+
 
 const DEFAULT_ROLE_DEFINITIONS = [
   {
@@ -94,10 +153,25 @@ export async function provisionNewTenant(tenantData, adminData) {
   let tenant;
 
   try {
-    // 1. Create or Map entry in the management database (Control Plane)
+    // 1. Create in legacy tenants table (for full platform visibility)
+    const legacySql = `
+      INSERT INTO emr.tenants (name, code, subdomain, contact_email, subscription_tier, status)
+      VALUES ($1, $2, $3, $4, $5, 'active')
+      ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
+      RETURNING *
+    `;
+    const { rows: [legacyTenant] } = await query(legacySql, [
+      tenantData.name,
+      tenantData.code,
+      tenantData.subdomain,
+      tenantData.contactEmail,
+      tenantData.subscriptionTier || 'Enterprise'
+    ]);
+
+    // 2. Map entry in the management database (Control Plane)
     const insertSql = `
       INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier)
-      VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       ON CONFLICT (code) DO UPDATE SET 
         name = EXCLUDED.name,
         updated_at = NOW()
@@ -105,6 +179,7 @@ export async function provisionNewTenant(tenantData, adminData) {
     `;
     
     const { rows: [createdTenant] } = await query(insertSql, [
+      legacyTenant.id,
       tenantData.name,
       tenantData.code,
       tenantData.subdomain,
@@ -131,13 +206,13 @@ export async function provisionNewTenant(tenantData, adminData) {
     const createdRoles = [];
     for (const roleDef of DEFAULT_ROLE_DEFINITIONS) {
       const roleResult = await query(`
-        INSERT INTO "${schemaName}"."roles" (name, description, is_system)
-        VALUES ($1, $2, $3)
+        INSERT INTO "${schemaName}"."roles" (tenant_id, name, description, is_system)
+        VALUES ($1, $2, $3, $4)
         ON CONFLICT (name) DO UPDATE SET 
           description = EXCLUDED.description,
           is_system = EXCLUDED.is_system
         RETURNING id, name
-      `, [roleDef.name, roleDef.description, roleDef.is_system]);
+      `, [tenant.id, roleDef.name, roleDef.description, roleDef.is_system]);
       
       createdRoles.push(roleResult.rows[0]);
     }
@@ -149,47 +224,71 @@ export async function provisionNewTenant(tenantData, adminData) {
 
     const hashedPassword = await bcrypt.hash(adminData.password, 10);
     const userResult = await query(`
-      INSERT INTO "${schemaName}"."users" (email, password_hash, name, role_id)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name
+      INSERT INTO "${schemaName}"."users" (tenant_id, email, password_hash, name, role_id)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, tenant_id = EXCLUDED.tenant_id
       RETURNING id, email
-    `, [adminData.email, hashedPassword, adminData.name, adminRole.id]);
+    `, [tenant.id, adminData.email, hashedPassword, adminData.name, adminRole.id]);
 
     const user = userResult.rows[0];
 
-    await installTenantMetricsSync(schemaName, tenant.id);
+    // CRITICAL: Also register the admin in emr.users (global control plane).
+    // The auth system (getUserByEmail in user.service.js) queries emr.users for ALL tenant
+    // logins. Without this, the admin exists in the shard but is invisible to the login flow.
+    await query(`
+      INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active)
+      VALUES ($1, $2, $3, $4, $5, 'Admin', true)
+      ON CONFLICT (email) DO UPDATE SET 
+        tenant_id = EXCLUDED.tenant_id,
+        password_hash = EXCLUDED.password_hash,
+        name = EXCLUDED.name,
+        role = 'Admin',
+        is_active = true
+    `, [user.id, tenant.id, adminData.email, hashedPassword, adminData.name]);
+    console.log(`[PROVISIONING] Admin user registered in global auth plane for ${schemaName}.`);
 
-    // 5. Log success to the global system log
-    try {
-      await query(`
-        INSERT INTO emr.management_system_logs (id, event, tenant_id, details, created_at)
-        VALUES (gen_random_uuid(), 'TENANT_PROVISIONED', $1, $2, NOW())
-      `, [tenant.id, JSON.stringify({
-        schemaName,
-        tenantId: tenant.id,
-        adminEmail: user.email,
-        seededRoles: createdRoles.map((role) => role.name)
-      })]);
-    } catch (logErr) {
-      console.warn('[PROVISIONING_WARN] System log recording deferred:', logErr.message);
-    }
+    // BACKGROUND: metrics sync, logging, and email are non-blocking.
+    // The critical provisioning (schema + users) is complete — return immediately.
+    // These tasks complete asynchronously and do not affect the tenant's usability.
+    setImmediate(() => {
+      (async () => {
+        try {
+          await installTenantMetricsSync(schemaName, tenant.id);
+          console.log(`[PROVISIONING_BG] Metrics sync installed for ${schemaName}`);
+        } catch (metricsErr) {
+          console.warn(`[PROVISIONING_BG] Metrics sync deferred for ${schemaName}:`, metricsErr?.message || metricsErr);
+        }
+        
+        try {
+          await query(`
+            INSERT INTO emr.management_system_logs (id, event, tenant_id, details, created_at)
+            VALUES (gen_random_uuid(), 'TENANT_PROVISIONED', $1, $2, NOW())
+          `, [tenant.id, JSON.stringify({
+            schemaName,
+            tenantId: tenant.id,
+            adminEmail: user.email,
+            seededRoles: createdRoles.map((role) => role.name)
+          })]);
+        } catch (logErr) {
+          console.warn('[PROVISIONING_BG] Log deferred:', logErr?.message || logErr);
+        }
 
-    // 6. Send welcome email to the communication address (strictly as per requirements)
-    const communicationRecipient = tenantData.contactEmail || 'b.selvakumar@gmail.com';
-    console.log(`[PROVISIONING] Sending welcome email to Board Member / Communication recipient: ${communicationRecipient}`);
-    
-    try {
-      await sendTenantWelcomeEmail(
-        communicationRecipient, 
-        tenantData.name, 
-        tenantData.subdomain, 
-        { email: adminData.email, password: adminData.password }
-      );
-      console.log(`[PROVISIONING] Welcome email successfully dispatched to communication hub for ${tenantData.code}`);
-    } catch (mailErr) {
-      console.warn(`[PROVISIONING] Communication dispatch failed for ${communicationRecipient}:`, mailErr.message);
-      // Non-fatal for the core process
-    }
+        try {
+          const communicationRecipient = tenantData.contactEmail || 'b.selvakumar@gmail.com';
+          await sendTenantWelcomeEmail(
+            communicationRecipient,
+            tenantData.name,
+            tenantData.subdomain,
+            { email: adminData.email, password: adminData.password }
+          );
+          console.log(`[PROVISIONING_BG] Welcome email dispatched for ${tenantData.code}`);
+        } catch (mailErr) {
+          console.warn(`[PROVISIONING_BG] Email deferred:`, mailErr?.message || mailErr);
+        }
+      })().catch(err => {
+        console.error('[PROVISIONING_BG] Fatal background error intercepted:', err);
+      });
+    });
 
     return {
       ...tenant,
@@ -222,7 +321,7 @@ export async function provisionNewTenant(tenantData, adminData) {
       
       // 3. Purge orphaned metadata
       if (tenant?.id) {
-        await query('DELETE FROM emr.management_tenants WHERE id = $1', [tenant.id])
+        await query('DELETE FROM emr.management_tenants WHERE id::text = $1::text', [tenant.id])
           .catch(err => console.error('Orphaned tenant metadata purge failed:', err.message));
       }
     } catch (rollbackError) {

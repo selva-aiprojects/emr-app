@@ -83,51 +83,13 @@ export default function EnhancedSuperadminPage({
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-transparent">
+    <div className="flex flex-col min-h-full bg-transparent">
       {/* MAIN VIEWPORT */}
       <main className="flex-1 flex flex-col relative">
-        {/* TOP COMMAND BAR */}
-        <header className="h-[80px] border-b border-slate-200 flex items-center justify-between px-10 z-40 bg-white/80 backdrop-blur-md">
-           <div className="relative group w-[400px]">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400" />
-              <input 
-                type="text" 
-                placeholder="Query Shard, Policy or Identity..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-3 pl-12 pr-4 text-[12px] font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 placeholder:text-slate-400 transition-all font-tabular"
-              />
-           </div>
-
-           <div className="flex items-center gap-6">
-              <button 
-                onClick={handleMegaSeed}
-                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-100 transition-all group"
-              >
-                 <Shield className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                 Institutional Simulation
-              </button>
-              <button className="relative w-10 h-10 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-indigo-600 transition-all group">
-                 <Bell className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                 {tickets.filter(t => t.status !== 'resolved').length > 0 && (
-                   <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 border-2 border-[#1e293b]" />
-                 )}
-              </button>
-              <div className="h-8 w-px bg-white/5" />
-              <div className="flex items-center gap-4">
-                 <div className="text-right">
-                    <p className="text-[12px] font-black text-slate-900 tracking-tight">Root Auditor</p>
-                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Tier 0 Access</p>
-                 </div>
-                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-800 to-indigo-900 border border-white/10 flex items-center justify-center text-white text-[12px] font-black">
-                   RA
-                 </div>
-              </div>
-           </div>
-        </header>
+        {/* TOP COMMAND BAR REMOVED: Managed by parent AppLayout to prevent redundancy */}
 
         {/* DYNAMIC VIEW ZONE */}
-        <section className="flex-1 overflow-y-auto p-10 scroll-smooth relative bg-[#f1f5f9]/30 custom-scrollbar">
+        <section className="flex-1 overflow-y-auto px-6 lg:px-10 py-8 scroll-smooth relative bg-[#f1f5f9]/30 custom-scrollbar">
            {/* Ambient Glows */}
            <div className="absolute top-[-200px] left-[-200px] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
            <div className="absolute bottom-[-100px] right-[-100px] w-[400px] h-[400px] bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none" />

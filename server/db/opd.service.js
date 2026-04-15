@@ -20,7 +20,7 @@ export async function createOPDToken({
   const tokenSql = `
     SELECT COALESCE(MAX(CAST(SUBSTRING(full_token FROM '[0-9]+$') AS INTEGER)), 0) + 1 as next_number
     FROM emr.opd_tokens
-    WHERE tenant_id = $1
+    WHERE tenant_id::text = $1::text
       AND department_id = $2
       AND DATE(created_at) = CURRENT_DATE
   `;
@@ -82,7 +82,7 @@ export async function getOPDTokens(tenantId, filters = {}) {
     LEFT JOIN emr.patients p ON t.patient_id = p.id
     LEFT JOIN emr.departments d ON t.department_id = d.id
     LEFT JOIN emr.users u ON t.doctor_id = u.id
-    WHERE t.tenant_id = $1
+    WHERE t.tenant_id::text = $1::text
   `;
 
   const params = [tenantId];
@@ -245,7 +245,7 @@ export async function getOPDBills(tenantId, filters = {}) {
     LEFT JOIN emr.departments d ON b.department_id = d.id
     LEFT JOIN emr.users u ON b.doctor_id = u.id
     LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    WHERE b.tenant_id = $1
+    WHERE b.tenant_id::text = $1::text
   `;
 
   const params = [tenantId];

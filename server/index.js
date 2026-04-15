@@ -68,12 +68,16 @@ app.use((req, res, next) => {
       return res.status(200).send();
     }
 
+    // Provisioning routes deploy 55+ SQL statements — they need more time
+    const isProvisioningRoute = req.method === 'POST' && req.path.includes('/superadmin/tenants');
+    const watchdogMs = isProvisioningRoute ? 180000 : 30000; // 3min for provisioning, 30s for others
+
     const timeout = setTimeout(() => {
        if (!res.headersSent) {
-          console.error(`[CRITICAL_HANG] Request stuck for 30s: ${req.method} ${req.path}`);
+          console.error(`[CRITICAL_HANG] Request stuck for ${watchdogMs/1000}s: ${req.method} ${req.path}`);
           res.status(503).json({ error: 'Backend Pipeline Deadlock (Watchdog)' });
        }
-    }, 30000);
+    }, watchdogMs);
     
     res.on('finish', () => clearTimeout(timeout));
     res.on('close', () => clearTimeout(timeout));
@@ -89,6 +93,8 @@ app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Routes
 app.use('/api/superadmin', superadminRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/encounters', encounterRoutes);
 app.use('/api/billing', billingRoutes);
@@ -111,8 +117,6 @@ app.use('/api/support', supportRoutes);
 app.use('/api/ambulances', ambulanceRoutes);
 app.use('/api/blood-bank', bloodbankRoutes);
 app.use('/api/clinical', clinicalRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/ai', aiRoutes);
 
 app.get('/api/version', (req, res) => res.json({ version: '1.5.0-MODULAR-FINAL' }));
 
@@ -155,10 +159,53 @@ try {
     }
   }
 
+  async function ensureGlobalRoles() {
+    try {
+      // Create master emr.roles and emr.users to stabilize system logic
+      await query(`
+        CREATE TABLE IF NOT EXISTS emr.roles (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id uuid,
+            name text NOT NULL,
+            description text,
+            is_system boolean DEFAULT false,
+            created_at timestamp with time zone DEFAULT now(),
+            updated_at timestamp with time zone DEFAULT now(),
+            UNIQUE(tenant_id, name)
+        );
+      `);
+      await query(`
+        CREATE TABLE IF NOT EXISTS emr.users (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            tenant_id uuid,
+            email text NOT NULL UNIQUE,
+            password_hash text NOT NULL,
+            name text NOT NULL,
+            role text,
+            role_id uuid,
+            is_active boolean DEFAULT true,
+            created_at timestamp with time zone DEFAULT now()
+        );
+      `);
+      
+      // Seed fallback default roles on master plane without explicit tenant_id (hence nullable)
+      await query(`
+        INSERT INTO emr.roles (name, description, is_system) VALUES 
+        ('Admin', 'Global System Admin', true),
+        ('Doctor', 'Clinical Staff', true),
+        ('Nurse', 'Nursing Staff', true)
+        ON CONFLICT DO NOTHING;
+      `);
+    } catch(err) {
+      console.warn('[SCHEMA_FIX] Failed to align emr.roles/users plane:', err.message);
+    }
+  }
+
   // Global initialization Logic (Silent Boot)
   (async () => {
     try {
        await ensureTenantColumns();
+       await ensureGlobalRoles();
        ensureManagementPlaneInfrastructure().catch(err => {
          console.warn('⚠️ [STARTUP] Management plane setup deferred:', err.message);
        });

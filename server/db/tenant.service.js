@@ -10,13 +10,13 @@ import { query } from './connection.js';
 // =====================================================
 
 export async function getTenantTier(tenantId) {
-  const sql = 'SELECT subscription_tier FROM emr.tenants WHERE id = $1';
+  const sql = 'SELECT subscription_tier FROM emr.tenants WHERE id::text = $1::text';
   const result = await query(sql, [tenantId]);
   return result.rows[0]?.subscription_tier || 'Basic';
 }
 
 export async function getTenantCustomFeatures(tenantId) {
-  const sql = 'SELECT feature_flag, enabled FROM emr.tenant_features WHERE tenant_id = $1';
+  const sql = 'SELECT feature_flag, enabled FROM emr.tenant_features WHERE tenant_id::text = $1::text';
   const result = await query(sql, [tenantId]);
   return result.rows.map(row => ({
     featureFlag: row.feature_flag,
@@ -45,7 +45,7 @@ export async function setGlobalKillSwitch(featureFlag, enabled, userId, reason) 
 }
 
 export async function getTenantFeatureStatus(tenantId) {
-  const sql = 'SELECT * FROM emr.tenant_feature_status WHERE tenant_id = $1';
+  const sql = 'SELECT * FROM emr.tenant_feature_status WHERE tenant_id::text = $1::text';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
@@ -54,7 +54,7 @@ export async function setTenantTier(tenantId, tier) {
   const sql = `
     UPDATE emr.tenants 
     SET subscription_tier = $1, updated_at = NOW() 
-    WHERE id = $2 
+    WHERE id::text = $2::text 
     RETURNING *
   `;
   const result = await query(sql, [tier, tenantId]);
@@ -75,7 +75,7 @@ export async function createAuditLog({ tenantId, userId, userName, action, entit
   const safeUserId = userId === '44000000-0000-0000-0000-000000000001' ? null : userId;
   const sql = `
     INSERT INTO emr.audit_logs (tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    VALUES ($1::text, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
   `;
   const result = await query(sql, [tenantId, safeUserId, userName, action, entityName, entityId, details, ipAddress, userAgent]);
@@ -112,13 +112,15 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
     values.push(req_logo_url);
   }
 
+  if (updates.length === 0) return null;
+
   updates.push('updated_at = NOW()');
-  values.push(tenantId);
+  values.push(String(tenantId));
 
   const sql = `
     UPDATE emr.tenants 
     SET ${updates.join(', ')}
-    WHERE id = $${paramIndex}
+    WHERE id::text = $${paramIndex}::text
     RETURNING *
   `;
 
@@ -177,9 +179,9 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
  * 2. emr.tenants (legacy fallback)
  */
 async function resolveTenantCode(tenantId) {
-  let result = await query('SELECT code FROM emr.management_tenants WHERE id = $1', [tenantId]);
+  let result = await query('SELECT code FROM emr.management_tenants WHERE id::text = $1::text', [tenantId]);
   if (!result.rows[0]) {
-    result = await query('SELECT code FROM emr.tenants WHERE id = $1', [tenantId]);
+    result = await query('SELECT code FROM emr.tenants WHERE id::text = $1::text', [tenantId]);
   }
   return (result.rows[0]?.code || 'UNK').toUpperCase();
 }
@@ -216,7 +218,7 @@ export async function generateInvoiceNumber(tenantId) {
   return `INV-${tenantCode}-${sequence.toString().padStart(6, '0')}`;
 }
 
-export const getAllTenants = getTenants;
+export const getAllTenants = () => getTenants();
 
 export async function getTenants() {
   try {
@@ -224,13 +226,13 @@ export async function getTenants() {
     const mgmtRes = await query(`
       SELECT
         t.id, t.name, t.code, t.subdomain, t.status, t.created_at, t.updated_at,
-        t.subscription_tier, t.contact_email, t.schema_name,
+        t.subscription_tier, t.contact_email, t.schema_name, mt.theme, mt.features, mt.logo_url, mt.billing_config,
         COALESCE(mtm.patients_count, 0) as patients,
         COALESCE(mtm.doctors_count, 0) as doctors,
         COALESCE(mtm.available_beds, 0) as "bedsAvailable",
         COALESCE(mtm.available_ambulances, 0) as "ambulancesAvailable",
         COALESCE(mtm.active_users_count, 0) as active_users_count
-      FROM emr.management_tenants t
+      FROM emr.management_tenants t LEFT JOIN emr.tenants mt ON mt.id::text = t.id::text
       LEFT JOIN emr.management_tenant_metrics mtm ON mtm.tenant_id = t.id
       ORDER BY t.name
     `);
@@ -238,7 +240,7 @@ export async function getTenants() {
     // 2. Fallback check: Grab everything from legacy emr.tenants
     const legacyRes = await query(`
       SELECT id, name, code, subdomain, status, created_at, updated_at, 
-             subscription_tier, contact_email, code as schema_name,
+             subscription_tier, contact_email, code as schema_name, theme, features, logo_url, billing_config,
              0 as patients, 0 as doctors, 0 as "bedsAvailable",
              0 as "ambulancesAvailable", 0 as active_users_count
       FROM emr.tenants 
@@ -259,13 +261,13 @@ export async function getTenants() {
 }
 
 export async function getTenantById(id) {
-  const result = await query('SELECT * FROM emr.management_tenants WHERE id = $1', [id]);
+  const result = await query('SELECT * FROM emr.management_tenants WHERE id::text = $1::text', [id]);
   return result.rows[0];
 }
 
 export async function updateTenantStatus(id, status) {
   const result = await query(
-    'UPDATE emr.management_tenants SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+    'UPDATE emr.management_tenants SET status = $1, updated_at = NOW() WHERE id::text = $2::text RETURNING *',
     [status, id]
   );
   return result.rows[0];
@@ -275,6 +277,7 @@ export async function getTenantByCode(code) {
   const result = await query('SELECT * FROM emr.management_tenants WHERE UPPER(code) = UPPER($1)', [code]);
   return result.rows[0];
 }
+
 export async function createTenant({ name, code, subdomain, contactEmail, theme, features, subscription_tier }) {
   // 1. Create in legacy tenants table (with all metadata)
   const sql = `

@@ -1,12 +1,45 @@
 import express from 'express';
 import * as repo from '../db/repository.js';
 import { authenticate, requireRole } from '../middleware/auth.middleware.js';
+import { getSubscriptionCatalog, upsertSubscriptionPlan, ALL_MODULES } from '../db/subscriptionCatalog.service.js';
 
 const router = express.Router();
 
 // Apply common middleware to all superadmin routes
 router.use(authenticate);
 router.use(requireRole('Superadmin'));
+
+/**
+ * @route   GET /api/admin/subscription-catalog
+ * @desc    Get all subscription plan definitions (price, features, module keys)
+ */
+router.get('/subscription-catalog', async (req, res) => {
+  try {
+    const catalog = await getSubscriptionCatalog();
+    res.json({ plans: catalog, modules: ALL_MODULES });
+  } catch (error) {
+    console.error('Error fetching subscription catalog:', error);
+    res.status(500).json({ error: 'Failed to fetch subscription catalog' });
+  }
+});
+
+/**
+ * @route   POST /api/admin/subscription-catalog
+ * @desc    Upsert a subscription plan definition (price, features, modules)
+ */
+router.post('/subscription-catalog', async (req, res) => {
+  try {
+    const { subscription } = req.body;
+    if (!subscription || !subscription.id) {
+      return res.status(400).json({ error: 'subscription.id is required' });
+    }
+    const saved = await upsertSubscriptionPlan(subscription);
+    res.json(saved);
+  } catch (error) {
+    console.error('Error saving subscription plan:', error);
+    res.status(500).json({ error: 'Failed to save subscription plan' });
+  }
+});
 
 /**
  * @route   GET /api/admin/tenants

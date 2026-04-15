@@ -16,7 +16,7 @@ export async function getPatients(tenantId, userRole = null, limit = 50, offset 
     SELECT 
       p.id, p.first_name, p.last_name, p.date_of_birth, p.gender, p.phone, p.email, p.address, p.mrn, p.blood_group, p.medical_history, p.emergency_contact, p.insurance, p.created_at, p.updated_at, p.is_archived
     FROM patients p
-    WHERE p.tenant_id = $1
+    WHERE p.tenant_id::text = $1::text
     AND p.is_archived = $2`;
 
   if (filters.text) {
@@ -148,7 +148,7 @@ export async function updatePatient({ tenantId, id, updates }) {
   const sql = `
     UPDATE patients 
     SET ${fields.join(', ')}
-    WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex++}
+    WHERE id::text = $${paramIndex++} AND tenant_id::text = $${paramIndex++}
     RETURNING *
   `;
 
