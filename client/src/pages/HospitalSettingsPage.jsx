@@ -80,8 +80,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
           currency: tenant?.billing_config?.currency || 'INR',
           gatewayKey: tenant?.billing_config?.gatewayKey || '',
           accountStatus: tenant?.billing_config?.accountStatus || 'unlinked'
-        },
-        subscription_tier: tenant?.subscription_tier || 'Professional'
+        }
       });
       
       // Apply CSS variables during initial load
@@ -135,7 +134,6 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
           hero: form.heroColor,
           text: form.textColor
         },
-        features: form.features,
         billingConfig: form.billingConfig
       };
 
@@ -302,15 +300,13 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600"><ShieldCheck size={20} /></div>
-                  <div><h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Subscription Matrix</h3><p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Platform Feature Access</p></div>
+                  <div><h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Subscription Matrix</h3><p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Platform Feature Access (Contact Nexus Superadmin for changes)</p></div>
                 </div>
                 <div className="px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-[10px] font-black text-indigo-700 uppercase tracking-widest">
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Active Tier</label>
-                  <select className="input-field" value={form.subscription_tier || 'Professional'} onChange={(e) => setForm(p => ({ ...p, subscription_tier: e.target.value }))}>
-                    <option>Basic</option>
-                    <option>Professional</option>
-                    <option>Enterprise</option>
-                  </select>
+                  <div className="input-field bg-white/50 cursor-not-allowed">
+                    {tenant?.subscription_tier || 'Professional'}
+                  </div>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -340,14 +336,43 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-[0.2em] opacity-50">Included</span>
                         )}
                       </div>
-                      <button type="button" 
-                        disabled={!hasAccess}
-                        onClick={() => {
-                          if (hasAccess) setForm(p => ({ ...p, features: { ...p.features, [f.key]: !p.features[f.key] } }));
-                        }} 
-                        className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${!hasAccess ? 'bg-slate-200' : form.features[f.key] ? 'bg-emerald-500' : 'bg-slate-300'}`}>
-                        <span className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${form.features[f.key] && hasAccess ? 'translate-x-5' : 'translate-x-1'}`} />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <div className={`relative inline-flex h-4 w-8 items-center rounded-full transition-colors ${!hasAccess ? 'bg-slate-200' : form.features[f.key] ? 'bg-emerald-500' : 'bg-slate-300'} cursor-not-allowed opacity-75`}>
+                          <span className={`inline-block h-2 w-2 transform rounded-full bg-white transition-transform ${form.features[f.key] && hasAccess ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            // Create feature request
+                            const requestMessage = `Feature Request from ${tenant?.name}:\n\nFeature: ${f.label}\nKey: ${f.key}\nCurrent Status: ${form.features[f.key] ? 'Enabled' : 'Disabled'}\n\nPlease review and approve this feature request.\n\nSent: ${new Date().toLocaleString()}`;
+                            
+                            // Copy to clipboard for easy sending
+                            navigator.clipboard.writeText(requestMessage).then(() => {
+                              showToast({
+                                message: 'Feature request copied to clipboard! Send to Nexus Superadmin.',
+                                type: 'info',
+                                title: 'Feature Request'
+                              });
+                            }).catch(() => {
+                              // Fallback: show modal with request text
+                              const modal = document.createElement('div');
+                              modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4';
+                              modal.innerHTML = `
+                                <div class="bg-white rounded-xl p-6 max-w-md w-full">
+                                  <h3 class="text-lg font-bold mb-4">Feature Request</h3>
+                                  <p class="text-sm text-gray-600 mb-4">Send this request to Nexus Superadmin:</p>
+                                  <textarea class="w-full p-3 border rounded-lg text-sm" rows="8" readonly>${requestMessage}</textarea>
+                                  <button onclick="this.closest('.fixed').remove()" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">Close</button>
+                                </div>
+                              `;
+                              document.body.appendChild(modal);
+                            });
+                          }}
+                          className="text-[9px] font-bold text-indigo-600 uppercase tracking-widest hover:text-indigo-800 transition-colors"
+                        >
+                          Request
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
