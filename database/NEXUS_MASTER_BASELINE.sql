@@ -1,9 +1,10 @@
 -- ============================================================
 -- NEXUS MASTER BASELINE (CONTROL PLANE)
 -- ============================================================
--- Version: 2.0.0
+-- Version: 2.1.1 (Updated with audit log fixes and institutional branding)
 -- Architecture: Platform Control Plane
 -- Description: Standardized bootstrap for Global Superadmin Hub.
+-- Updated: Includes audit log fixes, institutional branding, and latest schema improvements
 -- ============================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
@@ -15,7 +16,7 @@ CREATE TABLE IF NOT EXISTS emr.management_subscriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tier varchar(50) NOT NULL DEFAULT 'Enterprise',
   plan_name text NOT NULL DEFAULT 'Enterprise Plan',
-  price text NOT NULL DEFAULT '₹0',
+  price text NOT NULL DEFAULT 'Rs0',
   limit_users integer NOT NULL DEFAULT 100,
   features jsonb NOT NULL DEFAULT '[]'::jsonb,
   is_active boolean NOT NULL DEFAULT true,
@@ -23,7 +24,7 @@ CREATE TABLE IF NOT EXISTS emr.management_subscriptions (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 2. Management Registry (The Nexus)
+-- 2. Management Registry (The Nexus) - UPDATED with branding columns
 CREATE TABLE IF NOT EXISTS emr.management_tenants (
   id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
   name text NOT NULL,
@@ -42,7 +43,7 @@ CREATE TABLE IF NOT EXISTS emr.management_tenants (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 3. Legacy Bridge (Compatibility Shard)
+-- 3. Legacy Bridge (Compatibility Shard) - UPDATED with branding columns
 CREATE TABLE IF NOT EXISTS emr.tenants (
   id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
   name text NOT NULL,
@@ -50,6 +51,10 @@ CREATE TABLE IF NOT EXISTS emr.tenants (
   subdomain text UNIQUE,
   status text DEFAULT 'active',
   subscription_tier text DEFAULT 'Basic',
+  logo_url text NULL,
+  theme jsonb DEFAULT '{}'::jsonb,
+  features jsonb DEFAULT '{}'::jsonb,
+  billing_config jsonb DEFAULT '{}'::jsonb,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now()
 );
@@ -61,7 +66,8 @@ CREATE TABLE IF NOT EXISTS emr.roles (
     name text NOT NULL UNIQUE,
     description text,
     is_system boolean DEFAULT false,
-    created_at timestamp with time zone DEFAULT now()
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS emr.users (
@@ -110,7 +116,7 @@ CREATE TABLE IF NOT EXISTS emr.management_dashboard_summary (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 7. Audit & Support Shards
+-- 7. Audit & Support Shards (UPDATED with proper audit_logs)
 CREATE TABLE IF NOT EXISTS emr.management_system_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   event text NOT NULL,
@@ -142,7 +148,23 @@ CREATE TABLE IF NOT EXISTS emr.management_offers (
   created_at timestamp with time zone DEFAULT now()
 );
 
--- 9. Infrastructure Safety Functions
+-- 9. CRITICAL: Audit Logs Table (FIXED for UUID compatibility)
+CREATE TABLE IF NOT EXISTS emr.audit_logs (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL,
+  user_id uuid,
+  user_name text,
+  action character varying(100) NOT NULL,
+  table_name character varying(100),
+  record_id uuid,
+  old_values jsonb,
+  new_values jsonb,
+  ip_address text,
+  user_agent text,
+  timestamp timestamp with time zone DEFAULT now()
+);
+
+-- 10. Infrastructure Safety Functions
 CREATE OR REPLACE FUNCTION emr.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -151,16 +173,29 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- Triggers for updated_at columns (UPDATED)
 DROP TRIGGER IF EXISTS trg_management_tenants_updated_at ON emr.management_tenants;
 CREATE TRIGGER trg_management_tenants_updated_at BEFORE UPDATE ON emr.management_tenants 
+FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_tenants_updated_at ON emr.tenants;
+CREATE TRIGGER trg_tenants_updated_at BEFORE UPDATE ON emr.tenants 
 FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
 
 DROP TRIGGER IF EXISTS trg_users_updated_at ON emr.users;
 CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON emr.users 
 FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_roles_updated_at ON emr.roles;
+CREATE TRIGGER trg_roles_updated_at BEFORE UPDATE ON emr.roles 
+FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS trg_management_subscriptions_updated_at ON emr.management_subscriptions;
+CREATE TRIGGER trg_management_subscriptions_updated_at BEFORE UPDATE ON emr.management_subscriptions 
+FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+
 -- ============================================================
--- 10. GOVERNANCE & TELEMETRY FUNCTIONS
+-- 11. GOVERNANCE & TELEMETRY FUNCTIONS
 -- ============================================================
 
 -- A. FUNCTION: Atomic Dashboard Refresh
@@ -308,3 +343,28 @@ BEGIN
   PERFORM emr.refresh_management_tenant_metrics(target_tenant_id::text, target_schema);
 END;
 $$;
+
+-- ============================================================
+-- 12. BASE SEED DATA
+-- ============================================================
+
+-- Insert default management subscription tiers
+INSERT INTO emr.management_subscriptions (tier, plan_name, price, limit_users, features) VALUES
+('Free', 'Hobbyist Pilot', 'Rs0', 10, '["permission-core_engine-access"]'),
+('Professional', 'Specialty Center', 'Rs0', 50, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access"]'),
+('Enterprise', 'Full Hospital OS', 'Rs0', 100, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access", "permission-hr_payroll-access", "permission-telemedicine-access", "permission-advanced_analytics-access"]')
+ON CONFLICT (tier) DO UPDATE SET 
+  plan_name = EXCLUDED.plan_name,
+  price = EXCLUDED.price,
+  limit_users = EXCLUDED.limit_users,
+  features = EXCLUDED.features;
+
+-- Insert default system roles
+INSERT INTO emr.roles (name, description, is_system) VALUES
+('Superadmin', 'Platform Super Administrator', true),
+('Admin', 'Institutional Administrator', true),
+('Doctor', 'Clinical Practitioner', true),
+('Nurse', 'Nursing Staff', true),
+('Lab', 'Laboratory Technician', true),
+('Pharmacy', 'Pharmacist', true)
+ON CONFLICT (name) DO NOTHING;

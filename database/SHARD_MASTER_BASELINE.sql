@@ -1,10 +1,10 @@
 -- ============================================================
 -- SHARD MASTER BASELINE (DATA PLANE / INSTITUTIONAL NODES)
 -- ============================================================
--- Version: 2.2.0 (Full Clinical Lifecycle - Comprehensive)
+-- Version: 2.3.1 (Updated with audit log fixes and latest institutional tables)
 -- Architecture: Institutional Isolation
--- Description: Canonical DDL containing 55+ tables for full EMR operations.
--- Matches: tenant_base_schema_comprehensive_v2.sql (NHGL Standard)
+-- Description: Canonical DDL containing 60+ tables for full EMR operations.
+-- Updated: Includes audit log fixes, institutional branding, and all latest migrations
 -- ============================================================
 
 -- SCHEMA UTILITIES
@@ -233,8 +233,34 @@ CREATE TABLE IF NOT EXISTS diagnostic_reports (
 );
 
 -- ============================================================
--- 3. INPATIENT MANAGEMENT
+-- 3. INSTITUTIONAL MASTERS (UPDATED)
 -- ============================================================
+
+CREATE TABLE IF NOT EXISTS departments (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    name text NOT NULL,
+    code character varying(64),
+    description text,
+    head_of_dept character varying(255),
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(tenant_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS services (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    name text NOT NULL,
+    code character varying(64) NOT NULL,
+    category character varying(64) DEFAULT 'Clinical',
+    base_rate decimal(12,2) DEFAULT 0,
+    tax_percent decimal(5,2) DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(tenant_id, code)
+);
 
 CREATE TABLE IF NOT EXISTS wards (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -246,7 +272,8 @@ CREATE TABLE IF NOT EXISTS wards (
     base_rate numeric(10,2),
     status character varying(20) DEFAULT 'active',
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(tenant_id, name)
 );
 
 CREATE TABLE IF NOT EXISTS beds (
@@ -258,8 +285,13 @@ CREATE TABLE IF NOT EXISTS beds (
     status character varying(20) DEFAULT 'available',
     patient_id uuid REFERENCES patients(id) ON DELETE SET NULL,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(tenant_id, ward_id, bed_number)
 );
+
+-- ============================================================
+-- 4. INPATIENT MANAGEMENT
+-- ============================================================
 
 CREATE TABLE IF NOT EXISTS admissions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -293,7 +325,7 @@ CREATE TABLE IF NOT EXISTS discharges (
 );
 
 -- ============================================================
--- 4. BLOOD BANK
+-- 5. BLOOD BANK
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS donors (
@@ -332,7 +364,7 @@ CREATE TABLE IF NOT EXISTS blood_requests (
 );
 
 -- ============================================================
--- 5. AMBULANCE & EMERGENCY
+-- 6. AMBULANCE & EMERGENCY
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS ambulances (
@@ -340,6 +372,8 @@ CREATE TABLE IF NOT EXISTS ambulances (
     tenant_id uuid NOT NULL,
     vehicle_number VARCHAR(64) NOT NULL UNIQUE,
     model VARCHAR(255),
+    current_driver VARCHAR(255),
+    contact_number VARCHAR(32),
     status VARCHAR(32) DEFAULT 'Available',
     last_location_lat DECIMAL(10,8),
     last_location_lng DECIMAL(11,8),
@@ -347,20 +381,73 @@ CREATE TABLE IF NOT EXISTS ambulances (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS ambulance_dispatch (
+CREATE TABLE IF NOT EXISTS ambulance_trips (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
     ambulance_id uuid REFERENCES ambulances(id) ON DELETE SET NULL,
-    patient_name text,
-    pickup_location text,
-    priority text DEFAULT 'normal',
-    status text DEFAULT 'dispatched',
-    dispatched_at timestamp with time zone DEFAULT now(),
-    completed_at timestamp with time zone
+    patient_name VARCHAR(255),
+    location_lat DECIMAL(10,8),
+    location_lng DECIMAL(11,8),
+    priority VARCHAR(16) DEFAULT 'normal',
+    status VARCHAR(32) DEFAULT 'En Route',
+    dispatched_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
 );
 
 -- ============================================================
--- 6. FINANCE & BILLING
+-- 7. DOCUMENT MANAGEMENT
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS documents (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid,
+    encounter_id uuid,
+    category VARCHAR(64) DEFAULT 'other',
+    title VARCHAR(255) NOT NULL,
+    file_name TEXT NOT NULL,
+    mime_type VARCHAR(128),
+    storage_key TEXT,
+    size_bytes BIGINT DEFAULT 0,
+    tags JSONB DEFAULT '[]',
+    uploaded_by VARCHAR(255),
+    is_deleted BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS document_audit_logs (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    document_id uuid NOT NULL,
+    action VARCHAR(64) NOT NULL,
+    actor_id uuid,
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================================
+-- 8. SERVICE REQUESTS (UPDATED)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS service_requests (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    encounter_id uuid REFERENCES encounters(id) ON DELETE SET NULL,
+    requester_id uuid,
+    category VARCHAR(64) DEFAULT 'lab',
+    code VARCHAR(64),
+    display VARCHAR(255),
+    status VARCHAR(32) DEFAULT 'pending',
+    priority VARCHAR(32) DEFAULT 'routine',
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================================
+-- 9. FINANCE & BILLING
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS invoices (
@@ -412,7 +499,7 @@ CREATE TABLE IF NOT EXISTS insurance_providers (
 );
 
 -- ============================================================
--- 7. HR & PAYROLL
+-- 10. HR & PAYROLL
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS employees (
@@ -477,7 +564,7 @@ CREATE TABLE IF NOT EXISTS payroll_items (
 );
 
 -- ============================================================
--- 8. IDENTITY & INFRASTRUCTURE
+-- 11. IDENTITY & INFRASTRUCTURE
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS roles (
@@ -532,40 +619,20 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
     user_id uuid,
+    user_name text,
     action character varying(100) NOT NULL,
     table_name character varying(100),
     record_id uuid,
     old_values jsonb,
     new_values jsonb,
+    ip_address text,
+    user_agent text,
     timestamp timestamp with time zone DEFAULT now()
 );
 
 -- ============================================================
--- 8.5 MISSING COMPREHENSIVE TABLES
+-- 12. ADDITIONAL COMPREHENSIVE TABLES
 -- ============================================================
-
-CREATE TABLE IF NOT EXISTS departments (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id uuid NOT NULL,
-    name text NOT NULL,
-    code character varying(20),
-    type character varying(50),
-    status character varying(20) DEFAULT 'active',
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS services (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id uuid NOT NULL,
-    name text NOT NULL,
-    category character varying(50),
-    description text,
-    price numeric(10,2),
-    status character varying(20) DEFAULT 'active',
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
-);
 
 CREATE TABLE IF NOT EXISTS employee_leaves (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -620,18 +687,6 @@ CREATE TABLE IF NOT EXISTS inventory_purchases (
     updated_at timestamp with time zone DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS service_requests (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id uuid NOT NULL,
-    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    encounter_id uuid REFERENCES encounters(id) ON DELETE SET NULL,
-    category character varying(64) DEFAULT 'lab',
-    display character varying(255),
-    status character varying(32) DEFAULT 'pending',
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
-);
-
 CREATE TABLE IF NOT EXISTS insurance_claims (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL,
@@ -656,7 +711,7 @@ CREATE TABLE IF NOT EXISTS drug_allergies (
 );
 
 -- ============================================================
--- 9. TRIGGERS & INDEXES
+-- 13. TRIGGERS & INDEXES
 -- ============================================================
 
 CREATE INDEX IF NOT EXISTS idx_patients_tenant_id ON patients(tenant_id);
@@ -666,12 +721,20 @@ CREATE INDEX IF NOT EXISTS idx_encounters_patient_id ON encounters(patient_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_patient_id ON invoices(patient_id);
 CREATE INDEX IF NOT EXISTS idx_employees_tenant_id ON employees(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_id ON audit_logs(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_service_requests_tenant ON service_requests(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_service_requests_patient ON service_requests(patient_id);
+CREATE INDEX IF NOT EXISTS idx_service_requests_status ON service_requests(status);
+CREATE INDEX IF NOT EXISTS idx_service_requests_category ON service_requests(category);
+CREATE INDEX IF NOT EXISTS idx_departments_tenant_id ON departments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_services_tenant_id ON services(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_documents_tenant_id ON documents(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_document_audit_logs_tenant_id ON document_audit_logs(tenant_id);
 
 DO $$
 DECLARE
     t text;
 BEGIN
-    FOR t IN (SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() AND table_name IN ('patients','appointments','encounters','clinical_records','prescriptions','wards','beds','admissions','discharges','invoices','employees','service_requests', 'conditions', 'diagnostic_reports', 'lab_tests', 'ambulances', 'blood_units'))
+    FOR t IN (SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() AND table_name IN ('patients','appointments','encounters','clinical_records','prescriptions','wards','beds','admissions','discharges','invoices','employees','service_requests', 'conditions', 'diagnostic_reports', 'lab_tests', 'ambulances', 'blood_units', 'departments', 'services', 'documents', 'document_audit_logs'))
     LOOP
         EXECUTE format('DROP TRIGGER IF EXISTS trg_%I_updated_at ON %I', t, t);
         EXECUTE format('CREATE TRIGGER trg_%I_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', t, t);
@@ -679,7 +742,7 @@ BEGIN
 END $$;
 
 -- ============================================================
--- 10. BASE SEED DATA (CORE ROLES)
+-- 14. BASE SEED DATA (CORE ROLES)
 -- ============================================================
 
 INSERT INTO roles (name, description, is_system) VALUES

@@ -155,9 +155,15 @@ export async function provisionNewTenant(tenantData, adminData) {
   try {
     // 1. Create in legacy tenants table (for full platform visibility)
     const legacySql = `
-      INSERT INTO emr.tenants (name, code, subdomain, contact_email, subscription_tier, status)
-      VALUES ($1, $2, $3, $4, $5, 'active')
-      ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
+      INSERT INTO emr.tenants (name, code, subdomain, contact_email, subscription_tier, status, logo_url, theme, features, billing_config, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8, $9, NOW(), NOW())
+      ON CONFLICT (code) DO UPDATE SET 
+        name = EXCLUDED.name,
+        logo_url = EXCLUDED.logo_url,
+        theme = EXCLUDED.theme,
+        features = EXCLUDED.features,
+        billing_config = EXCLUDED.billing_config,
+        updated_at = NOW()
       RETURNING *
     `;
     const { rows: [legacyTenant] } = await query(legacySql, [
@@ -165,15 +171,23 @@ export async function provisionNewTenant(tenantData, adminData) {
       tenantData.code,
       tenantData.subdomain,
       tenantData.contactEmail,
-      tenantData.subscriptionTier || 'Enterprise'
+      tenantData.subscriptionTier || 'Enterprise',
+      tenantData.logoUrl || null,
+      JSON.stringify(tenantData.theme || {}),
+      JSON.stringify(tenantData.features || {}),
+      JSON.stringify(tenantData.billingConfig || {})
     ]);
 
     // 2. Map entry in the management database (Control Plane)
     const insertSql = `
-      INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier, logo_url, theme, features, billing_config, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
       ON CONFLICT (code) DO UPDATE SET 
         name = EXCLUDED.name,
+        logo_url = EXCLUDED.logo_url,
+        theme = EXCLUDED.theme,
+        features = EXCLUDED.features,
+        billing_config = EXCLUDED.billing_config,
         updated_at = NOW()
       RETURNING *
     `;
@@ -186,7 +200,11 @@ export async function provisionNewTenant(tenantData, adminData) {
       schemaName,
       'active',
       tenantData.contactEmail,
-      tenantData.subscriptionTier || 'Enterprise'
+      tenantData.subscriptionTier || 'Enterprise',
+      tenantData.logoUrl || null,
+      JSON.stringify(tenantData.theme || {}),
+      JSON.stringify(tenantData.features || {}),
+      JSON.stringify(tenantData.billingConfig || {})
     ]);
     
     tenant = createdTenant;
@@ -261,9 +279,9 @@ export async function provisionNewTenant(tenantData, adminData) {
         
         try {
           await query(`
-            INSERT INTO emr.management_system_logs (id, event, tenant_id, details, created_at)
-            VALUES (gen_random_uuid(), 'TENANT_PROVISIONED', $1, $2, NOW())
-          `, [tenant.id, JSON.stringify({
+            INSERT INTO emr.audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
+            VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, NULL, NULL, NOW())
+          `, [tenant.id, user.id, user.name, 'tenant.provision', 'tenant', tenant.id, JSON.stringify({
             schemaName,
             tenantId: tenant.id,
             adminEmail: user.email,
@@ -307,12 +325,12 @@ export async function provisionNewTenant(tenantData, adminData) {
       // 1. Log failure BEFORE purging metadata (prevents FK violation)
       if (tenant?.id) {
         await query(`
-          INSERT INTO emr.management_system_logs (id, event, tenant_id, details, created_at)
-          VALUES (gen_random_uuid(), 'TENANT_PROVISIONING_FAILED', $1, $2, NOW())
-        `, [tenant.id, JSON.stringify({
-           schemaName,
-           tenantCode: tenantData.code,
-           message: error.message
+          INSERT INTO emr.audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
+          VALUES (gen_random_uuid(), $1, NULL, NULL, $2, $3, $4, $5, NULL, NULL, NOW())
+        `, [tenant.id, 'tenant.provision.failed', 'tenant', tenant.id, JSON.stringify({
+          schemaName,
+          tenantCode: tenantData.code,
+          message: error.message
         })]).catch(logErr => console.error('Failed to log provisioning failure:', logErr.message));
       }
 

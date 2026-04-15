@@ -45,7 +45,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
   const [catalog, setCatalog] = useState({ plans: [], modules: [] });
 
   useEffect(() => {
-    api.apiRequest('/tenants/subscription-catalog').then(res => {
+    api.get('/tenants/subscription-catalog').then(res => {
       if (res && res.plans) setCatalog(res);
     }).catch(e => console.warn('Catalog restricted', e));
   }, []);
@@ -113,7 +113,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
         billingConfig: form.billingConfig
       };
 
-      const updated = await api.updateTenantSettings(tenant?.id, payload);
+      const updated = await api.patch(`/tenants/${tenant?.id}/settings`, payload);
 
       showToast({
         message: 'Institutional Environment Synchronized!',

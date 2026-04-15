@@ -75,7 +75,7 @@ export async function createAuditLog({ tenantId, userId, userName, action, entit
   const safeUserId = userId === '44000000-0000-0000-0000-000000000001' ? null : userId;
   const sql = `
     INSERT INTO emr.audit_logs (tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent)
-    VALUES ($1::text, $2, $3, $4, $5, $6, $7, $8, $9)
+    VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
   `;
   const result = await query(sql, [tenantId, safeUserId, userName, action, entityName, entityId, details, ipAddress, userAgent]);
@@ -162,7 +162,7 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
       mgmtUpdates.push('updated_at = NOW()');
       mgmtValues.push(tenantId);
       try {
-        const mgmtSql = `UPDATE emr.management_tenants SET ${mgmtUpdates.join(', ')} WHERE id = $${mgmtIdx}`;
+        const mgmtSql = `UPDATE emr.management_tenants SET ${mgmtUpdates.join(', ')} WHERE id::text = $${mgmtIdx}::text`;
         await query(mgmtSql, mgmtValues);
       } catch (syncErr) {
         console.warn(`[SYNC_WARNING] Failed to propagate settings to management plane for ${tenantId}:`, syncErr.message);

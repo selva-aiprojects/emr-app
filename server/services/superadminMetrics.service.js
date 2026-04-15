@@ -38,11 +38,15 @@ export async function ensureManagementPlaneInfrastructure() {
     await pool.query(`
       INSERT INTO emr.management_subscriptions (tier, plan_name, price, limit_users, features)
       VALUES 
-        ('Free', 'Hobbyist Pilot', '₹0', 1, '["permission-core_engine-access"]'),
-        ('Basic', 'Small Clinic', '₹1999', 5, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access"]'),
-        ('Professional', 'Specialty Center', '₹5999', 25, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access"]'),
-        ('Enterprise', 'Full Hospital OS', '₹9999', 1000, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access", "permission-hr_payroll-access"]')
-      ON CONFLICT DO NOTHING
+        ('Free', 'Hobbyist Pilot', 'Rs0', 1, '["permission-core_engine-access"]'),
+        ('Basic', 'Small Clinic', 'Rs1999', 5, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access"]'),
+        ('Professional', 'Specialty Center', 'Rs5999', 25, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access"]'),
+        ('Enterprise', 'Full Hospital OS', 'Rs9999', 1000, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access", "permission-hr_payroll-access"]')
+      ON CONFLICT (tier) DO UPDATE SET 
+        plan_name = EXCLUDED.plan_name,
+        price = EXCLUDED.price,
+        limit_users = EXCLUDED.limit_users,
+        features = EXCLUDED.features
     `);
 
     // C. Precision Seeding for Institutional Nodes
