@@ -42,6 +42,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(null);
   const [error, setError] = useState('');
+  const [hasSavedChanges, setHasSavedChanges] = useState(false);
   const [catalog, setCatalog] = useState({ plans: [], modules: [] });
 
   useEffect(() => {
@@ -51,7 +52,8 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
   }, []);
 
   useEffect(() => {
-    if (tenant) {
+    // Only initialize form from tenant prop if no changes have been saved yet
+    if (tenant && !hasSavedChanges) {
       setForm({
         displayName: tenant?.name || '',
         primaryColor: tenant?.theme?.primary || '#0f5a6e',
@@ -74,7 +76,7 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
         }
       });
     }
-  }, [tenant]);
+  }, [tenant, hasSavedChanges]);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -147,6 +149,9 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
             accountStatus: updated.billingConfig?.accountStatus || 'unlinked'
           }
         });
+        
+        // Mark that changes have been saved to prevent form re-initialization
+        setHasSavedChanges(true);
       }
 
       const root = document.documentElement;
