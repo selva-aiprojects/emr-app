@@ -76,11 +76,12 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
           institutional_ledger: tenant?.features?.institutional_ledger ?? true
         },
         billingConfig: {
-          provider: tenant?.billingConfig?.provider || 'Stripe',
-          currency: tenant?.billingConfig?.currency || 'INR',
-          gatewayKey: tenant?.billingConfig?.gatewayKey || '',
-          accountStatus: tenant?.billingConfig?.accountStatus || 'unlinked'
-        }
+          provider: tenant?.billing_config?.provider || 'Stripe',
+          currency: tenant?.billing_config?.currency || 'INR',
+          gatewayKey: tenant?.billing_config?.gatewayKey || '',
+          accountStatus: tenant?.billing_config?.accountStatus || 'unlinked'
+        },
+        subscription_tier: tenant?.subscription_tier || 'Professional'
       });
       
       // Apply CSS variables during initial load
@@ -304,7 +305,12 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
                   <div><h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Subscription Matrix</h3><p className="text-[10px] text-slate-400 font-bold uppercase mt-1">Platform Feature Access</p></div>
                 </div>
                 <div className="px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-[10px] font-black text-indigo-700 uppercase tracking-widest">
-                  Active Tier: {tenant?.subscription_tier || 'Professional'}
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Active Tier</label>
+                  <select className="input-field" value={form.subscription_tier || 'Professional'} onChange={(e) => setForm(p => ({ ...p, subscription_tier: e.target.value }))}>
+                    <option>Basic</option>
+                    <option>Professional</option>
+                    <option>Enterprise</option>
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
