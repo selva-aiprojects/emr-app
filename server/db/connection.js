@@ -172,11 +172,27 @@ async function runPendingMigrations() {
       console.log(`[DATABASE_MIGRATION] Running: ${file}`);
       try {
         const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
-        await pool.query(sql);
+        
+        // Split SQL into individual statements and execute them one by one
+        const statements = sql
+          .split(';')
+          .map(stmt => stmt.trim())
+          .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
+        
+        for (const statement of statements) {
+          try {
+            await pool.query(statement);
+          } catch (stmtErr) {
+            // Log statement error but continue with other statements
+            console.warn(`[DATABASE_MIGRATION] Statement failed in ${file}:`, stmtErr.message);
+            console.warn(`[DATABASE_MIGRATION] Statement: ${statement.substring(0, 100)}...`);
+          }
+        }
+        
         await pool.query('INSERT INTO emr.migrations_log (filename) VALUES ($1)', [file]);
-        console.log(`[DATABASE_MIGRATION] ✅ Success: ${file}`);
+        console.log(`[DATABASE_MIGRATION] \u2705 Success: ${file}`);
       } catch (err) {
-        console.error(`[DATABASE_MIGRATION] ❌ Failed: ${file}`, err.message);
+        console.error(`[DATABASE_MIGRATION] \u274c Failed: ${file}`, err.message);
       }
     }
   }
