@@ -170,7 +170,15 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
     }
   }
 
-  return tenant;
+  // Return merged data for frontend compatibility
+  return {
+    ...tenant,
+    // Ensure all branding fields are included for frontend
+    theme: theme || tenant.theme || {},
+    features: features || tenant.features || {},
+    billingConfig: billingConfig || tenant.billing_config || {},
+    logo_url: req_logo_url || tenant.logo_url
+  };
 }
 
 /**

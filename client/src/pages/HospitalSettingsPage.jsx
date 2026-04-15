@@ -124,14 +124,40 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
       if (onUpdateTenant) onUpdateTenant(updated);
       setStatus('success');
 
-      const root = document.documentElement;
-      if (form.primaryColor) {
-        root.style.setProperty('--clinical-primary', form.primaryColor);
-        root.style.setProperty('--medical-navy', form.primaryColor);
+      // Update the form with the latest data from the server response
+      if (updated) {
+        setForm({
+          displayName: updated.name || '',
+          primaryColor: updated.theme?.primary || '#0f5a6e',
+          accentColor: updated.theme?.accent || '#f57f17',
+          heroColor: updated.theme?.hero || '#1e293b',
+          textColor: updated.theme?.text || '#334155',
+          logo_url: updated.logo_url || '',
+          features: {
+            inventory: updated.features?.inventory ?? true,
+            telehealth: updated.features?.telehealth ?? false,
+            payroll: updated.features?.payroll ?? true,
+            staff_governance: updated.features?.staff_governance ?? true,
+            institutional_ledger: updated.features?.institutional_ledger ?? true
+          },
+          billingConfig: {
+            provider: updated.billingConfig?.provider || 'Stripe',
+            currency: updated.billingConfig?.currency || 'INR',
+            gatewayKey: updated.billingConfig?.gatewayKey || '',
+            accountStatus: updated.billingConfig?.accountStatus || 'unlinked'
+          }
+        });
       }
-      if (form.accentColor) root.style.setProperty('--clinical-accent', form.accentColor);
-      if (form.heroColor) root.style.setProperty('--clinical-hero', form.heroColor);
-      if (form.textColor) root.style.setProperty('--clinical-text', form.textColor);
+
+      const root = document.documentElement;
+      // Use the updated form data for CSS variables
+      if (updated?.theme?.primary) {
+        root.style.setProperty('--clinical-primary', updated.theme.primary);
+        root.style.setProperty('--medical-navy', updated.theme.primary);
+      }
+      if (updated?.theme?.accent) root.style.setProperty('--clinical-accent', updated.theme.accent);
+      if (updated?.theme?.hero) root.style.setProperty('--clinical-hero', updated.theme.hero);
+      if (updated?.theme?.text) root.style.setProperty('--clinical-text', updated.theme.text);
     } catch (err) {
       console.error('HospitalSettingsPage error:', err);
       setError('Failed to update institutional configuration');
