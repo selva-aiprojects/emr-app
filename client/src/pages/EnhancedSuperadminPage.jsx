@@ -24,7 +24,8 @@ export default function EnhancedSuperadminPage({
   superOverview = {},
   tickets = [],
   onRefresh,
-  apiClient
+  apiClient,
+  setView
 }) {
   const [activeView, setActiveView] = useState(initialView);
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,7 +66,7 @@ export default function EnhancedSuperadminPage({
       case 'subscription_mgmt':
         return <SubscriptionEngine tenants={tenants} />;
       case 'tenant_management':
-        return <TenantControlCenter tenants={tenants} onRefresh={onRefresh} apiClient={apiClient} />;
+        return <TenantControlCenter tenants={tenants} onRefresh={onRefresh} apiClient={apiClient} setView={setView} />;
       case 'infra_health':
         return <InfraOpsManager tenants={tenants} overview={superOverview} apiClient={apiClient} />;
       case 'financial_control':

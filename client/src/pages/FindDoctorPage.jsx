@@ -10,6 +10,7 @@ export default function FindDoctorPage({
   providers = [],
   onCreateAppointment,
   onSelfAppointment,
+  onAddUser,
   patients = []
 }) {
   const { showToast } = useToast();
@@ -181,6 +182,20 @@ export default function FindDoctorPage({
                 image: null
               };
               setDoctors([newDoc, ...doctors]);
+              
+              // Also add to global users state to make it available in EMR
+              if (onAddUser) {
+                onAddUser({
+                  id: newDoc.id,
+                  name: newDoc.name,
+                  email: `${newDoc.name.toLowerCase().replace(/\s+/g, '.')}@hospital.com`,
+                  role: 'Doctor',
+                  department: newDoc.specialty,
+                  status: 'Active',
+                  tenantId: session?.tenantId
+                });
+              }
+              
               showToast({ message: 'Doctor registered successfully!', type: 'success', title: 'Provider Registry' });
               setShowAddDoctorModal(false);
             }}>

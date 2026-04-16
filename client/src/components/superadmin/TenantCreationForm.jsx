@@ -8,10 +8,10 @@ import {
 } from 'lucide-react';
 
 const TIERS = [
-  { value: 'Free',         label: 'Free',         color: 'slate',    icon: Box, price: 'SYD-01' },
-  { value: 'Basic',        label: 'Basic',        color: 'blue',     icon: ShieldCheck, price: 'SYD-02' },
-  { value: 'Professional', label: 'Professional', color: 'indigo',   icon: Zap, price: 'SYD-03' },
-  { value: 'Enterprise',   label: 'Enterprise',   color: 'rose',     icon: Crown, price: 'SYD-04' },
+  { value: 'Free',         label: 'Free',         color: 'slate',    icon: Box, price: '0' },
+  { value: 'Basic',        label: 'Basic',        color: 'blue',     icon: ShieldCheck, price: '199' },
+  { value: 'Professional', label: 'Professional', color: 'indigo',   icon: Zap, price: '499' },
+  { value: 'Enterprise',   label: 'Enterprise',   color: 'rose',     icon: Crown, price: '1299' },
 ];
 
 const INITIAL = {
@@ -23,6 +23,8 @@ const INITIAL = {
   subscriptionTier: 'Professional',
   primaryColor: '#6366f1',
   accentColor: '#f43f5e',
+  heroColor: '#1e293b',
+  textColor: '#334155',
 };
 
 export default function TenantCreationForm({ onCreate, isDark = true }) {
@@ -202,33 +204,49 @@ export default function TenantCreationForm({ onCreate, isDark = true }) {
          </div>
 
          {/* VISUAL SHARDS */}
-         <div className="grid grid-cols-2 gap-8">
-            <div className="group bg-white border border-slate-200 p-6 rounded-[2rem] flex items-center justify-between hover:border-indigo-200 transition-all shadow-sm">
-               <div className="flex items-center gap-6">
-                  <div className="relative">
-                     <input type="color" name="primaryColor" value={form.primaryColor} onChange={handleChange} className="w-14 h-14 rounded-2xl cursor-pointer border-none bg-transparent relative z-10" />
-                     <div className="absolute inset-0 rounded-2xl shadow-inner pointer-events-none" style={{ backgroundColor: form.primaryColor }} />
-                  </div>
-                  <div>
-                     <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Primary Shard</p>
-                     <p className="text-[14px] font-black text-slate-900 uppercase tabular-nums tracking-widest">{form.primaryColor}</p>
-                  </div>
+         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="group bg-white border border-slate-200 p-6 rounded-[2rem] flex flex-col items-center hover:border-indigo-200 transition-all shadow-sm">
+               <div className="relative mb-4">
+                  <input type="color" name="primaryColor" value={form.primaryColor} onChange={handleChange} className="w-14 h-14 rounded-2xl cursor-pointer border-none bg-transparent relative z-10" />
+                  <div className="absolute inset-0 rounded-2xl shadow-inner pointer-events-none" style={{ backgroundColor: form.primaryColor }} />
                </div>
-               <Palette className="text-slate-800" size={32} />
+               <div className="text-center">
+                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Primary</p>
+                  <p className="text-[12px] font-black text-slate-900 uppercase tabular-nums tracking-widest">{form.primaryColor}</p>
+               </div>
             </div>
 
-            <div className="group bg-white border border-slate-200 p-6 rounded-[2.5rem] flex items-center justify-between hover:border-rose-200 transition-all shadow-sm">
-               <div className="flex items-center gap-6">
-                  <div className="relative">
-                     <input type="color" name="accentColor" value={form.accentColor} onChange={handleChange} className="w-14 h-14 rounded-2xl cursor-pointer border-none bg-transparent relative z-10" />
-                     <div className="absolute inset-0 rounded-2xl shadow-inner pointer-events-none" style={{ backgroundColor: form.accentColor }} />
-                  </div>
-                  <div>
-                     <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Accent Shard</p>
-                     <p className="text-[14px] font-black text-slate-900 uppercase tabular-nums tracking-widest">{form.accentColor}</p>
-                  </div>
+            <div className="group bg-white border border-slate-200 p-6 rounded-[2.5rem] flex flex-col items-center hover:border-rose-200 transition-all shadow-sm">
+               <div className="relative mb-4">
+                  <input type="color" name="accentColor" value={form.accentColor} onChange={handleChange} className="w-14 h-14 rounded-2xl cursor-pointer border-none bg-transparent relative z-10" />
+                  <div className="absolute inset-0 rounded-2xl shadow-inner pointer-events-none" style={{ backgroundColor: form.accentColor }} />
                </div>
-               <Layers className="text-slate-800" size={32} />
+               <div className="text-center">
+                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Accent</p>
+                  <p className="text-[14px] font-black text-slate-900 uppercase tabular-nums tracking-widest">{form.accentColor}</p>
+               </div>
+            </div>
+
+            <div className="group bg-white border border-slate-200 p-6 rounded-[2rem] flex flex-col items-center hover:border-emerald-200 transition-all shadow-sm">
+               <div className="relative mb-4">
+                  <input type="color" name="heroColor" value={form.heroColor} onChange={handleChange} className="w-14 h-14 rounded-2xl cursor-pointer border-none bg-transparent relative z-10" />
+                  <div className="absolute inset-0 rounded-2xl shadow-inner pointer-events-none" style={{ backgroundColor: form.heroColor }} />
+               </div>
+               <div className="text-center">
+                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Hero</p>
+                  <p className="text-[14px] font-black text-slate-900 uppercase tabular-nums tracking-widest">{form.heroColor}</p>
+               </div>
+            </div>
+
+            <div className="group bg-white border border-slate-200 p-6 rounded-[2.5rem] flex flex-col items-center hover:border-slate-400 transition-all shadow-sm">
+               <div className="relative mb-4">
+                  <input type="color" name="textColor" value={form.textColor} onChange={handleChange} className="w-14 h-14 rounded-2xl cursor-pointer border-none bg-transparent relative z-10" />
+                  <div className="absolute inset-0 rounded-2xl shadow-inner pointer-events-none" style={{ backgroundColor: form.textColor }} />
+               </div>
+               <div className="text-center">
+                  <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] mb-1">Text</p>
+                  <p className="text-[14px] font-black text-slate-900 uppercase tabular-nums tracking-widest">{form.textColor}</p>
+               </div>
             </div>
          </div>
 

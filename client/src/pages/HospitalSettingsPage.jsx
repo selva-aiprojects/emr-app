@@ -32,10 +32,10 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
       institutional_ledger: tenant?.features?.institutional_ledger ?? true
     },
     billingConfig: {
-      provider: tenant?.billingConfig?.provider || 'Stripe',
-      currency: tenant?.billingConfig?.currency || 'INR',
-      gatewayKey: tenant?.billingConfig?.gatewayKey || '',
-      accountStatus: tenant?.billingConfig?.accountStatus || 'unlinked'
+      provider: tenant?.billingConfig?.provider || tenant?.billing_config?.provider || 'Stripe',
+      currency: tenant?.billingConfig?.currency || tenant?.billing_config?.currency || 'INR',
+      gatewayKey: tenant?.billingConfig?.gatewayKey || tenant?.billing_config?.gatewayKey || '',
+      accountStatus: tenant?.billingConfig?.accountStatus || tenant?.billing_config?.accountStatus || 'unlinked'
     }
   });
 
@@ -52,11 +52,24 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
   }, []);
 
   useEffect(() => {
-    // Reset hasSavedChanges when tenant changes
+    // Reset hasSavedChanges when tenant changes (including session updates)
     if (tenant) {
       setHasSavedChanges(false);
     }
   }, [tenant?.id]);
+
+  useEffect(() => {
+    // Apply theme colors to CSS variables whenever form changes
+    const root = document.documentElement;
+    root.style.setProperty('--clinical-primary', form.primaryColor);
+    root.style.setProperty('--clinical-accent', form.accentColor);
+    root.style.setProperty('--clinical-hero', form.heroColor);
+    root.style.setProperty('--clinical-text', form.textColor);
+    root.style.setProperty('--medical-navy', form.primaryColor);
+    root.style.setProperty('--clinical-primary-dark', form.primaryColor);
+    root.style.setProperty('--clinical-blue', form.accentColor);
+    root.style.setProperty('--clinical-accent-soft', form.accentColor + '1A');
+  }, [form.primaryColor, form.accentColor, form.heroColor, form.textColor]);
 
   useEffect(() => {
     // Only initialize form from tenant prop if no changes have been saved yet
@@ -76,10 +89,10 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
           institutional_ledger: tenant?.features?.institutional_ledger ?? true
         },
         billingConfig: {
-          provider: tenant?.billing_config?.provider || 'Stripe',
-          currency: tenant?.billing_config?.currency || 'INR',
-          gatewayKey: tenant?.billing_config?.gatewayKey || '',
-          accountStatus: tenant?.billing_config?.accountStatus || 'unlinked'
+          provider: tenant?.billingConfig?.provider || tenant?.billing_config?.provider || 'Stripe',
+          currency: tenant?.billingConfig?.currency || tenant?.billing_config?.currency || 'INR',
+          gatewayKey: tenant?.billingConfig?.gatewayKey || tenant?.billing_config?.gatewayKey || '',
+          accountStatus: tenant?.billingConfig?.accountStatus || tenant?.billing_config?.accountStatus || 'unlinked'
         }
       });
       
@@ -165,10 +178,10 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
             institutional_ledger: updated.features?.institutional_ledger ?? true
           },
           billingConfig: {
-            provider: updated.billingConfig?.provider || 'Stripe',
-            currency: updated.billingConfig?.currency || 'INR',
-            gatewayKey: updated.billingConfig?.gatewayKey || '',
-            accountStatus: updated.billingConfig?.accountStatus || 'unlinked'
+            provider: updated.billingConfig?.provider || updated.billing_config?.provider || 'Stripe',
+            currency: updated.billingConfig?.currency || updated.billing_config?.currency || 'INR',
+            gatewayKey: updated.billingConfig?.gatewayKey || updated.billing_config?.gatewayKey || '',
+            accountStatus: updated.billingConfig?.accountStatus || updated.billing_config?.accountStatus || 'unlinked'
           }
         });
         
@@ -254,19 +267,67 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
               <div className="grid grid-cols-2 gap-8 mb-8">
                 <div className="p-4 rounded-2xl border-2 border-slate-50 flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-600 uppercase">Primary</label>
-                  <input type="color" value={form.primaryColor} onChange={(e) => setForm(p => ({ ...p, primaryColor: e.target.value }))} />
+                  <input 
+                    type="color" 
+                    value={form.primaryColor} 
+                    onChange={(e) => {
+                      const newColor = e.target.value;
+                      setForm(p => ({ ...p, primaryColor: newColor }));
+                      // Apply real-time preview to all relevant CSS variables
+                      document.documentElement.style.setProperty('--clinical-primary', newColor);
+                      document.documentElement.style.setProperty('--medical-navy', newColor);
+                      document.documentElement.style.setProperty('--clinical-primary-dark', newColor);
+                      // Force a reflow to ensure the changes take effect
+                      document.documentElement.offsetHeight;
+                    }} 
+                  />
                 </div>
                 <div className="p-4 rounded-2xl border-2 border-slate-50 flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-600 uppercase">Accent</label>
-                  <input type="color" value={form.accentColor} onChange={(e) => setForm(p => ({ ...p, accentColor: e.target.value }))} />
+                  <input 
+                    type="color" 
+                    value={form.accentColor} 
+                    onChange={(e) => {
+                      const newColor = e.target.value;
+                      setForm(p => ({ ...p, accentColor: newColor }));
+                      // Apply real-time preview to all relevant CSS variables
+                      document.documentElement.style.setProperty('--clinical-accent', newColor);
+                      document.documentElement.style.setProperty('--clinical-blue', newColor);
+                      document.documentElement.style.setProperty('--clinical-accent-soft', newColor + '1A');
+                      // Force a reflow
+                      document.documentElement.offsetHeight;
+                    }} 
+                  />
                 </div>
                 <div className="p-4 rounded-2xl border-2 border-slate-50 flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-600 uppercase">Hero</label>
-                  <input type="color" value={form.heroColor} onChange={(e) => setForm(p => ({ ...p, heroColor: e.target.value }))} />
+                  <input 
+                    type="color" 
+                    value={form.heroColor} 
+                    onChange={(e) => {
+                      const newColor = e.target.value;
+                      setForm(p => ({ ...p, heroColor: newColor }));
+                      // Apply real-time preview
+                      document.documentElement.style.setProperty('--clinical-hero', newColor);
+                      // Force a reflow
+                      document.documentElement.offsetHeight;
+                    }} 
+                  />
                 </div>
                 <div className="p-4 rounded-2xl border-2 border-slate-50 flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-600 uppercase">Text</label>
-                  <input type="color" value={form.textColor} onChange={(e) => setForm(p => ({ ...p, textColor: e.target.value }))} />
+                  <input 
+                    type="color" 
+                    value={form.textColor} 
+                    onChange={(e) => {
+                      const newColor = e.target.value;
+                      setForm(p => ({ ...p, textColor: newColor }));
+                      // Apply real-time preview
+                      document.documentElement.style.setProperty('--clinical-text', newColor);
+                      // Force a reflow
+                      document.documentElement.offsetHeight;
+                    }} 
+                  />
                 </div>
               </div>
             </section>

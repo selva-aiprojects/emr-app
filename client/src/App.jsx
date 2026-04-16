@@ -26,6 +26,7 @@ const UnifiedLoginPage = lazy(() => import('./pages/UnifiedLoginPage.jsx'));
 const UsersPage = lazy(() => import('./pages/UsersPage.jsx'));
 const LabPage = lazy(() => import('./pages/LabPage.jsx'));
 const LabAvailabilityPage = lazy(() => import('./pages/LabAvailabilityPage.jsx'));
+const TenantCreationPage = lazy(() => import('./pages/TenantCreationPage.jsx'));
 const LabTestsPage = lazy(() => import('./pages/LabTestsPage.jsx'));
 const SupportPage = lazy(() => import('./pages/SupportPage.jsx'));
 const CommunicationPage = lazy(() => import('./pages/CommunicationPage.jsx'));
@@ -306,6 +307,11 @@ export default function App() {
 
     setPermissions(effectivePermissions);
 
+    // Update tenant data with latest settings from bootstrap
+    if (bootstrap.tenant) {
+      setTenants(prev => prev.map(t => t.id === tenantId ? { ...t, ...bootstrap.tenant } : t));
+    }
+
     // Use non-destructive merging for critical entities to handle replication lag
     const mergeData = (prev, incoming) => {
         if (!incoming) return prev;
@@ -456,19 +462,26 @@ export default function App() {
       try {
         const themeConfig = typeof tenant.theme === 'string' ? JSON.parse(tenant.theme) : tenant.theme;
         const { primary, accent, hero, text } = themeConfig;
+        const root = document.documentElement;
+        
         if (primary) {
-          document.documentElement.style.setProperty('--clinical-primary', primary);
-          document.documentElement.style.setProperty('--clinical-primary-dark', primary); 
+          root.style.setProperty('--clinical-primary', primary);
+          root.style.setProperty('--clinical-primary-dark', primary);
+          root.style.setProperty('--medical-navy', primary);
         }
         if (accent) {
-          document.documentElement.style.setProperty('--clinical-accent', accent);
+          root.style.setProperty('--clinical-accent', accent);
+          root.style.setProperty('--clinical-blue', accent);
+          root.style.setProperty('--clinical-accent-soft', accent + '1A');
         }
         if (hero) {
-          document.documentElement.style.setProperty('--clinical-hero', hero);
+          root.style.setProperty('--clinical-hero', hero);
         }
         if (text) {
-          document.documentElement.style.setProperty('--clinical-text', text);
+          root.style.setProperty('--clinical-text', text);
         }
+        
+        console.log('[THEME_SYNC] Applied institutional theme:', themeConfig);
       } catch (err) {
         console.warn('[THEME_SYNC] Failed to parse institutional theme shard:', err);
       }
@@ -598,6 +611,7 @@ export default function App() {
               }}
               onRefresh={refreshSuperadmin}
               infra={superOverview?.infra || {}}
+              setView={setView}
             />
           )}
 
@@ -738,6 +752,9 @@ export default function App() {
             session={session}
             providers={providers}
             patients={scopedPatients}
+            onAddUser={(newUser) => {
+              setUsers(prevUsers => [...prevUsers, newUser]);
+            }}
             onCreateAppointment={(e) => {
               e.preventDefault();
               const fd = new FormData(e.target);
@@ -1168,6 +1185,7 @@ export default function App() {
         {view === 'ambulance' && <AmbulancePage tenant={tenant} />}
         {view === 'service_catalog' && <ServiceCatalogPage tenant={tenant} />}
         {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} patients={patients} />}
+        {view === 'tenant_creation' && <TenantCreationPage setView={setView} />}
         
         {['admin', 'admin_masters', 'bed_management'].includes(view) && (
           <AdminMastersPage 
@@ -1181,6 +1199,10 @@ export default function App() {
             tenant={tenant} 
             onUpdateTenant={(updated) => {
               setTenants(prev => prev.map(t => t.id === updated.id ? updated : t));
+              // Also update the session tenant if it matches
+              if (session?.tenantId === updated.id) {
+                setSession(prev => prev ? { ...prev, tenant: updated } : null);
+              }
             }} 
           />
         )}

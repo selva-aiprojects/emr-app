@@ -43,6 +43,7 @@ export async function getBootstrapData(tenantId, userId) {
     employeesLeavesResult,
     insuranceProvidersResult,
     claimsResult,
+    tenantResult,
   ] = await Promise.all([
     runSafeQuery('SELECT * FROM emr.users WHERE id = $1', [userId]),
     runSafeQuery(
@@ -79,6 +80,10 @@ export async function getBootstrapData(tenantId, userId) {
     ),
     runSafeQuery(
       'SELECT * FROM claims WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      [tenantId]
+    ),
+    runSafeQuery(
+      'SELECT * FROM emr.management_tenants WHERE id = $1',
       [tenantId]
     ),
   ]);
@@ -126,5 +131,6 @@ export async function getBootstrapData(tenantId, userId) {
     employeesLeaves: snakeToCamel(employeesLeavesResult.rows),
     insuranceProviders: snakeToCamel(insuranceProvidersResult.rows),
     claims: snakeToCamel(claimsResult.rows),
+    tenant: snakeToCamel(tenantResult.rows[0] || {}),
   };
 }

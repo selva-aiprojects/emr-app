@@ -637,7 +637,9 @@ export default function EmrPage({ tenant, activeUser, selectedId, patients, prov
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Attending Identity</label>
                     <select name="providerId" className="input-field h-[60px] bg-slate-50 border-none font-bold text-slate-800 rounded-xl">
-                      {<option value="test-doctor-id">Default Physician</option>}
+                      {(providers || []).length === 0 && (
+                        <option value="" disabled>No providers available</option>
+                      )}
                       {Array.from(new Map((providers || []).map(p => [p.id, p])).values()).map(p => (
                         <option key={p.id} value={p.id}>{p.name}</option>
                       ))}
