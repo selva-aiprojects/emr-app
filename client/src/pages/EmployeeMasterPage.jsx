@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
+import { employeeService } from '../services/employee.service.js';
 import { 
   Users, 
   Star, 
@@ -62,81 +63,6 @@ export default function EmployeeMasterPage({ tenant }) {
   const departments = ['All', 'Cardiology', 'Neurology', 'Pediatrics', 'Orthopedics', 'General Medicine', 'Surgery', 'Radiology', 'Pathology'];
   const roles = ['Doctor', 'Nurse', 'Administrator', 'Support Staff', 'Technician'];
 
-  // Mock employee data - replace with actual API call
-  const mockEmployees = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@hospital.com',
-      department: 'Cardiology',
-      role: 'Doctor',
-      status: 'Active',
-      joinDate: '2020-03-15',
-      employeeId: 'EMP001',
-      credentials: {
-        rating: 4.8,
-        experience: 15,
-        consultationFee: 500,
-        location: 'Main Hospital Building',
-        availableDays: ['Mon', 'Wed', 'Fri'],
-        specialization: 'Interventional Cardiology',
-        education: 'MD - Harvard Medical School',
-        languages: ['English', 'Hindi', 'Tamil']
-      }
-    },
-    {
-      id: 2,
-      name: 'Dr. Michael Chen',
-      email: 'michael.chen@hospital.com',
-      department: 'Neurology',
-      role: 'Doctor',
-      status: 'Active',
-      joinDate: '2018-07-22',
-      employeeId: 'EMP002',
-      credentials: {
-        rating: 4.9,
-        experience: 12,
-        consultationFee: 600,
-        location: 'Neurology Wing',
-        availableDays: ['Tue', 'Thu', 'Sat'],
-        specialization: 'Neuro-interventional Surgery',
-        education: 'MD - Johns Hopkins',
-        languages: ['English', 'Mandarin']
-      }
-    },
-    {
-      id: 3,
-      name: 'Dr. Emily Rodriguez',
-      email: 'emily.rodriguez@hospital.com',
-      department: 'Pediatrics',
-      role: 'Doctor',
-      status: 'Active',
-      joinDate: '2019-11-10',
-      employeeId: 'EMP003',
-      credentials: {
-        rating: 4.7,
-        experience: 8,
-        consultationFee: 400,
-        location: 'Pediatrics Department',
-        availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-        specialization: 'Pediatric Cardiology',
-        education: 'MD - Stanford Medical School',
-        languages: ['English', 'Spanish']
-      }
-    },
-    {
-      id: 4,
-      name: 'James Wilson',
-      email: 'james.wilson@hospital.com',
-      department: 'Administration',
-      role: 'Nurse',
-      status: 'Active',
-      joinDate: '2021-01-05',
-      employeeId: 'EMP004',
-      credentials: null
-    }
-  ];
-
   useEffect(() => {
     loadEmployees();
   }, []);
@@ -144,13 +70,33 @@ export default function EmployeeMasterPage({ tenant }) {
   const loadEmployees = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      setTimeout(() => {
-        setEmployees(mockEmployees);
-        setLoading(false);
-      }, 1000);
+      const employeesData = await employeeService.getEmployees();
+      // Transform backend data to match frontend structure
+      const transformedEmployees = employeesData.map(emp => ({
+        id: emp.id,
+        name: emp.name,
+        email: emp.email || `${emp.code.toLowerCase()}@hospital.com`,
+        department: emp.department || 'General',
+        role: emp.designation || 'Staff',
+        status: 'Active', // Backend doesn't have status field, default to Active
+        joinDate: emp.joinDate || new Date().toISOString().split('T')[0],
+        employeeId: emp.code,
+        credentials: emp.designation === 'Doctor' ? {
+          rating: 0,
+          experience: 0,
+          consultationFee: 0,
+          location: '',
+          availableDays: [],
+          specialization: '',
+          education: '',
+          languages: []
+        } : null
+      }));
+      setEmployees(transformedEmployees);
     } catch (error) {
+      console.error('Error loading employees:', error);
       showToast({ message: 'Failed to load employees', type: 'error' });
+    } finally {
       setLoading(false);
     }
   };
@@ -166,15 +112,18 @@ export default function EmployeeMasterPage({ tenant }) {
   const handleAddEmployee = async (e) => {
     e.preventDefault();
     try {
-      // Simulate API call to add employee
-      const newId = Math.max(...employees.map(emp => emp.id), 0) + 1;
-      const employeeToAdd = {
-        ...newEmployee,
-        id: newId,
-        joinDate: new Date().toISOString().split('T')[0]
+      // Prepare data for backend API
+      const employeeData = {
+        name: newEmployee.name,
+        code: newEmployee.employeeId,
+        department: newEmployee.department,
+        designation: newEmployee.role,
+        joinDate: newEmployee.joinDate || new Date().toISOString().split('T')[0],
+        email: newEmployee.email,
+        salary: 0 // Default salary, can be added to form later
       };
       
-      setEmployees([...employees, employeeToAdd]);
+      await employeeService.createEmployee(employeeData);
       
       showToast({ message: 'Employee added successfully!', type: 'success' });
       setShowAddEmployeeForm(false);
@@ -197,7 +146,11 @@ export default function EmployeeMasterPage({ tenant }) {
           languages: []
         }
       });
+      
+      // Reload employees to get the latest data
+      await loadEmployees();
     } catch (error) {
+      console.error('Error adding employee:', error);
       showToast({ message: 'Failed to add employee', type: 'error' });
     }
   };
@@ -205,7 +158,7 @@ export default function EmployeeMasterPage({ tenant }) {
   const handleCredentialSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Simulate API call to save credentials
+      // Update frontend state only (backend credentials support to be added later)
       const updatedEmployees = employees.map(emp => 
         emp.id === selectedEmployee.id 
           ? { ...emp, credentials: { ...credentialData } }

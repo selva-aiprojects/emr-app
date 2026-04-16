@@ -11,6 +11,20 @@ router.use(requireTenant);
 router.use(moduleGate('employees'));
 
 /**
+ * @route   GET /api/employees
+ * @desc    Get all employees for a tenant
+ */
+router.get('/', requirePermission('employees'), async (req, res) => {
+  try {
+    const employees = await repo.getEmployees(req.tenantId);
+    res.json(employees);
+  } catch (error) {
+    console.error('Error fetching employees:', error);
+    res.status(500).json({ error: 'Failed to fetch employees' });
+  }
+});
+
+/**
  * @route   POST /api/employees
  * @desc    Create a new employee record
  */
