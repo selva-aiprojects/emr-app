@@ -18,23 +18,7 @@ export default function EnhancedLoginPage({ onLogin, tenants, loading: propLoadi
 
   const tenantOptions = useMemo(() => tenants || [], [tenants]);
 
-  const demoCredentials = {
-    superadmin: {
-      label: 'Platform Admin',
-      email: 'superadmin@emr.local',
-      password: 'Admin@123',
-      icon: Shield,
-      color: 'indigo'
-    },
-    nah: {
-      label: 'Hospital Admin',
-      email: 'admin@nah.local',
-      password: 'Admin@123',
-      icon: User,
-      color: 'blue'
-    }
-  };
-
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     setInternalLoading(true);
@@ -57,27 +41,7 @@ export default function EnhancedLoginPage({ onLogin, tenants, loading: propLoadi
     }
   };
 
-  const setDemoCreds = (key, demo) => {
-    const matchedTenant = tenantOptions.find(t =>
-      t.name.toLowerCase().includes('new age') ||
-      t.code?.toLowerCase() === 'nah' ||
-      t.id?.toLowerCase() === 'nah'
-    );
-
-    setCredentials({
-      tenantId: key === 'superadmin' ? 'superadmin' : (matchedTenant ? (matchedTenant.code || matchedTenant.id) : key),
-      email: demo.email,
-      password: demo.password
-    });
-  };
-
-  const handleQuickLogin = (key, demo) => {
-    setDemoCreds(key, demo);
-    setTimeout(() => {
-      document.getElementById('login-form')?.dispatchEvent(new Event('submit', { cancelable: true }));
-    }, 100);
-  };
-
+  
   return (
     <div className="enhanced-login-container">
       {/* Background Pattern */}
@@ -113,37 +77,7 @@ export default function EnhancedLoginPage({ onLogin, tenants, loading: propLoadi
           </div>
         </div>
 
-        {/* Quick Access Demo Cards */}
-        <div className="quick-access">
-          <p className="quick-access-title">Quick Access</p>
-          <div className="demo-cards">
-            {Object.entries(demoCredentials).map(([key, demo]) => (
-              <button
-                key={key}
-                onClick={() => handleQuickLogin(key, demo)}
-                className="demo-card"
-                disabled={isLoading}
-              >
-                <div className={`demo-icon ${demo.color}`}>
-                  <demo.icon className="w-5 h-5 text-white" />
-                </div>
-                <div className="demo-info">
-                  <p className="demo-label">{demo.label}</p>
-                  <p className="demo-email">{demo.email}</p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400" />
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="login-divider">
-          <div className="divider-line"></div>
-          <span className="divider-text">OR</span>
-          <div className="divider-line"></div>
-        </div>
-
+        
         {/* Login Form */}
         <form id="login-form" onSubmit={handleSubmit} className="login-form">
           {/* Facility Selection */}

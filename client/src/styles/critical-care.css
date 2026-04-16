@@ -318,6 +318,75 @@ h1, h2, h3, h4, .font-display {
   font-family: var(--font-body);
 }
 
+/* SIDEBAR HEADER HIGHLIGHT */
+.sidebar-header-highlight {
+  background: linear-gradient(135deg, var(--clinical-primary), var(--clinical-accent)) !important;
+  border-bottom: 2px solid var(--clinical-accent) !important;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.15) !important;
+}
+
+/* SIDEBAR HEADER TEXT STYLING */
+.sidebar-header-highlight h1,
+.sidebar-header-highlight .text-[14px],
+.sidebar-header-highlight .text-white,
+.sidebar-header-highlight .text-white\\/40,
+.sidebar-header-highlight .text-white\\/30 {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.sidebar-header-highlight p,
+.sidebar-header-highlight .text-[9px],
+.sidebar-header-highlight .font-black {
+  color: rgba(255, 255, 255, 0.9) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+.sidebar-header-highlight .min-w-0 h1,
+.sidebar-header-highlight .min-w-0 p,
+.sidebar-header-highlight .min-w-0 span {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* HIGHER SPECIFICITY SELECTORS */
+div.flex.items-center.justify-between.px-5.py-4.sidebar-header-highlight h1,
+div.flex.items-center.justify-between.px-5.py-4.sidebar-header-highlight .text-[14px] {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+div.flex.items-center.justify-between.px-5.py-4.sidebar-header-highlight p,
+div.flex.items-center.justify-between.px-5.py-4.sidebar-header-highlight .text-[9px] {
+  color: rgba(255, 255, 255, 0.9) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* CUSTOM SCROLLBAR STYLING */
+.sidebar-custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.sidebar-custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--clinical-secondary), var(--clinical-accent));
+  border-radius: 4px;
+  border: 1px solid rgba(0, 119, 182, 0.2);
+}
+
+.sidebar-custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--clinical-accent), var(--clinical-primary));
+}
+
+.sidebar-custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--clinical-secondary) rgba(255, 255, 255, 0.1);
+}
+
 .enhanced-header {
   background: var(--medical-surface-solid);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);

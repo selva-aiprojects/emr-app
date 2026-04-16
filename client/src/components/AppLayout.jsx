@@ -285,7 +285,7 @@ export default function AppLayout({
 
   const SidebarContent = (
     <div className="flex flex-col h-full bg-[var(--medical-navy)] border-r border-white/[0.05] shadow-2xl">
-      <div className={`flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? "justify-center p-4" : "justify-between px-5 py-4"}`}>
+      <div className={`sidebar-header-highlight flex items-center border-b border-white/[0.06] ${sidebarCollapsed ? "justify-center p-4" : "justify-between px-5 py-4"}`}>
         {!sidebarCollapsed && (
           <div className="flex items-center gap-4 min-w-0">
             {tenant?.logo_url ? (
@@ -298,10 +298,16 @@ export default function AppLayout({
               </div>
             )}
             <div className="min-w-0">
-              <h1 className="text-[14px] font-black tracking-tight text-white uppercase leading-tight" style={{ color: '#ffffff', letterSpacing: '0.05em' }}>
+              <h1 
+                className="text-[14px] font-black tracking-tight text-white uppercase leading-tight" 
+                style={{ color: '#ffffff !important', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}
+              >
                 {BRAND.name}
               </h1>
-              <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] truncate mt-1" style={{ textShadow: "0 1px 2px rgba(0,0,0,0.2)" }}>
+              <p 
+                className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] truncate mt-1" 
+                style={{ color: 'rgba(255, 255, 255, 0.9) !important', textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)' }}
+              >
                 {facilityName}
               </p>
             </div>
@@ -329,8 +335,7 @@ export default function AppLayout({
       </div>
 
       <nav
-        className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-0.5"
-        style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(255,255,255,0.1) transparent" }}
+        className="sidebar-custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-0.5"
       >
         {sidebarGroups.map((group) => {
           const visibleModules = group.modules.filter((m) => effectiveAccessibleModules.includes(m));
