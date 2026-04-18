@@ -128,10 +128,10 @@ export async function getSuperadminOverview() {
       ORDER BY t.created_at DESC
     `);
 
-    // 2. For any tenant where ALL counts are 0, do a live query from their schema
+    // 2. For any tenant with data or missing doctor counts, do a live query from their schema
     const enrichedTenants = await Promise.all(tenantRows.map(async (row) => {
-      const allZero = Number(row.patients_count) === 0 && Number(row.doctors_count) === 0;
-      if (!allZero || !row.schema_name) return row;
+      const hasData = Number(row.patients_count) > 0 || Number(row.doctors_count) === 0;
+      if (!hasData || !row.schema_name) return row;
 
       try {
         const schemaName = row.schema_name;
@@ -144,7 +144,7 @@ export async function getSuperadminOverview() {
 
         const [pRes, dRes, bRes, aRes] = await Promise.all([
           pool.query(`SELECT COUNT(*)::int as c FROM "${schemaName}".patients`).catch(() => ({ rows: [{ c: 0 }] })),
-          pool.query(`SELECT COUNT(*)::int as c FROM emr.users WHERE tenant_id::text = $1::text AND lower(role) = 'doctor'`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] })),
+          pool.query(`SELECT COUNT(*)::int as c FROM "${schemaName}".employees WHERE tenant_id = $1 AND (lower(designation) LIKE '%doctor%' OR lower(designation) LIKE '%consultant%' OR lower(designation) LIKE '%physician%' OR lower(designation) LIKE '%surgeon%')`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] })),
           pool.query(`SELECT COUNT(CASE WHEN status = 'available' THEN 1 END)::int as c FROM "${schemaName}".beds`).catch(() => ({ rows: [{ c: 0 }] })),
           pool.query(`SELECT COUNT(CASE WHEN status = 'available' THEN 1 END)::int as c FROM "${schemaName}".ambulances`).catch(() => ({ rows: [{ c: 0 }] })),
         ]);
@@ -157,19 +157,24 @@ export async function getSuperadminOverview() {
         // Upsert into cache so next load is faster
         await pool.query(`
           INSERT INTO emr.management_tenant_metrics
-            (tenant_id, patients_count, doctors_count, available_beds, available_ambulances, active_users_count, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            (tenant_id, tenant_code, tenant_name, schema_name, patients_count, doctors_count, available_beds, available_ambulances, active_users_count, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
           ON CONFLICT (tenant_id) DO UPDATE SET
+            tenant_code = EXCLUDED.tenant_code,
+            tenant_name = EXCLUDED.tenant_name,
+            schema_name = EXCLUDED.schema_name,
             patients_count = EXCLUDED.patients_count,
             doctors_count = EXCLUDED.doctors_count,
             available_beds = EXCLUDED.available_beds,
             available_ambulances = EXCLUDED.available_ambulances,
+            active_users_count = EXCLUDED.active_users_count,
             updated_at = NOW()
-        `, [row.tenant_id, livePatients, liveDoctors, liveBeds, liveAmb, liveDoctors]).catch(() => {});
+        `, [row.tenant_id, row.tenant_code, row.tenant_name, row.schema_name, livePatients, liveDoctors, liveBeds, liveAmb, liveDoctors]).catch(() => {});
 
         return { ...row, patients_count: livePatients, doctors_count: liveDoctors, available_beds: liveBeds, available_ambulances: liveAmb };
       } catch (e) {
         console.warn(`[OVERVIEW] Live query failed for ${row.tenant_code}:`, e.message);
+        console.error(`[OVERVIEW] Full error for ${row.tenant_code}:`, e);
         return row;
       }
     }));
