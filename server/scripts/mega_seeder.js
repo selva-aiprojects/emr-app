@@ -6,11 +6,14 @@ export async function runMegaSeed() {
     console.log('🚀 [MEGA_SEED] Initiating Full Institutional Lifecycle Simulation...');
 
     try {
-        // 1. Provision New Tenant (Control Plane + Shard Initialization)
         const tenantName = "Starlight Mega Center";
         const tenantCode = "SMC-MEGA";
         const tenantSubdomain = "smcmega";
         const adminEmail = "admin@smcmega.local";
+
+        console.log(`[MEGA_SEED] Cleaning up any previous simulation traces for ${tenantCode}...`);
+        await query(`DELETE FROM emr.tenants WHERE code = $1`, [tenantCode]).catch(() => {});
+        await query(`DROP SCHEMA IF EXISTS "${tenantSubdomain}" CASCADE`).catch(() => {});
         
         console.log(`[MEGA_SEED] Provisioning tenant ${tenantCode}...`);
         const result = await provisionNewTenant(
@@ -27,7 +30,7 @@ export async function runMegaSeed() {
         const deptIds = [];
         const departments = ['Cardiology', 'Emergency', 'General Medicine', 'Inpatient Ward', 'Laboratory', 'Pharmacy'];
         for (const name of departments) {
-            const res = await query(`INSERT INTO "${schema}"."departments" (tenant_id, name, code, status) VALUES ($1, $2, $3, 'active') RETURNING id`, 
+            const res = await query(`INSERT INTO "${schema}"."departments" (tenant_id, name, code) VALUES ($1, $2, $3) RETURNING id`, 
                 [tenantId, name, name.substring(0, 3).toUpperCase()]);
             deptIds.push(res.rows[0].id);
         }
@@ -40,8 +43,9 @@ export async function runMegaSeed() {
             { name: 'X-Ray Chest', cat: 'Radiology', price: 1200 }
         ];
         for (const s of services) {
-            const res = await query(`INSERT INTO "${schema}"."services" (tenant_id, name, category, base_price, status) VALUES ($1, $2, $3, $4, 'active') RETURNING id`,
-                [tenantId, s.name, s.cat, s.price]);
+            const code = s.name.substring(0, 4).toUpperCase() + '-' + Math.floor(Math.random() * 100);
+            const res = await query(`INSERT INTO "${schema}"."services" (tenant_id, name, code, category, base_rate) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+                [tenantId, s.name, code, s.cat, s.price]);
             serIds.push(res.rows[0].id);
         }
 
@@ -53,9 +57,9 @@ export async function runMegaSeed() {
         const nurseRoleId = nurseRes.rows[0].id;
 
         const hp = await hashPassword('Admin@123');
-        const doctorRes = await query(`INSERT INTO "${schema}"."users" (tenant_id, email, password_hash, name, role, role_id) VALUES ($1, $2, $3, $4, 'Doctor', $5) RETURNING id`,
+        const doctorRes = await query(`INSERT INTO "${schema}"."users" (tenant_id, email, password_hash, name, role_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
             [tenantId, 'doctor@smcmega.local', hp, 'Dr. Aris Thorne', docRoleId]);
-        const nurseRes2 = await query(`INSERT INTO "${schema}"."users" (tenant_id, email, password_hash, name, role, role_id) VALUES ($1, $2, $3, $4, 'Nurse', $5) RETURNING id`,
+        const nurseRes2 = await query(`INSERT INTO "${schema}"."users" (tenant_id, email, password_hash, name, role_id) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
             [tenantId, 'nurse@smcmega.local', hp, 'Nurse Elara', nurseRoleId]);
         
         const doctorId = doctorRes.rows[0].id;
@@ -83,7 +87,7 @@ export async function runMegaSeed() {
 
             // D. Inpatient Management (for every second patient)
             if (i % 2 === 0) {
-                const wardRes = await query(`INSERT INTO "${schema}"."wards" (tenant_id, name, type, capacity, status) VALUES ($1, $2, 'General', 10, 'active') RETURNING id`,
+                const wardRes = await query(`INSERT INTO "${schema}"."wards" (tenant_id, name, type, base_rate) VALUES ($1, $2, 'General', 1500) RETURNING id`,
                     [tenantId, `Ward ${suffix}`]);
                 const wardId = wardRes.rows[0].id;
                 
@@ -98,22 +102,16 @@ export async function runMegaSeed() {
             }
 
             // E. Diagnostics
-            const testRes = await query(`INSERT INTO "${schema}"."lab_tests" (tenant_id, test_name, category, price) VALUES ($1, 'Mega Panel', 'Laboratory', 1000) RETURNING id`, [tenantId]);
-            const testId = testRes.rows[0].id;
-            
-            const reqRes = await query(`INSERT INTO "${schema}"."service_requests" (tenant_id, patient_id, encounter_id, category, display, status) VALUES ($1, $2, $3, 'lab', 'Mega Panel', 'completed') RETURNING id`,
-                [tenantId, patientId, encId]);
-            
-            await query(`INSERT INTO "${schema}"."diagnostic_reports" (tenant_id, patient_id, test_id, encounter_id, status, results, conclusion) VALUES ($1, $2, $3, $4, 'final', $5, 'Healthy simulation state')`,
-                [tenantId, patientId, testId, encId, JSON.stringify({ score: 100, health: "Optimal" })]);
+            const reqRes = await query(`INSERT INTO "${schema}"."service_requests" (tenant_id, patient_id, encounter_id, category, display, status, notes) VALUES ($1, $2, $3, 'lab', 'Mega Panel', 'completed', $4) RETURNING id`,
+                [tenantId, patientId, encId, JSON.stringify({ results: 'Healthy simulation state', score: 100 })]);
 
             // F. Billing
             const invNum = `INV-MEGA-${suffix}`;
-            const invRes = await query(`INSERT INTO "${schema}"."invoices" (tenant_id, patient_id, invoice_number, total, paid, status) VALUES ($1, $2, $3, 2500, 2500, 'paid') RETURNING id`,
+            const invRes = await query(`INSERT INTO "${schema}"."invoices" (tenant_id, patient_id, invoice_number, subtotal, total, paid, status) VALUES ($1, $2, $3, 2500, 2500, 2500, 'paid') RETURNING id`,
                 [tenantId, patientId, invNum]);
             const invId = invRes.rows[0].id;
             
-            await query(`INSERT INTO "${schema}"."invoice_items" (tenant_id, invoice_id, item_description, amount) VALUES ($1, $2, 'Comprehensive Medical Package', 2500)`,
+            await query(`INSERT INTO "${schema}"."invoice_items" (tenant_id, invoice_id, item_description, quantity, rate, amount) VALUES ($1, $2, 'Comprehensive Medical Package', 1, 2500, 2500)`,
                 [tenantId, invId]);
         }
 
@@ -121,7 +119,19 @@ export async function runMegaSeed() {
         return { success: true, tenantId, tenantCode };
 
     } catch (error) {
-        console.error('[MEGA_SEED] ❌ Simulation failed:', error.message);
+        console.error('[MEGA_SEED] ❌ Simulation failed:', error);
         throw error;
     }
+}
+
+// Execute directly if run via CLI
+import { fileURLToPath } from 'url';
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    runMegaSeed().then(() => {
+        console.log('✅ Mega seed completed successfully');
+        process.exit(0);
+    }).catch(err => {
+        console.error('❌ Failed:', err);
+        process.exit(1);
+    });
 }

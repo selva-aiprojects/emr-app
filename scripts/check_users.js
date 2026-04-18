@@ -1,36 +1,27 @@
+import { query } from '../server/db/connection.js';
 
-import pkg from 'pg';
-const { Pool } = pkg;
-import dotenv from 'dotenv';
-import bcrypt from 'bcryptjs';
-
-dotenv.config();
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-async function check() {
-  const result = await pool.query('SELECT name, email, role, password_hash FROM emr.users WHERE email IN ($1, $2, $3)', [
-    'superadmin@emr.local',
-    'anita@sch.local',
-    'rajesh@sch.local'
-  ]);
-
-  console.log('User Hashes:');
-  for (const user of result.rows) {
-    const passwords = ['Admin@123', 'Anita@123', 'Rajesh@123'];
-    let matched = 'NONE';
-    for (const p of passwords) {
-      if (await bcrypt.compare(p, user.password_hash)) {
-        matched = p;
-        break;
-      }
+async function checkUsers() {
+  try {
+    const tenantCode = 'MGHPL';
+    const tenantRes = await query('SELECT id FROM emr.tenants WHERE code = $1', [tenantCode]);
+    
+    if (tenantRes.rowCount === 0) {
+      console.log('Tenant not found');
+      return;
     }
-    console.log(`- ${user.name} (${user.email}): Hash starts with ${user.password_hash.substring(0, 10)}... Matches known: ${matched}`);
+    
+    const tenantId = tenantRes.rows[0].id;
+    console.log(`Tenant ID for ${tenantCode}: ${tenantId}`);
+    
+    const usersRes = await query('SELECT email, role FROM emr.users WHERE tenant_id = $1', [tenantId]);
+    console.log('Users for tenant:');
+    console.table(usersRes.rows);
+    
+  } catch (err) {
+    console.error(err);
+  } finally {
+    process.exit(0);
   }
-  process.exit(0);
 }
 
-check();
+checkUsers();

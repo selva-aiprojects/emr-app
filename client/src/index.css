@@ -35,10 +35,11 @@
 
   --text-main: #1E293B;     /* Slate-800 - Primary Content */
   --text-strong: #020617;   /* Slate-950 - Headings */
-  --text-muted: #475569;    /* Slate-600 - Descriptive Text (Darkened for visibility) */
-  --text-soft: #64748B;     /* Slate-500 - Secondary Labels (Darkened for visibility) */
+  --text-muted: #475569;    /* Slate-600 - Descriptive Text */
+  --text-soft: #64748B;     /* Slate-500 - Secondary Labels */
 
-  --border: rgba(0, 119, 182, 0.14);
+  --border: rgba(0, 119, 182, 0.12);
+  --border-strong: rgba(0, 119, 182, 0.25);
   --surface: #FFFFFF;
   --page-bg: #EFF5FA;
   /* Cool clinical blue-gray — matches sidebar atmosphere */
@@ -213,26 +214,55 @@ textarea {
   box-shadow: 0 30px 40px -10px rgba(0, 0, 0, 0.08);
 }
 
-/* BUTTONS */
-.btn {
-  padding: 12px 24px;
-  border-radius: 14px;
+/* BUTTONS - STANDARDIZED PREMIUM */
+.btn-premium {
+  padding: 12px 28px;
+  border-radius: 16px;
   font-weight: 700;
-  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  letter-spacing: -0.01em;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   cursor: pointer;
   border: none;
-  font-size: 0.875rem;
-}
-
-.btn-primary {
   background: var(--clinical-blue);
   color: white;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
 }
 
-.btn-primary:hover {
+.btn-premium:hover {
   background: var(--medical-navy);
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(0, 119, 182, 0.2);
+  box-shadow: 0 12px 24px rgba(1, 22, 39, 0.2);
+}
+
+.btn-premium-outline {
+  background: transparent;
+  border: 2px solid var(--border-strong);
+  color: var(--text-main);
+  box-shadow: none;
+}
+
+.btn-premium-outline:hover {
+  background: rgba(0, 119, 182, 0.05);
+  border-color: var(--clinical-blue);
+  color: var(--clinical-blue);
+  transform: translateY(-2px);
+}
+
+.btn-premium-ghost {
+  background: transparent;
+  border: none;
+  color: var(--text-soft);
+  box-shadow: none;
+}
+
+.btn-premium-ghost:hover {
+  background: rgba(0, 119, 182, 0.08);
+  color: var(--clinical-blue);
 }
 
 /* INPUTS */
@@ -295,14 +325,30 @@ textarea {
   animation: fade-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* Page content specific heading adjustments (Reducing size to 50% of the 2.5rem base) */
+/* Uniform Typography for Page Content */
+.premium-title {
+  font-size: 1.75rem !important;
+  font-weight: 800 !important;
+  color: var(--text-strong) !important;
+  letter-spacing: -0.03em !important;
+  line-height: 1.1 !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.premium-subtitle {
+  font-size: 0.875rem !important;
+  color: var(--text-muted) !important;
+  font-weight: 500 !important;
+}
+
 body .page-shell-premium h1,
 body .page-content h1,
 .page-header-premium h1 {
-  font-size: 1.5rem !important;
-  letter-spacing: -0.02em !important;
-  line-height: 1.2 !important;
-  margin-bottom: 8px !important;
+  font-size: 2rem !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.04em !important;
+  line-height: 1.1 !important;
+  margin-bottom: 0.5rem !important;
 }
 
 /* Unified Stat Cards */
@@ -535,7 +581,7 @@ img, svg {
    ═══════════════════════════════════════════════════════════ */
 .page-header-premium {
   background: linear-gradient(135deg, var(--clinical-hero) 0%, var(--clinical-primary-dark) 100%);
-  padding: 3rem !important;
+  padding: 2.5rem 3rem !important; /* Standardized height */
   border-radius: 32px !important;
   color: white !important;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
@@ -548,35 +594,53 @@ img, svg {
   align-items: center !important;
 }
 
-.page-header-premium::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at top right, var(--clinical-accent), transparent 50%),
-              radial-gradient(circle at bottom left, var(--clinical-accent), transparent 40%);
-  opacity: 0.15;
-  pointer-events: none;
-  z-index: 0;
+/* Force textual elements to be white, while safely ignoring UI controls like buttons */
+.page-header-premium > * > h1, 
+.page-header-premium > * > h2,
+.page-header-premium > * > h3,
+.page-header-premium > * > p,
+.page-header-premium > * > span:not(button span):not(.system-shard-badge),
+.page-header-premium > * > div:not(button div) {
+  color: white;
 }
 
 .page-header-premium h1, 
 .page-header-premium h2,
-.page-header-premium h3,
-.page-header-premium p, 
-.page-header-premium .dim-label,
-.page-header-premium span:not(.live-indicator),
-.page-header-premium .text-slate-300 {
+.page-header-premium h3 {
   color: white !important;
-  opacity: 1 !important;
-  position: relative;
-  z-index: 10;
 }
 
+.page-header-premium .premium-subtitle,
 .page-header-premium .dim-label {
-  opacity: 0.9 !important;
   color: rgba(255, 255, 255, 0.8) !important;
-  font-weight: 500;
-  max-width: 600px;
+  font-weight: 500 !important;
+  max-width: 650px;
+}
+
+/* Global button override for absolute styling uniformity */
+.btn-premium {
+  min-height: 44px !important;
+  padding: 0 28px !important;
+  border-radius: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 800 !important;
+  font-size: 0.8125rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.1em !important;
+  white-space: nowrap !important;
+  border: none !important;
+  background: var(--clinical-blue) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-premium:hover {
+  background: var(--medical-navy) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 24px rgba(1, 22, 39, 0.2) !important;
 }
 
 .system-shard-badge {

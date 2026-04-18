@@ -1,6 +1,7 @@
 import { verifyToken } from '../services/auth.service.js';
 import { query } from '../db/connection.js';
 import { tenantContext } from '../lib/tenantContext.js';
+import fs from 'fs';
 
 /**
  * Middleware to authenticate requests using JWT
@@ -62,9 +63,12 @@ export async function authenticate(req, res, next) {
       return next();
     }
 
-    // Fetch user from database
+    // Fetch user from database with tenant info
     const userResult = await query(
-      'SELECT id, tenant_id, email, name, role, patient_id, is_active FROM emr.users WHERE id = $1',
+      `SELECT u.id, u.tenant_id, u.email, u.name, u.role, u.patient_id, u.is_active, t.subscription_tier 
+       FROM emr.users u 
+       LEFT JOIN emr.tenants t ON u.tenant_id::text = t.id 
+       WHERE u.id = $1::uuid`,
       [decoded.userId]
     );
 
@@ -83,7 +87,7 @@ export async function authenticate(req, res, next) {
     }
 
     // Normalize role for consistency
-    const userRole = user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase();
+    const userRole = user.role?.charAt(0).toUpperCase() + user.role?.slice(1).toLowerCase() || 'User';
     let finalRole = userRole;
 
     // Canonicalize specialized or alias roles to system-standard equivalents
@@ -101,14 +105,23 @@ export async function authenticate(req, res, next) {
       name: user.name,
       role: finalRole,
       patientId: user.patient_id,
+      subscription_tier: user.subscription_tier || 'Basic'
     };
 
     next();
   } catch (error) {
-    console.error('Authentication error:', error);
+    const errorLog = `\n--- [${new Date().toISOString()}] AUTH_CRASH ---\nPath: ${req.method} ${req.path}\nError: ${error.message}\nStack: ${error.stack}\n-----------------------------------\n`;
+    try {
+      fs.appendFileSync('AUTH_ERROR.log', errorLog);
+    } catch (fsErr) {
+      console.error('Failed to write to AUTH_ERROR.log', fsErr);
+    }
+    
+    console.error(`[AUTH_CRASH] Error during authentication for ${req.method} ${req.path}:`, error);
     return res.status(500).json({
       error: 'Authentication failed',
-      message: 'Internal server error during authentication'
+      message: 'Internal server error during authentication',
+      details: error.message
     });
   }
 }
@@ -149,7 +162,12 @@ export function requireRole(...roles) {
  * Extracts tenantId from query params or body
  */
 export function requireTenant(req, res, next) {
-  const tenantId = req.header('x-tenant-id') || req.query.tenantId || req.body.tenantId || req.params.id || req.params.tenantId;
+  // Use authenticated user's tenantId first, then check other sources
+  let tenantId = req.user?.tenantId;
+  
+  if (!tenantId) {
+    tenantId = req.header('x-tenant-id') || req.query.tenantId || req.body.tenantId || req.params.id || req.params.tenantId;
+  }
 
   if (!tenantId) {
     return res.status(400).json({
@@ -322,7 +340,7 @@ export async function optionalAuth(req, res, next) {
     const decoded = verifyToken(token);
 
     const userResult = await query(
-      'SELECT id, tenant_id, email, name, role, patient_id, is_active FROM emr.users WHERE id = $1 AND is_active = true',
+      'SELECT id, tenant_id, email, name, role, patient_id, is_active FROM emr.users WHERE id = $1::uuid AND is_active = true',
       [decoded.userId]
     );
 

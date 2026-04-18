@@ -44,6 +44,7 @@ import bloodbankRoutes from './routes/bloodbank.routes.js';
 import clinicalRoutes from './routes/clinical.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import aiRoutes from './routes/ai.routes.js';
+import menuRoutes from './routes/menu.js';
 
 const app = express();
 
@@ -117,6 +118,7 @@ app.use('/api/support', supportRoutes);
 app.use('/api/ambulances', ambulanceRoutes);
 app.use('/api/blood-bank', bloodbankRoutes);
 app.use('/api/clinical', clinicalRoutes);
+app.use('/api/menu', menuRoutes);
 
 app.get('/api/version', (req, res) => res.json({ version: '1.5.0-MODULAR-FINAL' }));
 

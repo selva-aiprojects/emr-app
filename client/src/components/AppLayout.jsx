@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { moduleMeta } from "../config/modules.js";
 import { BRAND } from "../config/branding.js";
+import { menuService } from "../services/menuService.js";
 
 import {
   Activity,
@@ -131,7 +132,7 @@ function formatRole(role) {
 }
 
 /* ─── COLLAPSIBLE GROUP COMPONENT ────────────────────────────────── */
-function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebarCollapsed }) {
+function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebarCollapsed, databaseMenu }) {
   const [open, setOpen] = useState(true);
 
   if (visibleModules.length === 0) return null;
@@ -167,8 +168,28 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
       >
         <div className={`space-y-1.5 ${!sidebarCollapsed && open ? "pt-2 pb-4" : ""}`}>
           {visibleModules.map((moduleName) => {
-            const Icon = navIcons[moduleName] || LayoutDashboard;
-            const moduleInfo = moduleMeta[moduleName];
+            // Try to get icon and info from database first, then fallback to hardcoded
+            let Icon = LayoutDashboard;
+            let moduleInfo = moduleMeta[moduleName];
+            let displayName = moduleInfo?.title || moduleName;
+            let subtitle = moduleInfo?.subtitle;
+            
+            if (databaseMenu) {
+              // Find this module in database menu
+              for (const header of databaseMenu) {
+                const item = header.items.find(i => i.code === moduleName);
+                if (item) {
+                  Icon = navIcons[item.icon_name] || navIcons[moduleName] || LayoutDashboard;
+                  displayName = item.name;
+                  subtitle = item.description;
+                  break;
+                }
+              }
+            } else {
+              // Fallback to hardcoded icons
+              Icon = navIcons[moduleName] || LayoutDashboard;
+            }
+            
             const isActive = view === moduleName;
 
             return (
@@ -179,7 +200,7 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
                   setView(moduleName);
                   setMobileOpen(false);
                 }}
-                title={sidebarCollapsed ? moduleInfo?.title || moduleName : ""}
+                title={sidebarCollapsed ? displayName : ""}
                 className={`
                   w-full flex items-center gap-3 rounded-xl transition-all duration-150 group relative
                   ${sidebarCollapsed ? "px-2 py-3 justify-center" : "px-3 py-2.5"}
@@ -202,11 +223,11 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
                 {!sidebarCollapsed && (
                   <div className="flex flex-col items-start leading-none min-w-0">
                     <span className="text-xs font-semibold tracking-tight truncate">
-                      {moduleInfo?.title || moduleName}
+                      {displayName}
                     </span>
-                    {moduleInfo?.subtitle && (
+                    {subtitle && (
                       <span className="text-[10px] opacity-40 font-medium mt-0.5 truncate">
-                        {moduleInfo.subtitle}
+                        {subtitle}
                       </span>
                     )}
                   </div>
@@ -249,14 +270,69 @@ export default function AppLayout({
       ? "My Schedule"
       : moduleMeta[view]?.title || "Clinical Workspace";
 
+  const [databaseMenu, setDatabaseMenu] = useState(null);
+  const [menuLoading, setMenuLoading] = useState(true);
+
+  // Load menu from database
+  useEffect(() => {
+    const loadMenuFromDatabase = async () => {
+      if (!activeUser?.role) {
+        setMenuLoading(false);
+        return;
+      }
+
+      try {
+        const menuData = await menuService.getUserMenu();
+        setDatabaseMenu(menuData);
+      } catch (error) {
+        console.warn('Failed to load menu from database, falling back to defaults:', error);
+        setDatabaseMenu(null);
+      } finally {
+        setMenuLoading(false);
+      }
+    };
+
+    loadMenuFromDatabase();
+  }, [activeUser?.role]);
+
+  // Convert database menu to sidebar groups format
+  const sidebarGroups = useMemo(() => {
+    if (menuLoading) return [];
+    
+    if (databaseMenu && databaseMenu.length > 0) {
+      // Use database menu
+      return databaseMenu.map(header => ({
+        name: header.name,
+        modules: header.items.map(item => item.code)
+      }));
+    }
+    
+    // Fallback to hardcoded groups
+    return getSidebarGroups(activeUser?.role);
+  }, [activeUser?.role, databaseMenu, menuLoading]);
+
   const effectiveAccessibleModules = useMemo(() => {
+    // If we have database menu, extract modules from there
+    if (databaseMenu && databaseMenu.length > 0) {
+      const dbModules = [];
+      databaseMenu.forEach(header => {
+        header.items.forEach(item => {
+          dbModules.push(item.code);
+        });
+      });
+      
+      if (isDoctor && !dbModules.includes("doctor_workspace")) {
+        return ["doctor_workspace", ...dbModules];
+      }
+      return dbModules;
+    }
+    
+    // Fallback to original logic
     if (isDoctor && !allowedViews.includes("doctor_workspace")) {
       return ["doctor_workspace", ...allowedViews];
     }
     return allowedViews;
-  }, [isDoctor, allowedViews]);
-
-  const sidebarGroups = useMemo(() => getSidebarGroups(activeUser?.role), [activeUser?.role]);
+  }, [isDoctor, allowedViews, databaseMenu]);
 
   const today = useMemo(
     () =>
@@ -339,6 +415,10 @@ export default function AppLayout({
       >
         {sidebarGroups.map((group) => {
           const visibleModules = group.modules.filter((m) => effectiveAccessibleModules.includes(m));
+          
+          // Skip empty groups
+          if (visibleModules.length === 0) return null;
+          
           return (
             <NavGroup
               key={group.name}
@@ -348,6 +428,7 @@ export default function AppLayout({
               setView={setView}
               setMobileOpen={setMobileOpen}
               sidebarCollapsed={sidebarCollapsed}
+              databaseMenu={databaseMenu}
             />
           );
         })}

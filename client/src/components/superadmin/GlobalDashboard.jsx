@@ -58,9 +58,9 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
          <button 
             disabled={isSyncing}
             onClick={handleSync}
-            className="flex items-center gap-3 bg-white hover:bg-slate-50 border border-slate-200 shadow-sm px-5 py-3 rounded-2xl text-[10px] font-black text-slate-700 uppercase tracking-widest transition-all disabled:opacity-50 group"
+            className={`btn-premium gap-3 ${isSyncing ? 'opacity-50 cursor-not-allowed' : ''}`}
          >
-            <Activity size={14} className={`${isSyncing ? "animate-spin text-indigo-600" : "group-hover:text-indigo-600"} transition-colors`} /> 
+            <Activity size={18} className={isSyncing ? "animate-spin" : ""} /> 
             {isSyncing ? "Updating..." : "Update Everything"}
          </button>
       </div>

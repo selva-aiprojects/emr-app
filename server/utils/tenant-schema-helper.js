@@ -7,40 +7,54 @@ import { query } from '../db/connection.js';
  */
 export async function getTenantSchema(tenantId) {
   try {
-    // First, get the tenant code from the main emr schema
-    const tenantResult = await query(`
-      SELECT code, subdomain 
-      FROM emr.tenants 
-      WHERE id = $1
+    // First, try looking up the registered schema in management_tenants (most accurate)
+    const mgmtResult = await query(`
+      SELECT schema_name FROM emr.management_tenants 
+      WHERE id::text = $1::text AND schema_name IS NOT NULL
     `, [tenantId]);
-    
+
+    if (mgmtResult.rows.length > 0) {
+      const schemaName = mgmtResult.rows[0].schema_name;
+      // Verify the schema exists
+      const schemaCheck = await query(`
+        SELECT schema_name FROM information_schema.schemata WHERE schema_name = $1
+      `, [schemaName]);
+      if (schemaCheck.rows.length > 0) return schemaName;
+    }
+
+    // Fallback: derive from emr.tenants schema_name or code
+    const tenantResult = await query(`
+      SELECT code, schema_name FROM emr.tenants WHERE id::text = $1::text
+    `, [tenantId]);
+
     if (tenantResult.rows.length === 0) {
       throw new Error(`Tenant not found: ${tenantId}`);
     }
-    
-    const tenant = tenantResult.rows[0];
-    const tenantCode = tenant.code.toLowerCase();
-    
-    // Construct the schema name: {code} (for NHGL) or {code}_emr (for others)
-    const schemaName = tenantCode === 'nhgl' ? 'nhgl' : `${tenantCode}_emr`;
-    
-    // Verify the schema exists
-    const schemaCheck = await query(`
-      SELECT schema_name 
-      FROM information_schema.schemata 
-      WHERE schema_name = $1
-    `, [schemaName]);
-    
-    if (schemaCheck.rows.length === 0) {
-      console.warn(`Schema ${schemaName} not found for tenant ${tenantId}, falling back to demo_emr`);
-      return 'demo_emr';
+
+    const tenantCode = tenantResult.rows[0].code?.toLowerCase();
+    const explicitSchema = tenantResult.rows[0].schema_name?.toLowerCase();
+
+    // Try explicit schema first, then exact code, then code_emr pattern
+    const candidates = [];
+    if (explicitSchema) candidates.push(explicitSchema);
+    if (tenantCode) {
+      candidates.push(tenantCode);
+      candidates.push(`${tenantCode}_emr`);
     }
-    
-    return schemaName;
+
+    for (const candidate of candidates) {
+      if (!candidate) continue;
+      const schemaCheck = await query(`
+        SELECT schema_name FROM information_schema.schemata WHERE schema_name = $1
+      `, [candidate]);
+      if (schemaCheck.rows.length > 0) return candidate;
+    }
+
+    console.warn(`No schema found for tenant ${tenantId} (code: ${tenantCode}, schema: ${explicitSchema}), falling back to emr`);
+    return 'emr';
   } catch (error) {
     console.error('Error getting tenant schema:', error.message);
-    // Fallback to demo_emr for safety
-    return 'demo_emr';
+    return 'emr';
   }
 }
 

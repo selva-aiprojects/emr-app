@@ -3,28 +3,31 @@ import { ShieldCheck } from 'lucide-react';
 import { useToast } from '../hooks/useToast.jsx';
 import MetricCard from '../components/MetricCard';
 
-export default function InventoryPage({ inventory, onAddItem, onRestock }) {
+export default function InventoryPage({ inventory = [], onAddItem, onRestock }) {
   const { showToast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   
-  const filteredInventory = inventory.filter(item => 
+  // Safe guard against undefined inventory
+  const safeInventory = Array.isArray(inventory) ? inventory : [];
+  
+  const filteredInventory = safeInventory.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (item.category && item.category.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const totalItems = inventory.length;
-  const lowStockItems = inventory.filter((item) => Number(item.stock) <= Number(item.reorder)).length;
+  const totalItems = safeInventory.length;
+  const lowStockItems = safeInventory.filter((item) => Number(item.stock) <= Number(item.reorder)).length;
 
   return (
     <div className="page-shell-premium animate-fade-in">
       <header className="page-header-premium">
         <div>
-           <h1 className="flex items-center gap-3">
+           <h1 className="premium-title flex items-center gap-3">
               Asset Logistics & Supply Chain
-              <span className="text-[10px] bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Inventory Node</span>
+              <span className="system-shard-badge">Inventory Node</span>
            </h1>
-           <p className="dim-label">Monitor clinical inventory, reorder thresholds, and asset registration with high-fidelity logistics tracking.</p>
+           <p className="premium-subtitle opacity-90">Monitor clinical inventory, reorder thresholds, and asset registration with high-fidelity logistics tracking.</p>
            <p className="text-[11px] font-black text-white/60 uppercase tracking-widest mt-2 flex items-center gap-2">
               <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Operational Readiness • Supply Chain oversight active
            </p>
@@ -215,7 +218,7 @@ export default function InventoryPage({ inventory, onAddItem, onRestock }) {
                         </td>
                         <td className="text-right">
                           <button
-                            className="px-4 py-2 bg-[var(--primary-soft)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white rounded-xl text-[9px] font-black uppercase tracking-[0.1em] transition-all border border-[var(--primary)]/10 shadow-sm active:scale-95"
+                            className="btn-premium py-2 px-4 text-[9px] uppercase tracking-widest"
                             onClick={() => onRestock(item.id)}
                           >
                             Initiate Restock

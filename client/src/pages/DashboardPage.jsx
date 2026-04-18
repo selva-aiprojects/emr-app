@@ -46,39 +46,39 @@ function LiveQueue({ appointments = [], patients = [], setView, setActivePatient
     .sort((a, b) => new Date(a.updated_at) - new Date(b.updated_at));
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-[var(--accent-soft)] overflow-hidden">
-       <header className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="text-xs font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
-             <Activity className="w-3.5 h-3.5 text-indigo-500" /> Patients Waiting
+    <div className="bg-[var(--page-bg)] rounded-xl shadow-sm border border-[var(--border)] overflow-hidden">
+       <header className="p-4 bg-[var(--page-bg)] border-b border-[var(--border)] flex justify-between items-center">
+          <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-strong)] flex items-center gap-2">
+             <Activity className="w-3.5 h-3.5 text-[var(--clinical-blue)]" /> Patients Waiting
           </h3>
-          <span className="text-[10px] bg-emerald-500 text-white px-2.5 py-1 rounded-full font-bold shadow-sm">{queue.length} Total</span>
+          <span className="text-[10px] bg-[var(--success)] text-white px-2.5 py-1 rounded-full font-bold shadow-sm">{queue.length} Total</span>
        </header>
-       <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-50">
+       <div className="max-h-[300px] overflow-y-auto divide-y divide-[var(--border)]">
           {queue.length === 0 ? (
             <div className="p-10 text-center">
-               <Activity className="w-8 h-8 text-slate-100 mx-auto mb-2" />
-               <p className="text-slate-300 text-[10px] font-black uppercase tracking-widest">No patients waiting right now</p>
+               <Activity className="w-8 h-8 text-[var(--border)] mx-auto mb-2" />
+               <p className="text-[var(--text-muted)] text-[10px] font-black uppercase tracking-widest">No patients waiting right now</p>
             </div>
           ) : (
             queue.map((a, idx) => {
               const patientId = a.patientId || a.patient_id;
               const p = patients.find(p => p.id === patientId);
               return (
-                <div key={a.id} className="p-3 flex items-center gap-3 hover:bg-slate-50/50 transition-colors group">
-                   <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px]">
+                <div key={a.id} className="p-3 flex items-center gap-3 hover:bg-[var(--accent-soft)]/20 transition-colors group">
+                   <div className="w-7 h-7 rounded-lg bg-[var(--accent-soft)] text-[var(--clinical-blue)] flex items-center justify-center font-black text-[10px]">
                       {idx + 1}
                    </div>
                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-slate-900 truncate leading-relaxed mb-1">{p?.firstName} {p?.lastName}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">{a.reason || 'General Visit'}</p>
+                      <p className="text-xs font-black text-[var(--text-strong)] truncate leading-relaxed mb-1">{p?.firstName} {p?.lastName}</p>
+                      <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wide">{a.reason || 'General Visit'}</p>
                    </div>
                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-normal ${a.status === 'triaged' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-normal ${a.status === 'triaged' ? 'bg-[var(--primary-soft)] text-[var(--clinical-blue)]' : 'bg-[var(--accent-soft)] text-[var(--clinical-blue)]'}`}>
                          {a.status}
                       </span>
                       <button 
                          onClick={() => { setActivePatientId?.(patientId); setView('emr'); }}
-                         className="p-1.5 rounded-lg bg-slate-900 text-white opacity-0 group-hover:opacity-100 transition-all"
+                         className="p-1.5 rounded-lg bg-[var(--primary)] text-white opacity-0 group-hover:opacity-100 transition-all shadow-sm"
                       >
                          <ChevronRight className="w-3 h-3" />
                       </button>
@@ -97,15 +97,15 @@ function DashboardLoader() {
   return (
     <div className="fixed inset-0 z-[999] bg-white/80 backdrop-blur-md flex flex-col items-center justify-center animate-fade-in">
        <div className="relative">
-          <div className="w-20 h-20 rounded-2xl bg-[var(--primary)] shadow-2xl shadow-indigo-200 flex items-center justify-center animate-pulse">
+          <div className="w-20 h-20 rounded-2xl bg-[var(--primary)] shadow-2xl shadow-[var(--clinical-blue)]/20 flex items-center justify-center animate-pulse">
              <HeartPulse className="w-10 h-10 text-white" />
           </div>
-          <div className="absolute -inset-4 border-2 border-indigo-500/20 rounded-full animate-ping"></div>
-          <div className="absolute -inset-8 border border-indigo-500/10 rounded-full animate-ping [animation-delay:0.5s]"></div>
+          <div className="absolute -inset-4 border-2 border-[var(--clinical-blue)]/20 rounded-full animate-ping"></div>
+          <div className="absolute -inset-8 border border-[var(--clinical-blue)]/10 rounded-full animate-ping [animation-delay:0.5s]"></div>
        </div>
        <div className="mt-10 text-center">
-          <h2 className="text-[12px] font-black uppercase tracking-[0.3em] text-slate-800 mb-2">NHGL Intelligence</h2>
-          <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest animate-pulse">Synchronizing Clinical Data Nodes...</p>
+          <h2 className="text-[12px] font-black uppercase tracking-[0.3em] text-[var(--text-strong)] mb-2">Platform Intelligence</h2>
+          <p className="text-[10px] text-[var(--text-muted)] font-black uppercase tracking-widest animate-pulse">Synchronizing Clinical Data Nodes...</p>
        </div>
     </div>
   );
@@ -361,7 +361,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
                  key={filter}
                  onClick={() => setTimeFilter(filter)}
                  disabled={loading}
-                 className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${timeFilter === filter ? 'bg-white shadow-xl text-[var(--clinical-primary)]' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
+                 className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${timeFilter === filter ? 'btn-premium h-8 !px-4 !rounded-xl !text-[10px]' : 'text-white/60 hover:text-white hover:bg-white/5'}`}
                >
                  {filter}
                </button>
@@ -369,7 +369,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           </div>
           <button 
             onClick={handleExportReport}
-            className="px-8 py-3 bg-white text-[var(--clinical-primary)] rounded-2xl hover:bg-slate-50 transition-all text-xs font-black uppercase tracking-[0.2em] shadow-2xl flex items-center group active:scale-95"
+            className="btn-premium group"
           >
             <FileText className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" />
             Generate Executive Report
@@ -407,10 +407,10 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
                 <TrendingUp className="w-6 h-6" />
              </div>
              <div className="text-right">
-                <div className={`text-[11px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.growth?.revenue >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                <div className={`text-[11px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.growth?.revenue >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
                    {realtimeMetrics.growth?.revenue >= 0 ? 'Surge' : 'Dip'}
                 </div>
-                <div className="text-[10px] text-slate-500 font-black mt-1 uppercase tracking-tighter">{realtimeMetrics.growth?.revenue}% vs Prev</div>
+                <div className="text-[10px] text-[var(--text-muted)] font-black mt-1 uppercase tracking-tighter">{realtimeMetrics.growth?.revenue}% vs Prev</div>
              </div>
           </div>
           <div className="metric-content mt-4">
@@ -427,8 +427,8 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
                 <Calendar className="w-6 h-6" />
              </div>
              <div className="text-right">
-                <div className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none">Active</div>
-                <div className="text-[9px] text-slate-400 font-bold">In Local Registry</div>
+                <div className="text-[10px] font-black text-[var(--clinical-blue)] uppercase tracking-widest leading-none">Active</div>
+                <div className="text-[9px] text-[var(--text-muted)] font-bold">In Local Registry</div>
              </div>
           </div>
           <div className="metric-content mt-4">
@@ -445,10 +445,10 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
                 <Users className="w-6 h-6" />
              </div>
              <div className="text-right">
-                <div className={`text-[10px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.growth?.patients >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                <div className={`text-[10px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.growth?.patients >= 0 ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>
                    {realtimeMetrics.growth?.patients >= 0 ? 'Growing' : 'Stable'}
                 </div>
-                <div className="text-[9px] text-slate-400 font-bold">Live Patient Shards</div>
+                <div className="text-[9px] text-[var(--text-muted)] font-bold">Live Patient Shards</div>
              </div>
           </div>
           <div className="metric-content mt-4">
@@ -459,20 +459,20 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         </div>
 
         {/* Metric Card 4: Critical Alerts */}
-        <div className={`platform-metric-card group transition-all duration-500 ${realtimeMetrics.criticalAlerts > 0 ? 'bg-red-50/30 animate-alert-pulse border-red-200' : ''}`}>
+        <div className={`platform-metric-card group transition-all duration-500 ${realtimeMetrics.criticalAlerts > 0 ? 'bg-[var(--danger)]/5 animate-alert-pulse border-[var(--danger)]/20' : ''}`}>
           <div className="metric-header text-right">
-             <div className={`metric-icon red shadow-lg ${realtimeMetrics.criticalAlerts > 0 ? 'shadow-red-200 animate-pulse' : 'shadow-red-100'}`}>
+             <div className={`metric-icon red shadow-lg ${realtimeMetrics.criticalAlerts > 0 ? 'shadow-[var(--danger)]/20 animate-pulse' : 'shadow-[var(--danger)]/10'}`}>
                 <AlertCircle className="w-6 h-6" />
              </div>
              <div className="text-right">
-                <div className={`text-[10px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.criticalAlerts > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                <div className={`text-[10px] font-black uppercase tracking-widest leading-none ${realtimeMetrics.criticalAlerts > 0 ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`}>
                    {realtimeMetrics.criticalAlerts > 0 ? 'Attention' : 'Stable'}
                 </div>
-                <div className="text-[9px] text-slate-400 font-bold">Critical Node Detection</div>
+                <div className="text-[9px] text-[var(--text-soft)] font-bold">Critical Node Detection</div>
              </div>
           </div>
           <div className="metric-content mt-4">
-             <div className={`metric-value ${realtimeMetrics.criticalAlerts > 0 ? 'text-red-700' : ''}`}>{realtimeMetrics.criticalAlerts}</div>
+             <div className={`metric-value ${realtimeMetrics.criticalAlerts > 0 ? 'text-[var(--danger)]' : ''}`}>{realtimeMetrics.criticalAlerts}</div>
              <div className="metric-title">System Alerts</div>
              <div className="metric-subtitle">Shortages or Issues</div>
           </div>
@@ -483,37 +483,37 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
         <div className="dashboard-card metric-card">
           <div className="flex justify-center mb-3">
-            <div className="bg-red-50 rounded-lg p-3">
-              <Droplet className="w-6 h-6 text-red-600" />
+            <div className="bg-[var(--danger)]/10 rounded-lg p-3">
+              <Droplet className="w-6 h-6 text-[var(--danger)]" />
             </div>
           </div>
           <p className="metric-value">{realtimeMetrics.bloodBank?.value || 0} {realtimeMetrics.bloodBank?.label || 'Units'}</p>
           <p className="metric-label">Blood Bank Stock</p>
-          <span className="text-xs text-red-600 font-medium font-bold">
+          <span className="text-xs text-[var(--danger)] font-medium font-bold">
             {(realtimeMetrics.bloodBank?.value || 0) < 10 ? 'Urgent Restock' : 'Safe Levels'}
           </span>
         </div>
 
         <div className="dashboard-card metric-card">
           <div className="flex justify-center mb-3">
-            <div className="bg-purple-50 rounded-lg p-3">
-              <FlaskConical className="w-6 h-6 text-purple-600" />
+            <div className="bg-[var(--primary-soft)] rounded-lg p-3">
+              <FlaskConical className="w-6 h-6 text-[var(--clinical-blue)]" />
             </div>
           </div>
           <p className="metric-value">{realtimeMetrics.labProgress?.value || 0}%</p>
           <p className="metric-label">Lab Progress</p>
-          <span className="text-xs text-purple-600 font-medium font-bold">{realtimeMetrics.labProgress?.pending || 0} pending</span>
+          <span className="text-xs text-[var(--clinical-blue)] font-medium font-bold">{realtimeMetrics.labProgress?.pending || 0} pending</span>
         </div>
 
         <div className="dashboard-card metric-card">
           <div className="flex justify-center mb-3">
-            <div className="bg-emerald-50 rounded-lg p-3">
-              <Truck className="w-6 h-6 text-emerald-600" />
+            <div className="bg-[var(--success)]/10 rounded-lg p-3">
+              <Truck className="w-6 h-6 text-[var(--success)]" />
             </div>
           </div>
           <p className="metric-value">{realtimeMetrics.fleetStatus?.available || 0} / {realtimeMetrics.fleetStatus?.total || 0}</p>
           <p className="metric-label">Fleet Available</p>
-          <span className="text-xs text-emerald-600 font-medium font-bold">{realtimeMetrics.fleetStatus?.active || 0} En Route</span>
+          <span className="text-xs text-[var(--success)] font-medium font-bold">{realtimeMetrics.fleetStatus?.active || 0} En Route</span>
         </div>
       </div>
 
@@ -522,7 +522,7 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
           <div key={index} 
                data-testid={`quick-action-${action.view}`}
                onClick={() => setView?.(action.view)}
-               className="bg-white rounded-xl shadow-sm border border-[var(--accent-soft)] p-6 text-center cursor-pointer hover:shadow-md transition-all group">
+               className="bg-[var(--page-bg)] rounded-xl shadow-sm border border-[var(--border)] p-6 text-center cursor-pointer hover:shadow-md transition-all group">
             <div className="bg-[var(--accent-soft)] group-hover:bg-[var(--primary-soft)] rounded-lg p-3 w-12 h-12 mx-auto mb-4 flex items-center justify-center transition-colors">
               <action.icon className="w-6 h-6 text-[var(--clinical-blue)]" />
             </div>
@@ -535,14 +535,14 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       {/* Charts Grid - rich clinical visuals */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         {/* Patient Flow Chart */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-0 flex flex-col h-full overflow-hidden">
+        <div className="dashboard-card border border-[var(--border)] bg-[var(--page-bg)] rounded-xl shadow-sm p-0 flex flex-col h-full overflow-hidden">
           <div className="chart-container flex-1 flex flex-col p-4">
             <div className="chart-header flex justify-between items-start mb-4">
               <div>
-                <h2 className="chart-title text-lg font-semibold text-gray-900">Patient Flow</h2>
-                <p className="text-xs text-gray-500 mt-1">Daily admission & discharge trends</p>
+                <h2 className="chart-title text-lg font-semibold text-[var(--text-strong)]">Patient Flow</h2>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Daily admission & discharge trends</p>
               </div>
-              <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1">
+              <span className="text-[10px] font-semibold text-[var(--success)] bg-[var(--success)]/10 border border-[var(--success)]/20 rounded-full px-3 py-1">
                 Live cohort
               </span>
             </div>
@@ -553,14 +553,14 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         </div>
 
         {/* Department Status */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-0 flex flex-col h-full overflow-hidden">
+        <div className="dashboard-card border border-[var(--border)] bg-[var(--page-bg)] rounded-xl shadow-sm p-0 flex flex-col h-full overflow-hidden">
           <div className="chart-container flex-1 flex flex-col p-4">
             <div className="chart-header flex justify-between items-start mb-4">
               <div>
-                <h2 className="chart-title text-lg font-semibold text-gray-900">Department Status</h2>
-                <p className="text-sm text-gray-600 mt-1">Current department occupancy</p>
+                <h2 className="chart-title text-lg font-semibold text-[var(--text-strong)]">Department Status</h2>
+                <p className="text-sm text-[var(--text-muted)] mt-1">Current department occupancy</p>
               </div>
-              <span className="text-[10px] font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-full px-3 py-1">
+              <span className="text-[10px] font-semibold text-[var(--text-strong)] bg-[var(--accent-soft)] border border-[var(--border)] rounded-full px-3 py-1">
                 Bed & service mix
               </span>
             </div>
@@ -571,14 +571,14 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         </div>
 
         {/* Revenue Analytics */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-0 flex flex-col h-full overflow-hidden">
+        <div className="dashboard-card border border-[var(--border)] bg-[var(--page-bg)] rounded-xl shadow-sm p-0 flex flex-col h-full overflow-hidden">
           <div className="chart-container flex-1 flex flex-col p-4">
             <div className="chart-header flex justify-between items-start mb-4">
               <div>
-                <h2 className="chart-title text-lg font-semibold text-gray-900">Revenue Analytics</h2>
-                <p className="text-sm text-gray-600 mt-1">Monthly financial performance</p>
+                <h2 className="chart-title text-lg font-semibold text-[var(--text-strong)]">Revenue Analytics</h2>
+                <p className="text-sm text-[var(--text-muted)] mt-1">Monthly financial performance</p>
               </div>
-              <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-full px-3 py-1">
+              <span className="text-[10px] font-semibold text-[var(--clinical-blue)] bg-[var(--clinical-blue)]/10 border border-[var(--clinical-blue)]/20 rounded-full px-3 py-1">
                 Collections trend
               </span>
             </div>
@@ -592,10 +592,10 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       {/* NEW: TOP METRICS ROW */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
         {/* Top Diagnoses */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px] overflow-hidden">
+        <div className="dashboard-card border border-[var(--border)] bg-[var(--page-bg)] rounded-xl shadow-sm p-4 h-[350px] overflow-hidden">
            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Top 10 Diagnoses</h3>
-              <FileText className="w-4 h-4 text-purple-500" />
+              <h3 className="text-sm font-black uppercase tracking-widest text-[var(--text-strong)]">Top 10 Diagnoses</h3>
+              <FileText className="w-4 h-4 text-[var(--clinical-blue)]" />
            </div>
            <div className="h-[280px]">
               <TopDiagnosesChart data={realtimeMetrics.topDiagnoses} />
@@ -603,10 +603,10 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
         </div>
 
         {/* Top Services (Revenue Mix) */}
-        <div className="dashboard-card border border-gray-200 bg-white rounded-xl shadow-sm p-4 h-[350px] overflow-hidden">
+        <div className="dashboard-card border border-[var(--border)] bg-[var(--page-bg)] rounded-xl shadow-sm p-4 h-[350px] overflow-hidden">
            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-slate-800">Revenue Mix by Service</h3>
-              <span className="text-2xl font-bold text-emerald-500">₹</span>
+              <h3 className="text-sm font-black uppercase tracking-widest text-[var(--text-strong)]">Revenue Mix by Service</h3>
+              <span className="text-2xl font-bold text-[var(--success)]">₹</span>
            </div>
            <div className="h-[280px]">
               <TopServicesChart data={realtimeMetrics.topServices} />

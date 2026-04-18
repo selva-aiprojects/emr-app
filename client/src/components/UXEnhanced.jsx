@@ -250,30 +250,30 @@ export function SmartSearch({
           }
         }}
         placeholder={placeholder}
-        className="h-11 w-full rounded-2xl border border-[var(--border)] bg-gray-50/50 pl-4 pr-12 text-sm text-[var(--text-main)] outline-none transition-all focus:bg-white focus:border-[var(--clinical-blue)]/30 focus:ring-4 focus:ring-[var(--clinical-blue)]/5"
+        className="h-11 w-full rounded-2xl border border-[var(--border)] bg-[var(--page-bg)]/50 pl-4 pr-12 text-sm text-[var(--text-main)] outline-none transition-all focus:bg-white focus:border-[var(--clinical-blue)]/30 focus:ring-4 focus:ring-[var(--clinical-blue)]/5"
       />
       {isFocused && searchResults.length > 0 && (
         <div className="absolute right-0 top-full z-[9999] mt-2 w-full rounded-2xl border border-[var(--border)] bg-white p-2 shadow-2xl animate-fade-in">
           {searchResults.map((item) => (
             <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setQuery("");
-                onSearch?.(item);
-              }}
-              className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all hover:bg-[var(--primary-soft)]"
+               key={item.id}
+               type="button"
+               onClick={() => {
+                 setQuery("");
+                 onSearch?.(item);
+               }}
+               className="group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition-all hover:bg-[var(--primary-soft)]"
             >
-              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-[var(--clinical-blue)] transition-all">
+              <div className="w-8 h-8 rounded-lg bg-[var(--page-bg)] flex items-center justify-center text-[var(--text-soft)] group-hover:bg-white group-hover:text-[var(--clinical-blue)] transition-all">
                 {item.type === 'patient' && <UserCircle size={14} />}
                 {item.type === 'appointment' && <Calendar size={14} />}
                 {item.type === 'nav' && <Activity size={14} />}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-black text-slate-900 truncate tracking-tight">{item.label}</div>
-                <div className="text-[11px] font-black text-slate-400 uppercase tracking-widest truncate mt-0.5">{item.sub}</div>
+                <div className="text-sm font-black text-[var(--text-strong)] truncate tracking-tight">{item.label}</div>
+                <div className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest truncate mt-0.5">{item.sub}</div>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-200 group-hover:text-[var(--clinical-blue)] group-hover:translate-x-1 transition-all" />
+              <ChevronRight className="w-4 h-4 text-[var(--border)] group-hover:text-[var(--clinical-blue)] group-hover:translate-x-1 transition-all" />
             </button>
           ))}
         </div>

@@ -102,12 +102,25 @@ router.post('/login', async (req, res) => {
                      (normalizedRole === 'Support staff' ? 'Support Staff' : 
                      (normalizedRole === 'Hr' ? 'HR' : normalizedRole));
 
+    // Resolve Tier
+    let subscriptionTier = 'Basic';
+    try {
+      const tenantTierResult = await query(
+        'SELECT subscription_tier FROM emr.tenants WHERE id = $1',
+        [user.tenant_id]
+      );
+      subscriptionTier = tenantTierResult.rows[0]?.subscription_tier || 'Basic';
+    } catch (err) {
+      console.warn('Failed to resolve tenant tier at login:', err.message);
+    }
+
     const token = generateToken({
       userId: user.id,
       tenantId: user.tenant_id,
       role: finalRole,
       email: user.email,
       patientId: user.patient_id,
+      subscription_tier: subscriptionTier
     });
 
     // Resolve Permissions
@@ -146,6 +159,7 @@ router.post('/login', async (req, res) => {
       user: { id: user.id, name: user.name, email: user.email, role: finalRole },
       tenantId: user.tenant_id,
       role: finalRole,
+      subscriptionTier,
       permissions: { [finalRole]: rolePermissions },
       featureFlags,
     };

@@ -56,20 +56,20 @@ export async function getRealtimeDashboardMetrics(tenantId) {
       mtdPatients,
       prevMonthPatients
     ] = await Promise.all([
-      // Today's appointments (scheduled_start)
-      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.appointments WHERE tenant_id = $1 AND DATE(scheduled_start) = CURRENT_DATE`, [tenantId]),
+      // Total appointments (all time)
+      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.appointments WHERE tenant_id = $1`, [tenantId]),
       
-      // Today's revenue
-      safeQuery(`SELECT COALESCE(SUM(total), 0) as total FROM ${schemaName}.invoices WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE AND status = 'paid'`, [tenantId]),
+      // Total revenue (all time, paid invoices)
+      safeQuery(`SELECT COALESCE(SUM(total), 0) as total FROM ${schemaName}.invoices WHERE tenant_id = $1 AND status = 'paid'`, [tenantId]),
       
-      // Today's patients
-      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.patients WHERE tenant_id = $1 AND DATE(created_at) = CURRENT_DATE`, [tenantId]),
+      // Total patients (all time)
+      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.patients WHERE tenant_id = $1`, [tenantId]),
       
-      // Today's admissions (using encounters table)
-      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'admission'`, [tenantId]),
+      // Total admissions (using encounters table)
+      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.encounters WHERE tenant_id = $1 AND encounter_type = 'admission'`, [tenantId]),
       
-      // Today's discharges (using encounters table)
-      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.encounters WHERE tenant_id = $1 AND DATE(visit_date) = CURRENT_DATE AND encounter_type = 'discharge'`, [tenantId]),
+      // Total discharges (using encounters table)
+      safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.encounters WHERE tenant_id = $1 AND encounter_type = 'discharge'`, [tenantId]),
       
       // Occupied beds
       safeQuery(`SELECT COUNT(*) as count FROM ${schemaName}.beds WHERE tenant_id = $1 AND status = 'occupied'`, [tenantId]),
@@ -133,15 +133,15 @@ export async function getRealtimeDashboardMetrics(tenantId) {
     const labValue = labsTotal === 0 ? 0 : Math.round(((labsTotal - labsPending) / labsTotal) * 100);
 
     const metrics = {
-      todayAppointments: todayAppointments.rows[0]?.count || 0,
+      todayAppointments: parseInt(todayAppointments.rows[0]?.count || 0),
       todayRevenue: parseFloat(todayRevenue.rows[0]?.total || 0),
-      todayPatients: todayPatients.rows[0]?.count || 0,
-      todayAdmissions: todayAdmissions.rows[0]?.count || 0,
-      todayDischarges: todayDischarges.rows[0]?.count || 0,
-      occupiedBeds: occupiedBeds.rows[0]?.count || 0,
-      availableBeds: availableBeds.rows[0]?.count || 0,
-      totalBeds: totalBeds.rows[0]?.count || 0,
-      criticalLabResults: criticalLabResults.rows[0]?.count || 0,
+      todayPatients: parseInt(todayPatients.rows[0]?.count || 0),
+      todayAdmissions: parseInt(todayAdmissions.rows[0]?.count || 0),
+      todayDischarges: parseInt(todayDischarges.rows[0]?.count || 0),
+      occupiedBeds: parseInt(occupiedBeds.rows[0]?.count || 0),
+      availableBeds: parseInt(availableBeds.rows[0]?.count || 0),
+      totalBeds: parseInt(totalBeds.rows[0]?.count || 0),
+      criticalLabResults: parseInt(criticalLabResults.rows[0]?.count || 0),
       bloodBank: { value: parseInt(bloodUnits.rows[0]?.count || 0), label: 'Units' },
       labProgress: { value: labValue, pending: labsPending },
       fleetStatus: { 

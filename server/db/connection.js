@@ -5,10 +5,20 @@ import { tenantContext } from '../lib/tenantContext.js';
 
 dotenv.config();
 
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) {
+  console.warn('⚠️ [DB_CONFIG] DATABASE_URL is not defined in environment variables!');
+} else {
+  const maskedUrl = dbUrl.replace(/\/\/.*@/, '//****:****@');
+  console.log(`📡 [DB_CONFIG] DATABASE_URL loaded: ${maskedUrl}`);
+}
+
 // PostgreSQL connection pool configuration
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  connectionString: dbUrl,
+  ssl: {
+    rejectUnauthorized: false
+  },
   max: 50, // Increased capacity for concurrent E2E bursts
   idleTimeoutMillis: 30000, 
   connectionTimeoutMillis: 10000, // Fail fast if pool is full (10s)
@@ -62,14 +72,14 @@ export async function query(text, params) {
           });
           
           if (res.rows.length === 0) {
-            // Check Legacy Tenants table (fallback to LOWER(code) as schema)
+            // Check Legacy Tenants table (fallback to schema_name or LOWER(code) as schema)
             res = await pool.query({
-              text: 'SELECT code as schema_name FROM emr.tenants WHERE id::text = $1',
+              text: 'SELECT schema_name, code FROM emr.tenants WHERE id::text = $1',
               values: [tenantId],
               timeout: 5000
             });
-            if (res.rows.length > 0 && res.rows[0].schema_name) {
-              res.rows[0].schema_name = res.rows[0].schema_name.toLowerCase();
+            if (res.rows.length > 0) {
+              res.rows[0].schema_name = (res.rows[0].schema_name || res.rows[0].code).toLowerCase();
             }
           }
 
@@ -88,7 +98,12 @@ export async function query(text, params) {
 
     // 2. Session Configuration (Sequence-Harden)
     // IMPORTANT: Schema name must be quoted to handle names with periods (e.g. nah.healthezee.com)
-    await client.query(`SET search_path TO "${schemaName}", emr, public`);
+    try {
+      await client.query(`SET search_path TO "${schemaName}", emr, public`);
+    } catch (sessionErr) {
+      console.error(`[DB_SESSION_ERROR] Failed to set search_path to ${schemaName}:`, sessionErr.message);
+      throw sessionErr;
+    }
     
     if (tenantId === 'SUPERADMIN_BYPASS') {
       await client.query("SELECT set_config('app.bypass_rls', 'true', false)");
@@ -104,7 +119,8 @@ export async function query(text, params) {
 
     return res;
   } catch (error) {
-    console.error(`[CRITICAL_DB_ERROR] ${error.message}. Query: ${text}`);
+    console.error(`[CRITICAL_DB_ERROR] Query: ${text}`);
+    console.error('Error Details:', error);
     throw error;
   } finally {
       if (client) {
@@ -125,6 +141,7 @@ export async function query(text, params) {
 // Migration Registry to ensure scripts run only once
 async function ensureMigrationRegistry() {
   try {
+    await pool.query('CREATE SCHEMA IF NOT EXISTS emr');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS emr.migrations_log (
         id SERIAL PRIMARY KEY,
@@ -143,9 +160,10 @@ async function runPendingMigrations() {
   const { fileURLToPath } = await import('url');
   
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const migrationsDir = path.join(__dirname, 'migrations');
-
-  if (!fs.existsSync(migrationsDir)) return;
+  const migrationsPaths = [
+    path.join(__dirname, 'migrations'),
+    path.join(__dirname, '../../database/migrations')
+  ];
 
   // A. ENSURE NEXUS MASTER BASELINE FIRST
   const nexusBaseline = path.join(__dirname, '../../database/NEXUS_MASTER_BASELINE.sql');
@@ -164,18 +182,27 @@ async function runPendingMigrations() {
     }
   }
 
-  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
-  
-  for (const file of files) {
-    const checkRes = await pool.query('SELECT 1 FROM emr.migrations_log WHERE filename = $1', [file]);
+  for (const migrationsDir of migrationsPaths) {
+    const absolutePath = path.resolve(migrationsDir);
+    console.log(`📂 Checking migrations directory: ${absolutePath}`);
+    if (!fs.existsSync(migrationsDir)) {
+      console.warn(`⚠️ Directory missing: ${absolutePath}`);
+      continue;
+    }
+    
+    const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort();
+    console.log(`📄 Found ${files.length} SQL files in ${absolutePath}`);
+    
+    for (const file of files) {
+      const checkRes = await pool.query('SELECT 1 FROM emr.migrations_log WHERE filename = $1', [file]);
     if (checkRes.rowCount === 0) {
       console.log(`[DATABASE_MIGRATION] Running: ${file}`);
       try {
         const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
         
-        // Split SQL into individual statements and execute them one by one
+        // Smarter split that respects $$ blocks for functions and triggers
         const statements = sql
-          .split(';')
+          .split(/;(?=(?:[^$]*\$\$[^$]*\$\$)*[^$]*$)/)
           .map(stmt => stmt.trim())
           .filter(stmt => stmt.length > 0 && !stmt.startsWith('--'));
         
@@ -183,9 +210,12 @@ async function runPendingMigrations() {
           try {
             await pool.query(statement);
           } catch (stmtErr) {
-            // Log statement error but continue with other statements
-            console.warn(`[DATABASE_MIGRATION] Statement failed in ${file}:`, stmtErr.message);
-            console.warn(`[DATABASE_MIGRATION] Statement: ${statement.substring(0, 100)}...`);
+            // Ignore "already exists" errors for idempotency
+            if (stmtErr.code === '42P07' || stmtErr.code === '42710' || stmtErr.code === '42P01' && statement.toUpperCase().includes('DROP')) {
+              // Skip: relation already exists or index already exists or drop failed on non-existent
+              continue;
+            }
+            throw stmtErr; // Re-throw other errors
           }
         }
         
@@ -196,6 +226,7 @@ async function runPendingMigrations() {
       }
     }
   }
+}
 }
 
 // Test connection function with Forced Migration

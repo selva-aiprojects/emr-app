@@ -10,13 +10,13 @@ import { query } from './connection.js';
 // =====================================================
 
 export async function getTenantTier(tenantId) {
-  const sql = 'SELECT subscription_tier FROM emr.tenants WHERE id::text = $1::text';
+  const sql = 'SELECT subscription_tier FROM emr.management_tenants WHERE id = $1';
   const result = await query(sql, [tenantId]);
   return result.rows[0]?.subscription_tier || 'Basic';
 }
 
 export async function getTenantCustomFeatures(tenantId) {
-  const sql = 'SELECT feature_flag, enabled FROM emr.tenant_features WHERE tenant_id::text = $1::text';
+  const sql = 'SELECT feature_flag, enabled FROM emr.tenant_features WHERE tenant_id = $1::uuid';
   const result = await query(sql, [tenantId]);
   return result.rows.map(row => ({
     featureFlag: row.feature_flag,
@@ -282,7 +282,10 @@ export async function updateTenantStatus(id, status) {
 }
 
 export async function getTenantByCode(code) {
-  const result = await query('SELECT * FROM emr.management_tenants WHERE UPPER(code) = UPPER($1)', [code]);
+  let result = await query('SELECT * FROM emr.management_tenants WHERE UPPER(code) = UPPER($1)', [code]);
+  if (result.rows.length === 0) {
+    result = await query('SELECT * FROM emr.tenants WHERE UPPER(code) = UPPER($1)', [code]);
+  }
   return result.rows[0];
 }
 

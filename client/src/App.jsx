@@ -29,6 +29,7 @@ const LabAvailabilityPage = lazy(() => import('./pages/LabAvailabilityPage.jsx')
 const TenantCreationPage = lazy(() => import('./pages/TenantCreationPage.jsx'));
 const LabTestsPage = lazy(() => import('./pages/LabTestsPage.jsx'));
 const SupportPage = lazy(() => import('./pages/SupportPage.jsx'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage.jsx'));
 const CommunicationPage = lazy(() => import('./pages/CommunicationPage.jsx'));
 const DocumentVaultPage = lazy(() => import('./pages/DocumentVaultPage.jsx'));
 const AmbulancePage = lazy(() => import('./pages/AmbulancePage.jsx'));
@@ -249,6 +250,38 @@ export default function App() {
       setTenants(await api.getTenants());
     } catch (err) {
       setError(err.message);
+    }
+  }
+
+  async function refreshSuperadmin() {
+    try {
+      const [overview, tenantList] = await Promise.all([
+        api.getSuperadminOverview().catch(e => {
+          console.warn('[SUPERADMIN_REFRESH] Overview fetch failed:', e.message);
+          return null;
+        }),
+        api.getTenants().catch(() => []),
+      ]);
+
+      if (overview) {
+        setSuperOverview(overview);
+        // Merge per-tenant metrics from overview.tenants into the tenants list
+        if (overview.tenants?.length) {
+          setTenants(prev => {
+            const metricMap = {};
+            overview.tenants.forEach(t => { metricMap[t.id] = t; });
+            const merged = prev.map(t => metricMap[t.id] ? { ...t, ...metricMap[t.id] } : t);
+            // Add any tenants from overview not already in list
+            const existingIds = new Set(prev.map(t => t.id));
+            overview.tenants.forEach(t => { if (!existingIds.has(t.id)) merged.push(t); });
+            return merged;
+          });
+        }
+      } else if (tenantList.length) {
+        setTenants(tenantList);
+      }
+    } catch (err) {
+      console.error('[SUPERADMIN_REFRESH] Failed:', err.message);
     }
   }
 
@@ -1187,6 +1220,23 @@ export default function App() {
         {view === 'ai_vision' && <AIImageAnalysisPage tenant={tenant} patients={patients} />}
         {view === 'tenant_creation' && <TenantCreationPage setView={setView} />}
         
+        {view === 'inventory' && (
+          <InventoryPage
+            inventory={inventory}
+            onAddItem={(e) => {
+              const data = extractFormPayload(e);
+              withRefresh(() => api.addInventoryItem({
+                tenantId: session.tenantId,
+                ...data
+              }));
+            }}
+            onRestock={(itemId) => {
+              const qty = window.prompt('Enter restock quantity:', '50');
+              if (qty) withRefresh(() => api.restockItem(itemId, { tenantId: session.tenantId, quantity: Number(qty) }));
+            }}
+          />
+        )}
+
         {['admin', 'admin_masters', 'bed_management'].includes(view) && (
           <AdminMastersPage 
             tenant={tenant} 
