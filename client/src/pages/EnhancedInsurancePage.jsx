@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
+import PatientSearch from '../components/PatientSearch.jsx';
 import { 
   Building2, Plus, Search, ShieldCheck, ArrowLeft, Send, ExternalLink, Calendar, Hash, User,
   FileText, Clock, AlertCircle, CheckCircle, XCircle, TrendingUp, Users, IndianRupee,
@@ -7,14 +8,12 @@ import {
 } from 'lucide-react';
 import { currency } from '../utils/format.js';
 import { 
-  getEnhancedInsuranceProviders, 
-  createEnhancedInsuranceProvider,
-  getInsuranceClaims,
-  createInsuranceClaim,
+  getInsuranceProviders,
+  createInsuranceProvider,
+  getClaims,
+  createClaim,
   getPreauthorizationRequests,
   createPreauthorizationRequest,
-  getInsuranceDashboard,
-  updateClaimStatus,
   updatePreauthStatus
 } from '../api.js';
 
@@ -27,6 +26,8 @@ export default function EnhancedInsurancePage({ tenant }) {
   const [showProviderModal, setShowProviderModal] = useState(false);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [showPreauthModal, setShowPreauthModal] = useState(false);
+  const [selectedClaimPatient, setSelectedClaimPatient] = useState(null);
+  const [selectedPreauthPatient, setSelectedPreauthPatient] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
@@ -45,26 +46,58 @@ export default function EnhancedInsurancePage({ tenant }) {
       setLoading(true);
       try {
         switch (activeTab) {
-          case 'dashboard':
-            const dashboardData = await getInsuranceDashboard(tenant.id);
-            setDashboard(dashboardData);
+          case 'dashboard': {
+            const [providersData, claimsData, preauthData] = await Promise.all([
+              getInsuranceProviders(tenant.id),
+              getClaims(tenant.id),
+              getPreauthorizationRequests(tenant.id, { status: statusFilter })
+            ]);
+
+            setProviders(providersData);
+            setClaims(claimsData);
+            setPreauthRequests(preauthData);
+            setDashboard({
+              total_claims: claimsData.length,
+              pending_claims: claimsData.filter(c => c.status === 'PENDING').length,
+              approved_claims: claimsData.filter(c => c.status === 'APPROVED').length,
+              settled_claims: claimsData.filter(c => c.status === 'SETTLED').length,
+              total_settled: claimsData.reduce((sum, c) => sum + Number(c.total_approved_amount || c.total_settled_amount || 0), 0),
+              total_preauth: preauthData.length,
+              pending_preauth: preauthData.filter(p => p.status === 'PENDING').length,
+              approved_preauth: preauthData.filter(p => p.status === 'APPROVED').length,
+              expired_preauth: preauthData.filter(p => p.status === 'EXPIRED').length,
+              total_providers: providersData.length,
+              active_providers: providersData.filter(p => p.status === 'Active' || p.status === 'ACTIVE').length,
+            });
             break;
-          case 'providers':
-            const providersData = await getEnhancedInsuranceProviders(tenant.id);
+          }
+          case 'providers': {
+            const providersData = await getInsuranceProviders(tenant.id);
             setProviders(providersData);
             break;
-          case 'claims':
-            const claimsData = await getInsuranceClaims(tenant.id, { status: statusFilter });
+          }
+          case 'claims': {
+            const [providersData, claimsData] = await Promise.all([
+              getInsuranceProviders(tenant.id),
+              getClaims(tenant.id, { status: statusFilter })
+            ]);
+            setProviders(providersData);
             setClaims(claimsData);
             break;
-          case 'preauth':
-            const preauthData = await getPreauthorizationRequests(tenant.id, { status: statusFilter });
+          }
+          case 'preauth': {
+            const [providersData, preauthData] = await Promise.all([
+              getInsuranceProviders(tenant.id),
+              getPreauthorizationRequests(tenant.id, { status: statusFilter })
+            ]);
+            setProviders(providersData);
             setPreauthRequests(preauthData);
             break;
+          }
         }
       } catch (error) {
         console.error('Error loading data:', error);
-        showToast('Failed to load data', 'error');
+        showToast({ title: 'Insurance Load Error', message: 'Failed to load insurance data', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -99,6 +132,94 @@ export default function EnhancedInsurancePage({ tenant }) {
     claims.find(c => c.id === selectedClaimId), 
     [claims, selectedClaimId]
   );
+
+  const handleCreateProvider = async (e) => {
+    e.preventDefault();
+    try {
+      const fd = new FormData(e.target);
+      await createInsuranceProvider({
+        providerName: fd.get('name'),
+        providerCode: fd.get('providerCode') || `PROV-${Date.now()}`,
+        contactPerson: fd.get('contactPerson'),
+        phone: fd.get('phone'),
+        email: fd.get('email'),
+        address: fd.get('address'),
+        isActive: true
+      });
+      setShowProviderModal(false);
+      showToast({ message: 'Insurance provider added successfully.', type: 'success', title: 'Insurance' });
+      setActiveTab('providers');
+    } catch (error) {
+      console.error('Failed to create provider:', error);
+      showToast({ message: 'Unable to provision provider.', type: 'error', title: 'Insurance' });
+    }
+  };
+
+  const handleCreateClaim = async (e) => {
+    e.preventDefault();
+    if (!selectedClaimPatient) {
+      showToast({ message: 'Please select a patient for the claim.', type: 'error', title: 'Claims' });
+      return;
+    }
+
+    try {
+      const fd = new FormData(e.target);
+      await createClaim({
+        patientId: selectedClaimPatient.id,
+        providerId: selectedProviderId,
+        policyNumber: fd.get('policyNumber') || '',
+        policyHolderName: fd.get('policyHolderName') || '',
+        relationshipToPatient: fd.get('relationship') || 'SELF',
+        claimType: fd.get('type') || 'Hospitalization',
+        claimCategory: fd.get('category') || 'Medical',
+        admissionDate: fd.get('admissionDate') || new Date().toISOString(),
+        dischargeDate: fd.get('dischargeDate') || new Date().toISOString(),
+        diagnosisIcd10Codes: fd.get('icd10Code') ? [fd.get('icd10Code')] : [],
+        procedureIcd10Codes: fd.get('procedureIcd10Code') ? [fd.get('procedureIcd10Code')] : [],
+        totalClaimedAmount: Number(fd.get('amount')) || 0,
+        supportingDocuments: [],
+        createdBy: 'SYSTEM'
+      });
+      setShowClaimModal(false);
+      setSelectedClaimPatient(null);
+      showToast({ message: 'Insurance claim submitted successfully.', type: 'success', title: 'Claims' });
+      setActiveTab('claims');
+    } catch (error) {
+      console.error('Failed to submit claim:', error);
+      showToast({ message: 'Unable to submit claim.', type: 'error', title: 'Claims' });
+    }
+  };
+
+  const handleCreatePreauth = async (e) => {
+    e.preventDefault();
+    if (!selectedPreauthPatient) {
+      showToast({ message: 'Please select a patient for pre-authorization.', type: 'error', title: 'Pre-Auth' });
+      return;
+    }
+
+    try {
+      const fd = new FormData(e.target);
+      await createPreauthorizationRequest({
+        patientId: selectedPreauthPatient.id,
+        providerId: selectedProviderId,
+        policyNumber: fd.get('policyNumber') || '',
+        requestedAmount: Number(fd.get('requestedAmount')) || 0,
+        diagnosisSummary: fd.get('diagnosisSummary') || '',
+        proposedTreatment: fd.get('proposedTreatment') || '',
+        estimatedAdmissionDate: fd.get('estimatedAdmissionDate') || new Date().toISOString(),
+        estimatedDischargeDate: fd.get('estimatedDischargeDate') || new Date().toISOString(),
+        icd10Codes: fd.get('icd10Code') ? [fd.get('icd10Code')] : [],
+        createdBy: 'SYSTEM'
+      });
+      setShowPreauthModal(false);
+      setSelectedPreauthPatient(null);
+      showToast({ message: 'Pre-authorization request submitted.', type: 'success', title: 'Pre-auth' });
+      setActiveTab('preauth');
+    } catch (error) {
+      console.error('Failed to submit pre-auth request:', error);
+      showToast({ message: 'Unable to submit pre-authorization request.', type: 'error', title: 'Pre-auth' });
+    }
+  };
 
   if (loading) {
     return (
@@ -482,6 +603,208 @@ export default function EnhancedInsurancePage({ tenant }) {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Provider Modal */}
+      {showProviderModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="glass-panel w-full max-w-2xl p-10 shadow-2xl relative">
+            <button onClick={() => setShowProviderModal(false)} className="absolute top-6 right-6 w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors">
+              <Plus className="w-6 h-6 rotate-45 text-slate-400" />
+            </button>
+            <div className="mb-10">
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Provision New Insurance Provider</h3>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2">Create a secure payer endpoint for the tenant.</p>
+            </div>
+            <form className="space-y-8" onSubmit={handleCreateProvider}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Provider Name</label>
+                  <input name="name" className="input-field py-4" required placeholder="HealthGuard Assurance" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Provider Code</label>
+                  <input name="providerCode" className="input-field py-4" placeholder="HG-001" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Contact Person</label>
+                  <input name="contactPerson" className="input-field py-4" placeholder="Name of contact person" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Phone</label>
+                  <input name="phone" className="input-field py-4" placeholder="+91 98765 43210" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email</label>
+                  <input name="email" type="email" className="input-field py-4" placeholder="support@payer.com" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Address</label>
+                  <input name="address" className="input-field py-4" placeholder="123 Corporate Avenue, City" />
+                </div>
+              </div>
+              <div className="pt-8 border-t border-slate-100 flex justify-end gap-4">
+                <button type="button" className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-500" onClick={() => setShowProviderModal(false)}>Cancel</button>
+                <button type="submit" className="px-8 py-4 btn-primary text-[11px] font-black uppercase tracking-widest shadow-xl">Provision Provider</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Claim Modal */}
+      {showClaimModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="glass-panel w-full max-w-3xl p-10 shadow-2xl relative">
+            <button onClick={() => setShowClaimModal(false)} className="absolute top-6 right-6 w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors">
+              <Plus className="w-6 h-6 rotate-45 text-slate-400" />
+            </button>
+            <div className="mb-10">
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Submit Insurance Claim</h3>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2">Fill in claim details and attach the patient / provider context.</p>
+            </div>
+            <form className="space-y-8" onSubmit={handleCreateClaim}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Patient</label>
+                  <PatientSearch tenantId={tenant.id} onSelect={setSelectedClaimPatient} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Provider</label>
+                  <select
+                    name="providerId"
+                    value={selectedProviderId || ''}
+                    onChange={(e) => setSelectedProviderId(e.target.value)}
+                    className="input-field py-4"
+                    required
+                  >
+                    <option value="">Select provider</option>
+                    {providers.map(provider => (
+                      <option key={provider.id} value={provider.id}>{provider.provider_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Claim Amount</label>
+                  <input name="amount" type="number" min="0" step="0.01" className="input-field py-4" placeholder="0.00" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Claim Type</label>
+                  <select name="type" className="input-field py-4">
+                    <option value="Hospitalization">Hospitalization</option>
+                    <option value="Outpatient">Outpatient</option>
+                    <option value="Emergency">Emergency</option>
+                    <option value="Diagnostics">Diagnostics</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Policy Number</label>
+                  <input name="policyNumber" className="input-field py-4" placeholder="Policy number" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Policy Holder</label>
+                  <input name="policyHolderName" className="input-field py-4" placeholder="Policy holder name" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Admission Date</label>
+                  <input name="admissionDate" type="date" className="input-field py-4" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Discharge Date</label>
+                  <input name="dischargeDate" type="date" className="input-field py-4" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Clinical Summary</label>
+                <textarea name="diagnosisSummary" className="input-field py-4 min-h-[140px]" placeholder="Brief diagnosis summary" />
+              </div>
+              <div className="pt-8 border-t border-slate-100 flex justify-end gap-4">
+                <button type="button" className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-500" onClick={() => setShowClaimModal(false)}>Cancel</button>
+                <button type="submit" className="px-8 py-4 btn-primary text-[11px] font-black uppercase tracking-widest shadow-xl">Submit Claim</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Pre-authorization Modal */}
+      {showPreauthModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="glass-panel w-full max-w-3xl p-10 shadow-2xl relative">
+            <button onClick={() => setShowPreauthModal(false)} className="absolute top-6 right-6 w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center transition-colors">
+              <Plus className="w-6 h-6 rotate-45 text-slate-400" />
+            </button>
+            <div className="mb-10">
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Request Pre-authorization</h3>
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2">Pre-authorize upcoming admissions through the payer network.</p>
+            </div>
+            <form className="space-y-8" onSubmit={handleCreatePreauth}>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Patient</label>
+                  <PatientSearch tenantId={tenant.id} onSelect={setSelectedPreauthPatient} />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Provider</label>
+                  <select
+                    name="providerId"
+                    value={selectedProviderId || ''}
+                    onChange={(e) => setSelectedProviderId(e.target.value)}
+                    className="input-field py-4"
+                    required
+                  >
+                    <option value="">Select provider</option>
+                    {providers.map(provider => (
+                      <option key={provider.id} value={provider.id}>{provider.provider_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Requested Amount</label>
+                  <input name="requestedAmount" type="number" min="0" step="0.01" className="input-field py-4" placeholder="0.00" required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Policy Number</label>
+                  <input name="policyNumber" className="input-field py-4" placeholder="Policy number" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Treatment Plan</label>
+                  <input name="proposedTreatment" className="input-field py-4" placeholder="Proposed treatment description" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estimated Admission</label>
+                  <input name="estimatedAdmissionDate" type="date" className="input-field py-4" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estimated Discharge</label>
+                  <input name="estimatedDischargeDate" type="date" className="input-field py-4" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">ICD-10 Code</label>
+                  <input name="icd10Code" className="input-field py-4" placeholder="Enter ICD-10 code" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Diagnosis Summary</label>
+                <textarea name="diagnosisSummary" className="input-field py-4 min-h-[140px]" placeholder="Brief clinical summary" />
+              </div>
+              <div className="pt-8 border-t border-slate-100 flex justify-end gap-4">
+                <button type="button" className="px-6 py-4 text-[11px] font-black uppercase tracking-widest text-slate-500" onClick={() => setShowPreauthModal(false)}>Cancel</button>
+                <button type="submit" className="px-8 py-4 btn-primary text-[11px] font-black uppercase tracking-widest shadow-xl">Submit Pre-auth</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

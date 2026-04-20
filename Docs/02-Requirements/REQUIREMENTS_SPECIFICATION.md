@@ -75,11 +75,21 @@ The system encompasses the full patient journey from registration and appointmen
 - **REQ-BIL-03**: **Discharge Settlement**. Support IPD discharge settlement workflow prior to discharge completion.
 - **REQ-BIL-04**: **Insurance Claims**. Capture policy numbers, claim numbers, and claim amounts.
 - **REQ-BIL-05**: **Tenant Payment Gateway**. Tenants must be able to configure their own institutional payment gateways (Stripe, Razorpay, etc.) for patient/insurance settlements, independent of the platform's billing.
+- **REQ-BIL-06**: **Concessions & Discounts**. Support doctor-level and hospital-level discount concessions with approval workflows and audit trails.
+- **REQ-BIL-07**: **Credit Billing**. Enable credit note generation and tracking through patient receivable summaries for bill clearance.
+- **REQ-BIL-08**: **Billing Approval Flows**. Implement multi-level approval workflows for bill modifications, discounts, and final settlements.
+- **REQ-BIL-09**: **IP Billing with Refunds**. Support IP billing, refund processing, cancellation approval workflows, final bill clearance, and discharge card generation.
+- **REQ-BIL-10**: **Insurance Pre-Authorization**. Complete insurance workflow including pre-authorization requests, approvals, revised approvals, and final amount reflection in IP final bills.
+- **REQ-BIL-11**: **Corporate Patient Billing**. Print final bills for corporate patients and maintain corporate bill registers for tracking.
+- **REQ-BIL-12**: **Partial Insurance Coverage**. Handle scenarios where insurance covers part of the bill and remaining amount is paid through cash or credit card.
 
 
 ### 2.7 Insurance Registry
 - **REQ-INS-01**: **Provider Registry**. Create and maintain insurance providers by tenant.
 - **REQ-INS-02**: **Claim Lifecycle**. Create and track claims linked to patient encounter/invoice context.
+- **REQ-INS-03**: **Pre-Authorization Workflow**. Support pre-authorization requests, approval processes, revised approvals, and final amount reflection in IP bills.
+- **REQ-INS-04**: **Corporate Patient Management**. Handle corporate patient billing with dedicated bill registers and tracking.
+- **REQ-INS-05**: **Partial Coverage Handling**. Process bills where insurance covers partial amounts and remaining is paid through alternative methods.
 
 ### 2.8 Accounts Payable
 - **REQ-ACC-01**: **Expense Logging**. Capture operational expenses by category, date, payment method, and reference.

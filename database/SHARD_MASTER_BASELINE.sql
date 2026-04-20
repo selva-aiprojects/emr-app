@@ -564,7 +564,350 @@ CREATE TABLE IF NOT EXISTS payroll_items (
 );
 
 -- ============================================================
--- 11. IDENTITY & INFRASTRUCTURE
+-- 11. FINANCIAL MANAGEMENT (ENTERPRISE FEATURES)
+-- ============================================================
+
+-- 11.1 Services & Pricing
+CREATE TABLE IF NOT EXISTS services (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    name text NOT NULL,
+    code character varying(32) UNIQUE,
+    category character varying(50),
+    subcategory character varying(50),
+    base_rate decimal(10,2) NOT NULL,
+    tax_percent decimal(5,2) DEFAULT 0,
+    description text,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 11.2 Detailed Billing
+CREATE TABLE IF NOT EXISTS billing (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    invoice_id uuid REFERENCES invoices(id),
+    billing_date date NOT NULL,
+    service_id uuid REFERENCES services(id),
+    service_name text NOT NULL,
+    quantity integer DEFAULT 1,
+    unit_price decimal(10,2) NOT NULL,
+    discount_percent decimal(5,2) DEFAULT 0,
+    discount_amount decimal(10,2) DEFAULT 0,
+    tax_percent decimal(5,2) DEFAULT 0,
+    tax_amount decimal(10,2) DEFAULT 0,
+    total_amount decimal(10,2) NOT NULL,
+    billing_type character varying(50), -- consultation, procedure, lab, pharmacy, room
+    status character varying(20) DEFAULT 'pending', -- pending, approved, rejected, billed
+    created_by uuid REFERENCES users(id),
+    approved_by uuid REFERENCES users(id),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 11.3 Invoices & Billing
+CREATE TABLE IF NOT EXISTS invoices (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    invoice_number character varying(64) UNIQUE,
+    invoice_date date NOT NULL,
+    due_date date,
+    description text,
+    subtotal decimal(10,2) NOT NULL,
+    discount_amount decimal(10,2) DEFAULT 0,
+    tax_amount decimal(10,2) DEFAULT 0,
+    total_amount decimal(10,2) NOT NULL,
+    paid_amount decimal(10,2) DEFAULT 0,
+    balance_amount decimal(10,2) NOT NULL,
+    payment_method character varying(50),
+    payment_status character varying(20) DEFAULT 'unpaid', -- unpaid, partially_paid, paid, overdue
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 11.4 Accounts Receivable
+CREATE TABLE IF NOT EXISTS accounts_receivable (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    invoice_id uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+    amount decimal(10,2) NOT NULL,
+    paid_amount decimal(10,2) DEFAULT 0,
+    balance_amount decimal(10,2) NOT NULL,
+    due_date date NOT NULL,
+    overdue_days integer DEFAULT 0,
+    status character varying(20) DEFAULT 'pending', -- pending, partially_paid, paid, written_off
+    last_payment_date date,
+    payment_plan character varying(20), -- weekly, monthly, custom
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 11.5 Accounts Payable
+CREATE TABLE IF NOT EXISTS accounts_payable (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    vendor_name text NOT NULL,
+    invoice_number character varying(64),
+    invoice_date date NOT NULL,
+    due_date date NOT NULL,
+    amount decimal(10,2) NOT NULL,
+    paid_amount decimal(10,2) DEFAULT 0,
+    balance_amount decimal(10,2) NOT NULL,
+    category character varying(50), -- pharmaceuticals, medical_supplies, equipment, services, utilities
+    status character varying(20) DEFAULT 'pending', -- pending, partially_paid, paid, overdue
+    payment_terms character varying(20), -- net30, net60, net90
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 11.6 Expenses
+CREATE TABLE IF NOT EXISTS expenses (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    expense_date date NOT NULL,
+    category character varying(50) NOT NULL, -- salary, utilities, rent, supplies, equipment, marketing
+    subcategory character varying(50),
+    description text NOT NULL,
+    amount decimal(10,2) NOT NULL,
+    payment_method character varying(50),
+    vendor text,
+    receipt_number character varying(64),
+    approved_by uuid REFERENCES users(id),
+    status character varying(20) DEFAULT 'pending', -- pending, approved, rejected
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 11.7 Revenue
+CREATE TABLE IF NOT EXISTS revenue (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    revenue_date date NOT NULL,
+    category character varying(50) NOT NULL, -- consultation, procedures, lab, pharmacy, room_rent, other
+    subcategory character varying(50),
+    description text NOT NULL,
+    amount decimal(10,2) NOT NULL,
+    payment_method character varying(50),
+    invoice_id uuid REFERENCES invoices(id),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- ============================================================
+-- 12. ADVANCED BILLING & INSURANCE (ENTERPRISE FEATURES)
+-- ============================================================
+
+-- 12.1 Concessions & Discounts
+CREATE TABLE IF NOT EXISTS concessions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    bill_id uuid REFERENCES billing(id),
+    concession_type character varying(50) NOT NULL CHECK (concession_type IN ('doctor', 'hospital', 'charity', 'vip', 'staff')),
+    amount decimal(10,2),
+    percentage decimal(5,2),
+    reason text NOT NULL,
+    applied_by uuid NOT NULL REFERENCES users(id),
+    approved_by uuid REFERENCES users(id),
+    approval_status character varying(20) DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+    approval_level integer DEFAULT 1,
+    comments text,
+    expiry_date date,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT concession_amount_check CHECK (
+        (amount IS NOT NULL AND amount > 0) OR
+        (percentage IS NOT NULL AND percentage > 0 AND percentage <= 100)
+    ),
+    CONSTRAINT concession_not_both CHECK (
+        NOT (amount IS NOT NULL AND percentage IS NOT NULL)
+    )
+);
+
+-- 12.2 Credit Notes & Receivables
+CREATE TABLE IF NOT EXISTS credit_notes (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    original_bill_id uuid REFERENCES billing(id),
+    credit_amount decimal(10,2) NOT NULL CHECK (credit_amount > 0),
+    reason text NOT NULL,
+    status character varying(20) DEFAULT 'active' CHECK (status IN ('active', 'utilized', 'expired', 'cancelled')),
+    expiry_date date,
+    utilized_amount decimal(10,2) DEFAULT 0,
+    remaining_amount decimal(10,2) GENERATED ALWAYS AS (credit_amount - utilized_amount) STORED,
+    created_by uuid NOT NULL REFERENCES users(id),
+    utilized_by uuid REFERENCES users(id),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 12.3 Credit Note Utilizations
+CREATE TABLE IF NOT EXISTS credit_note_utilizations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    credit_note_id uuid NOT NULL REFERENCES credit_notes(id) ON DELETE CASCADE,
+    bill_id uuid REFERENCES billing(id),
+    utilized_amount decimal(10,2) NOT NULL CHECK (utilized_amount > 0),
+    utilized_by uuid NOT NULL REFERENCES users(id),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+-- 12.4 Billing Approvals
+CREATE TABLE IF NOT EXISTS bill_approvals (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    bill_id uuid NOT NULL REFERENCES billing(id),
+    approval_type character varying(50) NOT NULL CHECK (approval_type IN ('discount', 'refund', 'write_off', 'modification', 'cancellation')),
+    requested_by uuid NOT NULL REFERENCES users(id),
+    approved_by uuid REFERENCES users(id),
+    approval_level integer DEFAULT 1,
+    status character varying(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'escalated')),
+    priority character varying(20) DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+    comments text,
+    escalation_reason text,
+    escalated_at timestamp with time zone,
+    approved_at timestamp with time zone,
+    rejected_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 12.5 Approval Workflows
+CREATE TABLE IF NOT EXISTS approval_workflows (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    workflow_type character varying(50) NOT NULL CHECK (workflow_type IN ('discount', 'refund', 'write_off', 'modification', 'cancellation')),
+    min_amount decimal(10,2) NOT NULL,
+    max_amount decimal(10,2),
+    required_role character varying(50) NOT NULL,
+    approval_level integer NOT NULL,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 12.6 Insurance Providers
+CREATE TABLE IF NOT EXISTS insurance_providers (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    name text NOT NULL,
+    code character varying(32) NOT NULL,
+    contact_person text,
+    phone character varying(32),
+    email text,
+    address text,
+    pre_auth_required boolean DEFAULT true,
+    claim_submission_method character varying(20) DEFAULT 'electronic' CHECK (claim_submission_method IN ('electronic', 'manual', 'api')),
+    processing_time_days integer DEFAULT 7,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(tenant_id, code)
+);
+
+-- 12.7 Insurance Pre-Authorizations
+CREATE TABLE IF NOT EXISTS insurance_pre_auth (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    admission_id uuid REFERENCES encounters(id),
+    insurance_provider_id uuid NOT NULL REFERENCES insurance_providers(id),
+    policy_number character varying(100) NOT NULL,
+    pre_auth_number character varying(100),
+    requested_amount decimal(10,2) NOT NULL,
+    approved_amount decimal(10,2),
+    status character varying(20) DEFAULT 'requested' CHECK (status IN ('requested', 'approved', 'partially_approved', 'rejected', 'expired')),
+    request_date date NOT NULL DEFAULT CURRENT_DATE,
+    approval_date date,
+    expiry_date date,
+    diagnosis_codes text[],
+    procedure_codes text[],
+    remarks text,
+    requested_by uuid NOT NULL REFERENCES users(id),
+    approved_by uuid REFERENCES users(id),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 12.8 Pre-Auth Revisions
+CREATE TABLE IF NOT EXISTS insurance_pre_auth_revisions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    pre_auth_id uuid NOT NULL REFERENCES insurance_pre_auth(id) ON DELETE CASCADE,
+    revision_number integer NOT NULL,
+    previous_amount decimal(10,2),
+    revised_amount decimal(10,2) NOT NULL,
+    reason text NOT NULL,
+    status character varying(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    requested_by uuid NOT NULL REFERENCES users(id),
+    approved_by uuid REFERENCES users(id),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+-- 12.9 Corporate Clients
+CREATE TABLE IF NOT EXISTS corporate_clients (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    name text NOT NULL,
+    code character varying(32) NOT NULL,
+    contact_person text,
+    phone character varying(32),
+    email text,
+    address text,
+    credit_limit decimal(10,2),
+    payment_terms character varying(20) DEFAULT 'net30' CHECK (payment_terms IN ('immediate', 'net15', 'net30', 'net45', 'net60', 'net90')),
+    billing_cycle character varying(20) DEFAULT 'monthly' CHECK (billing_cycle IN ('weekly', 'monthly', 'quarterly')),
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(tenant_id, code)
+);
+
+-- 12.10 Corporate Bills
+CREATE TABLE IF NOT EXISTS corporate_bills (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+    bill_id uuid NOT NULL REFERENCES billing(id),
+    corporate_client_id uuid NOT NULL REFERENCES corporate_clients(id),
+    bill_type character varying(20) DEFAULT 'ipd' CHECK (bill_type IN ('ipd', 'opd', 'emergency')),
+    total_amount decimal(10,2) NOT NULL,
+    insurance_coverage decimal(10,2) DEFAULT 0,
+    corporate_coverage decimal(10,2) DEFAULT 0,
+    patient_responsibility decimal(10,2) DEFAULT 0,
+    settled_amount decimal(10,2) DEFAULT 0,
+    outstanding_amount decimal(10,2) GENERATED ALWAYS AS (total_amount - settled_amount) STORED,
+    settlement_date date,
+    status character varying(20) DEFAULT 'pending' CHECK (status IN ('pending', 'partially_settled', 'settled', 'written_off')),
+    due_date date,
+    remarks text,
+    created_by uuid NOT NULL REFERENCES users(id),
+    settled_by uuid REFERENCES users(id),
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 12.11 Corporate Bill Register
+CREATE TABLE IF NOT EXISTS corporate_bill_register (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    corporate_client_id uuid NOT NULL REFERENCES corporate_clients(id),
+    register_date date NOT NULL DEFAULT CURRENT_DATE,
+    total_bills integer DEFAULT 0,
+    total_amount decimal(10,2) DEFAULT 0,
+    settled_amount decimal(10,2) DEFAULT 0,
+    outstanding_amount decimal(10,2) GENERATED ALWAYS AS (total_amount - settled_amount) STORED,
+    generated_by uuid NOT NULL REFERENCES users(id),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+-- ============================================================
+-- 13. IDENTITY & INFRASTRUCTURE
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS roles (
@@ -730,11 +1073,47 @@ CREATE INDEX IF NOT EXISTS idx_services_tenant_id ON services(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_documents_tenant_id ON documents(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_document_audit_logs_tenant_id ON document_audit_logs(tenant_id);
 
+-- Financial indexes
+CREATE INDEX IF NOT EXISTS idx_billing_tenant_id ON billing(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_billing_patient_id ON billing(patient_id);
+CREATE INDEX IF NOT EXISTS idx_billing_date ON billing(billing_date);
+CREATE INDEX IF NOT EXISTS idx_invoices_tenant_id ON invoices(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(payment_status);
+CREATE INDEX IF NOT EXISTS idx_accounts_receivable_tenant_id ON accounts_receivable(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_accounts_payable_tenant_id ON accounts_payable(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_tenant_id ON expenses(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_revenue_tenant_id ON revenue(tenant_id);
+
+-- Advanced billing indexes
+CREATE INDEX IF NOT EXISTS idx_concessions_tenant_id ON concessions(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_concessions_patient_id ON concessions(patient_id);
+CREATE INDEX IF NOT EXISTS idx_concessions_bill_id ON concessions(bill_id);
+CREATE INDEX IF NOT EXISTS idx_concessions_status ON concessions(approval_status);
+CREATE INDEX IF NOT EXISTS idx_concessions_type ON concessions(concession_type);
+CREATE INDEX IF NOT EXISTS idx_credit_notes_tenant_id ON credit_notes(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_credit_notes_patient_id ON credit_notes(patient_id);
+CREATE INDEX IF NOT EXISTS idx_credit_notes_status ON credit_notes(status);
+CREATE INDEX IF NOT EXISTS idx_credit_notes_expiry ON credit_notes(expiry_date);
+CREATE INDEX IF NOT EXISTS idx_bill_approvals_tenant_id ON bill_approvals(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_bill_approvals_bill_id ON bill_approvals(bill_id);
+CREATE INDEX IF NOT EXISTS idx_bill_approvals_status ON bill_approvals(status);
+CREATE INDEX IF NOT EXISTS idx_bill_approvals_type ON bill_approvals(approval_type);
+CREATE INDEX IF NOT EXISTS idx_insurance_providers_tenant_id ON insurance_providers(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_insurance_pre_auth_tenant_id ON insurance_pre_auth(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_insurance_pre_auth_patient_id ON insurance_pre_auth(patient_id);
+CREATE INDEX IF NOT EXISTS idx_insurance_pre_auth_status ON insurance_pre_auth(status);
+CREATE INDEX IF NOT EXISTS idx_insurance_pre_auth_provider ON insurance_pre_auth(insurance_provider_id);
+CREATE INDEX IF NOT EXISTS idx_corporate_clients_tenant_id ON corporate_clients(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_corporate_bills_tenant_id ON corporate_bills(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_corporate_bills_patient_id ON corporate_bills(patient_id);
+CREATE INDEX IF NOT EXISTS idx_corporate_bills_corporate_id ON corporate_bills(corporate_client_id);
+CREATE INDEX IF NOT EXISTS idx_corporate_bills_status ON corporate_bills(status);
+
 DO $$
 DECLARE
     t text;
 BEGIN
-    FOR t IN (SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() AND table_name IN ('patients','appointments','encounters','clinical_records','prescriptions','wards','beds','admissions','discharges','invoices','employees','service_requests', 'conditions', 'diagnostic_reports', 'lab_tests', 'ambulances', 'blood_units', 'departments', 'services', 'documents', 'document_audit_logs'))
+    FOR t IN (SELECT table_name FROM information_schema.tables WHERE table_schema = current_schema() AND table_name IN ('patients','appointments','encounters','clinical_records','prescriptions','wards','beds','admissions','discharges','invoices','billing','employees','service_requests', 'conditions', 'diagnostic_reports', 'lab_tests', 'ambulances', 'blood_units', 'departments', 'services', 'documents', 'document_audit_logs', 'concessions', 'credit_notes', 'bill_approvals', 'insurance_providers', 'insurance_pre_auth', 'corporate_clients', 'corporate_bills'))
     LOOP
         EXECUTE format('DROP TRIGGER IF EXISTS trg_%I_updated_at ON %I', t, t);
         EXECUTE format('CREATE TRIGGER trg_%I_updated_at BEFORE UPDATE ON %I FOR EACH ROW EXECUTE FUNCTION update_updated_at_column()', t, t);

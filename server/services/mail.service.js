@@ -11,6 +11,8 @@ dotenv.config();
  * Prioritizes Resend API, falls back to SMTP, then Mock
  */
 export async function sendTenantWelcomeEmail(email, tenantName, subdomain, credentials) {
+  const loginEmail = credentials?.email || email;
+  const loginPassword = credentials?.password || '';
   const fromName = "Healthezee Platform";
   // Explicitly force the verified domain instead of relying on .env file fallback
   const fromEmail = "Healthezee Platform <care@cognivectra.com>";
@@ -158,11 +160,11 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
           </div>
           <div class="credential-row">
             <span class="credential-label">Admin Login</span>
-            <span class="credential-value">admin@${subdomain.toLowerCase()}.hospital</span>
+            <span class="credential-value">${loginEmail}</span>
           </div>
           <div class="credential-row" style="border-top: 2px dashed rgba(226,232,240,0.8); padding-top: 24px; margin-top: 16px;">
             <span class="credential-label" style="color: #dc2626; font-weight: 800;">Temporary Access Key</span>
-            <code class="credential-value" style="letter-spacing: 1px; font-size: 16px;">${credentials.password}</code>
+            <code class="credential-value" style="letter-spacing: 1px; font-size: 16px;">${loginPassword}</code>
           </div>
         </div>
 
@@ -219,9 +221,8 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
   // --- STRATEGY 1: RESEND API (High Reliability) ---
   if (process.env.RESEND_API_KEY) {
     try {
-      // In Resend free tier, you can only send to the verified email.
-      // We force it to 'b.selvakumar.aws@gmail.com' per the Resend validation error.
-      const overrideEmail = 'b.selvakumar.aws@gmail.com';
+      const configuredOverride = String(process.env.EMAIL_OVERRIDE_TO || '').trim();
+      const recipientEmail = configuredOverride || email;
       
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -231,7 +232,7 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
         },
         body: JSON.stringify({
           from: "onboarding@resend.dev",
-          to: [overrideEmail],
+          to: [recipientEmail],
           subject: subject,
           html: htmlContent
         })
@@ -239,7 +240,7 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
 
       if (response.ok) {
         const data = await response.json();
-        console.log(`✉️ [RESEND_SUCCESS] Email dispatched via API to ${overrideEmail}:`, data.id);
+        console.log(`✉️ [RESEND_SUCCESS] Email dispatched via API to ${recipientEmail}:`, data.id);
         return { success: true, messageId: data.id };
       } else {
         const error = await response.text();

@@ -176,6 +176,20 @@ Requested → Scheduled → Checked In → In Progress → Completed
 | P&L and Balance Sheet | — | — | — | ✅ |
 | Advanced Accounts Module | — | — | — | ✅ |
 | IPD Billing Auto-Posts to Ledger | — | — | — | ✅ |
+| **Concessions & Discounts** | — | — | — | ✅ |
+| **Credit Billing & Credit Notes** | — | — | — | ✅ |
+| **Billing Approval Workflows** | — | — | — | ✅ |
+| **IP Billing with Refunds** | — | — | — | ✅ |
+| **Cancellation Approval Workflows** | — | — | — | ✅ |
+| **Final Bill Clearance** | — | — | — | ✅ |
+| **Discharge Card Generation** | — | — | — | ✅ |
+| **Insurance Pre-Auth Requests** | — | — | — | ✅ |
+| **Pre-Auth Approval Processing** | — | — | — | ✅ |
+| **Revised Pre-Auth Approvals** | — | — | — | ✅ |
+| **Corporate Patient Bills** | — | — | — | ✅ |
+| **Corporate Bill Registers** | — | — | — | ✅ |
+| **Partial Insurance Coverage** | — | — | — | ✅ |
+| **Patient Receivable Summary** | — | — | — | ✅ |
 
 > **Insurance Trail by Tier:**
 > - **Basic:** Insurance policy number and provider captured at patient registration. No claim flow initiated.
@@ -183,6 +197,42 @@ Requested → Scheduled → Checked In → In Progress → Completed
 > - **Enterprise:** Full pre-authorization workflow at intake, before admission is confirmed.
 
 > **Discharge Settlement Rule (All tiers with IPD):** Billing settlement must be marked **COMPLETE** before a patient discharge is finalised and a bed is released.
+
+### 2.6.1 Advanced Billing Features (Enterprise Tier)
+
+#### Concessions & Discounts
+- **Doctor-Level Concessions**: Doctors can apply percentage or fixed amount discounts during consultation with configurable approval limits
+- **Hospital-Level Concessions**: Administrative staff can apply institutional discounts for special cases (charity, VIP patients, etc.)
+- **Approval Workflows**: Multi-level approval system for discounts exceeding predefined thresholds
+- **Audit Trail**: Complete tracking of all concessions with reason codes and approver information
+
+#### Credit Billing & Receivables
+- **Credit Note Generation**: Automatic creation of credit notes for overpayments or adjustments
+- **Patient Receivable Summary**: Comprehensive dashboard showing outstanding balances, credit notes, and payment history
+- **Bill Clearance Tracking**: Automated tracking of credit utilization against outstanding bills
+- **Aging Analysis**: Categorization of receivables by age (0-30 days, 31-60 days, 61-90 days, 90+ days)
+
+#### Billing Approval Flows
+- **Multi-Level Approvals**: Configurable approval hierarchies for bill modifications
+- **Change Tracking**: Complete audit trail of all bill changes with before/after values
+- **Approval Notifications**: Automated notifications to approvers via email/SMS
+- **Escalation Rules**: Automatic escalation if approvals are not processed within defined timeframes
+
+#### IP Billing with Refunds
+- **Comprehensive IP Billing**: Detailed billing for inpatient stays including room charges, procedure charges, medication, and services
+- **Refund Processing**: Streamlined refund workflows with approval requirements
+- **Cancellation Workflows**: Structured cancellation processes with financial impact assessment
+- **Final Bill Clearance**: Mandatory clearance confirmation before discharge processing
+- **Discharge Card Generation**: Automated generation of discharge summaries with final billing information
+
+#### Advanced Insurance Management
+- **Pre-Authorization Requests**: Electronic submission of pre-authorization requests to insurance providers
+- **Approval Processing**: Tracking and management of pre-authorization approvals
+- **Revised Approvals**: Handling of revised pre-authorization amounts with automatic bill adjustments
+- **Final Amount Reflection**: Automatic updating of final bills with approved insurance amounts
+- **Corporate Patient Billing**: Specialized billing workflows for corporate/TPA patients
+- **Corporate Bill Registers**: Dedicated tracking and reporting for corporate bill settlements
+- **Partial Coverage Handling**: Seamless processing of bills with partial insurance coverage and balance payment through cash/card
 
 ---
 

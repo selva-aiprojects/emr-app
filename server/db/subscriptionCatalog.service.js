@@ -6,6 +6,7 @@
  */
 
 import { query } from './connection.js';
+import { getDerivedTierModuleMap } from './featuresTier.service.js';
 
 // ─── Canonical module keys that appear in App.jsx allowedViews ───────────────
 const ALL_MODULES = [
@@ -86,6 +87,7 @@ export const DEFAULT_CATALOG = [
 let _memoryCache = null;
 
 export async function getSubscriptionCatalog() {
+  let catalog = null;
   try {
     const result = await query(`
       SELECT plan_id as id, name, cost, period, color,
@@ -103,12 +105,27 @@ export async function getSubscriptionCatalog() {
     `);
     if (result.rows.length > 0) {
       _memoryCache = result.rows;
-      return result.rows;
+      catalog = result.rows;
     }
   } catch (e) {
     console.warn('[CATALOG] emr.subscription_catalog table not found, using in-memory defaults. Run DB migration to persist.', e.message);
   }
-  return _memoryCache || DEFAULT_CATALOG;
+  if (!catalog) {
+    catalog = _memoryCache || DEFAULT_CATALOG;
+  }
+
+  // Overlay module_keys from features_tiers matrix when present.
+  // This lets UI restrictions follow subscription tier maintenance definitions.
+  const tierModuleMap = await getDerivedTierModuleMap();
+  if (tierModuleMap && Object.keys(tierModuleMap).length > 0) {
+    catalog = catalog.map((plan) => {
+      const tierModules = tierModuleMap[String(plan.id || '').toLowerCase()];
+      if (!tierModules?.length) return plan;
+      return { ...plan, moduleKeys: tierModules };
+    });
+  }
+
+  return catalog;
 }
 
 export async function upsertSubscriptionPlan(plan) {

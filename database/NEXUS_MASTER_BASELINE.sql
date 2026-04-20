@@ -164,6 +164,207 @@ CREATE TABLE IF NOT EXISTS emr.audit_logs (
   timestamp timestamp with time zone DEFAULT now()
 );
 
+-- ============================================================
+-- ADVANCED BILLING & INSURANCE EXTENSIONS (ENTERPRISE FEATURES)
+-- ============================================================
+
+-- 9.1 Concessions & Discounts
+CREATE TABLE IF NOT EXISTS emr.concessions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL,
+    bill_id uuid,
+    concession_type character varying(50) NOT NULL CHECK (concession_type IN ('doctor', 'hospital', 'charity', 'vip', 'staff')),
+    amount decimal(10,2),
+    percentage decimal(5,2),
+    reason text NOT NULL,
+    applied_by uuid NOT NULL,
+    approved_by uuid,
+    approval_status character varying(20) DEFAULT 'pending' CHECK (approval_status IN ('pending', 'approved', 'rejected')),
+    approval_level integer DEFAULT 1,
+    comments text,
+    expiry_date date,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 9.2 Credit Notes & Receivables
+CREATE TABLE IF NOT EXISTS emr.credit_notes (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL,
+    original_bill_id uuid,
+    credit_amount decimal(10,2) NOT NULL CHECK (credit_amount > 0),
+    reason text NOT NULL,
+    status character varying(20) DEFAULT 'active' CHECK (status IN ('active', 'utilized', 'expired', 'cancelled')),
+    expiry_date date,
+    utilized_amount decimal(10,2) DEFAULT 0,
+    remaining_amount decimal(10,2) GENERATED ALWAYS AS (credit_amount - utilized_amount) STORED,
+    created_by uuid NOT NULL,
+    utilized_by uuid,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 9.3 Credit Note Utilizations
+CREATE TABLE IF NOT EXISTS emr.credit_note_utilizations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    credit_note_id uuid NOT NULL REFERENCES emr.credit_notes(id) ON DELETE CASCADE,
+    bill_id uuid,
+    utilized_amount decimal(10,2) NOT NULL CHECK (utilized_amount > 0),
+    utilized_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+-- 9.4 Billing Approvals
+CREATE TABLE IF NOT EXISTS emr.bill_approvals (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    bill_id uuid NOT NULL,
+    approval_type character varying(50) NOT NULL CHECK (approval_type IN ('discount', 'refund', 'write_off', 'modification', 'cancellation')),
+    requested_by uuid NOT NULL,
+    approved_by uuid,
+    approval_level integer DEFAULT 1,
+    status character varying(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'escalated')),
+    priority character varying(20) DEFAULT 'normal' CHECK (priority IN ('low', 'normal', 'high', 'urgent')),
+    comments text,
+    escalation_reason text,
+    escalated_at timestamp with time zone,
+    approved_at timestamp with time zone,
+    rejected_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 9.5 Approval Workflows
+CREATE TABLE IF NOT EXISTS emr.approval_workflows (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    workflow_type character varying(50) NOT NULL CHECK (workflow_type IN ('discount', 'refund', 'write_off', 'modification', 'cancellation')),
+    min_amount decimal(10,2) NOT NULL,
+    max_amount decimal(10,2),
+    required_role character varying(50) NOT NULL,
+    approval_level integer NOT NULL,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 9.6 Insurance Providers
+CREATE TABLE IF NOT EXISTS emr.insurance_providers (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    name text NOT NULL,
+    code character varying(32) NOT NULL,
+    contact_person text,
+    phone character varying(32),
+    email text,
+    address text,
+    pre_auth_required boolean DEFAULT true,
+    claim_submission_method character varying(20) DEFAULT 'electronic' CHECK (claim_submission_method IN ('electronic', 'manual', 'api')),
+    processing_time_days integer DEFAULT 7,
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(tenant_id, code)
+);
+
+-- 9.7 Insurance Pre-Authorizations
+CREATE TABLE IF NOT EXISTS emr.insurance_pre_auth (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL,
+    admission_id uuid,
+    insurance_provider_id uuid NOT NULL REFERENCES emr.insurance_providers(id),
+    policy_number character varying(100) NOT NULL,
+    pre_auth_number character varying(100),
+    requested_amount decimal(10,2) NOT NULL,
+    approved_amount decimal(10,2),
+    status character varying(20) DEFAULT 'requested' CHECK (status IN ('requested', 'approved', 'partially_approved', 'rejected', 'expired')),
+    request_date date NOT NULL DEFAULT CURRENT_DATE,
+    approval_date date,
+    expiry_date date,
+    diagnosis_codes text[],
+    procedure_codes text[],
+    remarks text,
+    requested_by uuid NOT NULL,
+    approved_by uuid,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 9.8 Pre-Auth Revisions
+CREATE TABLE IF NOT EXISTS emr.insurance_pre_auth_revisions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    pre_auth_id uuid NOT NULL REFERENCES emr.insurance_pre_auth(id) ON DELETE CASCADE,
+    revision_number integer NOT NULL,
+    previous_amount decimal(10,2),
+    revised_amount decimal(10,2) NOT NULL,
+    reason text NOT NULL,
+    status character varying(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    requested_by uuid NOT NULL,
+    approved_by uuid,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+-- 9.9 Corporate Clients
+CREATE TABLE IF NOT EXISTS emr.corporate_clients (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    name text NOT NULL,
+    code character varying(32) NOT NULL,
+    contact_person text,
+    phone character varying(32),
+    email text,
+    address text,
+    credit_limit decimal(10,2),
+    payment_terms character varying(20) DEFAULT 'net30' CHECK (payment_terms IN ('immediate', 'net15', 'net30', 'net45', 'net60', 'net90')),
+    billing_cycle character varying(20) DEFAULT 'monthly' CHECK (billing_cycle IN ('weekly', 'monthly', 'quarterly')),
+    is_active boolean DEFAULT true,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    UNIQUE(tenant_id, code)
+);
+
+-- 9.10 Corporate Bills
+CREATE TABLE IF NOT EXISTS emr.corporate_bills (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    patient_id uuid NOT NULL,
+    bill_id uuid NOT NULL,
+    corporate_client_id uuid NOT NULL REFERENCES emr.corporate_clients(id),
+    bill_type character varying(20) DEFAULT 'ipd' CHECK (bill_type IN ('ipd', 'opd', 'emergency')),
+    total_amount decimal(10,2) NOT NULL,
+    insurance_coverage decimal(10,2) DEFAULT 0,
+    corporate_coverage decimal(10,2) DEFAULT 0,
+    patient_responsibility decimal(10,2) DEFAULT 0,
+    settled_amount decimal(10,2) DEFAULT 0,
+    outstanding_amount decimal(10,2) GENERATED ALWAYS AS (total_amount - settled_amount) STORED,
+    settlement_date date,
+    status character varying(20) DEFAULT 'pending' CHECK (status IN ('pending', 'partially_settled', 'settled', 'written_off')),
+    due_date date,
+    remarks text,
+    created_by uuid NOT NULL,
+    settled_by uuid,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+-- 9.11 Corporate Bill Register
+CREATE TABLE IF NOT EXISTS emr.corporate_bill_register (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL,
+    corporate_client_id uuid NOT NULL REFERENCES emr.corporate_clients(id),
+    register_date date NOT NULL DEFAULT CURRENT_DATE,
+    total_bills integer DEFAULT 0,
+    total_amount decimal(10,2) DEFAULT 0,
+    settled_amount decimal(10,2) DEFAULT 0,
+    outstanding_amount decimal(10,2) GENERATED ALWAYS AS (total_amount - settled_amount) STORED,
+    generated_by uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
 -- 10. Infrastructure Safety Functions
 CREATE OR REPLACE FUNCTION emr.update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -255,10 +456,48 @@ DECLARE
   a_count int := 0;
   t_name text;
   t_code text;
+  t_subdomain text;
   found_sc text;
 BEGIN
-  SELECT name, code, schema_name INTO t_name, t_code, sc FROM emr.management_tenants WHERE id::text = target_tenant_id::text;
-  sc := COALESCE(target_schema, sc);
+  SELECT name, code, subdomain, schema_name
+    INTO t_name, t_code, t_subdomain, sc
+  FROM emr.management_tenants
+  WHERE id::text = target_tenant_id::text;
+
+  -- Self-heal registry drift: if management row is missing, use legacy tenant row.
+  IF t_code IS NULL THEN
+    SELECT
+      COALESCE(NULLIF(name, ''), code),
+      code,
+      COALESCE(NULLIF(subdomain, ''), lower(code)),
+      COALESCE(NULLIF(schema_name, ''), lower(code))
+    INTO t_name, t_code, t_subdomain, sc
+    FROM emr.tenants
+    WHERE id::text = target_tenant_id::text;
+
+    IF t_code IS NOT NULL THEN
+      INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, created_at, updated_at)
+      VALUES (
+        target_tenant_id::uuid,
+        t_name,
+        t_code,
+        COALESCE(NULLIF(t_subdomain, ''), lower(t_code)),
+        COALESCE(NULLIF(sc, ''), lower(t_code)),
+        'active',
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (code) DO UPDATE SET
+        name = EXCLUDED.name,
+        updated_at = NOW();
+    END IF;
+  END IF;
+
+  IF t_code IS NULL THEN
+    RETURN;
+  END IF;
+
+  sc := COALESCE(target_schema, sc, lower(t_code));
 
   -- 1. SCAN ISOLATED SHARD (If exists)
   IF sc IS NOT NULL THEN
@@ -283,11 +522,14 @@ BEGIN
     updated_at
   )
   VALUES (
-    target_tenant_id::uuid, t_code, t_name, COALESCE(found_sc, sc),
+    target_tenant_id::uuid, t_code, COALESCE(t_name, t_code), COALESCE(found_sc, sc, lower(t_code)),
     d_count, p_count, b_count, a_count,
     now()
   )
   ON CONFLICT (tenant_id) DO UPDATE SET
+    tenant_code = EXCLUDED.tenant_code,
+    tenant_name = EXCLUDED.tenant_name,
+    schema_name = EXCLUDED.schema_name,
     doctors_count = EXCLUDED.doctors_count,
     patients_count = EXCLUDED.patients_count,
     available_beds = EXCLUDED.available_beds,

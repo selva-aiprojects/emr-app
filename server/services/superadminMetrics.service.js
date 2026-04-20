@@ -99,6 +99,25 @@ export async function installTenantMetricsSync(schemaName, tenantId) {
 
 export async function refreshTenantMetrics(tenantId, schemaName = null) {
   await ensureManagementPlaneInfrastructure();
+  // Self-heal registry drift: ensure tenant exists in management_tenants before metric refresh.
+  await pool.query(`
+    INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, created_at, updated_at)
+    SELECT
+      t.id,
+      COALESCE(NULLIF(t.name, ''), t.code),
+      t.code,
+      COALESCE(NULLIF(t.subdomain, ''), lower(t.code)),
+      COALESCE(NULLIF(t.schema_name, ''), lower(t.code)),
+      COALESCE(NULLIF(t.status, ''), 'active'),
+      NOW(),
+      NOW()
+    FROM emr.tenants t
+    WHERE t.id::text = $1::text
+    ON CONFLICT (code) DO UPDATE SET
+      name = EXCLUDED.name,
+      updated_at = NOW()
+  `, [tenantId]).catch(() => {});
+
   await pool.query('SELECT emr.refresh_management_tenant_metrics($1::text, $2)', [tenantId, schemaName]).catch(e => {
     console.warn('[refreshTenantMetrics] Postgres function unavailable:', e.message);
   });
@@ -110,6 +129,18 @@ export async function getSuperadminOverview() {
 
     // 1. Get all management tenants with any cached metrics
     const { rows: tenantRows } = await pool.query(`
+      WITH metrics_by_code AS (
+        SELECT
+          lower(coalesce(mt.code, mtm.tenant_code)) AS code_key,
+          MAX(COALESCE(mtm.doctors_count, 0)) AS doctors_count,
+          MAX(COALESCE(mtm.patients_count, 0)) AS patients_count,
+          MAX(COALESCE(mtm.available_beds, 0)) AS available_beds,
+          MAX(COALESCE(mtm.available_ambulances, 0)) AS available_ambulances,
+          MAX(COALESCE(mtm.active_users_count, 0)) AS active_users_count
+        FROM emr.management_tenant_metrics mtm
+        LEFT JOIN emr.management_tenants mt ON mt.id::text = mtm.tenant_id::text
+        GROUP BY lower(coalesce(mt.code, mtm.tenant_code))
+      )
       SELECT 
         t.id as tenant_id,
         t.code as tenant_code,
@@ -118,43 +149,54 @@ export async function getSuperadminOverview() {
         t.subscription_tier,
         t.contact_email,
         t.schema_name,
-        COALESCE(mtm.doctors_count, 0) as doctors_count,
-        COALESCE(mtm.patients_count, 0) as patients_count,
-        COALESCE(mtm.available_beds, 0) as available_beds,
-        COALESCE(mtm.available_ambulances, 0) as available_ambulances,
-        COALESCE(mtm.active_users_count, 0) as active_users_count
+        COALESCE(mbc.doctors_count, 0) as doctors_count,
+        COALESCE(mbc.patients_count, 0) as patients_count,
+        COALESCE(mbc.available_beds, 0) as available_beds,
+        COALESCE(mbc.available_ambulances, 0) as available_ambulances,
+        COALESCE(mbc.active_users_count, 0) as active_users_count
       FROM emr.management_tenants t
-      LEFT JOIN emr.management_tenant_metrics mtm ON t.id::text = mtm.tenant_id::text
+      LEFT JOIN metrics_by_code mbc ON lower(t.code) = mbc.code_key
       ORDER BY t.created_at DESC
     `);
 
     // 2. For any tenant with data or missing doctor counts, do a live query from their schema
-    const enrichedTenants = await Promise.all(tenantRows.map(async (row) => {
+    const enrichedTenants = [];
+    for (const row of tenantRows) {
       const hasData = Number(row.patients_count) > 0 || Number(row.doctors_count) === 0;
-      if (!hasData || !row.schema_name) return row;
+      if (!hasData || !row.schema_name) {
+        enrichedTenants.push(row);
+        continue;
+      }
 
       try {
         const schemaName = row.schema_name;
-
-        // Verify schema exists
         const schemaCheck = await pool.query(
           `SELECT schema_name FROM information_schema.schemata WHERE schema_name = $1`, [schemaName]
         );
-        if (schemaCheck.rows.length === 0) return row;
+        if (schemaCheck.rows.length === 0) {
+          enrichedTenants.push(row);
+          continue;
+        }
 
-        const [pRes, dRes, bRes, aRes] = await Promise.all([
-          pool.query(`SELECT COUNT(*)::int as c FROM "${schemaName}".patients`).catch(() => ({ rows: [{ c: 0 }] })),
-          pool.query(`SELECT COUNT(*)::int as c FROM "${schemaName}".employees WHERE tenant_id = $1 AND (lower(designation) LIKE '%doctor%' OR lower(designation) LIKE '%consultant%' OR lower(designation) LIKE '%physician%' OR lower(designation) LIKE '%surgeon%')`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] })),
-          pool.query(`SELECT COUNT(CASE WHEN status = 'available' THEN 1 END)::int as c FROM "${schemaName}".beds`).catch(() => ({ rows: [{ c: 0 }] })),
-          pool.query(`SELECT COUNT(CASE WHEN status = 'available' THEN 1 END)::int as c FROM "${schemaName}".ambulances`).catch(() => ({ rows: [{ c: 0 }] })),
-        ]);
+        const pRes = await pool.query(`SELECT COUNT(*)::int as c FROM "${schemaName}".patients`).catch(() => ({ rows: [{ c: 0 }] }));
+        const dRes = await pool.query(`SELECT COUNT(*)::int as c FROM "${schemaName}".employees WHERE tenant_id = $1 AND (lower(designation) LIKE '%doctor%' OR lower(designation) LIKE '%consultant%' OR lower(designation) LIKE '%physician%' OR lower(designation) LIKE '%surgeon%')`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
+        const bRes = await pool.query(`SELECT COUNT(CASE WHEN status = 'available' THEN 1 END)::int as c FROM "${schemaName}".beds`).catch(() => ({ rows: [{ c: 0 }] }));
+        const aRes = await pool.query(`SELECT COUNT(CASE WHEN status = 'available' THEN 1 END)::int as c FROM "${schemaName}".ambulances`).catch(() => ({ rows: [{ c: 0 }] }));
 
         const livePatients = pRes.rows[0]?.c || 0;
         const liveDoctors  = dRes.rows[0]?.c || 0;
         const liveBeds     = bRes.rows[0]?.c || 0;
         const liveAmb      = aRes.rows[0]?.c || 0;
+        const legacyPatientsRes = await pool.query(`SELECT COUNT(*)::int AS c FROM emr.patients WHERE tenant_id::text = $1::text`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
+        const legacyDoctorsRes = await pool.query(`SELECT COUNT(*)::int AS c FROM emr.users WHERE tenant_id::text = $1::text AND lower(coalesce(role, '')) LIKE '%doctor%'`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
+        const legacyBedsRes = await pool.query(`SELECT COUNT(*)::int AS c FROM emr.beds WHERE tenant_id::text = $1::text AND lower(coalesce(status, '')) = 'available'`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
+        const legacyAmbRes = await pool.query(`SELECT COUNT(*)::int AS c FROM emr.ambulances WHERE tenant_id::text = $1::text AND lower(coalesce(status, '')) IN ('available', 'online', 'active')`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
 
-        // Upsert into cache so next load is faster
+        const mergedPatients = Math.max(livePatients, Number(legacyPatientsRes.rows[0]?.c || 0));
+        const mergedDoctors = Math.max(liveDoctors, Number(legacyDoctorsRes.rows[0]?.c || 0));
+        const mergedBeds = Math.max(liveBeds, Number(legacyBedsRes.rows[0]?.c || 0));
+        const mergedAmb = Math.max(liveAmb, Number(legacyAmbRes.rows[0]?.c || 0));
+
         await pool.query(`
           INSERT INTO emr.management_tenant_metrics
             (tenant_id, tenant_code, tenant_name, schema_name, patients_count, doctors_count, available_beds, available_ambulances, active_users_count, updated_at)
@@ -169,15 +211,14 @@ export async function getSuperadminOverview() {
             available_ambulances = EXCLUDED.available_ambulances,
             active_users_count = EXCLUDED.active_users_count,
             updated_at = NOW()
-        `, [row.tenant_id, row.tenant_code, row.tenant_name, row.schema_name, livePatients, liveDoctors, liveBeds, liveAmb, liveDoctors]).catch(() => {});
+        `, [row.tenant_id, row.tenant_code, row.tenant_name, row.schema_name, mergedPatients, mergedDoctors, mergedBeds, mergedAmb, mergedDoctors]).catch(() => {});
 
-        return { ...row, patients_count: livePatients, doctors_count: liveDoctors, available_beds: liveBeds, available_ambulances: liveAmb };
+        enrichedTenants.push({ ...row, patients_count: mergedPatients, doctors_count: mergedDoctors, available_beds: mergedBeds, available_ambulances: mergedAmb });
       } catch (e) {
         console.warn(`[OVERVIEW] Live query failed for ${row.tenant_code}:`, e.message);
-        console.error(`[OVERVIEW] Full error for ${row.tenant_code}:`, e);
-        return row;
+        enrichedTenants.push(row);
       }
-    }));
+    }
 
     // 3. Aggregate totals
     const totals = enrichedTenants.reduce((acc, t) => {

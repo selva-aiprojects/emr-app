@@ -66,7 +66,7 @@ export default function TenantList({ tenants = [], onSelect }) {
           <div className="grid grid-cols-1 gap-4">
             {tenants.map((tenant, i) => {
               const initials = (tenant.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-              const tier = tenant.subscription_tier || 'Basic';
+              const tier = tenant.subscription_tier || tenant.subscriptionTier || 'Basic';
               const tierCfg = TIER_CONFIG[tier] || TIER_CONFIG.Basic;
 
               return (
@@ -96,10 +96,10 @@ export default function TenantList({ tenants = [], onSelect }) {
                           {tenant.subdomain}.healthezee.app
                         </div>
                       )}
-                      {tenant.contact_email && (
+                      {(tenant.contact_email || tenant.contactEmail) && (
                         <div className="flex items-center gap-1 text-[11px] text-slate-400">
                           <Shield className="w-3 h-3" />
-                          {tenant.contact_email}
+                          {tenant.contact_email || tenant.contactEmail}
                         </div>
                       )}
                     </div>
@@ -109,7 +109,7 @@ export default function TenantList({ tenants = [], onSelect }) {
                   <div className="hidden md:flex items-center gap-8 shrink-0">
                     <div className="text-center">
                       <div className="text-xl font-black text-slate-900 tabular-nums leading-none">
-                        {tenant.patient_count ?? 0}
+                        {tenant.patient_count ?? tenant.patients ?? tenant.patients_count ?? 0}
                       </div>
                       <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Patients</div>
                     </div>
@@ -138,3 +138,5 @@ export default function TenantList({ tenants = [], onSelect }) {
     </section>
   );
 }
+
+

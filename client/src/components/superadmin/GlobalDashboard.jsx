@@ -14,10 +14,18 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
   const totals = overview?.totals || {};
   
   const activeTenantsCount = tenants.length;
-  const totalDoctors = Number(totals.doctors || 0) > 0 ? totals.doctors : tenants.reduce((s, t) => s + Number(t.doctors || 0), 0);
-  const totalPatients = Number(totals.patients || 0) > 0 ? totals.patients : tenants.reduce((s, t) => s + Number(t.patients || 0), 0);
-  const availableBeds = Number(totals.bedsAvailable || 0) > 0 ? totals.bedsAvailable : tenants.reduce((s, t) => s + Number(t.bedsAvailable || 0), 0);
-  const availableAmbulance = Number(totals.ambulancesAvailable || 0) > 0 ? totals.ambulancesAvailable : tenants.reduce((s, t) => s + Number(t.ambulancesAvailable || 0), 0);
+  const totalDoctors = Number(totals.doctors || 0) > 0
+    ? totals.doctors
+    : tenants.reduce((s, t) => s + Number(t.doctors ?? t.doctors_count ?? 0), 0);
+  const totalPatients = Number(totals.patients || 0) > 0
+    ? totals.patients
+    : tenants.reduce((s, t) => s + Number(t.patients ?? t.patient_count ?? t.patients_count ?? 0), 0);
+  const availableBeds = Number(totals.bedsAvailable || 0) > 0
+    ? totals.bedsAvailable
+    : tenants.reduce((s, t) => s + Number(t.bedsAvailable ?? t.beds_available ?? 0), 0);
+  const availableAmbulance = Number(totals.ambulancesAvailable || 0) > 0
+    ? totals.ambulancesAvailable
+    : tenants.reduce((s, t) => s + Number(t.ambulancesAvailable ?? t.ambulances_available ?? 0), 0);
 
   const stats = [
     { label: 'Hospitals', icon: Globe, value: activeTenantsCount, sub: 'Total registered' },
@@ -122,17 +130,17 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
                            </div>
                         </td>
                         <td className="px-6 py-5 bg-white group-hover:bg-transparent border-y border-slate-100 text-center text-xs font-black text-slate-600 tabular-nums">
-                           {t.doctors || 0} <span className="text-[9px] text-slate-400 ml-1">PA</span>
+                           {Number(t.doctors ?? t.doctors_count ?? 0)} <span className="text-[9px] text-slate-400 ml-1">PA</span>
                         </td>
                         <td className="px-6 py-5 bg-white group-hover:bg-transparent border-y border-slate-100 text-center text-xs font-black text-slate-600 tabular-nums">
-                           {t.patients || 0}
+                           {Number(t.patients ?? t.patient_count ?? t.patients_count ?? 0)}
                         </td>
                         <td className="px-6 py-5 bg-white group-hover:bg-transparent border-y border-slate-100 text-center">
                            <div className="flex flex-col items-center gap-1.5">
                               <div className="w-20 h-1 bg-slate-200 rounded-full overflow-hidden">
-                                 <div className="h-full bg-indigo-500 shadow-sm" style={{ width: `${Math.min((t.activeUsers || 0) * 10, 100)}%` }} />
+                                 <div className="h-full bg-indigo-500 shadow-sm" style={{ width: `${Math.min((Number(t.activeUsers ?? t.active_users_count ?? 0)) * 10, 100)}%` }} />
                               </div>
-                              <span className="text-[9px] font-black text-slate-500 uppercase">{t.activeUsers || 0} Active</span>
+                              <span className="text-[9px] font-black text-slate-500 uppercase">{Number(t.activeUsers ?? t.active_users_count ?? 0)} Active</span>
                            </div>
                         </td>
                         <td className="px-6 py-5 bg-white group-hover:bg-transparent border-y border-slate-100 text-center">
@@ -213,3 +221,4 @@ export default function GlobalDashboard({ tenants = [], overview = {} }) {
     </div>
   );
 }
+

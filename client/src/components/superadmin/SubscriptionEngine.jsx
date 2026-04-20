@@ -51,6 +51,7 @@ export default function SubscriptionEngine({ tenants = [] }) {
   const [newFeature, setNewFeature] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedModuleGroups, setExpandedModuleGroups] = useState({});
+  const [tierMatrix, setTierMatrix] = useState({ tiers: [], features: [] });
 
   // ── Load catalog from API ────────────────────────────────────────────────
   const loadCatalog = useCallback(async () => {
@@ -71,6 +72,21 @@ export default function SubscriptionEngine({ tenants = [] }) {
   }, []);
 
   useEffect(() => { loadCatalog(); }, [loadCatalog]);
+
+  const loadTierMatrix = useCallback(async () => {
+    try {
+      const matrix = await api.get('/admin/features-tiers');
+      setTierMatrix({
+        tiers: matrix?.tiers || [],
+        features: matrix?.features || []
+      });
+    } catch (e) {
+      console.warn('[SubscriptionEngine] Feature tier matrix unavailable:', e.message);
+      setTierMatrix({ tiers: [], features: [] });
+    }
+  }, []);
+
+  useEffect(() => { loadTierMatrix(); }, [loadTierMatrix]);
 
   const selectedPlan = plans.find(p => p.id === selectedPlanId) || plans[0];
 
@@ -114,6 +130,50 @@ export default function SubscriptionEngine({ tenants = [] }) {
       setIsEditing(false);
     } catch (e) {
       showToast({ title: 'Save Failed', message: e.message || 'Could not persist plan configuration.', type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleTierFeature = (featureKey, tierKey) => {
+    setTierMatrix((prev) => ({
+      ...prev,
+      features: (prev.features || []).map((f) => {
+        if (f.featureKey !== featureKey) return f;
+        return {
+          ...f,
+          tiers: { ...(f.tiers || {}), [tierKey]: !Boolean(f?.tiers?.[tierKey]) }
+        };
+      })
+    }));
+  };
+
+  const updateFeatureModuleKeys = (featureKey, input) => {
+    const keys = input
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean);
+
+    setTierMatrix((prev) => ({
+      ...prev,
+      features: (prev.features || []).map((f) => (
+        f.featureKey === featureKey ? { ...f, moduleKeys: keys } : f
+      ))
+    }));
+  };
+
+  const saveTierMatrix = async () => {
+    try {
+      setLoading(true);
+      const saved = await api.put('/admin/features-tiers', { features: tierMatrix.features || [] });
+      setTierMatrix({
+        tiers: saved?.tiers || tierMatrix.tiers || [],
+        features: saved?.features || tierMatrix.features || []
+      });
+      await loadCatalog();
+      showToast({ title: 'Tier Matrix Saved', message: 'Feature-to-tier restrictions have been updated.', type: 'success' });
+    } catch (e) {
+      showToast({ title: 'Save Failed', message: e.message || 'Could not save feature tier matrix.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -174,6 +234,7 @@ export default function SubscriptionEngine({ tenants = [] }) {
               { id: 'plans',   label: 'Unit Pricing',    icon: LayoutGrid },
               { id: 'modules', label: 'Module Mapping',  icon: Layers },
               { id: 'matrix',  label: 'Feature Matrix',  icon: Table },
+              { id: 'tier_map', label: 'Tier Features',  icon: ShieldCheck },
               { id: 'clients', label: 'Yield Audit',     icon: BarChart3 },
               { id: 'ledger',  label: 'Shard Ledger',    icon: CreditCard }
             ].map(tab => (
@@ -463,6 +524,83 @@ export default function SubscriptionEngine({ tenants = [] }) {
       )}
 
       {/* ══ TAB: YIELD AUDIT ══════════════════════════════════════════════ */}
+      {activeTab === 'tier_map' && (
+        <div className="space-y-6 animate-in fade-in duration-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-[11px] font-black text-slate-600 uppercase tracking-[0.3em]">Feature Tier Matrix (XLSX-aligned)</h4>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                Source tiers: Tier 1 (OP Only), Tier 2 (OP+IP), Tier 3 (ERP)
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={loadTierMatrix}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 transition-all"
+              >
+                Reload
+              </button>
+              <button
+                onClick={saveTierMatrix}
+                disabled={loading}
+                className="px-7 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+              >
+                {loading ? 'Saving...' : 'Save Matrix'}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-[2.5rem] overflow-hidden p-4 shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-separate border-spacing-y-2">
+                <thead>
+                  <tr className="text-[10px] font-black uppercase text-slate-500 tracking-[0.25em]">
+                    <th className="px-6 py-4">Feature</th>
+                    {tierMatrix.tiers.map((t) => (
+                      <th key={t.key} className="px-6 py-4 text-center">{t.label}</th>
+                    ))}
+                    <th className="px-6 py-4">Mapped Modules</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(tierMatrix.features || []).map((f) => (
+                    <tr key={f.featureKey} className="group hover:bg-slate-50 transition-all">
+                      <td className="px-6 py-4 bg-white group-hover:bg-transparent first:rounded-l-2xl border-y border-l border-slate-100">
+                        <div className="text-[11px] font-black text-slate-800">{f.featureName}</div>
+                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">{f.featureKey}</div>
+                      </td>
+                      {tierMatrix.tiers.map((t) => {
+                        const active = Boolean(f?.tiers?.[t.key]);
+                        return (
+                          <td key={`${f.featureKey}-${t.key}`} className="px-6 py-4 bg-white group-hover:bg-transparent border-y border-slate-100 text-center">
+                            <button
+                              onClick={() => toggleTierFeature(f.featureKey, t.key)}
+                              className={`w-8 h-8 rounded-xl border flex items-center justify-center mx-auto ${
+                                active ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-slate-50 border-slate-200 text-slate-300'
+                              }`}
+                              title={active ? 'Enabled' : 'Disabled'}
+                            >
+                              {active ? <Check size={14} /> : <X size={14} />}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      <td className="px-6 py-4 bg-white group-hover:bg-transparent last:rounded-r-2xl border-y border-r border-slate-100">
+                        <input
+                          value={(f.moduleKeys || []).join(', ')}
+                          onChange={(e) => updateFeatureModuleKeys(f.featureKey, e.target.value)}
+                          placeholder="module1, module2"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-[10px] font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500/40"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
       {activeTab === 'clients' && (
         <div className="space-y-10 animate-in fade-in duration-500">
           <div className="flex justify-between items-center">
@@ -581,3 +719,4 @@ export default function SubscriptionEngine({ tenants = [] }) {
     </div>
   );
 }
+

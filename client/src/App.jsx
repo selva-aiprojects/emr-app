@@ -16,7 +16,7 @@ const FindDoctorPage = lazy(() => import('./pages/FindDoctorPage.jsx'));
 const DoctorAvailabilityPage = lazy(() => import('./pages/DoctorAvailabilityPage.jsx'));
 const EmrPage = lazy(() => import('./pages/EmrPage.jsx'));
 const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
-const InsurancePage = lazy(() => import('./pages/InsurancePage.jsx'));
+const EnhancedInsurancePage = lazy(() => import('./pages/EnhancedInsurancePage.jsx'));
 const InpatientPage = lazy(() => import('./pages/InpatientPage.jsx'));
 const PharmacyPage = lazy(() => import('./pages/EnhancedPharmacyPage.jsx'));
 const EmployeesPage = lazy(() => import('./pages/EmployeesPage.jsx'));
@@ -87,6 +87,7 @@ export default function App() {
   const [employeeLeaves, setEmployeeLeaves] = useState([]);
   const [tickets, setTickets] = useState([]);
   const [superOverview, setSuperOverview] = useState(null);
+  const [subscriptionPlans, setSubscriptionPlans] = useState([]);
   const [reportSummary, setReportSummary] = useState(null);
   const [insuranceProviders, setInsuranceProviders] = useState([]);
   const [claims, setClaims] = useState([]);
@@ -145,6 +146,16 @@ export default function App() {
     [scopedPatients, activePatientId]
   );
 
+  const tierModuleMap = useMemo(() => {
+    const out = {};
+    (subscriptionPlans || []).forEach((plan) => {
+      const key = String(plan?.id || '').toLowerCase();
+      if (!key) return;
+      out[key] = new Set(Array.isArray(plan?.moduleKeys) ? plan.moduleKeys : []);
+    });
+    return out;
+  }, [subscriptionPlans]);
+
   const allowedViews = useMemo(() => {
     if (!activeUser?.role) {
       return [];
@@ -167,27 +178,40 @@ export default function App() {
     return roleViews.filter((item) => {
       if (item === 'dashboard') return true;
       
-      const tier = tenant?.subscription_tier || 'Enterprise';
-      
-      // Feature visibility matrix by subscription tier
-      if (tier === 'Free') {
+      const tier = String(tenant?.subscription_tier || tenant?.subscriptionTier || 'enterprise').toLowerCase();
+      const modulesForTier = tierModuleMap[tier];
+
+      // Canonical module mapping alias support for historical route keys
+      const aliases = {
+        documents: ['documents', 'document_vault'],
+        document_vault: ['document_vault', 'documents'],
+      };
+      const candidates = aliases[item] || [item];
+
+      if (modulesForTier && modulesForTier.size > 0) {
+        return candidates.some((key) => modulesForTier.has(key));
+      }
+
+      // Backward fallback if catalog is unavailable
+      if (tier === 'free') {
         const freeModules = ['superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'hospital_settings'];
-        return freeModules.includes(item);
-      } else if (tier === 'Basic') {
+        return candidates.some((key) => freeModules.includes(key));
+      }
+      if (tier === 'basic') {
         const basicModules = ['superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'inventory', 'pharmacy', 'ambulance', 'lab', 'hospital_settings', 'departments'];
-        return basicModules.includes(item);
-      } else if (tier === 'Professional') {
+        return candidates.some((key) => basicModules.includes(key));
+      }
+      if (tier === 'professional') {
         const proModules = [
-          'superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 
-          'inventory', 'pharmacy', 'ambulance', 'lab', 'inpatient', 'billing', 'accounts', 'accounts_receivable', 'accounts_payable', 
+          'superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents',
+          'inventory', 'pharmacy', 'ambulance', 'lab', 'inpatient', 'billing', 'accounts', 'accounts_receivable', 'accounts_payable',
           'insurance', 'service_catalog', 'hospital_settings', 'departments', 'bed_management'
         ];
-        return proModules.includes(item);
+        return candidates.some((key) => proModules.includes(key));
       }
-      
-      return true; // Enterprise has everything
+      return true;
     });
-  }, [permissions, activeUser, tenant]);
+  }, [permissions, activeUser, tenant, tierModuleMap]);
 
   const slmInsights = useMemo(() => {
     if (!tenant) return null;
@@ -204,6 +228,13 @@ export default function App() {
   useEffect(() => {
     loadTenants();
   }, []);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    api.get('/tenants/subscription-catalog')
+      .then((data) => setSubscriptionPlans(data?.plans || []))
+      .catch(() => setSubscriptionPlans([]));
+  }, [session?.user?.id, session?.tenantId]);
 
   useEffect(() => {
     // Don't redirect if superadmin — they always land on their own console
@@ -253,37 +284,6 @@ export default function App() {
     }
   }
 
-  async function refreshSuperadmin() {
-    try {
-      const [overview, tenantList] = await Promise.all([
-        api.getSuperadminOverview().catch(e => {
-          console.warn('[SUPERADMIN_REFRESH] Overview fetch failed:', e.message);
-          return null;
-        }),
-        api.getTenants().catch(() => []),
-      ]);
-
-      if (overview) {
-        setSuperOverview(overview);
-        // Merge per-tenant metrics from overview.tenants into the tenants list
-        if (overview.tenants?.length) {
-          setTenants(prev => {
-            const metricMap = {};
-            overview.tenants.forEach(t => { metricMap[t.id] = t; });
-            const merged = prev.map(t => metricMap[t.id] ? { ...t, ...metricMap[t.id] } : t);
-            // Add any tenants from overview not already in list
-            const existingIds = new Set(prev.map(t => t.id));
-            overview.tenants.forEach(t => { if (!existingIds.has(t.id)) merged.push(t); });
-            return merged;
-          });
-        }
-      } else if (tenantList.length) {
-        setTenants(tenantList);
-      }
-    } catch (err) {
-      console.error('[SUPERADMIN_REFRESH] Failed:', err.message);
-    }
-  }
 
   function normalizeRole(role) {
     if (!role) return '';
@@ -458,9 +458,39 @@ export default function App() {
         api.getSupportTickets()
       ]);
       console.log('DEBUG: Superadmin data fetched', { overview, allUsers, allTenants, allTickets });
+
+      const overviewTenantMap = new Map((overview?.tenants || []).map((t) => [t.id, t]));
+      const normalizeTenant = (tenant = {}) => {
+        const merged = { ...tenant, ...(overviewTenantMap.get(tenant.id) || {}) };
+        const patients = Number(merged.patients ?? merged.patient_count ?? merged.patients_count ?? 0);
+        const doctors = Number(merged.doctors ?? merged.doctors_count ?? 0);
+        const bedsAvailable = Number(merged.bedsAvailable ?? merged.beds_available ?? 0);
+        const ambulancesAvailable = Number(merged.ambulancesAvailable ?? merged.ambulances_available ?? 0);
+        const activeUsers = Number(merged.activeUsers ?? merged.active_users_count ?? 0);
+
+        return {
+          ...merged,
+          patients,
+          patient_count: patients,
+          doctors,
+          doctors_count: doctors,
+          bedsAvailable,
+          ambulancesAvailable,
+          activeUsers,
+          subscription_tier: merged.subscription_tier || merged.subscriptionTier || 'Basic',
+          contact_email: merged.contact_email || merged.contactEmail || null
+        };
+      };
+
+      const normalizedFromTenants = (allTenants || []).map(normalizeTenant);
+      const existingIds = new Set(normalizedFromTenants.map((t) => t.id));
+      const normalizedOverviewOnly = (overview?.tenants || [])
+        .filter((t) => !existingIds.has(t.id))
+        .map(normalizeTenant);
+
       setSuperOverview(overview);
       setUsers(allUsers || []);
-      setTenants(allTenants || []);
+      setTenants([...normalizedFromTenants, ...normalizedOverviewOnly]);
       setTickets(allTickets || []);
     } catch (err) {
       console.error('DEBUG: refreshSuperadmin failed', err);
@@ -1059,36 +1089,7 @@ export default function App() {
         )}
 
         {view === 'insurance' && (
-          <InsurancePage
-            providers={insuranceProviders}
-            claims={claims}
-            onCreateProvider={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
-              withRefresh(() => api.createInsuranceProvider({
-                tenantId: session.tenantId,
-                name: fd.get('name'),
-                type: fd.get('type'),
-                coverageLimit: Number(fd.get('coverageLimit')),
-                contactPerson: fd.get('contactPerson'),
-                phone: fd.get('phone'),
-                email: fd.get('email'),
-                address: fd.get('address')
-              }));
-            }}
-            onCreateClaim={(e) => {
-              e.preventDefault();
-              const fd = new FormData(e.target);
-              withRefresh(() => api.createInsuranceClaim({
-                tenantId: session.tenantId,
-                providerId: fd.get('providerId'),
-                patientId: fd.get('patientId'),
-                amount: Number(fd.get('amount')),
-                claimNumber: fd.get('claimNumber')
-              }));
-              e.target.reset();
-            }}
-          />
+          <EnhancedInsurancePage tenant={tenant} />
         )}
 
         {view === 'lab' && (

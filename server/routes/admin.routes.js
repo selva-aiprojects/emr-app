@@ -2,6 +2,7 @@ import express from 'express';
 import * as repo from '../db/repository.js';
 import { authenticate, requireRole } from '../middleware/auth.middleware.js';
 import { getSubscriptionCatalog, upsertSubscriptionPlan, ALL_MODULES } from '../db/subscriptionCatalog.service.js';
+import { getFeatureTierMatrix, saveFeatureTierMatrix } from '../db/featuresTier.service.js';
 
 const router = express.Router();
 
@@ -38,6 +39,39 @@ router.post('/subscription-catalog', async (req, res) => {
   } catch (error) {
     console.error('Error saving subscription plan:', error);
     res.status(500).json({ error: 'Failed to save subscription plan' });
+  }
+});
+
+/**
+ * @route   GET /api/admin/features-tiers
+ * @desc    Get tier-feature matrix (seeded from consolidated XLSX)
+ */
+router.get('/features-tiers', async (req, res) => {
+  try {
+    const matrix = await getFeatureTierMatrix();
+    res.json(matrix);
+  } catch (error) {
+    console.error('Error fetching features tiers matrix:', error);
+    res.status(500).json({ error: 'Failed to fetch feature tier matrix' });
+  }
+});
+
+/**
+ * @route   PUT /api/admin/features-tiers
+ * @desc    Save tier-feature matrix
+ */
+router.put('/features-tiers', async (req, res) => {
+  try {
+    const { features } = req.body || {};
+    if (!Array.isArray(features)) {
+      return res.status(400).json({ error: 'features array is required' });
+    }
+
+    const matrix = await saveFeatureTierMatrix(features);
+    res.json(matrix);
+  } catch (error) {
+    console.error('Error saving features tiers matrix:', error);
+    res.status(500).json({ error: 'Failed to save feature tier matrix' });
   }
 });
 

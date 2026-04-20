@@ -52,7 +52,14 @@ export const {
 } = encounterService;
 
 export const {
-  getInvoices, getInvoiceById, createInvoice, updateInvoiceStatus, payInvoice
+  getInvoices, getInvoiceById, createInvoice, updateInvoiceStatus, payInvoice,
+  getBillingItems, getBillingItemById, createBillingItem, updateBillingItem, deleteBillingItem,
+  getBillingConcessions, createBillingConcession, updateBillingConcession,
+  getCreditNotes, createCreditNote,
+  getBillingApprovals, createBillingApproval, updateBillingApproval,
+  getCorporateClients, createCorporateClient,
+  getCorporateBills, getCorporateBillById, createCorporateBill, updateCorporateBill,
+  getCorporateBillItems, createCorporateBillItem
 } = billingService;
 
 export const {
@@ -80,7 +87,10 @@ export const {
 } = supportService;
 
 export const {
-  getInsuranceProviders, createInsuranceProvider, getInsuranceClaims, createInsuranceClaim
+  getInsuranceProviders, createInsuranceProvider, updateInsuranceProvider,
+  getPatientInsurance, createPatientInsurance, updatePatientInsurance,
+  getInsuranceClaims, createInsuranceClaim,
+  getPreauthorizationRequests, createPreauthorizationRequest, updatePreauthStatus
 } = insuranceService;
 
 export const {

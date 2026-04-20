@@ -232,16 +232,33 @@ export async function getTenants() {
   try {
     // 1. Get modern management tenants with metrics
     const mgmtRes = await query(`
+      WITH metrics_by_code AS (
+        SELECT
+          lower(coalesce(mt.code, mtm.tenant_code)) AS code_key,
+          MAX(COALESCE(mtm.patients_count, 0)) AS patients_count,
+          MAX(COALESCE(mtm.doctors_count, 0)) AS doctors_count,
+          MAX(COALESCE(mtm.available_beds, 0)) AS available_beds,
+          MAX(COALESCE(mtm.available_ambulances, 0)) AS available_ambulances,
+          MAX(COALESCE(mtm.active_users_count, 0)) AS active_users_count
+        FROM emr.management_tenant_metrics mtm
+        LEFT JOIN emr.management_tenants mt ON mt.id::text = mtm.tenant_id::text
+        GROUP BY lower(coalesce(mt.code, mtm.tenant_code))
+      )
       SELECT
         t.id, t.name, t.code, t.subdomain, t.status, t.created_at, t.updated_at,
         t.subscription_tier, t.contact_email, t.schema_name, mt.theme, mt.features, mt.logo_url, mt.billing_config,
-        COALESCE(mtm.patients_count, 0) as patients,
-        COALESCE(mtm.doctors_count, 0) as doctors,
-        COALESCE(mtm.available_beds, 0) as "bedsAvailable",
-        COALESCE(mtm.available_ambulances, 0) as "ambulancesAvailable",
-        COALESCE(mtm.active_users_count, 0) as active_users_count
+        COALESCE(mbc.patients_count, 0) as patients,
+        COALESCE(mbc.patients_count, 0) as patient_count,
+        COALESCE(mbc.doctors_count, 0) as doctors,
+        COALESCE(mbc.doctors_count, 0) as doctors_count,
+        COALESCE(mbc.available_beds, 0) as "bedsAvailable",
+        COALESCE(mbc.available_beds, 0) as beds_available,
+        COALESCE(mbc.available_ambulances, 0) as "ambulancesAvailable",
+        COALESCE(mbc.available_ambulances, 0) as ambulances_available,
+        COALESCE(mbc.active_users_count, 0) as active_users_count,
+        COALESCE(mbc.active_users_count, 0) as "activeUsers"
       FROM emr.management_tenants t LEFT JOIN emr.tenants mt ON mt.id::text = t.id::text
-      LEFT JOIN emr.management_tenant_metrics mtm ON mtm.tenant_id = t.id
+      LEFT JOIN metrics_by_code mbc ON lower(t.code) = mbc.code_key
       ORDER BY t.name
     `);
     
@@ -249,8 +266,9 @@ export async function getTenants() {
     const legacyRes = await query(`
       SELECT id, name, code, subdomain, status, created_at, updated_at, 
              subscription_tier, contact_email, code as schema_name, theme, features, logo_url, billing_config,
-             0 as patients, 0 as doctors, 0 as "bedsAvailable",
-             0 as "ambulancesAvailable", 0 as active_users_count
+             0 as patients, 0 as patient_count, 0 as doctors, 0 as doctors_count, 0 as "bedsAvailable",
+             0 as beds_available, 0 as "ambulancesAvailable", 0 as ambulances_available,
+             0 as active_users_count, 0 as "activeUsers"
       FROM emr.tenants 
       ORDER BY name
     `);
@@ -375,3 +393,4 @@ export async function provisionTenantSchema(tenantId, schemaName) {
     return { success: false, error: err.message, log };
   }
 }
+

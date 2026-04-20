@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
 import PatientSearch from '../components/PatientSearch.jsx';
 import { currency, patientName } from '../utils/format.js';
@@ -124,8 +124,12 @@ export default function BillingPage({
   const [activeView, setActiveView] = useState('list'); // 'list' | 'create' | 'settlement'
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPaymentLink, setShowPaymentLink] = useState(null);
-
-
+  const [billingItems, setBillingItems] = useState([]);
+  const [billingConcessions, setBillingConcessions] = useState([]);
+  const [creditNotes, setCreditNotes] = useState([]);
+  const [billingApprovals, setBillingApprovals] = useState([]);
+  const [corporateClients, setCorporateClients] = useState([]);
+  const [corporateBills, setCorporateBills] = useState([]);
 
   const handleIssueInvoice = async (e) => {
     e.preventDefault();
@@ -167,6 +171,33 @@ export default function BillingPage({
       showToast({ title: 'Settlement Error', message: err.message, type: 'error' });
     }
   };
+
+  useEffect(() => {
+    async function loadBillingExtensions() {
+      if (!tenant?.id) return;
+      try {
+        const [items, concessions, credits, approvals, clients, bills] = await Promise.all([
+          api.getBillingItems(tenant.id),
+          api.getBillingConcessions(tenant.id),
+          api.getBillingCreditNotes(tenant.id),
+          api.getBillingApprovals(tenant.id),
+          api.getCorporateBillingClients(tenant.id),
+          api.getCorporateBillingRecords(tenant.id)
+        ]);
+
+        setBillingItems(items || []);
+        setBillingConcessions(concessions || []);
+        setCreditNotes(credits || []);
+        setBillingApprovals(approvals || []);
+        setCorporateClients(clients || []);
+        setCorporateBills(bills || []);
+      } catch (err) {
+        console.warn('Billing extension load failed', err);
+      }
+    }
+
+    loadBillingExtensions();
+  }, [tenant?.id]);
 
   if (!tenant) {
     return (
@@ -384,6 +415,21 @@ export default function BillingPage({
             <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center gap-4">
                <ShieldCheck className="w-4 h-4 text-emerald-500" />
                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Verify clinical eligibility before finalizing fiscal shards. All settlements are non-reversible.</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-8 py-8 border-b border-slate-100 bg-white/80">
+              <div className="rounded-3xl border border-emerald-100 bg-emerald-50 p-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600">Defined Bill Items</p>
+                <p className="mt-3 text-3xl font-black text-slate-900">{billingItems.length}</p>
+              </div>
+              <div className="rounded-3xl border border-amber-100 bg-amber-50 p-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-amber-600">Active Concessions</p>
+                <p className="mt-3 text-3xl font-black text-slate-900">{billingConcessions.length}</p>
+              </div>
+              <div className="rounded-3xl border border-slate-100 bg-slate-50 p-6">
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Corporate Contracts</p>
+                <p className="mt-3 text-3xl font-black text-slate-900">{corporateClients.length}</p>
+              </div>
             </div>
 
             <div className="premium-table-container">

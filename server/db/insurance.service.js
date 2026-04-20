@@ -44,6 +44,157 @@ export async function createEnhancedInsuranceProvider({
   return result.rows[0];
 }
 
+export async function getInsuranceProviders(tenantId) {
+  const sql = `
+    SELECT * FROM insurance_providers 
+    WHERE tenant_id::text = $1::text
+    ORDER BY provider_name
+  `;
+  const result = await query(sql, [tenantId]);
+  return result.rows;
+}
+
+export async function createInsuranceProvider({ 
+  tenantId, providerName, providerCode, contactPerson, phone, email, address, isActive = true
+}) {
+  const sql = `
+    INSERT INTO insurance_providers (
+      tenant_id, provider_name, provider_code,
+      contact_person, phone, email, address, is_active
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *
+  `;
+  const result = await query(sql, [
+    tenantId, providerName, providerCode, contactPerson, phone, email, address, isActive
+  ]);
+  return result.rows[0];
+}
+
+export async function updateInsuranceProvider({ providerId, tenantId, updates = {} }) {
+  const allowedFields = ['provider_name', 'provider_code', 'contact_person', 'phone', 'email', 'address', 'is_active'];
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (!allowedFields.includes(key)) continue;
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(value);
+  }
+
+  if (fields.length === 0) {
+    const fallback = await query(`SELECT * FROM insurance_providers WHERE id::text = $1::text AND tenant_id::text = $2::text`, [providerId, tenantId]);
+    return fallback.rows[0];
+  }
+
+  fields.push(`updated_at = $${paramIndex++}`);
+  values.push(new Date());
+
+  const sql = `
+    UPDATE insurance_providers
+    SET ${fields.join(', ')}
+    WHERE id::text = $${paramIndex++}::text AND tenant_id::text = $${paramIndex++}::text
+    RETURNING *
+  `;
+  values.push(providerId, tenantId);
+
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
+export async function getPatientInsurance(tenantId, filters = {}) {
+  const { patientId, providerId, isActive } = filters;
+  let sql = `
+    SELECT pi.*, p.first_name || ' ' || p.last_name AS patient_name,
+           ip.provider_name
+    FROM patient_insurance pi
+    LEFT JOIN patients p ON pi.patient_id = p.id
+    LEFT JOIN insurance_providers ip ON pi.provider_id = ip.id
+    WHERE pi.tenant_id::text = $1::text
+  `;
+
+  const params = [tenantId];
+  let paramIndex = 2;
+
+  if (patientId) {
+    sql += ` AND pi.patient_id::text = $${paramIndex++}::text`;
+    params.push(patientId);
+  }
+
+  if (providerId) {
+    sql += ` AND pi.provider_id::text = $${paramIndex++}::text`;
+    params.push(providerId);
+  }
+
+  if (typeof isActive !== 'undefined') {
+    sql += ` AND pi.is_active = $${paramIndex++}`;
+    params.push(isActive);
+  }
+
+  sql += ` ORDER BY pi.created_at DESC`;
+  const result = await query(sql, params);
+  return result.rows;
+}
+
+export async function createPatientInsurance({
+  tenantId, patientId, providerId, policyNumber, groupNumber,
+  coverageType, coveragePercentage = 100.0, deductibleAmount = 0,
+  maxCoverageAmount = null, effectiveDate = null, expiryDate = null,
+  isPrimary = false, isActive = true
+}) {
+  const sql = `
+    INSERT INTO patient_insurance (
+      tenant_id, patient_id, provider_id, policy_number, group_number,
+      coverage_type, coverage_percentage, deductible_amount, max_coverage_amount,
+      effective_date, expiry_date, is_primary, is_active
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+    RETURNING *
+  `;
+
+  const result = await query(sql, [
+    tenantId, patientId, providerId, policyNumber, groupNumber,
+    coverageType, coveragePercentage, deductibleAmount, maxCoverageAmount,
+    effectiveDate, expiryDate, isPrimary, isActive
+  ]);
+  return result.rows[0];
+}
+
+export async function updatePatientInsurance({ insuranceId, tenantId, updates = {} }) {
+  const allowedFields = [
+    'policy_number', 'group_number', 'coverage_type', 'coverage_percentage',
+    'deductible_amount', 'max_coverage_amount', 'effective_date', 'expiry_date',
+    'is_primary', 'is_active'
+  ];
+  const fields = [];
+  const values = [];
+  let paramIndex = 1;
+
+  for (const [key, value] of Object.entries(updates)) {
+    if (!allowedFields.includes(key)) continue;
+    fields.push(`${key} = $${paramIndex++}`);
+    values.push(value);
+  }
+
+  if (fields.length === 0) {
+    const fallback = await query(`SELECT * FROM patient_insurance WHERE id::text = $1::text AND tenant_id::text = $2::text`, [insuranceId, tenantId]);
+    return fallback.rows[0];
+  }
+
+  fields.push(`updated_at = $${paramIndex++}`);
+  values.push(new Date());
+
+  const sql = `
+    UPDATE patient_insurance
+    SET ${fields.join(', ')}
+    WHERE id::text = $${paramIndex++}::text AND tenant_id::text = $${paramIndex++}::text
+    RETURNING *
+  `;
+  values.push(insuranceId, tenantId);
+
+  const result = await query(sql, values);
+  return result.rows[0];
+}
+
 // =====================================================
 // INSURANCE CLAIMS
 // =====================================================
@@ -164,20 +315,18 @@ export async function createPreauthorizationRequest({
   const preauthNumber = `PA-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
   
   const sql = `
-    INSERT INTO emr.insurance_preauth_requests (
-      tenant_id, preauth_number, patient_id, provider_id, policy_number,
-      requested_amount, diagnosis_summary, proposed_treatment,
-      estimated_admission_date, estimated_discharge_date, icd10_codes,
-      status, approval_validity_days, expiry_date, created_by
-    )
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'PENDING', 15, NOW() + INTERVAL '15 days', $12)
+    INSERT INTO insurance_pre_auth (
+      tenant_id, provider_id, patient_id, pre_auth_number,
+      service_type, estimated_amount, approved_amount,
+      status, expiry_date, notes, created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
     RETURNING *
   `;
   
   const result = await query(sql, [
-    tenantId, preauthNumber, patientId, providerId, policyNumber,
-    requestedAmount, diagnosisSummary, proposedTreatment,
-    estimatedAdmissionDate, estimatedDischargeDate, icd10Codes, createdBy
+    tenantId, providerId, patientId, preauthNumber,
+    proposedTreatment, requestedAmount, null,
+    'pending', estimatedDischargeDate, diagnosisSummary
   ]);
   
   return result.rows[0];
@@ -186,15 +335,14 @@ export async function createPreauthorizationRequest({
 export async function getPreauthorizationRequests(tenantId, filters = {}) {
   let sql = `
     SELECT 
-      ipr.*,
+      ipr.*, 
       p.first_name || ' ' || p.last_name as patient_name,
       p.mrn as patient_mrn,
-      ipe.provider_name,
-      ipe.provider_type
-    FROM emr.insurance_preauth_requests ipr
-    JOIN emr.patients p ON ipr.patient_id = p.id
-    JOIN emr.insurance_providers_enhanced ipe ON ipr.provider_id = ipe.id
-    WHERE ipr.tenant_id = $1
+      ip.provider_name
+    FROM insurance_pre_auth ipr
+    LEFT JOIN patients p ON ipr.patient_id = p.id
+    LEFT JOIN insurance_providers ip ON ipr.provider_id = ip.id
+    WHERE ipr.tenant_id::text = $1::text
   `;
   
   const params = [tenantId];
@@ -206,8 +354,13 @@ export async function getPreauthorizationRequests(tenantId, filters = {}) {
   }
   
   if (filters.patientId) {
-    sql += ` AND ipr.patient_id = $${paramIndex++}`;
+    sql += ` AND ipr.patient_id::text = $${paramIndex++}::text`;
     params.push(filters.patientId);
+  }
+  
+  if (filters.providerId) {
+    sql += ` AND ipr.provider_id::text = $${paramIndex++}::text`;
+    params.push(filters.providerId);
   }
   
   sql += ` ORDER BY ipr.created_at DESC`;
@@ -242,22 +395,18 @@ export async function updateClaimStatus({ claimId, tenantId, status, approvedAmo
 
 export async function updatePreauthStatus({ preauthId, tenantId, status, approvedAmount, rejectionReason, updatedBy }) {
   const sql = `
-    UPDATE emr.insurance_preauth_requests
+    UPDATE insurance_pre_auth
     SET 
       status = $1,
       approved_amount = COALESCE($2, approved_amount),
       rejection_reason = $3,
       updated_by = $4,
       updated_at = NOW(),
-      approval_date = CASE 
-        WHEN $1 IN ('APPROVED', 'PARTIALLY_APPROVED') THEN NOW()
-        ELSE approval_date 
-      END,
       expiry_date = CASE 
-        WHEN $1 = 'APPROVED' THEN NOW() + INTERVAL '15 days'
+        WHEN $1 = 'approved' THEN NOW() + INTERVAL '15 days'
         ELSE expiry_date 
       END
-    WHERE id = $5 AND tenant_id = $6
+    WHERE id::text = $5::text AND tenant_id::text = $6::text
     RETURNING *
   `;
   

@@ -26,7 +26,18 @@ export default function TenantControlCenter({ tenants = [], onRefresh, apiClient
     if (!password) return;
     try {
       showToast({ message: `Resetting password for ${t.name}...`, type: 'info' });
-      await superadminService.resetUserPassword(t.code, `admin@${t.subdomain}.com`, password);
+      let targetEmail = '';
+      try {
+        const adminIdentity = await apiClient.getTenantAdmin(t.id);
+        targetEmail = String(adminIdentity?.email || '').trim().toLowerCase();
+      } catch (_) {
+        targetEmail = '';
+      }
+      if (!targetEmail) {
+        targetEmail = String(t.contact_email || `admin@${String(t.subdomain || t.code || '').toLowerCase()}.com`).trim().toLowerCase();
+      }
+
+      await superadminService.resetUserPassword(t.code, targetEmail, password);
       showToast({ message: `Password reset successful.`, type: 'success' });
     } catch (err) {
       showToast({ message: err.message, type: 'error', title: 'Reset Failed' });
@@ -137,7 +148,7 @@ export default function TenantControlCenter({ tenants = [], onRefresh, apiClient
                            </div>
                            <div className="flex flex-col items-end gap-2">
                               <span className="px-3 py-1 rounded-full bg-slate-50 text-slate-500 text-[8px] font-black uppercase tracking-widest border border-slate-200">
-                                 {t.subscriptionTier || 'Standard'} Tier
+                                 {t.subscription_tier || t.subscriptionTier || 'Standard'} Tier
                               </span>
                               <div className="flex items-center gap-1.5 font-black text-[9px] text-emerald-600 uppercase tracking-widest">
                                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Live
@@ -282,3 +293,4 @@ function IdentityRow({ tenant, apiClient }) {
     </tr>
   );
 }
+

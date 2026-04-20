@@ -195,16 +195,16 @@ export async function updateTenantSettings(tenantId, data) {
 }
 
 export async function provisionTenantAdmin(tenantId, data) {
-  return await apiRequest(`/admin/tenants/${tenantId}/provision-admin`, {
+  return await apiRequest('/superadmin/users/provision', {
     method: 'POST',
-    body: JSON.stringify(data),
+    body: JSON.stringify({ tenantId, ...data }),
   });
 }
 
 export async function resetTenantUserPassword(tenantId, email, newPassword) {
-  return await apiRequest(`/admin/tenants/${tenantId}/reset-password`, {
+  return await apiRequest('/superadmin/users/reset-password', {
     method: 'POST',
-    body: JSON.stringify({ email, newPassword }),
+    body: JSON.stringify({ tenantId, email, newPassword }),
   });
 }
 
@@ -423,6 +423,157 @@ export async function payInvoice(invoiceId, tenantId, userId, paymentMethod = 'C
   return await apiRequest(`/billing/${invoiceId}/pay`, {
     method: 'PATCH',
     body: JSON.stringify({ tenantId, userId, paymentMethod }),
+  });
+}
+
+export async function getBillingItems(tenantId, filters = {}) {
+  const params = new URLSearchParams({ tenantId, ...filters });
+  return await apiRequest(`/billing/items?${params.toString()}`);
+}
+
+export async function createBillingItem(data) {
+  return await apiRequest('/billing/items', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateBillingItem(itemId, data) {
+  return await apiRequest(`/billing/items/${itemId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteBillingItem(itemId) {
+  return await apiRequest(`/billing/items/${itemId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getBillingConcessions(tenantId, filters = {}) {
+  const params = new URLSearchParams({ tenantId, ...filters });
+  return await apiRequest(`/billing/concessions?${params.toString()}`);
+}
+
+export async function createBillingConcession(data) {
+  return await apiRequest('/billing/concessions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateBillingConcession(concessionId, data) {
+  return await apiRequest(`/billing/concessions/${concessionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getCreditNotes(tenantId, filters = {}) {
+  const params = new URLSearchParams({ tenantId, ...filters });
+  return await apiRequest(`/billing/credit-notes?${params.toString()}`);
+}
+
+export async function createCreditNote(data) {
+  return await apiRequest('/billing/credit-notes', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getBillingApprovals(tenantId, filters = {}) {
+  const params = new URLSearchParams({ tenantId, ...filters });
+  return await apiRequest(`/billing/approvals?${params.toString()}`);
+}
+
+export async function createBillingApproval(data) {
+  return await apiRequest('/billing/approvals', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateBillingApproval(approvalId, data) {
+  return await apiRequest(`/billing/approvals/${approvalId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getCorporateClients(tenantId) {
+  return await apiRequest(`/billing/corporate-clients?tenantId=${tenantId}`);
+}
+
+export async function createCorporateClient(data) {
+  return await apiRequest('/billing/corporate-clients', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getCorporateBills(tenantId, filters = {}) {
+  const params = new URLSearchParams({ tenantId, ...filters });
+  return await apiRequest(`/billing/corporate-bills?${params.toString()}`);
+}
+
+export async function createCorporateBill(data) {
+  return await apiRequest('/billing/corporate-bills', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateCorporateBill(billId, data) {
+  return await apiRequest(`/billing/corporate-bills/${billId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getCorporateBillItems(billId) {
+  return await apiRequest(`/billing/corporate-bills/${billId}/items`);
+}
+
+export async function createCorporateBillItem(billId, data) {
+  return await apiRequest(`/billing/corporate-bills/${billId}/items`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getEnhancedInsuranceProviders(tenantId) {
+  return await getInsuranceProviders(tenantId);
+}
+
+export async function createEnhancedInsuranceProvider(data) {
+  return await createInsuranceProvider(data);
+}
+
+export async function getInsuranceClaims(tenantId, filters = {}) {
+  return await getClaims(tenantId, filters);
+}
+
+export async function createInsuranceClaim(data) {
+  return await createClaim(data);
+}
+
+export async function getPreauthorizationRequests(tenantId, filters = {}) {
+  const params = new URLSearchParams({ tenantId, ...filters });
+  return await apiRequest(`/insurance/preauth?${params.toString()}`);
+}
+
+export async function createPreauthorizationRequest(data) {
+  return await apiRequest('/insurance/preauth', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updatePreauthStatus(preauthId, data) {
+  return await apiRequest(`/insurance/preauth/${preauthId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
   });
 }
 
@@ -865,6 +1016,34 @@ const apiClient = {
   createInsuranceProvider,
   getClaims,
   createClaim,
+  getEnhancedInsuranceProviders,
+  createEnhancedInsuranceProvider,
+  getInsuranceClaims,
+  createInsuranceClaim,
+  getPreauthorizationRequests,
+  createPreauthorizationRequest,
+  updatePreauthStatus,
+
+  // Billing Extensions
+  getBillingItems,
+  createBillingItem,
+  updateBillingItem,
+  deleteBillingItem,
+  getBillingConcessions,
+  createBillingConcession,
+  updateBillingConcession,
+  getCreditNotes,
+  createCreditNote,
+  getBillingApprovals,
+  createBillingApproval,
+  updateBillingApproval,
+  getCorporateClients,
+  createCorporateClient,
+  getCorporateBills,
+  createCorporateBill,
+  updateCorporateBill,
+  getCorporateBillItems,
+  createCorporateBillItem,
 
   // Ambulance
   getAmbulances,
@@ -974,7 +1153,7 @@ apiClient.getPatient = (id, tenantId) => apiRequest(`/patients/${id}${tenantId ?
 apiClient.resetUserPassword = (tenantId, email, newPassword) =>
   apiRequest('/superadmin/users/reset-password', {
     method: 'POST',
-    body: JSON.stringify({ tenantCode: tenantId, email, newPassword })
+    body: JSON.stringify({ tenantId, email, newPassword })
   });
 
 apiClient.updateTenant = (tenantId, data) =>
