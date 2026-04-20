@@ -1,7 +1,7 @@
 -- ============================================================
 -- NEXUS MASTER BASELINE (CONTROL PLANE)
 -- ============================================================
--- Version: 2.1.1 (Updated with audit log fixes and institutional branding)
+-- Version: 2.2.0 (MAGNUM GROUP OF HOSPITALS LTD - Full Enterprise Deployment)
 -- Architecture: Platform Control Plane
 -- Description: Standardized bootstrap for Global Superadmin Hub.
 -- Updated: Includes audit log fixes, institutional branding, and latest schema improvements
@@ -610,3 +610,71 @@ INSERT INTO emr.roles (name, description, is_system) VALUES
 ('Lab', 'Laboratory Technician', true),
 ('Pharmacy', 'Pharmacist', true)
 ON CONFLICT (name) DO NOTHING;
+
+-- ============================================================
+-- 13. MAGNUM GROUP OF HOSPITALS LTD - FULL ENTERPRISE TENANT PROVISIONING
+-- ============================================================
+-- Idempotent seed for deployment and new tenant creation
+-- Run this after CREATE SCHEMA magnum;
+
+-- Link to Enterprise subscription
+WITH enterprise_sub AS (
+  SELECT id FROM emr.management_subscriptions WHERE tier = 'Enterprise'
+)
+INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, subscription_tier, subscription_id, theme, features, billing_config)
+VALUES (
+  gen_random_uuid()::text, 
+  'MAGNUM GROUP OF HOSPITALS LTD', 
+  'magnum', 
+  'magnum', 
+  'magnum', 
+  'active', 
+  'Enterprise',
+  (SELECT id FROM enterprise_sub),
+  '{"primary": "#0f5a6e", "secondary": "#28a745"}'::jsonb,
+  '["full"]'::jsonb,
+  '{"credit_limit": 500000, "payment_terms": "net30"}'::jsonb
+)
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  subscription_tier = EXCLUDED.subscription_tier,
+  subscription_id = EXCLUDED.subscription_id,
+  theme = EXCLUDED.theme,
+  features = EXCLUDED.features,
+  billing_config = EXCLUDED.billing_config,
+  updated_at = NOW()
+RETURNING id;
+
+-- Legacy compatibility sync
+INSERT INTO emr.tenants (id, name, code, subdomain, status, subscription_tier, theme, features)
+SELECT id, name, code, subdomain, status, subscription_tier, theme, features
+FROM emr.management_tenants 
+WHERE code = 'magnum'
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  subscription_tier = EXCLUDED.subscription_tier,
+  theme = EXCLUDED.theme,
+  features = EXCLUDED.features,
+  updated_at = NOW();
+
+-- Platform Superadmin (update password via secure script)
+INSERT INTO emr.users (email, password_hash, name, role, role_id, tenant_id)
+SELECT 
+  'superadmin@magnum.com',
+  crypt('Magnum2024!', gen_salt('bf')),
+  'MAGNUM Super Administrator',
+  'Superadmin',
+  (SELECT id FROM emr.roles WHERE name = 'Superadmin'),
+  (SELECT id FROM emr.management_tenants WHERE code = 'magnum')
+WHERE NOT EXISTS (SELECT 1 FROM emr.users WHERE email = 'superadmin@magnum.com')
+ON CONFLICT (email) DO NOTHING;
+
+-- Initial metrics sync for Magnum shard (after SHARD baseline executed)
+SELECT emr.refresh_management_tenant_metrics(
+  (SELECT id FROM emr.management_tenants WHERE code = 'magnum')::text, 
+  'magnum'
+);
+
+-- Install metrics sync triggers for magnum schema (run after schema tables exist)
+-- SELECT emr.install_tenant_metrics_sync('magnum', (SELECT id FROM emr.management_tenants WHERE code = 'magnum')::text);
+

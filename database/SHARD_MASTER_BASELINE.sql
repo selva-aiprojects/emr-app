@@ -1,7 +1,7 @@
 -- ============================================================
 -- SHARD MASTER BASELINE (DATA PLANE / INSTITUTIONAL NODES)
 -- ============================================================
--- Version: 2.3.1 (Updated with audit log fixes and latest institutional tables)
+-- Version: 2.4.0 (MAGNUM GROUP OF HOSPITALS LTD - Enterprise RLS + Seed Data)
 -- Architecture: Institutional Isolation
 -- Description: Canonical DDL containing 60+ tables for full EMR operations.
 -- Updated: Includes audit log fixes, institutional branding, and all latest migrations
@@ -1121,6 +1121,33 @@ BEGIN
 END $$;
 
 -- ============================================================
+-- MAGNUM ENTERPRISE RLS POLICIES
+-- ============================================================
+-- Enable RLS on all tables with tenant_id for isolation
+-- Assumes current_tenant_id() function exists (set in session)
+
+DO $$
+DECLARE
+  tbl text;
+  tbls text[] := ARRAY[
+    'patients', 'frontdesk_visits', 'walkins', 'appointments', 'encounters', 'clinical_records', 'conditions', 
+    'observations', 'procedures', 'prescriptions', 'medication_administrations', 'lab_tests', 'diagnostic_reports',
+    'departments', 'services', 'wards', 'beds', 'admissions', 'discharges', 'donors', 'blood_units', 'blood_requests',
+    'ambulances', 'ambulance_trips', 'documents', 'document_audit_logs', 'service_requests', 'invoices', 'invoice_items',
+    'expenses', 'insurance_providers', 'employees', 'attendance', 'salary_structures', 'payroll_runs', 'payroll_items',
+    'billing', 'accounts_receivable', 'accounts_payable', 'revenue', 'concessions', 'credit_notes', 'credit_note_utilizations',
+    'bill_approvals', 'approval_workflows', 'insurance_pre_auth', 'insurance_pre_auth_revisions', 'corporate_clients', 
+    'corporate_bills', 'corporate_bill_register', 'employee_leaves', 'pharmacy_alerts', 'inventory_items', 
+    'inventory_purchases', 'insurance_claims', 'drug_allergies', 'roles', 'users', 'support_tickets', 'notices', 'audit_logs'
+  ];
+BEGIN
+  FOREACH tbl IN ARRAY tbls LOOP
+    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY;', tbl);
+    EXECUTE format('CREATE POLICY IF NOT EXISTS tenant_isolation ON %I FOR ALL USING (tenant_id = current_tenant_id()) WITH CHECK (tenant_id = current_tenant_id());', tbl);
+  END LOOP;
+END $$;
+
+-- ============================================================
 -- 14. BASE SEED DATA (CORE ROLES)
 -- ============================================================
 
@@ -1131,3 +1158,63 @@ INSERT INTO roles (name, description, is_system) VALUES
 ('Lab', 'Laboratory Technician', true),
 ('Pharmacy', 'Pharmacist', true)
 ON CONFLICT (name) DO NOTHING;
+
+-- ============================================================
+-- 15. MAGNUM ENTERPRISE SEED DATA (Full Subscription Ready)
+-- ============================================================
+-- Sample data for new tenant deployment
+
+-- Departments
+INSERT INTO departments (tenant_id, name, code, description, is_active) VALUES
+(gen_random_uuid(), 'General Medicine', 'GEN_MED', 'General Medicine Department', true),
+(gen_random_uuid(), 'Cardiology', 'CARDIO', 'Cardiology Department', true),
+(gen_random_uuid(), 'Orthopedics', 'ORTHO', 'Orthopedics Department', true),
+(gen_random_uuid(), 'Pharmacy', 'PHARM', 'Pharmacy Department', true),
+(gen_random_uuid(), 'Laboratory', 'LAB', 'Laboratory Services', true)
+ON CONFLICT (tenant_id, name) DO NOTHING;
+
+-- Wards (50 beds capacity for Magnum)
+INSERT INTO wards (tenant_id, name, type, capacity, base_rate, status) VALUES
+(gen_random_uuid(), 'General Ward A', 'General', 20, 2000, 'active'),
+(gen_random_uuid(), 'General Ward B', 'General', 20, 2000, 'active'),
+(gen_random_uuid(), 'Private Ward', 'Private', 10, 5000, 'active')
+ON CONFLICT (tenant_id, name) DO NOTHING;
+
+-- Sample Beds (first 10)
+DO $$
+DECLARE
+  ward_a uuid := (SELECT id FROM wards WHERE name = 'General Ward A' LIMIT 1);
+  ward_b uuid := (SELECT id FROM wards WHERE name = 'General Ward B' LIMIT 1);
+BEGIN
+  FOR i IN 1..5 LOOP
+    INSERT INTO beds (tenant_id, ward_id, bed_number, type, status) VALUES
+    (gen_random_uuid(), ward_a, 'Bed-' || LPAD(i::text, 2, '0'), 'General', 'available');
+  END LOOP;
+  FOR i IN 1..5 LOOP
+    INSERT INTO beds (tenant_id, ward_id, bed_number, type, status) VALUES
+    (gen_random_uuid(), ward_b, 'Bed-' || LPAD(i::text, 2, '0'), 'General', 'available');
+  END LOOP;
+END $$;
+
+-- Services/Pricing (Enterprise rates)
+INSERT INTO services (tenant_id, name, code, category, base_rate, tax_percent) VALUES
+(gen_random_uuid(), 'Consultation - General Physician', 'CONS_GP', 'Consultation', 800, 18),
+(gen_random_uuid(), 'ECG', 'ECG', 'Diagnostics', 500, 18),
+(gen_random_uuid(), 'Blood Test - Complete', 'CBC', 'Lab', 1200, 18),
+(gen_random_uuid(), 'X-Ray Chest', 'XRAY_CHEST', 'Imaging', 1500, 18),
+(gen_random_uuid(), 'Private Room - Day', 'ROOM_PRIVATE', 'Inpatient', 5000, 18)
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- Insurance Providers
+INSERT INTO insurance_providers (tenant_id, name, code, contact_person, pre_auth_required, is_active) VALUES
+(gen_random_uuid(), 'Star Health Insurance', 'STARHLTH', 'John Doe', true, true),
+(gen_random_uuid(), 'HDFC Ergo', 'HDFC_ERGO', 'Jane Smith', true, true)
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+-- Corporate Clients
+INSERT INTO corporate_clients (tenant_id, name, code, contact_person, credit_limit, payment_terms, is_active) VALUES
+(gen_random_uuid(), 'TechCorp Ltd', 'TECHCORP', 'Rajesh Kumar', 100000, 'net30', true),
+(gen_random_uuid(), 'ABC Manufacturing', 'ABC_MFG', 'Priya Sharma', 50000, 'net15', true)
+ON CONFLICT (tenant_id, code) DO NOTHING;
+
+RAISE NOTICE 'SHARD baseline + MAGNUM Enterprise seed completed. Run in tenant schema: SET search_path TO magnum;'
