@@ -480,15 +480,17 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
                      </div>
                      <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">No active admissions detected.</p>
                   </td></tr>
-                ) : displayEncounters.map((e, idx) => (
-                  <tr key={e.id} data-testid="encounter-row" data-patient-name={e.patient_name} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 30}ms` }}>
+                ) : displayEncounters.map((e, idx) => {
+                  const pName = e.patient_name || e.patientName || 'Clinical Subject';
+                  return (
+                  <tr key={e.id} data-testid="encounter-row" data-patient-name={pName} className="hover:bg-slate-50/50 transition-colors animate-fade-in" style={{ animationDelay: `${idx * 30}ms` }}>
                     <td>
                       <div className="flex items-center gap-4">
                          <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center text-xs font-black shadow-lg">
-                            {(e.patient_name || 'P')[0]}
+                            {(pName || 'P')[0]}
                          </div>
                          <div>
-                            <div className="text-sm font-black text-slate-900">{e.patient_name || 'Clinical Subject'}</div>
+                            <div className="text-sm font-black text-slate-900">{pName}</div>
                             <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-0.5 tabular-nums">MRN-${(e.patient_id || 'X').slice(0, 8)}</div>
                          </div>
                       </div>
@@ -525,7 +527,8 @@ export default function InpatientPage({ tenant, providers, encounters: allEncoun
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

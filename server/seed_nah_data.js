@@ -51,10 +51,10 @@ async function seedNAHData() {
     // Verify the data was inserted
     const verificationQueries = [
       'SELECT COUNT(*) as count FROM emr.tenants WHERE code = \'NAH\'',
-      'SELECT COUNT(*) as count FROM emr.users WHERE tenant_id = (SELECT id FROM emr.tenants WHERE code = \'NAH\')',
-      'SELECT COUNT(*) as count FROM emr.patients WHERE tenant_id = (SELECT id FROM emr.tenants WHERE code = \'NAH\')',
-      'SELECT COUNT(*) as count FROM emr.appointments WHERE tenant_id = (SELECT id FROM emr.tenants WHERE code = \'NAH\')',
-      'SELECT COUNT(*) as count FROM emr.invoices WHERE tenant_id = (SELECT id FROM emr.tenants WHERE code = \'NAH\')'
+      'SELECT COUNT(*) as count FROM emr.users WHERE tenant_id = (SELECT id::uuid FROM emr.tenants WHERE code = \'NAH\')',
+      'SELECT COUNT(*) as count FROM emr.patients WHERE tenant_id = (SELECT id::uuid FROM emr.tenants WHERE code = \'NAH\')',
+      'SELECT COUNT(*) as count FROM emr.appointments WHERE tenant_id = (SELECT id::uuid FROM emr.tenants WHERE code = \'NAH\')',
+      'SELECT COUNT(*) as count FROM emr.invoices WHERE tenant_id = (SELECT id::uuid FROM emr.tenants WHERE code = \'NAH\')'
     ];
     
     console.log('\n📊 Data Verification:');

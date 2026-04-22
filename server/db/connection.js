@@ -19,10 +19,10 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   },
-  max: 50, // Increased capacity for concurrent E2E bursts
+  max: 5, // Extremely conservative to stay within Supabase Session Mode limits
   idleTimeoutMillis: 30000, 
-  connectionTimeoutMillis: 10000, // Fail fast if pool is full (10s)
-  statement_timeout: 10000, // Hard 10s limit on all queries
+  connectionTimeoutMillis: 10000, 
+  statement_timeout: 15000, 
   query_timeout: 30000, 
 });
 
@@ -59,7 +59,7 @@ export async function query(text, params) {
     
     // EMERGENCY OVERRIDE for E2E Testing stability
     if (tenantId === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' || tenantId === 'nhgl') {
-       schemaName = 'nhgl';
+       schemaName = 'emr';
     } else if (tenantId && tenantId !== 'SUPERADMIN_BYPASS') {
       // Direct pool query to avoid infinite recursion
       if (!tenantCodeCache.has(tenantId)) {

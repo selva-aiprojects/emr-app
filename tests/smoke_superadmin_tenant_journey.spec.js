@@ -1,4 +1,4 @@
-﻿import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import bcrypt from 'bcryptjs';
 import { query } from '../server/db/connection.js';
 
@@ -31,7 +31,7 @@ test.describe('Smoke: Superadmin -> Tenant Admin -> Role Journey', () => {
     await expect(page.getByText(/Tenant provisioned successfully!/i)).toBeVisible({ timeout: 20000 });
 
     // --- Fetch tenant id
-    const tenantsRes = await request.get('http://127.0.0.1:4000/api/tenants');
+    const tenantsRes = await request.get('http://127.0.0.1:4005/api/tenants');
     const tenants = await tenantsRes.json();
     const tenant = tenants.find((t) => t.name === tenantName);
     expect(tenant).toBeTruthy();
@@ -97,7 +97,7 @@ test.describe('Smoke: Superadmin -> Tenant Admin -> Role Journey', () => {
     }
 
     // --- Create a fresh patient journey via API (tenant admin token)
-    const loginRes = await request.post('http://127.0.0.1:4000/api/login', {
+    const loginRes = await request.post('http://127.0.0.1:4005/api/login', {
       data: { tenantId: tenant.id, email: tenantAdminEmail, password: tenantAdminPassword }
     });
     const session = await loginRes.json();
@@ -115,7 +115,7 @@ test.describe('Smoke: Superadmin -> Tenant Admin -> Role Journey', () => {
       insurance: 'Self'
     };
 
-    const patientRes = await request.post('http://127.0.0.1:4000/api/patients', {
+    const patientRes = await request.post('http://127.0.0.1:4005/api/patients', {
       data: patientPayload,
       headers: {
         Authorization: `Bearer ${session.token}`,
@@ -124,14 +124,14 @@ test.describe('Smoke: Superadmin -> Tenant Admin -> Role Journey', () => {
     });
     const patient = await patientRes.json();
 
-    const usersRes = await request.get(`http://127.0.0.1:4000/api/users?tenantId=${tenant.id}`, {
+    const usersRes = await request.get(`http://127.0.0.1:4005/api/users?tenantId=${tenant.id}`, {
       headers: { Authorization: `Bearer ${session.token}` }
     });
     const users = await usersRes.json();
     const doctor = users.find((u) => u.email === `doctor+${suffix}@smoke.local`);
     expect(doctor).toBeTruthy();
 
-    await request.post('http://127.0.0.1:4000/api/appointments', {
+    await request.post('http://127.0.0.1:4005/api/appointments', {
       data: {
         tenantId: tenant.id,
         userId: session.user.id,

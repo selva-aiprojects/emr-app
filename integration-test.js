@@ -3,7 +3,7 @@ const axios = require('axios');
 // Integration Test Script for EMR Application
 // Tests Enterprise tenant with all features
 
-const BASE_URL = 'http://localhost:4000';
+const BASE_URL = 'http://localhost:4005';
 
 // Test configurations
 const tenants = [

@@ -55,7 +55,14 @@ export async function getBootstrapData(tenantId, userId) {
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM encounters WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      `SELECT e.*, 
+              TRIM(COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '')) as patient_name,
+              u.name as provider_name
+       FROM encounters e
+       LEFT JOIN patients p ON e.patient_id::text = p.id::text
+       LEFT JOIN emr.users u ON e.provider_id::text = u.id::text
+       WHERE e.tenant_id::text = $1::text
+       ORDER BY e.created_at DESC LIMIT 50`,
       [tenantId]
     ),
     runSafeQuery(

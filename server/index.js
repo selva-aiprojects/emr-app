@@ -71,7 +71,17 @@ app.use((req, res, next) => {
 
     // Provisioning routes deploy 55+ SQL statements — they need more time
     const isProvisioningRoute = req.method === 'POST' && req.path.includes('/superadmin/tenants');
-    const watchdogMs = isProvisioningRoute ? 180000 : 30000; // 3min for provisioning, 30s for others
+    const watchdogMs = isProvisioningRoute ? 180000 : 120000; // 3min for provisioning, 2min for standard
+
+    // Prevent ERR_HTTP_HEADERS_SENT crashes if route finishes AFTER watchdog fires
+    const originalJson = res.json;
+    res.json = function(body) {
+      if (!res.headersSent) {
+        return originalJson.call(this, body);
+      }
+      console.warn(`[WATCHDOG_INTERCEPT] Prevented late response crash on ${req.method} ${req.path}`);
+      return this;
+    };
 
     const timeout = setTimeout(() => {
        if (!res.headersSent) {

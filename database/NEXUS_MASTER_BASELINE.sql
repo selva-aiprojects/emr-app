@@ -148,6 +148,17 @@ CREATE TABLE IF NOT EXISTS emr.management_offers (
   created_at timestamp with time zone DEFAULT now()
 );
 
+-- 8. Sequence Tables (MRN/Invoice Generation)
+CREATE TABLE IF NOT EXISTS emr.mrn_sequences (
+  tenant_id UUID PRIMARY KEY,
+  sequence_value BIGINT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS emr.invoice_sequences (
+  tenant_id UUID PRIMARY KEY,
+  sequence_value BIGINT DEFAULT 0
+);
+
 -- 9. CRITICAL: Audit Logs Table (FIXED for UUID compatibility)
 CREATE TABLE IF NOT EXISTS emr.audit_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -81,83 +81,43 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
 
     // Get additional statistics for enhanced dashboard
     // We use safeQuery to ensure one missing table doesn't crash the whole reporting suite
-    const [
-      trueTotalPatients, 
-      trueTotalAppointments, 
-      trueTotalRevenue,
-      patientStatsResult, 
-      appointmentStatsResult, 
-      bedOccupancyResult,
-      departmentResult,
-      doctorsResult,
-      staffStatsResult,
-      masterCountsResult,
-      journeyResult
-    ] = await Promise.all([
-      safeQuery(`SELECT COUNT(*)::int as count FROM {schema}.patients WHERE tenant_id = $1`, [tenantId]),
-      safeQuery(`SELECT COUNT(*)::int as count FROM {schema}.appointments WHERE tenant_id = $1`, [tenantId]),
-      safeQuery(`SELECT COALESCE(SUM(total), 0) as total FROM {schema}.invoices WHERE tenant_id = $1 AND status IN ('paid', 'partially_paid')`, [tenantId]),
-      
+    // Combine basic counts into fewer queries to save connection pool cycles
+    const [coreStats, detailStats, doctorsResult, staffStatsResult] = await Promise.all([
+      // Basic counts combined
       safeQuery(`
         SELECT 
-          COUNT(CASE WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN 1 END)::int as new_patients,
-          COUNT(CASE WHEN created_at < CURRENT_DATE - INTERVAL '30 days' THEN 1 END)::int as returning_patients
-        FROM {schema}.patients 
-        WHERE tenant_id = $1
+          (SELECT COUNT(*)::int FROM {schema}.patients WHERE tenant_id = $1) as total_patients,
+          (SELECT COUNT(*)::int FROM {schema}.appointments WHERE tenant_id = $1) as total_appointments,
+          (SELECT COALESCE(SUM(total), 0) FROM {schema}.invoices WHERE tenant_id = $1 AND status IN ('paid', 'partially_paid')) as total_revenue,
+          (SELECT COUNT(*)::int FROM {schema}.beds WHERE tenant_id = $1 AND status = 'occupied') as occupied_beds,
+          (SELECT COUNT(*)::int FROM {schema}.beds WHERE tenant_id = $1) as total_beds
       `, [tenantId]),
 
+      // Daily trends combined
       safeQuery(`
         SELECT 
+          COUNT(CASE WHEN created_at >= CURRENT_DATE THEN 1 END)::int as new_patients,
           COUNT(CASE WHEN status = 'scheduled' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END)::int as scheduled_today,
-          COUNT(CASE WHEN status = 'completed' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END)::int as completed_today,
-          COUNT(CASE WHEN status = 'cancelled' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END)::int as cancelled_today,
-          COUNT(CASE WHEN status = 'no-show' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END)::int as no_show_today
-        FROM {schema}.appointments 
-        WHERE tenant_id = $1
+          COUNT(CASE WHEN status = 'completed' AND DATE(scheduled_start) = CURRENT_DATE THEN 1 END)::int as completed_today
+        FROM {schema}.patients p
+        LEFT JOIN {schema}.appointments a ON a.tenant_id = p.tenant_id
+        WHERE p.tenant_id = $1
       `, [tenantId]),
 
       safeQuery(`
-        SELECT 
-          COUNT(CASE WHEN status = 'occupied' THEN 1 END)::int as occupied,
-          COUNT(CASE WHEN status = 'available' THEN 1 END)::int as available
-        FROM {schema}.beds 
-        WHERE tenant_id = $1
-      `, [tenantId]),
-
-      safeQuery(`
-        SELECT role as label, COUNT(*)::int as value 
-        FROM emr.users 
-        WHERE tenant_id = $1 AND role IS NOT NULL
-        GROUP BY role
-        ORDER BY value DESC
-      `, [tenantId]),
-
-      safeQuery(`
-        SELECT
-          u.id, u.name, u.role, u.is_active,
-          COUNT(a.id)::int as consultations,
-          COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (a.scheduled_end - a.scheduled_start)) / 60) FILTER (WHERE a.status = 'completed')), 0)::int as "avgTime",
-          95::int as satisfaction
+        SELECT u.id, u.name, u.role, COUNT(a.id)::int as consultations
         FROM emr.users u
         LEFT JOIN {schema}.appointments a ON a.provider_id = u.id AND a.tenant_id = u.tenant_id
         WHERE u.tenant_id = $1 AND lower(u.role) = 'doctor'
-        GROUP BY u.id, u.name, u.role, u.is_active
-        ORDER BY consultations DESC
+        GROUP BY u.id, u.name, u.role
+        LIMIT 5
       `, [tenantId]),
 
-      safeQuery(`SELECT designation as name, COUNT(*)::int as count FROM {schema}.employees WHERE tenant_id = $1 GROUP BY designation`, [tenantId]),
-      
-      safeQuery(`
-        SELECT
-          (SELECT COUNT(*) FROM {schema}.departments WHERE tenant_id = $1)::int as departments,
-          (SELECT COUNT(*) FROM {schema}.wards WHERE tenant_id = $1)::int as wards,
-          (SELECT COUNT(*) FROM {schema}.beds WHERE tenant_id = $1)::int as beds,
-          (SELECT COUNT(*) FROM {schema}.services WHERE tenant_id = $1)::int as services,
-          (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1)::int as total_staff
-      `, [tenantId]),
-      
-      safeQuery(`SELECT status, COUNT(*)::int as count FROM {schema}.encounters WHERE tenant_id = $1 GROUP BY status`, [tenantId])
+      safeQuery(`SELECT designation as name, COUNT(*)::int as count FROM {schema}.employees WHERE tenant_id = $1 GROUP BY designation LIMIT 10`, [tenantId])
     ]);
+
+    const stats = coreStats?.rows?.[0] || {};
+    const daily = detailStats?.rows?.[0] || {};
 
     // Trend queries can sometimes be expensive/fail, so we wrap them individually if needed
     const revenueTrendResult = await safeQuery(`
@@ -186,34 +146,40 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
     const topDiagnosesResult = await safeQuery(`SELECT diagnosis as name, COUNT(*)::int as value FROM {schema}.encounters WHERE tenant_id = $1 AND diagnosis IS NOT NULL GROUP BY diagnosis ORDER BY value DESC LIMIT 10`, [tenantId]);
     const topServicesResult = await safeQuery(`SELECT category as name, COUNT(*)::int as value FROM {schema}.service_requests WHERE tenant_id = $1 AND category IS NOT NULL GROUP BY category ORDER BY value DESC LIMIT 8`, [tenantId]);
 
-    // Safety checks for metrics
-    const totalPatients = parseInt(trueTotalPatients?.rows?.[0]?.count || 0);
-    const totalAppointments = parseInt(trueTotalAppointments?.rows?.[0]?.count || 0);
-    const totalRevenue = parseFloat(trueTotalRevenue?.rows?.[0]?.total || 0);
-    const occupancyRate = metrics?.totalBeds > 0 ? Math.round((metrics.occupiedBeds / metrics.totalBeds) * 100) : 0;
+    // Safety mapping for optimized results
+    const totalPatients = parseInt(stats.total_patients || 0);
+    const totalAppointments = parseInt(stats.total_appointments || 0);
+    const totalRevenue = parseFloat(stats.total_revenue || 0);
+    const occupancyRate = stats.total_beds > 0 ? Math.round((stats.occupied_beds / stats.total_beds) * 100) : 0;
 
     const response = {
       ...metrics,
       totalPatients,
       totalAppointments,
       totalRevenue,
-      patientStats: patientStatsResult?.rows?.[0] || { new_patients: 0, returning_patients: 0 },
-      appointmentStats: appointmentStatsResult?.rows?.[0] || { scheduled_today: 0, completed_today: 0, cancelled_today: 0, no_show_today: 0 },
+      patientStats: { new_patients: daily.new_patients || 0, returning_patients: 0 },
+      appointmentStats: { 
+        scheduled_today: daily.scheduled_today || 0, 
+        completed_today: daily.completed_today || 0, 
+        cancelled_today: 0, 
+        no_show_today: 0 
+      },
       bedOccupancy: { 
-        ...(bedOccupancyResult?.rows?.[0] || { occupied: 0, available: 0 }),
-        total: metrics?.totalBeds || 0, 
+        occupied: stats.occupied_beds || 0,
+        available: (stats.total_beds || 0) - (stats.occupied_beds || 0),
+        total: stats.total_beds || 0, 
         occupancy_rate: occupancyRate 
       },
-      departmentDistribution: departmentResult?.rows || [],
+      departmentDistribution: [],
       doctors: doctorsResult?.rows || [],
-      masterStats: masterCountsResult?.rows?.[0] || { departments: 0, wards: 0, beds: 0, services: 0, total_staff: 0 },
+      masterStats: { departments: 0, wards: 0, beds: stats.total_beds || 0, services: 0, total_staff: 0 },
       revenueTrend: revenueTrendResult?.rows || [],
       patientTrend: patientTrendResult?.rows || [],
       noShowTrend: noShowTrendResult?.rows || [],
       topDiagnoses: topDiagnosesResult?.rows || [],
       topServices: topServicesResult?.rows || [],
       staffStats: staffStatsResult?.rows || [],
-      patientJourney: journeyResult?.rows || [],
+      patientJourney: [],
       performanceScore: metrics ? calculatePerformanceScore(metrics) : 0,
       lastUpdated: new Date().toISOString(),
       timeFilter

@@ -57,27 +57,43 @@ export async function ensureManagementPlaneInfrastructure() {
     console.log('🔄 [INFRA] Finalizing Management Plane Mapping...');
     const { rows: tenants } = await pool.query('SELECT * FROM emr.tenants');
     for (const t of tenants) {
-      const scName = (t.schema_name || t.code || 'public').toLowerCase();
-      await pool.query(`
-        INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status)
-        VALUES ($1, $2, $3, $4, $5, 'active')
-        ON CONFLICT (code) DO UPDATE SET 
-          name = EXCLUDED.name,
-          -- Only update schema_name if it is currently NULL or empty (preserve manually-set values like 'mgohl')
-          schema_name = CASE 
-            WHEN emr.management_tenants.schema_name IS NULL OR emr.management_tenants.schema_name = '' 
-            THEN EXCLUDED.schema_name 
-            ELSE emr.management_tenants.schema_name 
-          END,
-          updated_at = NOW()
-      `, [t.id, t.name, t.code, t.subdomain, scName]);
+      try {
+        const scName = (t.schema_name || t.code || 'public').toLowerCase();
+        await pool.query(`
+          INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status)
+          VALUES ($1, $2, $3, $4, $5, 'active')
+          ON CONFLICT (id) DO UPDATE SET 
+            code = EXCLUDED.code,
+            name = EXCLUDED.name,
+            subdomain = EXCLUDED.subdomain,
+            schema_name = CASE 
+              WHEN emr.management_tenants.schema_name IS NULL OR emr.management_tenants.schema_name = '' 
+              THEN EXCLUDED.schema_name 
+              ELSE emr.management_tenants.schema_name 
+            END,
+            updated_at = NOW()
+        `, [t.id, t.name, t.code, t.subdomain, scName]);
+      } catch (loopErr) {
+        // Skip individual records that violate secondary unique constraints (subdomain, schema_name)
+        // This prevents a single duplicate test record from crashing the entire server
+        if (loopErr.code === '23505') {
+            console.warn(`[INFRA_SYNC_SKIP] Tenant ${t.code} already exists in management registry.`);
+        } else {
+            console.warn(`[INFRA_SYNC_WARN] Failed to sync tenant ${t.code}:`, loopErr.message);
+        }
+      }
     }
 
     infrastructureReady = true;
     console.log('✅ [INFRA] Management Plane and Governance initialized.');
   } catch (err) {
-    console.error('❌ [INFRA_ERROR] Management Plane stabilization failed:', err.message);
-    infrastructureReady = true; 
+    if (err.code === '23505') {
+        console.warn('⚠️ [INFRA_IDEMPOTENCY] Baseline infrastructure already present.');
+        infrastructureReady = true;
+    } else {
+        console.error('❌ [INFRA_ERROR] Management Plane stabilization failed:', err.message);
+        // Don't set infrastructureReady = true if it's a different error
+    }
   }
 }
 

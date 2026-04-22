@@ -8,7 +8,7 @@ const TENANTS = [
 ];
 
 const ROLES = [
-  { key: 'admin', email: 'admin@nah.local', password: 'Admin@123', displayName: /Sarah/i },
+  { key: 'admin', email: 'admin@newage.hospital', password: 'Admin@123', displayName: /Sarah/i },
   { key: 'doctor', email: 'cmo@nah.local', password: 'Admin@123', displayName: /Michael/i },
   { key: 'nurse', email: 'headnurse@nah.local', password: 'Admin@123', displayName: /Emily/i },
   { key: 'lab', email: 'lab@nah.local', password: 'Admin@123', displayName: /Lisa/i },

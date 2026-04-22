@@ -4,7 +4,7 @@
  */
 // Node 24+ has global fetch
 
-const BASE_URL = 'http://127.0.0.1:4000/api';
+const BASE_URL = 'http://127.0.0.1:4005/api';
 let token = '';
 let tenantId = 'superadmin';
 let patientId = '';

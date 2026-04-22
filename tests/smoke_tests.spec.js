@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
 const TENANT_LABEL = 'New Age Hospital';
 
 const users = [
-    { tenant: TENANT_LABEL, email: 'admin@nah.local', password: 'Admin@123', name: /Sarah/i, role: 'Admin' },
+    { tenant: TENANT_LABEL, email: 'admin@newage.hospital', password: 'Admin@123', name: /Sarah/i, role: 'Admin' },
     { tenant: TENANT_LABEL, email: 'cmo@nah.local', password: 'Admin@123', name: /Michael/i, role: 'Doctor' },
 ];
 

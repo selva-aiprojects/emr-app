@@ -1,1 +1,17 @@
-# E2E Testing: Fresh Tenant Full Journey\n\n## Status: In Progress\n\n### Phase 1: Clean MAGNUM Setup [Pending]\n- [ ] Complete & run magnum_full_setup.js (NEXUS + SHARD + verify metrics)\n\n### Phase 2: Fresh Tenant Creation [Pending]\n- [ ] Superadmin login (magnum tenant)\n- [ ] Create new tenant: 'fresh-hospital' (Enterprise)\n- [ ] Verify shard schema/seeds auto-applied\n\n### Phase 3: Seed Core Data [Pending]\n- [ ] Add staff (Admin/Nurse/Frontdesk)\n- [ ] Pharmacy: Equipment/stock (Paracetamol, etc.)\n- [ ] Doctors (5 specialists)\n\n### Phase 4: Patient Journey Simulation [Pending]\n- [ ] OPD: Register patient → Appointment → Encounter → Prescription\n- [ ] Lab: Order test → Diagnostic report\n- [ ] IPD: Admit → Bed assign → Discharge\n- [ ] Billing: Invoice → AR entry (partial pay)\n- [ ] Pharmacy: Dispense → Inventory update → AP if needed\n\n### Phase 5: Verify Dashboards [Pending]\n- [ ] Tenant Dashboard: Graphs (revenue, pending appts/invoices, stock low)\n- [ ] Superadmin Dashboard: Metrics (patients/doctors/beds across tenants)\n- [ ] Accounts: AR/AP balances reflected\n\n### Phase 6: Tests & Reports [Pending]\n- [ ] npm run test:release-gate\n- [ ] Update DEMO_USER_MANUAL.md\n- [ ] PR: blackboxai/fresh-tenant-e2e\n\n**Next: Approve → Execute Phase 1**
+# E2E Test Fix: Pharmacy Prescription Dispensing (Test 06)
+
+## Current Progress
+✅ Steps 1-3,5 Complete | Data seeded successfully!
+⏳ Steps 4,6-8 Pending | Ready for test updates & re-run
+
+## Execution Steps
+### 1. ✅ Create NHGL-specific pharmacy queue seed script
+### 2. ✅ Create NHGL debug/verify pharmacy data script  
+### 3. ✅ Seed data for current E2E patient in NHGL tenant (schema issues fixed iteratively)
+### 4. [PENDING] Update test file with debug logs and fallback locator → **EDITING NOW**
+### 5. ✅ Verify data with debug script
+### 6. [PENDING] Re-run the E2E test
+### 7. [PENDING] If still fails, inspect selectors in headed browser pause
+### 8. [PENDING] Final validation
+
+**Next:** Edit test.spec.js → Run debug → Re-test E2E
