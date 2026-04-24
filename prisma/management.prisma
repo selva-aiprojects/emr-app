@@ -1,0 +1,53 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../node_modules/@generated/management"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["emr"]
+}
+
+model Tenant {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  code              String        @unique @db.VarChar(32)
+  subdomain         String        @unique @db.VarChar(128)
+  schema_name       String        @unique @db.VarChar(64)
+  status            String        @default("active") @db.VarChar(16)
+  contact_email     String?       @db.VarChar(128)
+  subscription_tier String?       @db.VarChar(50) @default("Professional")
+  created_at        DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime      @default(now()) @db.Timestamptz(6)
+  subscription      Subscription? @relation(fields: [subscription_id], references: [id])
+  subscription_id   String?       @db.Uuid
+  system_logs       SystemLog[]
+
+  @@map("management_tenants")
+  @@schema("emr")
+}
+
+model Subscription {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tier        String   @db.VarChar(50)
+  plan_name   String
+  limit_users Int      @default(10)
+  is_active   Boolean  @default(true)
+  tenants     Tenant[]
+
+  @@map("management_subscriptions")
+  @@schema("emr")
+}
+
+model SystemLog {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event      String
+  details    Json?
+  tenant     Tenant?  @relation(fields: [tenant_id], references: [id])
+  tenant_id  String?  @db.Uuid
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("management_system_logs")
+  @@schema("emr")
+}

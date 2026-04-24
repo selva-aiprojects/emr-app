@@ -1,0 +1,33 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="mainBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#152d4a"/>
+      <stop offset="50%" stop-color="#1e4d78"/>
+      <stop offset="100%" stop-color="#2878a8"/>
+    </linearGradient>
+    <filter id="mainShadow" x="-8%" y="-5%" width="116%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0a1e36" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <!-- Rounded square background -->
+  <rect x="18" y="8" width="164" height="164" rx="30" fill="url(#mainBg)" filter="url(#mainShadow)"/>
+  <!-- Subtle inner glow -->
+  <rect x="20" y="10" width="160" height="160" rx="28" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
+  <!-- Medical cross -->
+  <path d="M80 28h40v40h40v40h-40v40H80v-40H40V68h40V28z" fill="white"/>
+  <!-- Circular arrow with analytics trend -->
+  <g transform="translate(100,92)" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Circular arrow arc -->
+    <path d="M-30,6 A36,36 0 1,1 6,42" stroke-width="9.5" opacity="0.92"/>
+    <!-- Arrow head on circle -->
+    <polygon points="-30,6 -30,-10 -16,6" fill="white" stroke="none" opacity="0.92"/>
+    <!-- Trend line going up -->
+    <path d="M-12,24 L6,4 L24,9" stroke-width="9" opacity="0.92"/>
+    <!-- Arrow head on trend -->
+    <polygon points="18,9 30,6 24,-4" fill="white" stroke="none" opacity="0.92"/>
+  </g>
+  <!-- Text: MedFlow -->
+  <text x="100" y="192" text-anchor="middle" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="11" font-weight="600" fill="#64748b" letter-spacing="1.5" opacity="0.7">
+    MEDFLOW EMR
+  </text>
+</svg>

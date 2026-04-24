@@ -1,0 +1,291 @@
+{
+  "tenants": [
+    {
+      "id": "t1",
+      "name": "Selva Care Hospital",
+      "code": "SCH",
+      "subdomain": "selva-care",
+      "theme": {
+        "primary": "#0f5a6e",
+        "accent": "#f57f17"
+      },
+      "features": {
+        "inventory": true,
+        "telehealth": true
+      },
+      "status": "active"
+    },
+    {
+      "id": "t2",
+      "name": "Nila Health Center",
+      "code": "NHC",
+      "subdomain": "nila-health",
+      "theme": {
+        "primary": "#1b5e20",
+        "accent": "#ef6c00"
+      },
+      "features": {
+        "inventory": true,
+        "telehealth": false
+      },
+      "status": "active"
+    },
+    {
+      "id": "t3",
+      "name": "Riverway Community Clinic",
+      "code": "RCC",
+      "subdomain": "riverway",
+      "theme": {
+        "primary": "#6a1b9a",
+        "accent": "#00897b"
+      },
+      "features": {
+        "inventory": false,
+        "telehealth": false
+      },
+      "status": "active"
+    }
+  ],
+  "users": [
+    {
+      "id": "su1",
+      "tenantId": null,
+      "name": "System Superadmin",
+      "email": "superadmin@emr.local",
+      "role": "Superadmin",
+      "isActive": true
+    },
+    {
+      "id": "u1",
+      "tenantId": "t1",
+      "name": "Anita Admin",
+      "email": "anita@sch.local",
+      "role": "Admin",
+      "isActive": true
+    },
+    {
+      "id": "u2",
+      "tenantId": "t1",
+      "name": "Dr. Kumar",
+      "email": "kumar@sch.local",
+      "role": "Doctor",
+      "isActive": true
+    },
+    {
+      "id": "u3",
+      "tenantId": "t1",
+      "name": "Nurse Priya",
+      "email": "priya@sch.local",
+      "role": "Nurse",
+      "isActive": true
+    },
+    {
+      "id": "u4",
+      "tenantId": "t1",
+      "name": "Front Desk Ravi",
+      "email": "ravi@sch.local",
+      "role": "Front Office",
+      "isActive": true
+    },
+    {
+      "id": "u5",
+      "tenantId": "t2",
+      "name": "Bala Admin",
+      "email": "bala@nhc.local",
+      "role": "Admin",
+      "isActive": true
+    },
+    {
+      "id": "u6",
+      "tenantId": "t2",
+      "name": "Dr. Noor",
+      "email": "noor@nhc.local",
+      "role": "Doctor",
+      "isActive": true
+    },
+    {
+      "id": "u7",
+      "tenantId": "t3",
+      "name": "Kala Billing",
+      "email": "kala@rcc.local",
+      "role": "Billing",
+      "isActive": true
+    },
+    {
+      "id": "u8",
+      "tenantId": "t3",
+      "name": "Rafi Inventory",
+      "email": "rafi@rcc.local",
+      "role": "Inventory",
+      "isActive": true
+    },
+    {
+      "id": "u9",
+      "tenantId": "t1",
+      "name": "Meena Patient",
+      "email": "meena@sch.local",
+      "role": "Patient",
+      "patientId": "p1",
+      "isActive": true
+    }
+  ],
+  "patients": [
+    {
+      "id": "p1",
+      "tenantId": "t1",
+      "mrn": "SCH-1001",
+      "firstName": "Meena",
+      "lastName": "R",
+      "dob": "1990-02-10",
+      "gender": "Female",
+      "phone": "9001001001",
+      "email": "meena@personal.local",
+      "address": "12 Lake Street",
+      "bloodGroup": "B+",
+      "emergencyContact": "Rajan - 9001001002",
+      "insurance": "SCH-INS-100",
+      "medicalHistory": {
+        "chronicConditions": "Diabetes",
+        "allergies": "Penicillin",
+        "surgeries": "Appendectomy",
+        "familyHistory": "Hypertension"
+      },
+      "caseHistory": [
+        {
+          "date": "2026-01-10",
+          "summary": "Fever and body pain"
+        }
+      ],
+      "medications": [
+        {
+          "name": "Metformin",
+          "dosage": "500mg",
+          "frequency": "BD"
+        }
+      ],
+      "prescriptions": [
+        {
+          "date": "2026-01-10",
+          "text": "Paracetamol 650mg SOS"
+        }
+      ],
+      "recommendations": [
+        {
+          "date": "2026-01-10",
+          "text": "Hydration and 48h rest"
+        }
+      ],
+      "feedbacks": [
+        {
+          "date": "2026-01-11",
+          "rating": 4,
+          "comment": "Good consultation"
+        }
+      ],
+      "testReports": [
+        {
+          "date": "2026-01-12",
+          "name": "CBC",
+          "result": "Within normal range"
+        }
+      ],
+      "createdAt": "2026-02-14T00:00:00.000Z"
+    }
+  ],
+  "appointments": [
+    {
+      "id": "a1",
+      "tenantId": "t1",
+      "patientId": "p1",
+      "providerId": "u2",
+      "start": "2026-02-14T10:00",
+      "end": "2026-02-14T10:30",
+      "status": "completed",
+      "reason": "Fever review",
+      "source": "staff"
+    }
+  ],
+  "walkins": [
+    {
+      "id": "w1",
+      "tenantId": "t1",
+      "name": "Arun K",
+      "phone": "9000001122",
+      "reason": "General checkup",
+      "createdAt": "2026-02-14T08:00:00.000Z",
+      "status": "waiting"
+    }
+  ],
+  "encounters": [],
+  "invoices": [],
+  "inventory": [
+    {
+      "id": "i1",
+      "tenantId": "t1",
+      "code": "MED001",
+      "name": "Paracetamol 500mg",
+      "category": "Medicine",
+      "stock": 16,
+      "reorder": 20
+    }
+  ],
+  "employees": [
+    {
+      "id": "emp1",
+      "tenantId": "t1",
+      "name": "Ravi Kumar",
+      "code": "EMP-1001",
+      "department": "Front Office",
+      "designation": "Executive",
+      "joinDate": "2025-06-01",
+      "shift": "Morning",
+      "salary": 35000,
+      "leaveBalance": 12
+    }
+  ],
+  "employeeLeaves": [
+    {
+      "id": "lv1",
+      "tenantId": "t1",
+      "employeeId": "emp1",
+      "from": "2026-02-20",
+      "to": "2026-02-21",
+      "type": "Casual",
+      "status": "Approved"
+    }
+  ],
+  "auditLogs": [
+    {
+      "id": "log1",
+      "tenantId": "t1",
+      "userId": "u1",
+      "userName": "Anita Admin",
+      "action": "auth.login success",
+      "when": "2026-02-14 08:00"
+    },
+    {
+      "id": "log-740sjp1",
+      "tenantId": "t1",
+      "userId": null,
+      "userName": "system",
+      "action": "realtime.appointment.completed a1",
+      "when": "2026-02-14 12:48"
+    },
+    {
+      "id": "log-p3vthox",
+      "tenantId": "t1",
+      "userId": null,
+      "userName": "system",
+      "action": "realtime.inventory.issue MED001",
+      "when": "2026-02-14 12:49"
+    },
+    {
+      "id": "log-j5yu1cf",
+      "tenantId": "t1",
+      "userId": null,
+      "userName": "system",
+      "action": "realtime.inventory.issue MED001",
+      "when": "2026-02-14 12:50"
+    }
+  ]
+}

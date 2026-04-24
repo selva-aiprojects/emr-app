@@ -1,0 +1,100 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: emr-database
+    databaseName: emr
+    user: emr_user
+    plan: free
+    ipAllowList: []
+    
+  # Redis for Sessions & Caching
+  - type: redis
+    name: emr-redis
+    plan: free
+    
+  # Main EMR Application
+  - type: web
+    name: emr-application
+    runtime: node
+    nodeVersion: 20
+    buildCommand: cd client && npm install && npm run build && cd .. && npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      # Database Connection
+      - key: DATABASE_URL
+        fromDatabase:
+          name: emr-database
+          property: connectionString
+      
+      # Redis Connection  
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: emr-redis
+          property: connectionString
+      
+      # Application Configuration
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: RENDER
+        value: "true"
+      
+      # Prisma Configuration
+      - key: PRISMA_GENERATE_DATAPROXY_TYPES
+        value: "true"
+      
+      # CORS Configuration
+      - key: CORS_ORIGIN
+        value: "https://emr-application.onrender.com"
+      
+      # Email Configuration (optional)
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "true"
+      
+    # Static file serving
+    staticPublishPath: ./client/dist
+    
+    # Auto-deploy configuration
+    autoDeploy: true
+    
+    # Health checks
+    healthCheck:
+      path: /api/health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    
+    # Resource configuration
+    plan: starter
+    numInstances: 1
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetMemoryPercent: 70
+      targetCPUUtilization: 70
+    
+    # Build optimization
+    buildFilter:
+      paths:
+        - "!node_modules/**"
+        - "!client/node_modules/**"
+        - "!test/**"
+        - "!docs/**"
+        - "!.env*"
+        - "!*.log"
+    
+    # Deployment hooks
+    preDeployCommand: npm run prisma:generate
+    postDeployCommand: npm run prisma:migrate:deploy

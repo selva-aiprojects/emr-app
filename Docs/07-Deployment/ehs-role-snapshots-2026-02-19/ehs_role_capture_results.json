@@ -1,0 +1,74 @@
+{
+  "date": "2026-02-19",
+  "baseUrl": "http://localhost:5175",
+  "tenant": "Enterprise Hospital Systems",
+  "total": 8,
+  "success": 8,
+  "failed": 0,
+  "results": [
+    {
+      "tenant": "Enterprise Hospital Systems",
+      "role": "Admin",
+      "email": "admin.ehs@emr.local",
+      "status": "success",
+      "navItems": [],
+      "screenshot": "ehs-admin.png"
+    },
+    {
+      "tenant": "Enterprise Hospital Systems",
+      "role": "Nurse",
+      "email": "nurse.ehs@emr.local",
+      "status": "success",
+      "navItems": [],
+      "screenshot": "ehs-nurse.png"
+    },
+    {
+      "tenant": "Enterprise Hospital Systems",
+      "role": "Lab",
+      "email": "lab.ehs@emr.local",
+      "status": "success",
+      "navItems": [],
+      "screenshot": "ehs-lab.png"
+    },
+    {
+      "tenant": "Enterprise Hospital Systems",
+      "role": "Insurance",
+      "email": "insurance.ehs@emr.local",
+      "status": "success",
+      "navItems": [],
+      "screenshot": "ehs-insurance.png"
+    },
+    {
+      "tenant": "Enterprise Hospital Systems",
+      "role": "Billing",
+      "email": "billing.ehs@emr.local",
+      "status": "success",
+      "navItems": [],
+      "screenshot": "ehs-billing.png"
+    },
+    {
+      "tenant": "Enterprise Hospital Systems",
+      "role": "Accounts",
+      "email": "accounts.ehs@emr.local",
+      "status": "success",
+      "navItems": [],
+      "screenshot": "ehs-accounts.png"
+    },
+    {
+      "tenant": "Enterprise Hospital Systems",
+      "role": "Auditor",
+      "email": "auditor.ehs@emr.local",
+      "status": "success",
+      "navItems": [],
+      "screenshot": "ehs-auditor.png"
+    },
+    {
+      "tenant": "Enterprise Hospital Systems",
+      "role": "Management",
+      "email": "management.ehs@emr.local",
+      "status": "success",
+      "navItems": [],
+      "screenshot": "ehs-management.png"
+    }
+  ]
+}

@@ -1,0 +1,558 @@
+import { useEffect, useState } from 'react';
+import { useToast } from '../hooks/useToast.jsx';
+import PatientSearch from '../components/PatientSearch.jsx';
+import AppointmentActions from '../components/AppointmentActions.jsx';
+import DoctorAvailabilityCalendar from '../components/DoctorAvailabilityCalendar.jsx';
+import { patientName, userName } from '../utils/format.js';
+import '../styles/critical-care.css';
+import { 
+  Calendar, 
+  Clock, 
+  Users, 
+  Activity, 
+  UserPlus, 
+  ShieldCheck, 
+  Clock3,
+  ChevronRight,
+  Plus,
+  Clock4
+} from 'lucide-react';
+import AppointmentRescheduleModal from '../components/AppointmentRescheduleModal.jsx';
+
+export default function AppointmentsPage({
+  activeUser, session, patients, providers, walkins, appointments, users,
+  setView, setActivePatientId, onCreateAppointment, onCreatePatient, onCreateWalkin,
+  onSelfAppointment, onConvertWalkin, onSetAppointmentStatus, onReschedule
+}) {
+  const { showToast } = useToast();
+
+  const [activeTab, setActiveTab] = useState('appointments'); // 'appointments' | 'walkins' | 'availability'
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [reschedulingAppointment, setReschedulingAppointment] = useState(null);
+  const [regFirstName, setRegFirstName] = useState('');
+  const [regLastName, setRegLastName] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [showBookingForm, setShowBookingForm] = useState(false);
+  const isPatient = activeUser.role === 'Patient';
+  const isDoctor = activeUser.role === 'Doctor';
+
+  useEffect(() => {
+    if (isDoctor && activeTab === 'walkins') {
+      setActiveTab('appointments');
+    }
+  }, [isDoctor, activeTab]);
+
+  const handleAppointmentSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (isPatient) {
+        await onSelfAppointment(e);
+      } else {
+        await onCreateAppointment(e);
+      }
+      showToast({ message: 'Appointment scheduled successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      showToast({ message: 'Scheduling failed: ' + err.message, type: 'error' });
+    }
+  };
+
+  const handleSlotSelect = (slot) => {
+    if (!selectedPatientId && !isPatient) {
+      showToast({ message: 'Please select a patient first', type: 'error' });
+      return;
+    }
+    
+    setSelectedSlot(slot);
+    setShowBookingForm(true);
+  };
+
+  const handleSlotBooking = async (e) => {
+    e.preventDefault();
+    if (!selectedSlot) return;
+    
+    try {
+      const formData = new FormData(e.target);
+      const appointmentData = {
+        patientId: isPatient ? activeUser.patientId : selectedPatientId,
+        providerId: selectedSlot.doctor_id,
+        start: `${selectedSlot.date}T${selectedSlot.start_time}`,
+        end: `${selectedSlot.date}T${selectedSlot.end_time}`,
+        reason: formData.get('reason'),
+        doctorAvailabilityId: selectedSlot.id
+      };
+      
+      if (isPatient) {
+        await onSelfAppointment(appointmentData);
+      } else {
+        await onCreateAppointment(appointmentData);
+      }
+      
+      showToast({ message: 'Appointment booked successfully!', type: 'success' });
+      setShowBookingForm(false);
+      setSelectedSlot(null);
+      e.target.reset();
+    } catch (err) {
+      showToast({ message: 'Booking failed: ' + err.message, type: 'error' });
+    }
+  };
+
+  const handleWalkinSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await onCreateWalkin(e);
+      showToast({ message: 'Walk-in registered successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
+    }
+  };
+
+  const handleRegisterPatient = async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      const newP = await onCreatePatient({
+        firstName: fd.get('firstName'),
+        lastName: fd.get('lastName'),
+        dob: fd.get('dob'),
+        gender: fd.get('gender'),
+        phone: fd.get('phone'),
+        email: fd.get('email')
+      });
+      if (newP && newP.id) {
+        setSelectedPatientId(newP.id);
+        setIsRegistering(false);
+      }
+      showToast({ message: 'Patient registered successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
+    }
+  };
+
+  const handleStatusUpdate = async (id, status) => {
+    try {
+      await onSetAppointmentStatus(id, status);
+      showToast({ message: 'Appointment status updated.', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
+    }
+  };
+
+  const handleConvertWalkin = async (id) => {
+    try {
+      await onConvertWalkin(id);
+      showToast({ message: 'Walk-in admitted successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
+    }
+  };
+
+  const handleReschedule = async (data) => {
+    try {
+      await onReschedule(data.id, { start: data.start, end: data.end, reason: data.reason });
+      setReschedulingAppointment(null);
+      showToast({ message: 'Appointment rescheduled successfully!', type: 'success', title: 'Appointments' });
+    } catch (err) {
+      showToast({ title: 'Clinical Error', message: err.message, type: 'error' });
+    }
+  };
+
+  return (
+    <div className="page-shell-premium animate-fade-in">
+      {reschedulingAppointment && (
+        <AppointmentRescheduleModal 
+          appointment={reschedulingAppointment}
+          onClose={() => setReschedulingAppointment(null)}
+          onConfirm={handleReschedule}
+          patients={patients}
+          providers={providers}
+        />
+      )}
+      <header className="page-header-premium mb-10">
+        <div>
+           <h1 className="page-title-rich flex items-center gap-3 text-white">
+              {isDoctor ? 'Clinical Appointment Schedule' : 'Appointments & Scheduling Hub'}
+              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">
+                {isDoctor ? 'Clinical Node' : 'Reception Shard'}
+              </span>
+           </h1>
+           <p className="dim-label">
+             {isDoctor
+               ? 'Your scheduled consultations and patient encounters.'
+               : `Manage hospital appointments and walk-in patient flow for ${session?.tenantName || 'Authorized Facility'}.`}
+           </p>
+           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> System Online • Reception Protocol Active
+           </p>
+        </div>
+        <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
+          <button 
+            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'appointments' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+            onClick={() => setActiveTab('appointments')}
+          >
+            <Calendar className="w-3.5 h-3.5" /> {isDoctor ? 'Book Slot' : 'Appointments'}
+          </button>
+          {!isPatient && !isDoctor && (
+            <button 
+              className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'walkins' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+              onClick={() => setActiveTab('walkins')}
+            >
+              <Users className="w-3.5 h-3.5" /> Reception Queue
+            </button>
+          )}
+          <button 
+            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'availability' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
+            onClick={() => setActiveTab('availability')}
+          >
+            <Clock3 className="w-3.5 h-3.5" /> Availability
+          </button>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-12 gap-8">
+        {/* MAIN WORKFLOW: BOOKING FORMS */}
+        <main className="col-span-12 lg:col-span-8 space-y-8">
+          {activeTab === 'appointments' ? (
+            <article className="clinical-card">
+              <header className="mb-10 text-center lg:text-left">
+                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest text-lg">
+                    {isPatient ? 'Secure Slot Reservation' : 'Clinical Encounter Booking'}
+                 </h3>
+                 <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                    {isPatient ? 'Consultation Window Selection' : 'Scheduled Medical Interaction Node'}
+                 </p>
+              </header>
+
+              <form className="space-y-10" onSubmit={handleAppointmentSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-8">
+                    {!isPatient && (
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Step 1 / Patient Selection</label>
+                        <div className="p-1 bg-slate-50 border border-slate-100 rounded-2xl">
+                           <PatientSearch 
+                             tenantId={session?.tenantId} 
+                             onSelect={(p) => setSelectedPatientId(p.id)}
+                             onRegister={(name) => {
+                               const parts = name.split(' ');
+                               setRegFirstName(parts[0] || '');
+                               setRegLastName(parts.slice(1).join(' ') || '');
+                               setIsRegistering(true);
+                             }}
+                             initialPatientId={selectedPatientId}
+                           />
+                           <input type="hidden" name="patientId" value={selectedPatientId} />
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Step 2 / Select Doctor</label>
+                      <select name="providerId" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800" required>
+                        <option value="">Select Doctor...</option>
+                        {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Start Time</label>
+                        <input name="start" type="datetime-local" className="input-field py-4 bg-slate-50 border-none rounded-2xl font-black tabular-nums" required />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">End Time</label>
+                        <input name="end" type="datetime-local" className="input-field py-4 bg-slate-50 border-none rounded-2xl font-black tabular-nums" required />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Reason for Visit</label>
+                      <input name="reason" className="input-field py-5 bg-slate-50 border-none rounded-2xl" placeholder="Reason for consultation..." required />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-10 border-t border-slate-50">
+                  <button type="submit" className="clinical-btn bg-slate-900 text-white w-full py-4 text-[10px] shadow-xl hover:bg-slate-800 transition-all rounded-xl font-black tracking-[0.2em]">
+                    {isPatient ? 'TEST BOOK' : 'BOOK APPOINTMENT'}
+                  </button>
+                </div>
+              </form>
+            </article>
+          ) : isRegistering ? (
+            <article className="clinical-card !p-10 animate-slide-up">
+              <header className="mb-8 flex justify-between items-start">
+                 <div>
+                    <h3 className="text-lg font-black text-slate-900 uppercase tracking-widest">New Patient Registration</h3>
+                    <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">OPD Provisioning Module</p>
+                 </div>
+                 <button onClick={() => setIsRegistering(false)} className="text-slate-400 hover:text-slate-600">
+                    <Plus className="w-5 h-5 rotate-45" />
+                 </button>
+              </header>
+
+              <form className="space-y-8" onSubmit={handleRegisterPatient}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">First Name</label>
+                       <input name="firstName" defaultValue={regFirstName} className="input-field py-4 bg-slate-50 border-none rounded-2xl" required />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Name</label>
+                       <input name="lastName" defaultValue={regLastName} className="input-field py-4 bg-slate-50 border-none rounded-2xl" required />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Date of Birth</label>
+                       <input name="dob" type="date" max={new Date().toISOString().split('T')[0]} className="input-field py-4 bg-slate-50 border-none rounded-2xl" required />
+                    </div>
+                  </div>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mobile Number</label>
+                       <input name="phone" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="+91" />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Gender</label>
+                       <select name="gender" className="input-field py-4 bg-slate-50 border-none rounded-2xl font-bold">
+                          <option>Male</option>
+                          <option>Female</option>
+                          <option>Other</option>
+                       </select>
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</label>
+                       <input name="email" type="email" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="optional..." />
+                    </div>
+                  </div>
+                </div>
+                <div className="pt-8 border-t border-slate-50 flex justify-end gap-4">
+                  <button type="button" onClick={() => setIsRegistering(false)} className="px-8 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">Cancel</button>
+                  <button type="submit" className="clinical-btn bg-emerald-600 text-white px-10 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-emerald-700 transition-all border-none">
+                    Register & Continue
+                  </button>
+                </div>
+              </form>
+            </article>
+          ) : activeTab === 'availability' ? (
+            <article className="clinical-card">
+              <DoctorAvailabilityCalendar
+                tenantId={session?.tenantId}
+                doctors={providers}
+                onSlotSelect={handleSlotSelect}
+              />
+              
+              {/* Slot Booking Modal */}
+              {showBookingForm && selectedSlot && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-xl p-6 max-w-md w-full">
+                    <h3 className="text-lg font-bold text-slate-900 mb-4">Book Appointment Slot</h3>
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm font-medium text-blue-900">
+                        {new Date(selectedSlot.date).toLocaleDateString('en-IN', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        {new Date(`2000-01-01T${selectedSlot.start_time}`).toLocaleTimeString('en-IN', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })} - {new Date(`2000-01-01T${selectedSlot.end_time}`).toLocaleTimeString('en-IN', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        Duration: {selectedSlot.slot_duration_minutes} minutes
+                      </p>
+                    </div>
+                    
+                    {!isPatient && !selectedPatientId && (
+                      <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm text-amber-800">
+                          Please select a patient first from the Appointments tab
+                        </p>
+                      </div>
+                    )}
+                    
+                    <form onSubmit={handleSlotBooking} className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Reason for Visit</label>
+                        <textarea
+                          name="reason"
+                          required
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          rows="3"
+                          placeholder="Please describe the reason for consultation..."
+                        />
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Confirm Booking
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowBookingForm(false);
+                            setSelectedSlot(null);
+                          }}
+                          className="flex-1 px-4 py-2 bg-slate-300 text-slate-700 rounded-lg hover:bg-slate-400 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </article>
+          ) : (
+            <article className="clinical-card">
+              <header className="mb-10 text-center lg:text-left">
+                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest text-lg">
+                    Walk-in Patient Registration
+                 </h3>
+                 <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                    Immediate Patient Intake System
+                 </p>
+              </header>
+
+              <form className="space-y-10" onSubmit={handleWalkinSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-8">
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Patient Name</label>
+                       <input name="name" className="input-field h-[60px] bg-slate-50 border-none rounded-2xl font-black text-slate-800" placeholder="Full Name" required />
+                    </div>
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Mobile Number</label>
+                       <input name="phone" className="input-field py-4 bg-slate-50 border-none rounded-2xl" placeholder="Phone Number" required />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Reason for Visit</label>
+                    <textarea name="reason" className="input-field h-[148px] py-5 bg-slate-50 border-none rounded-2xl resize-none font-medium" placeholder="Symptoms or reason..." required />
+                  </div>
+                </div>
+                <div className="pt-10 border-t border-slate-50">
+                  <button type="submit" className="clinical-btn bg-emerald-600 text-white px-12 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all border-none">
+                     Add to Queue
+                  </button>
+                </div>
+              </form>
+            </article>
+          )}
+        </main>
+
+        {/* MONITORING PILLAR: LEDGER & QUEUE */}
+        <aside className="col-span-12 lg:col-span-4 space-y-8">
+          <section className="clinical-card !p-0 overflow-hidden">
+            <header className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-900">
+               <div>
+                  <h3 className="text-[10px] font-black text-emerald-500/60 uppercase tracking-[0.2em]">Encounter Ledger</h3>
+                  <p className="text-xs font-black text-white mt-1 tabular-nums">{appointments.length} Slots Locked</p>
+               </div>
+               <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/30">
+                  <Clock3 className="w-5 h-5" />
+               </div>
+            </header>
+            
+            <div className="max-h-[600px] overflow-y-auto divide-y divide-slate-50 scrollbar-hide">
+              {appointments.length === 0 ? (
+                <div className="p-16 text-center">
+                   <Clock className="w-10 h-10 text-slate-100 mx-auto mb-4" />
+                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">No appointments scheduled.</p>
+                </div>
+              ) : (
+                appointments.sort((a, b) => new Date(a.start) - new Date(b.start)).map((a, idx) => (
+                  <div key={a.id} className="p-6 hover:bg-slate-50 transition-all group border-l-4 border-transparent hover:border-indigo-500 animate-fade-in" style={{ animationDelay: `${idx * 40}ms` }}>
+                    <div className="flex items-start gap-4">
+                      <div className="text-center min-w-[64px]">
+                        <div className="text-xs font-black text-slate-900 tabular-nums">{new Date(a.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                        <div className="text-[9px] font-black text-slate-400 uppercase mt-1 tracking-tighter">{new Date(a.start).toLocaleDateString([], { month: 'short', day: 'numeric' })}</div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-black text-slate-800 hover:text-indigo-600 transition-colors cursor-pointer truncate" onClick={() => { setActivePatientId(a.patientId); setView('patients'); }}>
+                          {patientName(a.patientId, patients)}
+                        </div>
+                        <div className="text-[9px] font-black text-slate-400 uppercase mt-1 tracking-widest flex items-center gap-1.5">
+                           <Activity className="w-2.5 h-2.5 opacity-50" /> WITH {userName(a.providerId, users)}
+                        </div>
+                        <div className="mt-4 flex items-center gap-2">
+                           {a.status === 'checked_in' && <span className="px-2 py-0.5 bg-sky-50 text-sky-600 rounded text-[9px] font-black uppercase tracking-widest border border-sky-100">ARRIVED</span>}
+                           {a.status === 'triaged' && <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[9px] font-black uppercase tracking-widest border border-indigo-100 shadow-sm animate-pulse">TRIAGED (VITALS CAPTURED)</span>}
+                           {a.status === 'completed' && <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black uppercase tracking-widest border border-emerald-100">ENCOUNTERED</span>}
+                           <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
+                             a.status === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                             a.status === 'scheduled' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                             a.status === 'checked_in' ? 'bg-indigo-50 text-indigo-600 border-indigo-100 shadow-[0_4px_12px_rgba(99,102,241,0.1)]' :
+                             a.status === 'triaged' ? 'bg-purple-50 text-purple-600 border-purple-100 shadow-[0_4px_12px_rgba(124,58,237,0.1)]' : // Added triaged status
+                             'bg-slate-50 text-slate-500 border-slate-100'
+                           }`}>{a.status.replace('_', ' ')}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-6 pt-4 border-t border-slate-50 flex justify-end">
+                      <AppointmentActions
+                        appointment={a}
+                        user={activeUser}
+                        onStatus={(status) => handleStatusUpdate(a.id, status)}
+                        onReschedule={() => setReschedulingAppointment(a)}
+                      />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
+          {!isPatient && !isDoctor && (
+            <section className="clinical-card !p-0 overflow-hidden border-l-4 border-l-amber-500">
+              <header className="p-6 border-b border-slate-50 flex items-center justify-between">
+                 <div>
+                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Walk-in Queue</h3>
+                    <p className="text-sm font-black text-slate-900 mt-1 tabular-nums">{walkins.length} Waiting Patients</p>
+                 </div>
+                 <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center">
+                    <UserPlus className="w-4 h-4" />
+                 </div>
+              </header>
+              <div className="max-h-[300px] overflow-y-auto divide-y divide-slate-50">
+                {walkins.length === 0 ? (
+                  <div className="p-12 text-center">
+                     <Users className="w-8 h-8 text-slate-100 mx-auto mb-4 opacity-30" />
+                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">No patients waiting.</p>
+                  </div>
+                ) : (
+                  walkins.map((w, idx) => (
+                  <div key={w.id} className="p-5 flex items-center gap-4 hover:bg-slate-50 transition-all group animate-fade-in" style={{ animationDelay: `${idx * 40}ms` }}>
+                    <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xs shadow-lg">
+                      {(w.name || 'P')[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-black text-slate-900 truncate">{w.name}</div>
+                      <div className="text-[10px] font-bold text-slate-400 truncate mt-0.5 uppercase tracking-tighter">{w.reason}</div>
+                    </div>
+                    {w.status !== 'converted' ? (
+                      <button onClick={() => handleConvertWalkin(w.id)} className="clinical-btn bg-slate-100 text-slate-600 hover:bg-emerald-600 hover:text-white px-5 !min-h-[36px] text-[9px] font-black uppercase tracking-widest rounded-lg transition-all border-none">ADMIT</button>
+                    ) : (
+                      <span className="text-[9px] font-black text-slate-300 px-4 py-1.5 bg-slate-50 rounded-lg border border-slate-100 tracking-widest">LOGGED</span>
+                    )}
+                  </div>
+                  ))
+                )}
+              </div>
+            </section>
+          )}
+        </aside>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,438 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schema   = "emr"
+}
+
+model Tenant {
+  id               String        @id @default(cuid())
+  name             String
+  email            String?       @unique
+  phone            String?
+  address          String?
+  subscriptionTier String        @default("Free")
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  appointments     Appointment[]
+  departments      Department[]
+  services         Service[]
+  employees        Employee[]
+  encounters       Encounter[]
+  inventory        Inventory[]
+  invoices         Invoice[]
+  patients         Patient[]
+  users            User[]
+  billing          Billing[]
+  accountsReceivable AccountsReceivable[]
+  accountsPayable  AccountsPayable[]
+  expenses         Expense[]
+  revenue          Revenue[]
+  salary           Salary[]
+  attendance       Attendance[]
+  payroll          Payroll[]
+  fhirResources    FhirResource[]
+
+  @@map("tenants")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String
+  email     String
+  password  String
+  firstName String
+  lastName  String
+  role      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
+  billing  Billing[]
+  expenses Expense[]
+  revenue  Revenue[]
+  payroll  Payroll[]
+
+  @@map("users")
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  headOfDept  String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("departments")
+}
+
+model Employee {
+  id            String    @id @default(cuid())
+  tenantId      String
+  firstName     String
+  lastName      String
+  email         String
+  phone         String?
+  role          String
+  department    String?
+  joinDate      DateTime?
+  salary        Decimal?
+  bankAccount   String?
+  panNumber     String?
+  aadhaarNumber String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointments  Appointment[]
+  encounters    Encounter[]
+  salary        Salary[]
+  attendance    Attendance[]
+
+  @@map("employees")
+}
+
+model Salary {
+  id               String    @id @default(cuid())
+  tenantId         String
+  employeeId       String
+  month            Int
+  year             Int
+  basicSalary      Decimal
+  hra              Decimal   @default(0)
+  da               Decimal   @default(0)
+  ma               Decimal   @default(0)
+  otherAllowances  Decimal   @default(0)
+  totalEarnings    Decimal
+  pfDeduction      Decimal   @default(0)
+  esiDeduction     Decimal   @default(0)
+  tdsDeduction     Decimal   @default(0)
+  otherDeductions  Decimal   @default(0)
+  totalDeductions  Decimal
+  netSalary        Decimal
+  paymentDate      DateTime?
+  paymentMethod    String?
+  paymentStatus    String    @default("pending")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee         Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, employeeId, month, year])
+  @@map("salary")
+}
+
+model Attendance {
+  id            String    @id @default(cuid())
+  tenantId      String
+  employeeId    String
+  attendanceDate DateTime  @db.Date
+  checkIn       DateTime?
+  checkOut      DateTime?
+  breakStart    DateTime?
+  breakEnd      DateTime?
+  totalHours    Decimal?
+  overtimeHours Decimal   @default(0)
+  status        String    @default("present")
+  leaveType     String?
+  remarks       String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  employee      Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, employeeId, attendanceDate])
+  @@map("attendance")
+}
+
+model Payroll {
+  id               String    @id @default(cuid())
+  tenantId         String
+  month            Int
+  year             Int
+  totalEmployees   Int
+  totalSalaryPayout Decimal
+  totalDeductions  Decimal
+  totalNetPayout   Decimal
+  processingDate   DateTime?
+  processedBy      String?
+  status           String    @default("pending")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user             User?     @relation(fields: [processedBy], references: [id])
+
+  @@unique([tenantId, month, year])
+  @@map("payroll")
+}
+
+model Patient {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  firstName             String
+  lastName              String
+  dateOfBirth           DateTime? @db.Date
+  gender                String?
+  phone                 String?
+  email                 String?
+  address               String?
+  bloodType             String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  medicalHistory        String?
+  allergies             String?
+  isActive              Boolean   @default(true)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  appointments          Appointment[]
+  encounters            Encounter[]
+  invoices              Invoice[]
+  billing                Billing[]
+  accountsReceivable    AccountsReceivable[]
+
+  @@map("patients")
+}
+
+model Appointment {
+  id            String    @id @default(cuid())
+  tenantId      String
+  patientId     String
+  doctorId      String
+  appointmentDate DateTime
+  duration      Int       @default(30)
+  status        String    @default("scheduled")
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor        Employee  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("appointments")
+}
+
+model Encounter {
+  id            String    @id @default(cuid())
+  tenantId      String
+  patientId     String
+  doctorId      String
+  encounterDate DateTime @default(now())
+  encounterType String?
+  chiefComplaint String?
+  diagnosis     String?
+  treatmentPlan String?
+  prescription  String?
+  notes         String?
+  status        String    @default("active")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor        Employee  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@map("encounters")
+}
+
+model Billing {
+  id            String    @id @default(cuid())
+  tenantId      String
+  patientId     String
+  invoiceId     String?
+  billingDate   DateTime  @db.Date
+  serviceId     String?
+  serviceName   String
+  quantity      Int       @default(1)
+  unitPrice     Decimal
+  discountPerc  Decimal   @default(0)
+  discountAmt   Decimal   @default(0)
+  taxPerc       Decimal   @default(0)
+  taxAmt        Decimal   @default(0)
+  totalAmount   Decimal
+  billingType   String?
+  status        String    @default("pending")
+  createdBy     String?
+  approvedBy    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user          User?     @relation(fields: [createdBy], references: [id])
+  invoice       Invoice?  @relation(fields: [invoiceId], references: [id])
+
+  @@map("billing")
+}
+
+model Invoice {
+  id            String    @id @default(cuid())
+  tenantId      String
+  patientId     String
+  userId        String
+  invoiceNumber String    @unique
+  invoiceDate   DateTime  @db.Date
+  dueDate       DateTime  @db.Date
+  description   String?
+  subtotal      Decimal
+  discountAmt   Decimal   @default(0)
+  taxAmt        Decimal   @default(0)
+  totalAmount   Decimal
+  paidAmt       Decimal   @default(0)
+  balanceAmt    Decimal
+  paymentMethod String?
+  paymentStatus String    @default("unpaid")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id])
+  billing       Billing[]
+  accountsReceivable AccountsReceivable[]
+  revenue       Revenue[]
+
+  @@map("invoices")
+}
+
+model AccountsReceivable {
+  id            String    @id @default(cuid())
+  tenantId      String
+  patientId     String
+  invoiceId     String
+  amount        Decimal
+  paidAmount    Decimal   @default(0)
+  balanceAmount Decimal
+  dueDate       DateTime  @db.Date
+  overdueDays   Int       @default(0)
+  status        String    @default("pending")
+  lastPaymentDate DateTime? @db.Date
+  paymentPlan   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  patient       Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  invoice       Invoice   @relation(fields: [invoiceId], references: [id])
+
+  @@map("accounts_receivable")
+}
+
+model AccountsPayable {
+  id            String    @id @default(cuid())
+  tenantId      String
+  vendorName    String
+  invoiceNumber String?
+  invoiceDate   DateTime  @db.Date
+  dueDate       DateTime  @db.Date
+  amount        Decimal
+  paidAmount    Decimal   @default(0)
+  balanceAmount Decimal
+  category      String?
+  status        String    @default("pending")
+  paymentTerms  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("accounts_payable")
+}
+
+model Expense {
+  id            String    @id @default(cuid())
+  tenantId      String
+  expenseDate   DateTime  @db.Date
+  category      String
+  subcategory   String?
+  description   String
+  amount        Decimal
+  paymentMethod String?
+  vendor        String?
+  receiptNumber String?
+  approvedBy    String?
+  status        String    @default("pending")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user          User?     @relation(fields: [approvedBy], references: [id])
+
+  @@map("expenses")
+}
+
+model Revenue {
+  id            String    @id @default(cuid())
+  tenantId      String
+  revenueDate   DateTime  @db.Date
+  category      String
+  subcategory   String?
+  description   String
+  amount        Decimal
+  paymentMethod String?
+  invoiceId     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice       Invoice?  @relation(fields: [invoiceId], references: [id])
+
+  @@map("revenue")
+}
+
+model Inventory {
+  id           String    @id @default(cuid())
+  tenantId     String
+  name         String
+  category     String?
+  quantity     Int       @default(0)
+  unit         String?
+  minStock     Int       @default(0)
+  maxStock     Int?
+  unitCost     Decimal?
+  sellingPrice Decimal?
+  supplier     String?
+  expiryDate   DateTime? @db.Date
+  batchNumber  String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("inventory")
+}
+
+model Service {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  code        String?
+  category    String?
+  subcategory String?
+  baseRate    Decimal
+  taxPerc     Decimal   @default(0)
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+  @@map("services")
+}
+
+model FhirResource {
+  id           String    @id @default(cuid())
+  resourceType String
+  resourceId   String
+  resourceData Json
+  lastUpdated  DateTime  @default(now())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, resourceType, resourceId])
+  @@map("fhir_resources")
+}

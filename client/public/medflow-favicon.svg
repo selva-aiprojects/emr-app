@@ -1,0 +1,19 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a3a5c"/>
+      <stop offset="100%" stop-color="#2874a6"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="32" height="32" rx="6" fill="url(#bg)"/>
+  <!-- Medical cross -->
+  <path d="M13 7h6v7h6v6h-6v7h-6v-7H7v-6h6V7z" fill="white"/>
+  <!-- Circular arrow with trend -->
+  <g transform="translate(16,17)" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-5,1 A6,6 0 1,1 1,7" opacity="0.9"/>
+    <path d="M-5,1 L-5,-2 L-2,1" opacity="0.9"/>
+    <path d="M-2,4 L2,0 L5,1" stroke-width="1.8" opacity="0.9"/>
+    <path d="M3.5,1 L5,1 L5,-0.5" stroke-width="1.5" opacity="0.9"/>
+  </g>
+</svg>

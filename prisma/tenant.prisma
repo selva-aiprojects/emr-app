@@ -1,0 +1,76 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../node_modules/@generated/tenant"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email         String   @unique
+  password_hash String
+  name          String
+  role_id       String   @db.Uuid
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime @default(now()) @db.Timestamptz(6)
+  role          Role     @relation(fields: [role_id], references: [id])
+  patient       Patient? @relation(fields: [patient_id], references: [id])
+  patient_id    String?  @db.Uuid
+
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String       @unique
+  description String?
+  is_system   Boolean      @default(false)
+  created_at  DateTime     @default(now()) @db.Timestamptz(6)
+  users       User[]
+  permissions Permission[] @relation("RolePermissions")
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique
+  description String?
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  roles       Role[]   @relation("RolePermissions")
+
+  @@map("permissions")
+}
+
+// Business Logic Models
+model Patient {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mrn           String        @unique @db.VarChar(64)
+  first_name    String
+  last_name     String
+  date_of_birth DateTime?     @db.Date
+  gender        String?       @db.VarChar(16)
+  phone         String?       @db.VarChar(32)
+  email         String?
+  created_at    DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime      @default(now()) @db.Timestamptz(6)
+  users         User[]
+  appointments  Appointment[]
+
+  @@map("patients")
+}
+
+model Appointment {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  patient_id      String   @db.Uuid
+  scheduled_start DateTime @db.Timestamptz(6)
+  scheduled_end   DateTime @db.Timestamptz(6)
+  status          String   @default("scheduled") @db.VarChar(16)
+  reason          String?
+  patient         Patient  @relation(fields: [patient_id], references: [id])
+
+  @@map("appointments")
+}

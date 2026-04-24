@@ -1,0 +1,29 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#152d4a"/>
+      <stop offset="50%" stop-color="#1e4d78"/>
+      <stop offset="100%" stop-color="#2878a8"/>
+    </linearGradient>
+    <filter id="iconShadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+  <!-- Rounded square background -->
+  <rect x="4" y="4" width="112" height="112" rx="22" fill="url(#iconBg)" filter="url(#iconShadow)"/>
+  <!-- Inner subtle border -->
+  <rect x="6" y="6" width="108" height="108" rx="20" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <!-- Medical cross -->
+  <path d="M47 18h26v26h26v26H73v26H47V70H21V44h26V18z" fill="white"/>
+  <!-- Circular arrow with analytics trend -->
+  <g transform="translate(60,62)" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Circular arrow arc -->
+    <path d="M-20,4 A24,24 0 1,1 4,28" stroke-width="6.5" opacity="0.92"/>
+    <!-- Arrow head on circle -->
+    <polygon points="-20,4 -20,-8 -10,4" fill="white" stroke="none" opacity="0.92"/>
+    <!-- Trend line going up -->
+    <path d="M-8,16 L4,2 L16,6" stroke-width="6" opacity="0.92"/>
+    <!-- Arrow head on trend -->
+    <polygon points="12,6 20,4 16,-2" fill="white" stroke="none" opacity="0.92"/>
+  </g>
+</svg>

@@ -1,0 +1,4 @@
+-- DISABLED: 004_feature_flags.sql
+-- This migration was disabled because it references tables that should only exist in tenant schemas
+-- not in the emr management schema. The tables are created dynamically per tenant.
+-- Original file backed up as 004_feature_flags.sql.backup

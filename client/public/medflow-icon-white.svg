@@ -1,0 +1,11 @@
+<svg width="28" height="28" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Medical cross (white only, no background - for use on dark surfaces) -->
+  <path d="M47 18h26v26h26v26H73v26H47V70H21V44h26V18z" fill="white" opacity="0.95"/>
+  <!-- Circular arrow with analytics trend -->
+  <g transform="translate(60,62)" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-20,4 A24,24 0 1,1 4,28" stroke-width="6.5" opacity="0.85"/>
+    <polygon points="-20,4 -20,-8 -10,4" fill="white" stroke="none" opacity="0.85"/>
+    <path d="M-8,16 L4,2 L16,6" stroke-width="6" opacity="0.85"/>
+    <polygon points="12,6 20,4 16,-2" fill="white" stroke="none" opacity="0.85"/>
+  </g>
+</svg>

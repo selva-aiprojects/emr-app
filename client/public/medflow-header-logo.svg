@@ -1,0 +1,28 @@
+<svg width="280" height="56" viewBox="0 0 280 56" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="headerBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#152d4a"/>
+      <stop offset="50%" stop-color="#1e4d78"/>
+      <stop offset="100%" stop-color="#2878a8"/>
+    </linearGradient>
+  </defs>
+  <!-- Icon -->
+  <rect x="2" y="2" width="52" height="52" rx="10" fill="url(#headerBg)"/>
+  <!-- Medical cross -->
+  <path d="M22 8h12v12h12v12H34v12H22V32H10V20h12V8z" fill="white"/>
+  <!-- Circular arrow with trend -->
+  <g transform="translate(28,29)" fill="none" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M-9,2 A11,11 0 1,1 2,13" stroke-width="3" opacity="0.9"/>
+    <polygon points="-9,2 -9,-3 -5,2" fill="white" stroke="none" opacity="0.9"/>
+    <path d="M-4,7 L2,1 L7,3" stroke-width="2.8" opacity="0.9"/>
+    <polygon points="5.5,3 9,2 7.5,-1" fill="white" stroke="none" opacity="0.9"/>
+  </g>
+  <!-- Text: MedFlow -->
+  <text x="64" y="30" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="28" font-weight="700" fill="#1e3a5c" letter-spacing="-0.5">
+    <tspan>Med</tspan><tspan font-weight="800">Flow</tspan>
+  </text>
+  <!-- Text: EMR -->
+  <text x="210" y="30" font-family="'Inter','Segoe UI',Arial,sans-serif" font-size="22" font-weight="400" fill="#64748b" letter-spacing="1">
+    EMR
+  </text>
+</svg>
