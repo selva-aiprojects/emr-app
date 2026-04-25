@@ -81,6 +81,20 @@ CREATE TABLE nexus.roles (
     updated_at timestamp with time zone DEFAULT now()
 );
 
+DROP TABLE IF EXISTS nexus.users CASCADE;
+CREATE TABLE nexus.users (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    tenant_id VARCHAR(255) REFERENCES nexus.management_tenants(id) ON DELETE CASCADE,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255),
+    name VARCHAR(255) NOT NULL,
+    role VARCHAR(255),
+    is_active BOOLEAN DEFAULT true,
+    last_login TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- 4.5 Governance & Sequences
 CREATE TABLE IF NOT EXISTS nexus.role_permissions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -243,9 +257,10 @@ $$;
 
 -- Seed Data
 INSERT INTO nexus.management_subscriptions (tier, plan_name, price, limit_users) VALUES
-('Free', 'Hobbyist Pilot', 'Rs0', 10),
-('Professional', 'Specialty Center', 'Rs0', 50),
-('Enterprise', 'Full Hospital OS', 'Rs0', 100)
+('Basic', 'Hobbyist Pilot', 'Rs1999', 10),
+('Standard', 'Growing Clinic', 'Rs4999', 25),
+('Professional', 'Specialty Center', 'Rs7999', 50),
+('Enterprise', 'Full Hospital OS', 'Rs14999', 100)
 ON CONFLICT (tier) DO NOTHING;
 
 INSERT INTO nexus.roles (id, name, description, is_system) VALUES

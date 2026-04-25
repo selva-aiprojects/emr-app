@@ -17,7 +17,7 @@ export function PageHero({
   className = ""
 }) {
   return (
-    <header className={`relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 md:p-12 mb-8 shadow-2xl ${className}`}>
+    <header className={`page-header-premium stagger-entrance ${className}`}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ 
         backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
@@ -33,16 +33,16 @@ export function PageHero({
               </div>
             )}
             <div className="flex flex-col gap-2">
-              <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-none flex items-center gap-3">
+              <h1 className="text-3xl font-black text-white flex items-center gap-3">
                 {title}
                 {badge && (
-                  <span className="hidden md:inline-block text-[10px] bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-widest font-black backdrop-blur-md">
+                  <span className="system-shard-badge">
                     {badge}
                   </span>
                 )}
               </h1>
               {subtitle && (
-                <p className="text-white/60 text-sm md:text-base font-medium max-w-xl italic">
+                <p className="premium-subtitle !text-white/80 mt-2">
                   {subtitle}
                 </p>
               )}

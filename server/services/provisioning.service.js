@@ -163,8 +163,8 @@ export async function provisionNewTenant(tenantData, adminData) {
   try {
     // 1. Create in legacy tenants table (for full platform visibility)
     const legacySql = `
-      INSERT INTO tenants (name, code, subdomain, contact_email, subscription_tier, status, logo_url, theme, features, billing_config, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8, $9, NOW(), NOW())
+      INSERT INTO nexus.tenants (name, code, subdomain, subscription_tier, status, logo_url, theme, features, billing_config, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, 'active', $5, $6, $7, $8, NOW(), NOW())
       ON CONFLICT (code) DO UPDATE SET 
         name = EXCLUDED.name,
         logo_url = EXCLUDED.logo_url,
@@ -178,7 +178,6 @@ export async function provisionNewTenant(tenantData, adminData) {
       tenantData.name,
       tenantData.code,
       tenantData.subdomain,
-      tenantData.contactEmail,
       tenantData.subscriptionTier || 'Enterprise',
       tenantData.logoUrl || null,
       JSON.stringify(tenantData.theme || {}),
@@ -188,7 +187,7 @@ export async function provisionNewTenant(tenantData, adminData) {
 
     // 2. Map entry in the management database (Control Plane)
     const insertSql = `
-      INSERT INTO management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier, logo_url, theme, features, billing_config, created_at, updated_at)
+      INSERT INTO nexus.management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier, logo_url, theme, features, billing_config, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
       ON CONFLICT (code) DO UPDATE SET 
         name = EXCLUDED.name,
@@ -291,9 +290,12 @@ export async function provisionNewTenant(tenantData, adminData) {
 
     const user = userResult.rows[0];
 
+    // Auto-patch the schema just in case it's a legacy version
+    await query(`ALTER TABLE nexus.users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255)`);
+
     // CRITICAL: Also register the admin in users (global control plane).
     await query(`
-      INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active)
+      INSERT INTO nexus.users (id, tenant_id, email, password_hash, name, role, is_active)
       VALUES ($1, $2, $3, $4, $5, 'Admin', true)
       ON CONFLICT (email) DO UPDATE SET 
         tenant_id = EXCLUDED.tenant_id,
@@ -318,7 +320,7 @@ export async function provisionNewTenant(tenantData, adminData) {
         
         try {
           await query(`
-            INSERT INTO audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
+            INSERT INTO nexus.audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, NULL, NULL, NOW())
           `, [tenant.id, user.id, user.name, 'tenant.provision', 'tenant', tenant.id, JSON.stringify({
             schemaName,
@@ -364,7 +366,7 @@ export async function provisionNewTenant(tenantData, adminData) {
       // 1. Log failure BEFORE purging metadata (prevents FK violation)
       if (tenant?.id) {
         await query(`
-          INSERT INTO audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
+          INSERT INTO nexus.audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
           VALUES (gen_random_uuid(), $1, NULL, NULL, $2, $3, $4, $5, NULL, NULL, NOW())
         `, [tenant.id, 'tenant.provision.failed', 'tenant', tenant.id, JSON.stringify({
           schemaName,
@@ -378,7 +380,7 @@ export async function provisionNewTenant(tenantData, adminData) {
       
       // 3. Purge orphaned metadata
       if (tenant?.id) {
-        await query('DELETE FROM management_tenants WHERE id::text = $1::text', [tenant.id])
+        await query('DELETE FROM nexus.management_tenants WHERE id::text = $1::text', [tenant.id])
           .catch(err => console.error('Orphaned tenant metadata purge failed:', err.message));
       }
     } catch (rollbackError) {

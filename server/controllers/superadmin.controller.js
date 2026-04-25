@@ -288,3 +288,19 @@ export async function globalPasswordReset(req, res) {
     res.status(500).json({ error: error.message });
   }
 }
+
+/**
+ * Provision a New Institutional Tenant
+ */
+export async function createNewTenant(req, res) {
+  const { tenantData, adminData } = req.body;
+  try {
+    if (!tenantData || !adminData) {
+      return res.status(400).json({ error: 'tenantData and adminData are required' });
+    }
+    const result = await provisionNewTenant(tenantData, adminData);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}

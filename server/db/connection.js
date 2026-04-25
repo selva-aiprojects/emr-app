@@ -126,8 +126,7 @@ function robustSqlSplit(sql) {
 async function runPendingMigrations() {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const migrationsPaths = [
-    path.join(__dirname, 'migrations'),
-    path.join(__dirname, '../../database/migrations')
+    path.join(__dirname, 'migrations')
   ];
 
   for (const migrationsDir of migrationsPaths) {
@@ -193,7 +192,7 @@ export async function testConnection() {
     await pool.query('SELECT NOW() as now');
     console.log('✅ Database connection successful');
     await ensureMigrationRegistry();
-    await runPendingMigrations();
+    // await runPendingMigrations(); // Disabled: Relying strictly on NEXUS_MASTER_BASELINE.sql and SHARD_MASTER_BASELINE.sql
     return true;
   } catch (error) {
     console.error('❌ Database connection failed:', error.message);

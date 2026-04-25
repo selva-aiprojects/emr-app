@@ -349,11 +349,11 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
            <h1 className="flex flex-col md:flex-row items-center gap-3 text-3xl font-black text-white">
               <span className="opacity-90">{getGreeting()},</span>
               <span>{activeUser?.name?.split(' ')[0] || 'Admin'}</span>
-              <span className="text-[11px] bg-white/20 text-white px-3 py-1.5 rounded-xl border border-white/20 uppercase tracking-widest font-black shadow-lg backdrop-blur-md">
+              <span className="system-shard-badge">
                 Institutional Control Plane
               </span>
            </h1>
-           <p className="text-[14px] mt-3 font-medium text-white/70 max-w-xl">
+           <p className="premium-subtitle mt-3 max-w-xl">
              Daily Clinical Summary & Operational Intelligence for <span className="text-white font-bold">{tenant?.name || 'Authorized Centre'}</span>
            </p>
         </div>

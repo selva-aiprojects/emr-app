@@ -10,10 +10,10 @@ import { useToast } from '../hooks/useToast.jsx';
 import { superadminService } from '../services/superadmin.service.js';
 
 const TIERS = [
-  { value: 'Free',         label: 'Free',         color: 'slate',    icon: Box, price: '0' },
-  { value: 'Basic',        label: 'Basic',        color: 'blue',     icon: ShieldCheck, price: '199' },
-  { value: 'Professional', label: 'Professional', color: 'indigo',   icon: Zap, price: '499' },
-  { value: 'Enterprise',   label: 'Enterprise',   color: 'rose',     icon: Crown, price: '1299' },
+  { value: 'Basic',        label: 'Basic',        color: 'slate',    icon: Box, price: '1999' },
+  { value: 'Standard',     label: 'Standard',     color: 'blue',     icon: ShieldCheck, price: '4999' },
+  { value: 'Professional', label: 'Professional', color: 'indigo',   icon: Zap, price: '7999' },
+  { value: 'Enterprise',   label: 'Enterprise',   color: 'rose',     icon: Crown, price: '14999' },
 ];
 
 const INITIAL = {

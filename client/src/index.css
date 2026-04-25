@@ -214,27 +214,28 @@ textarea {
 
 /* BUTTONS - STANDARDIZED PREMIUM */
 .btn-premium {
-  padding: 12px 28px;
-  border-radius: 16px;
-  font-weight: 700;
-  font-size: 0.875rem;
-  letter-spacing: -0.01em;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  cursor: pointer;
-  border: none;
-  background: var(--clinical-blue);
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 119, 182, 0.2);
+  min-height: 48px !important; /* Standardized Button Height */
+  padding: 0 32px !important;
+  border-radius: 14px !important; /* Premium Soft Radius */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-weight: 800 !important;
+  font-size: 0.8125rem !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.12em !important;
+  white-space: nowrap !important;
+  border: none !important;
+  background: var(--clinical-blue) !important;
+  color: white !important;
+  box-shadow: 0 6px 16px rgba(0, 119, 182, 0.25) !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .btn-premium:hover {
-  background: var(--medical-navy);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(1, 22, 39, 0.2);
+  background: var(--medical-navy) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 24px rgba(1, 22, 39, 0.2) !important;
 }
 
 .btn-premium-outline {

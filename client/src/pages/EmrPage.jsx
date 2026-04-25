@@ -246,8 +246,8 @@ export default function EmrPage({
     <div className="page-shell-premium animate-fade-in">
       <header className="page-header-premium mb-10 pb-6">
         <div>
-          <h1 className="flex items-center gap-3">Clinical Workspace</h1>
-          <p className="dim-label">Institutional Health Ledger & Patient Care Hub</p>
+          <h1 className="text-3xl font-black text-white flex items-center gap-3">Clinical Workspace</h1>
+          <p className="premium-subtitle !text-white/80 mt-2">Institutional Health Ledger & Patient Care Hub</p>
         </div>
       </header>
       

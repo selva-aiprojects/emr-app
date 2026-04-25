@@ -5,7 +5,9 @@ import {
   getManagementOverview,
   getGlobalSupportTickets, 
   provisionTenantUser, 
-  globalPasswordReset
+  globalPasswordReset,
+  createNewTenant,
+  deleteTenant
 } from '../controllers/superadmin.controller.js';
 
 const router = express.Router();
@@ -43,9 +45,9 @@ router.post('/users/reset-password', globalPasswordReset);
 // TODO: Add missing controller functions for these routes
 // router.post('/sync-infra', syncLegacyTenants);
 // router.post('/sync-metrics', syncManagementMetrics);
-// router.post('/tenants', createNewTenant);
+router.post('/tenants', createNewTenant);
 // router.patch('/tenants/:id', updateTenant);
-// router.delete('/tenants/:id', deleteTenant);
+router.delete('/tenants/:id', deleteTenant);
 // router.post('/broadcast', broadcastToAllTenants);
 // router.post('/communicate', sendCommunication);
 // router.get('/tenants/:id/admin', getTenantAdmin);

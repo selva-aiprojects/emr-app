@@ -38,13 +38,15 @@
   /* Alias used across the app shell */
   --font-sans: var(--font-body);
   
-  /* STANDARDIZED FONT SIZES */
-  --font-size-xs: 0.75rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 1rem;
-  --font-size-lg: 1.125rem;
-  --font-size-xl: 1.25rem;
-  --font-size-2xl: 2rem;
+  /* STANDARDIZED FONT SIZES - INTER PRIORITY */
+  --font-size-xs: 0.75rem;   /* 12px */
+  --font-size-sm: 0.875rem;  /* 14px */
+  --font-size-base: 1rem;    /* 16px */
+  --font-size-lg: 1.125rem;  /* 18px */
+  --font-size-xl: 1.25rem;   /* 20px */
+  --font-size-2xl: 1.75rem;  /* 28px */
+  --font-size-3xl: 2.5rem;   /* 40px */
+  --font-size-4xl: 3rem;     /* 48px */
 
   /* SHADOWS & BLURS */
   --glass-blur: 16px;
@@ -310,6 +312,15 @@ h1, h2, h3, h4, .font-display {
   line-height: 1.1;
   color: var(--clinical-primary);
 }
+
+.text-xs { font-size: var(--font-size-xs) !important; }
+.text-sm { font-size: var(--font-size-sm) !important; }
+.text-base { font-size: var(--font-size-base) !important; }
+.text-lg { font-size: var(--font-size-lg) !important; }
+.text-xl { font-size: var(--font-size-xl) !important; }
+.text-2xl { font-size: var(--font-size-2xl) !important; }
+.text-3xl { font-size: var(--font-size-3xl) !important; }
+.text-4xl { font-size: var(--font-size-4xl) !important; }
 
 /* ENHANCED SUPERADMIN PAGE STYLES */
 .enhanced-superadmin-page {
@@ -1444,12 +1455,19 @@ div.flex.items-center.justify-between.px-5.py-4.sidebar-header-highlight .text-[
 }
 
 .page-header-premium {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1.5rem;
-  margin-bottom: 2.5rem;
+  background: linear-gradient(135deg, var(--clinical-hero, #011627) 0%, var(--clinical-primary-dark, #0077B6) 100%) !important;
+  padding: 3rem 4rem !important; /* Standardized Hero Height */
+  border-radius: 32px !important;
+  color: white !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15) !important;
+  position: relative;
+  overflow: hidden !important;
+  margin-bottom: 3.5rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  min-height: 220px; /* Ensures vertical uniformity */
   font-family: var(--font-sans);
 }
 

@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
      }
      
      // Public list (strictly from DB)
-     const tenantsRes = await repo.query("SELECT id, name, code, subdomain, logo_url FROM tenants WHERE status = 'active' LIMIT 100");
+     const tenantsRes = await repo.query("SELECT id, name, code, subdomain, logo_url FROM nexus.tenants WHERE status = 'active' LIMIT 100");
      res.json(tenantsRes.rows);
   } catch (error) {
     console.error('Tenant fetch error:', error);

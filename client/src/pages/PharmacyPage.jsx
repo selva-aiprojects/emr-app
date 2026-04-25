@@ -146,11 +146,11 @@ export default function PharmacyPage({ tenant, inventory = [], onDispense }) {
     <div className="page-shell-premium animate-fade-in space-y-10 pb-20">
       <header className="page-header-premium">
         <div>
-           <h1 className="premium-title flex items-center gap-4 text-white">
+           <h1 className="text-3xl font-black text-white flex items-center gap-4">
               Pharmacy Inventory Intelligence
               <span className="system-shard-badge">Supply Chain Shard</span>
            </h1>
-           <p className="premium-subtitle opacity-90 text-white">High-fidelity pharmaceutical tracking, automated reorder triggers, and institutional procurement for {tenant?.name || 'Authorized Facility'}.</p>
+           <p className="premium-subtitle !text-white/80 mt-2">High-fidelity pharmaceutical tracking, automated reorder triggers, and institutional procurement for {tenant?.name || 'Authorized Facility'}.</p>
            <p className="text-[10px] font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/50">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> FDA Compliance Node: Active • Inventory Sync: Real-time
            </p>

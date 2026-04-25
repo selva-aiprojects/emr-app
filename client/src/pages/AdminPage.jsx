@@ -6,11 +6,11 @@ export default function AdminPage({ tenant, patients, onSaveSettings, onCreateUs
     <div className="page-shell-premium animate-fade-in space-y-10 pb-20">
       <header className="page-header-premium">
         <div>
-           <h1 className="flex items-center gap-4 text-white">
+           <h1 className="text-3xl font-black text-white flex items-center gap-4">
               Institutional Control Plane
               <span className="system-shard-badge">Governance Root Shard</span>
            </h1>
-           <p className="dim-label">Organizational orchestration and strategic tenant trajectory configuration for {tenant?.name || 'Authorized Facility'}.</p>
+           <p className="premium-subtitle !text-white/80 mt-2">Organizational orchestration and strategic tenant trajectory configuration for {tenant?.name || 'Authorized Facility'}.</p>
            <p className="text-[10px] font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/50">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Administrative Integrity: Verified • Real-time Monitoring Active
            </p>

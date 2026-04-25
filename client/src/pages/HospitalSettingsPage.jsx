@@ -212,11 +212,11 @@ export default function HospitalSettingsPage({ tenant, onUpdateTenant }) {
     <div className="page-shell-premium slide-up">
       <header className="page-header-premium mb-8">
         <div>
-          <h1 className="page-title-rich flex items-center gap-3 text-slate-900">
-            <Settings className="w-8 h-8 text-[#0077B6]" />
+          <h1 className="text-3xl font-black text-white flex items-center gap-3">
+            <Settings className="w-8 h-8 text-white/80" />
             Institutional Branding & Settings
           </h1>
-          <p className="dim-label italic">Customize hospital digital identity, theme, and operational configurations.</p>
+          <p className="premium-subtitle !text-white/80 mt-2">Customize hospital digital identity, theme, and operational configurations.</p>
         </div>
       </header>
 

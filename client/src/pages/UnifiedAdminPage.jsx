@@ -111,28 +111,28 @@ export default function UnifiedAdminPage({ tenant, userRole = 'superadmin' }) {
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-rose-50/30 blur-[120px] rounded-full -z-10" />
 
       {/* Modern Compact Header */}
-      <header className="max-w-[1400px] mx-auto mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+      <header className="page-header-premium mb-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 !rounded-[2.5rem]">
          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-slate-200 group hover:rotate-12 transition-transform">
+            <div className="w-12 h-12 bg-white/10 border border-white/10 rounded-2xl flex items-center justify-center text-white shadow-xl group hover:rotate-12 transition-transform">
                <Shield size={24} />
             </div>
             <div>
-               <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight italic flex items-center gap-2">
+               <h1 className="text-3xl font-black text-white flex items-center gap-3">
                   Unified Admin Console
-                  <span className="text-[9px] bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full border border-emerald-100 font-black not-italic uppercase tracking-widest">Active</span>
+                  <span className="system-shard-badge not-italic">Active</span>
                </h1>
-               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Platform Governance · Cluster Shards: {tenants.length}</p>
+               <p className="premium-subtitle !text-white/80 mt-0.5">Platform Governance · Cluster Shards: {tenants.length}</p>
             </div>
          </div>
 
          {/* Navigation Tab Bar */}
-         <nav className="bg-white p-1 rounded-xl border border-slate-200 flex gap-1 shadow-sm overflow-x-auto no-scrollbar">
+         <nav className="bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 flex gap-1 shadow-sm overflow-x-auto no-scrollbar">
             {adminTabs.map(tab => (
                <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
-                     activeTab === tab.id ? 'bg-slate-900 text-white shadow-md' : 'text-slate-400 hover:text-slate-900'
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                     activeTab === tab.id ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'
                   }`}
                >
                   <tab.icon size={14} /> {tab.name}

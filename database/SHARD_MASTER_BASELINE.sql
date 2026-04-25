@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(255) PRIMARY KEY, -- References nexus.users(id) or email
     tenant_id VARCHAR(255) NOT NULL REFERENCES nexus.tenants(id),
     email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255),
     name VARCHAR(255) NOT NULL,
     role VARCHAR(255) REFERENCES roles(id),
     is_active BOOLEAN DEFAULT true,
