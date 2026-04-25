@@ -23,8 +23,8 @@ export async function getDoctorAvailability(tenantId, doctorId, date) {
       current_appointments,
       status,
       notes
-    FROM emr.doctor_availability 
-    WHERE tenant_id = $1 
+    FROM nexus.doctor_availability 
+    WHERE tenant_id::text = $1::text 
       AND ($2::uuid IS NULL OR doctor_id = $2)
       AND ($3::date IS NULL OR date = $3)
       AND is_available = true
@@ -39,7 +39,7 @@ export async function getDoctorAvailability(tenantId, doctorId, date) {
 
 export async function createDoctorAvailability({ tenantId, doctorId, date, startTime, endTime, slotDurationMinutes = 15, maxAppointments = 1, notes, createdBy }) {
   const sql = `
-    INSERT INTO emr.doctor_availability (
+    INSERT INTO nexus.doctor_availability (
       tenant_id, doctor_id, date, start_time, end_time, 
       slot_duration_minutes, max_appointments, notes, created_by
     )
@@ -65,7 +65,7 @@ export async function generateDoctorAvailabilitySlots({ tenantId, doctorId, date
     
     if (slotEndTime <= end) {
       const sql = `
-        INSERT INTO emr.doctor_availability (
+        INSERT INTO nexus.doctor_availability (
           tenant_id, doctor_id, date, start_time, end_time, 
           slot_duration_minutes, max_appointments, created_by
         )
@@ -123,9 +123,9 @@ export async function updateDoctorAvailabilitySlot(availabilityId, tenantId, upd
   }
   
   const sql = `
-    UPDATE emr.doctor_availability 
+    UPDATE nexus.doctor_availability 
     SET ${fields.join(', ')}, updated_at = NOW()
-    WHERE id = $1 AND tenant_id = $${paramIndex}
+    WHERE id::text = $1::text AND tenant_id::text = $${paramIndex}::text
     RETURNING *
   `;
   
@@ -138,11 +138,11 @@ export async function updateDoctorAvailabilitySlot(availabilityId, tenantId, upd
 
 export async function incrementAppointmentCount(availabilityId, tenantId) {
   const sql = `
-    UPDATE emr.doctor_availability 
+    UPDATE nexus.doctor_availability 
     SET current_appointments = current_appointments + 1,
         updated_at = NOW()
-    WHERE id = $1 
-      AND tenant_id = $2 
+    WHERE id::text = $1::text 
+      AND tenant_id::text = $2::text 
       AND current_appointments < max_appointments
     RETURNING *
   `;
@@ -153,10 +153,10 @@ export async function incrementAppointmentCount(availabilityId, tenantId) {
 
 export async function decrementAppointmentCount(availabilityId, tenantId) {
   const sql = `
-    UPDATE emr.doctor_availability 
+    UPDATE nexus.doctor_availability 
     SET current_appointments = GREATEST(current_appointments - 1, 0),
         updated_at = NOW()
-    WHERE id = $1 AND tenant_id = $2
+    WHERE id::text = $1::text AND tenant_id::text = $2::text
     RETURNING *
   `;
   
@@ -176,9 +176,9 @@ export async function getAvailableSlotsForDoctor(tenantId, doctorId, date) {
       max_appointments,
       current_appointments,
       available_slots
-    FROM emr.doctor_availability 
-    WHERE tenant_id = $1 
-      AND doctor_id = $2 
+    FROM nexus.doctor_availability 
+    WHERE tenant_id::text = $1::text 
+      AND doctor_id::uuid = $2::uuid 
       AND date = $3 
       AND is_available = true 
       AND status = 'available'
@@ -202,8 +202,8 @@ export async function getDoctorAvailabilityCalendar(tenantId, doctorId, startDat
       COUNT(CASE WHEN current_appointments >= max_appointments THEN 1 END) as booked_slots,
       MIN(start_time) as first_slot_time,
       MAX(end_time) as last_slot_time
-    FROM emr.doctor_availability 
-    WHERE tenant_id = $1 
+    FROM nexus.doctor_availability 
+    WHERE tenant_id::text = $1::text 
       AND ($2::uuid IS NULL OR doctor_id = $2)
       AND date BETWEEN $3 AND $4
       AND is_available = true

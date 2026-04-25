@@ -8,7 +8,7 @@ const DEV_PROCESS_HINTS = ['server/index.js', 'vite', 'concurrently'];
 
 function matchesRepoProcess(commandLine = '') {
     const normalized = commandLine.toLowerCase();
-    return DEV_PROCESS_HINTS.some((hint) => normalized.includes(hint));
+    return normalized.includes(REPO_PATH) && DEV_PROCESS_HINTS.some((hint) => normalized.includes(hint));
 }
 
 async function getWindowsListeners(port) {
@@ -85,10 +85,16 @@ async function killProcess(pid) {
 
 async function cleanupPort(port) {
     const listeners = await getListeners(port);
-    
-    for (const listener of listeners) {
+    const candidates = listeners.filter((listener) => matchesRepoProcess(listener.commandLine));
+
+    for (const listener of candidates) {
         await killProcess(listener.pid);
-        console.log(`Cleared listener on port ${port} (PID ${listener.pid}) - ${listener.commandLine?.slice(0, 50)}...`);
+        console.log(`Cleared stale dev listener on port ${port} (PID ${listener.pid})`);
+    }
+
+    const skipped = listeners.filter((listener) => !matchesRepoProcess(listener.commandLine));
+    for (const listener of skipped) {
+        console.log(`Left port ${port} listener untouched (PID ${listener.pid}) because it does not look like this repo's dev process`);
     }
 }
 

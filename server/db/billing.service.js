@@ -17,10 +17,10 @@ export async function getInvoices(tenantId, filters = {}) {
       i.*, p.first_name || ' ' || p.last_name as patient_name,
       p.phone as patient_phone,
       u.name as doctor_name
-    FROM invoices i
-    LEFT JOIN patients p ON i.patient_id = p.id
-    LEFT JOIN encounters e ON i.encounter_id = e.id
-    LEFT JOIN emr.users u ON e.provider_id = u.id
+    FROM nexus.invoices i
+    LEFT JOIN nexus.patients p ON i.patient_id::text = p.id::text
+    LEFT JOIN nexus.encounters e ON i.encounter_id::text = e.id::text
+    LEFT JOIN nexus.users u ON e.provider_id::text = u.id::text
     WHERE i.tenant_id::text = $1::text
   `;
   
@@ -33,12 +33,12 @@ export async function getInvoices(tenantId, filters = {}) {
   }
   
   if (patientId) {
-    sql += ` AND i.patient_id = $${paramIndex++}`;
+    sql += ` AND i.patient_id::text = $${paramIndex++}::text`;
     params.push(patientId);
   }
   
   if (doctorId) {
-    sql += ` AND i.doctor_id = $${paramIndex++}`;
+    sql += ` AND i.doctor_id::text = $${paramIndex++}::text`;
     params.push(doctorId);
   }
   
@@ -64,13 +64,13 @@ export async function getInvoices(tenantId, filters = {}) {
 }
 
 export async function createInvoice({ tenantId, patientId, encounterId, items, subtotal, taxAmount, totalAmount }) {
-  // Generate invoice number correctly from emr schema
-  const invoiceNumberSql = `SELECT emr.get_next_invoice_number($1) as invoice_number`;
+  // Generate invoice number correctly from nexus schema
+  const invoiceNumberSql = `SELECT nexus.get_next_invoice_number($1) as invoice_number`;
   const invoiceNumberResult = await query(invoiceNumberSql, [tenantId]);
   const invoiceNumber = invoiceNumberResult.rows[0].invoice_number;
   
   const sql = `
-    INSERT INTO invoices (
+    INSERT INTO nexus.invoices (
       tenant_id, patient_id, encounter_id, invoice_number, subtotal, tax, total, status
     )
     VALUES ($1, $2, $3, $4, $5, $6, $7, 'unpaid')
@@ -84,7 +84,7 @@ export async function createInvoice({ tenantId, patientId, encounterId, items, s
   // Insert items into invoice_items if provided
   if (items && Array.isArray(items)) {
     for (const item of items) {
-       await query(`INSERT INTO invoice_items (tenant_id, invoice_id, description, quantity, unit_price, total) VALUES ($1, $2, $3, $4, $5, $6)`,
+       await query(`INSERT INTO nexus.invoice_items (tenant_id, invoice_id, description, quantity, unit_price, total) VALUES ($1, $2, $3, $4, $5, $6)`,
          [tenantId, result.rows[0].id, item.description, item.quantity || 1, item.unitPrice || item.price, item.total]);
     }
   }
@@ -108,7 +108,7 @@ export async function updateInvoiceStatus(invoiceId, tenantId, status, additiona
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE invoices
+    UPDATE nexus.invoices
     SET ${setClause}
     WHERE id::text = $${paramIndex++}::text AND tenant_id::text = $${paramIndex++}::text
     RETURNING *
@@ -120,7 +120,7 @@ export async function updateInvoiceStatus(invoiceId, tenantId, status, additiona
 
 export async function payInvoice({ tenantId, invoiceId, paymentMethod, paymentAmount, transactionId, notes, paidBy }) {
   const sql = `
-    UPDATE invoices 
+    UPDATE nexus.invoices 
     SET status = 'paid', payment_method = $1, paid = $2, transaction_id = $3, payment_date = NOW(), payment_notes = $4, paid_by = $5, updated_at = NOW()
     WHERE id::text = $6::text AND tenant_id::text = $7::text
     RETURNING *
@@ -136,9 +136,9 @@ export async function getInvoiceById(invoiceId, tenantId) {
       i.*, p.first_name || ' ' || p.last_name as patient_name,
       p.phone as patient_phone,
       u.name as doctor_name
-    FROM invoices i
-    LEFT JOIN patients p ON i.patient_id = p.id
-    LEFT JOIN emr.users u ON i.doctor_id = u.id
+    FROM nexus.invoices i
+    LEFT JOIN nexus.patients p ON i.patient_id::text = p.id::text
+    LEFT JOIN nexus.users u ON i.doctor_id::text = u.id::text
     WHERE i.id::text = $1::text AND i.tenant_id::text = $2::text
   `;
   
@@ -155,10 +155,10 @@ export async function getBillingItems(tenantId, filters = {}) {
   let sql = `
     SELECT bi.*, p.first_name || ' ' || p.last_name AS patient_name,
            fv.token_number AS visit_token, inv.invoice_number
-    FROM billing_items bi
-    LEFT JOIN patients p ON bi.patient_id = p.id
-    LEFT JOIN frontdesk_visits fv ON bi.visit_id = fv.id
-    LEFT JOIN billing_invoices inv ON bi.invoice_id = inv.id
+    FROM nexus.billing_items bi
+    LEFT JOIN nexus.patients p ON bi.patient_id::text = p.id::text
+    LEFT JOIN nexus.frontdesk_visits fv ON bi.visit_id::text = fv.id::text
+    LEFT JOIN nexus.invoices inv ON bi.invoice_id::text = inv.id::text
     WHERE bi.tenant_id::text = $1::text
   `;
 
@@ -192,14 +192,14 @@ export async function getBillingItems(tenantId, filters = {}) {
 }
 
 export async function getBillingItemById(itemId, tenantId) {
-  const sql = `SELECT * FROM billing_items WHERE id::text = $1::text AND tenant_id::text = $2::text`;
+  const sql = `SELECT * FROM nexus.billing_items WHERE id::text = $1::text AND tenant_id::text = $2::text`;
   const result = await query(sql, [itemId, tenantId]);
   return result.rows[0];
 }
 
 export async function createBillingItem({ tenantId, patientId, visitId, invoiceId, itemCode, itemName, quantity = 1, unitPrice = 0, discountAmount = 0, taxAmount = 0, status = 'pending' }) {
   const sql = `
-    INSERT INTO billing_items (
+    INSERT INTO nexus.billing_items (
       tenant_id, patient_id, visit_id, invoice_id,
       item_code, item_name, quantity, unit_price,
       discount_amount, tax_amount, status
@@ -236,7 +236,7 @@ export async function updateBillingItem({ itemId, tenantId, updates = {} }) {
   values.push(new Date());
 
   const sql = `
-    UPDATE billing_items
+    UPDATE nexus.billing_items
     SET ${fields.join(', ')}
     WHERE id::text = $${index++}::text AND tenant_id::text = $${index++}::text
     RETURNING *
@@ -248,7 +248,7 @@ export async function updateBillingItem({ itemId, tenantId, updates = {} }) {
 }
 
 export async function deleteBillingItem(itemId, tenantId) {
-  const sql = `DELETE FROM billing_items WHERE id::text = $1::text AND tenant_id::text = $2::text RETURNING *`;
+  const sql = `DELETE FROM nexus.billing_items WHERE id::text = $1::text AND tenant_id::text = $2::text RETURNING *`;
   const result = await query(sql, [itemId, tenantId]);
   return result.rows[0];
 }
@@ -257,9 +257,9 @@ export async function getBillingConcessions(tenantId, filters = {}) {
   const { patientId, invoiceId, status } = filters;
   let sql = `
     SELECT bc.*, p.first_name || ' ' || p.last_name AS patient_name, inv.invoice_number
-    FROM billing_concessions bc
-    LEFT JOIN patients p ON bc.patient_id = p.id
-    LEFT JOIN billing_invoices inv ON bc.invoice_id = inv.id
+    FROM nexus.billing_concessions bc
+    LEFT JOIN nexus.patients p ON bc.patient_id = p.id
+    LEFT JOIN nexus.invoices inv ON bc.invoice_id = inv.id
     WHERE bc.tenant_id::text = $1::text
   `;
 
@@ -289,7 +289,7 @@ export async function getBillingConcessions(tenantId, filters = {}) {
 
 export async function createBillingConcession({ tenantId, patientId, invoiceId, concessionType, amount, reason, approvedBy = null, approvedAt = null, status = 'pending' }) {
   const sql = `
-    INSERT INTO billing_concessions (
+    INSERT INTO nexus.billing_concessions (
       tenant_id, patient_id, invoice_id,
       concession_type, amount, reason,
       approved_by, approved_at, status
@@ -317,7 +317,7 @@ export async function updateBillingConcession({ concessionId, tenantId, updates 
   }
 
   if (fields.length === 0) {
-    const result = await query(`SELECT * FROM billing_concessions WHERE id::text = $1::text AND tenant_id::text = $2::text`, [concessionId, tenantId]);
+    const result = await query(`SELECT * FROM nexus.billing_concessions WHERE id::text = $1::text AND tenant_id::text = $2::text`, [concessionId, tenantId]);
     return result.rows[0];
   }
 
@@ -325,7 +325,7 @@ export async function updateBillingConcession({ concessionId, tenantId, updates 
   values.push(new Date());
 
   const sql = `
-    UPDATE billing_concessions
+    UPDATE nexus.billing_concessions
     SET ${fields.join(', ')}
     WHERE id::text = $${index++}::text AND tenant_id::text = $${index++}::text
     RETURNING *
@@ -338,7 +338,7 @@ export async function updateBillingConcession({ concessionId, tenantId, updates 
 
 export async function getCreditNotes(tenantId, filters = {}) {
   const { patientId, invoiceId } = filters;
-  let sql = `SELECT cn.* FROM billing_credit_notes cn WHERE cn.tenant_id::text = $1::text`;
+  let sql = `SELECT cn.* FROM nexus.billing_credit_notes cn WHERE cn.tenant_id::text = $1::text`;
   const params = [tenantId];
   let paramIndex = 2;
 
@@ -363,7 +363,7 @@ export async function createCreditNote({ tenantId, patientId, originalInvoiceId,
   }
 
   const sql = `
-    INSERT INTO billing_credit_notes (
+    INSERT INTO nexus.billing_credit_notes (
       tenant_id, patient_id, original_invoice_id,
       credit_note_number, amount, reason
     ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -378,9 +378,9 @@ export async function getBillingApprovals(tenantId, filters = {}) {
   const { patientId, invoiceId, status } = filters;
   let sql = `
     SELECT ba.*, p.first_name || ' ' || p.last_name AS patient_name, inv.invoice_number
-    FROM billing_approvals ba
-    LEFT JOIN patients p ON ba.patient_id = p.id
-    LEFT JOIN billing_invoices inv ON ba.invoice_id = inv.id
+    FROM nexus.billing_approvals ba
+    LEFT JOIN nexus.patients p ON ba.patient_id = p.id
+    LEFT JOIN nexus.invoices inv ON ba.invoice_id = inv.id
     WHERE ba.tenant_id::text = $1::text
   `;
 
@@ -409,7 +409,7 @@ export async function getBillingApprovals(tenantId, filters = {}) {
 
 export async function createBillingApproval({ tenantId, patientId, invoiceId, approvalType, amount, requestedBy, status = 'pending', notes = null }) {
   const sql = `
-    INSERT INTO billing_approvals (
+    INSERT INTO nexus.billing_approvals (
       tenant_id, patient_id, invoice_id,
       approval_type, amount, requested_by,
       status, notes
@@ -437,7 +437,7 @@ export async function updateBillingApproval({ approvalId, tenantId, updates = {}
   }
 
   if (fields.length === 0) {
-    const result = await query(`SELECT * FROM billing_approvals WHERE id::text = $1::text AND tenant_id::text = $2::text`, [approvalId, tenantId]);
+    const result = await query(`SELECT * FROM nexus.billing_approvals WHERE id::text = $1::text AND tenant_id::text = $2::text`, [approvalId, tenantId]);
     return result.rows[0];
   }
 
@@ -445,7 +445,7 @@ export async function updateBillingApproval({ approvalId, tenantId, updates = {}
   values.push(new Date());
 
   const sql = `
-    UPDATE billing_approvals
+    UPDATE nexus.billing_approvals
     SET ${fields.join(', ')}
     WHERE id::text = $${index++}::text AND tenant_id::text = $${index++}::text
     RETURNING *
@@ -457,14 +457,14 @@ export async function updateBillingApproval({ approvalId, tenantId, updates = {}
 }
 
 export async function getCorporateClients(tenantId) {
-  const sql = `SELECT * FROM corporate_clients WHERE tenant_id::text = $1::text ORDER BY client_name`;
+  const sql = `SELECT * FROM nexus.corporate_clients WHERE tenant_id::text = $1::text ORDER BY client_name`;
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
 
 export async function createCorporateClient({ tenantId, clientName, clientCode, contactPerson, phone, email, address, billingAddress, creditLimit, paymentTerms, isActive = true }) {
   const sql = `
-    INSERT INTO corporate_clients (
+    INSERT INTO nexus.corporate_clients (
       tenant_id, client_name, client_code,
       contact_person, phone, email, address,
       billing_address, credit_limit, payment_terms, is_active
@@ -482,8 +482,8 @@ export async function getCorporateBills(tenantId, filters = {}) {
   const { clientId, status } = filters;
   let sql = `
     SELECT cb.*, cc.client_name
-    FROM corporate_bills cb
-    LEFT JOIN corporate_clients cc ON cb.client_id = cc.id
+    FROM nexus.corporate_bills cb
+    LEFT JOIN nexus.corporate_clients cc ON cb.client_id = cc.id
     WHERE cb.tenant_id::text = $1::text
   `;
 
@@ -508,8 +508,8 @@ export async function getCorporateBills(tenantId, filters = {}) {
 export async function getCorporateBillById(billId, tenantId) {
   const sql = `
     SELECT cb.*, cc.client_name
-    FROM corporate_bills cb
-    LEFT JOIN corporate_clients cc ON cb.client_id = cc.id
+    FROM nexus.corporate_bills cb
+    LEFT JOIN nexus.corporate_clients cc ON cb.client_id = cc.id
     WHERE cb.id::text = $1::text AND cb.tenant_id::text = $2::text
   `;
   const result = await query(sql, [billId, tenantId]);
@@ -522,7 +522,7 @@ export async function createCorporateBill({ tenantId, clientId, billNumber = nul
   }
 
   const sql = `
-    INSERT INTO corporate_bills (
+    INSERT INTO nexus.corporate_bills (
       tenant_id, client_id, bill_number,
       total_amount, paid_amount, status, due_date
     ) VALUES ($1, $2, $3, $4, 0, $5, $6)
@@ -552,7 +552,7 @@ export async function updateCorporateBill({ billId, tenantId, updates = {} }) {
   values.push(new Date());
 
   const sql = `
-    UPDATE corporate_bills
+    UPDATE nexus.corporate_bills
     SET ${fields.join(', ')}
     WHERE id::text = $${index++}::text AND tenant_id::text = $${index++}::text
     RETURNING *
@@ -566,8 +566,8 @@ export async function updateCorporateBill({ billId, tenantId, updates = {} }) {
 export async function getCorporateBillItems(billId, tenantId) {
   const sql = `
     SELECT cbi.*, p.first_name || ' ' || p.last_name AS patient_name
-    FROM corporate_bill_items cbi
-    LEFT JOIN patients p ON cbi.patient_id = p.id
+    FROM nexus.corporate_bill_items cbi
+    LEFT JOIN nexus.patients p ON cbi.patient_id = p.id
     WHERE cbi.bill_id::text = $1::text AND cbi.tenant_id::text = $2::text
     ORDER BY cbi.created_at DESC
   `;
@@ -577,7 +577,7 @@ export async function getCorporateBillItems(billId, tenantId) {
 
 export async function createCorporateBillItem({ tenantId, billId, patientId, serviceDescription, amount }) {
   const sql = `
-    INSERT INTO corporate_bill_items (
+    INSERT INTO nexus.corporate_bill_items (
       tenant_id, bill_id, patient_id, service_description, amount
     ) VALUES ($1, $2, $3, $4, $5)
     RETURNING *

@@ -83,12 +83,27 @@ export default function FindDoctorPage({
   const specialties = ['All', 'Cardiologist', 'Neurologist', 'Pediatrician', 'Orthopedic Surgeon', 'General Physician', 'Dermatologist', 'Gynecologist'];
 
   useEffect(() => {
-    // Simulate loading doctors
-    setTimeout(() => {
-      setDoctors(mockDoctors);
+    if (Array.isArray(providers) && providers.length > 0) {
+      const dbDoctors = providers.map(p => ({
+        id: p.id,
+        name: p.name || 'Unknown Doctor',
+        specialty: p.department || p.role || 'General Physician',
+        experience: 10, // Fallback
+        rating: 4.8,    // Fallback
+        consultationFee: 500, // Fallback
+        availableDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+        location: 'Main Block',
+        education: 'MD',
+        languages: ['English']
+      }));
+      setDoctors(dbDoctors);
       setLoading(false);
-    }, 1000);
-  }, []);
+    } else {
+      // Fallback to mock if absolutely no providers, but label it
+      setDoctors(mockDoctors.map(d => ({ ...d, isMock: true })));
+      setLoading(false);
+    }
+  }, [providers]);
 
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

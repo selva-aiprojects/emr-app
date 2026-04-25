@@ -53,6 +53,7 @@ class MenuService {
   }
 
   /**
+
    * Get user's allowed modules (backward compatibility)
    */
   async getUserAllowedModules() {

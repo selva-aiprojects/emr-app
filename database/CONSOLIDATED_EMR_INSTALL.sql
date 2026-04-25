@@ -14,7 +14,7 @@ CREATE SCHEMA IF NOT EXISTS emr;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Shared timestamp trigger function
-CREATE OR REPLACE FUNCTION emr.set_updated_at()
+CREATE OR REPLACE FUNCTION nexus.set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
   NEW.updated_at = now();
@@ -22,15 +22,15 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trg_patients_updated_at BEFORE UPDATE ON emr.patients FOR EACH ROW EXECUTE FUNCTION emr.set_updated_at();
-CREATE TRIGGER trg_appointments_updated_at BEFORE UPDATE ON emr.appointments FOR EACH ROW EXECUTE FUNCTION emr.set_updated_at();
-CREATE TRIGGER trg_ambulances_updated_at BEFORE UPDATE ON emr.ambulances FOR EACH ROW EXECUTE FUNCTION emr.set_updated_at();
+CREATE TRIGGER trg_patients_updated_at BEFORE UPDATE ON nexus.patients FOR EACH ROW EXECUTE FUNCTION nexus.set_updated_at();
+CREATE TRIGGER trg_appointments_updated_at BEFORE UPDATE ON nexus.appointments FOR EACH ROW EXECUTE FUNCTION nexus.set_updated_at();
+CREATE TRIGGER trg_ambulances_updated_at BEFORE UPDATE ON nexus.ambulances FOR EACH ROW EXECUTE FUNCTION nexus.set_updated_at();
 
 -- =====================================================
 -- 1. TENANCY & GOVERNANCE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.tenants (
+CREATE TABLE IF NOT EXISTS nexus.tenants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   code varchar(32) NOT NULL UNIQUE,
@@ -50,9 +50,9 @@ CREATE TABLE IF NOT EXISTS emr.tenants (
 -- 2. USER ACCESS & SECURITY
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.users (
+CREATE TABLE IF NOT EXISTS nexus.users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   email text NOT NULL,
   password_hash text NOT NULL,
   name text NOT NULL,
@@ -67,9 +67,9 @@ CREATE TABLE IF NOT EXISTS emr.users (
   CHECK ((role = 'Superadmin' AND tenant_id IS NULL) OR (role != 'Superadmin' AND tenant_id IS NOT NULL))
 );
 
-CREATE TABLE IF NOT EXISTS emr.sessions (
+CREATE TABLE IF NOT EXISTS nexus.sessions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL REFERENCES emr.users(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES nexus.users(id) ON DELETE CASCADE,
   token_hash text NOT NULL,
   expires_at timestamptz NOT NULL,
   created_at timestamptz NOT NULL DEFAULT now()
@@ -79,9 +79,9 @@ CREATE TABLE IF NOT EXISTS emr.sessions (
 -- 3. CORE CLINICAL ENTITIES
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.patients (
+CREATE TABLE IF NOT EXISTS nexus.patients (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   mrn varchar(64) NOT NULL,
   first_name text NOT NULL,
   last_name text NOT NULL,
@@ -99,11 +99,11 @@ CREATE TABLE IF NOT EXISTS emr.patients (
   UNIQUE (tenant_id, mrn)
 );
 
-CREATE TABLE IF NOT EXISTS emr.appointments (
+CREATE TABLE IF NOT EXISTS nexus.appointments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-  patient_id uuid NOT NULL REFERENCES emr.patients(id) ON DELETE RESTRICT,
-  provider_id uuid REFERENCES emr.users(id) ON DELETE SET NULL,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+  patient_id uuid NOT NULL REFERENCES nexus.patients(id) ON DELETE RESTRICT,
+  provider_id uuid REFERENCES nexus.users(id) ON DELETE SET NULL,
   scheduled_start timestamptz NOT NULL,
   scheduled_end timestamptz NOT NULL,
   status varchar(16) NOT NULL DEFAULT 'scheduled' CHECK (status IN ('requested', 'scheduled', 'checked_in', 'completed', 'cancelled', 'no_show')),
@@ -113,11 +113,11 @@ CREATE TABLE IF NOT EXISTS emr.appointments (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS emr.encounters (
+CREATE TABLE IF NOT EXISTS nexus.encounters (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-  patient_id uuid NOT NULL REFERENCES emr.patients(id) ON DELETE RESTRICT,
-  provider_id uuid REFERENCES emr.users(id) ON DELETE SET NULL,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+  patient_id uuid NOT NULL REFERENCES nexus.patients(id) ON DELETE RESTRICT,
+  provider_id uuid REFERENCES nexus.users(id) ON DELETE SET NULL,
   encounter_type varchar(16) NOT NULL CHECK (encounter_type IN ('OPD', 'IPD', 'emergency')),
   visit_date date NOT NULL DEFAULT CURRENT_DATE,
   chief_complaint text,
@@ -132,10 +132,10 @@ CREATE TABLE IF NOT EXISTS emr.encounters (
 -- 4. PHARMACY & LABORATORY
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.prescriptions (
+CREATE TABLE IF NOT EXISTS nexus.prescriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-  encounter_id uuid NOT NULL REFERENCES emr.encounters(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+  encounter_id uuid NOT NULL REFERENCES nexus.encounters(id) ON DELETE CASCADE,
   drug_name text NOT NULL,
   dosage text,
   frequency text,
@@ -146,12 +146,12 @@ CREATE TABLE IF NOT EXISTS emr.prescriptions (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS emr.service_requests (
+CREATE TABLE IF NOT EXISTS nexus.service_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-  patient_id uuid NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-  encounter_id uuid REFERENCES emr.encounters(id) ON DELETE SET NULL,
-  requester_id uuid REFERENCES emr.users(id) ON DELETE SET NULL,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+  patient_id uuid NOT NULL REFERENCES nexus.patients(id) ON DELETE CASCADE,
+  encounter_id uuid REFERENCES nexus.encounters(id) ON DELETE SET NULL,
+  requester_id uuid REFERENCES nexus.users(id) ON DELETE SET NULL,
   category varchar(32) NOT NULL CHECK (category IN ('lab', 'radiology', 'procedure', 'consultation')),
   code varchar(64),
   display text NOT NULL,
@@ -166,9 +166,9 @@ CREATE TABLE IF NOT EXISTS emr.service_requests (
 -- 5. OPERATIONAL UNITS (WARDS, BEDS, DEPARTMENTS)
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.departments (
+CREATE TABLE IF NOT EXISTS nexus.departments (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   name text NOT NULL,
   code varchar(32) NOT NULL,
   status varchar(16) DEFAULT 'active',
@@ -177,9 +177,9 @@ CREATE TABLE IF NOT EXISTS emr.departments (
   UNIQUE (tenant_id, code)
 );
 
-CREATE TABLE IF NOT EXISTS emr.wards (
+CREATE TABLE IF NOT EXISTS nexus.wards (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   name text NOT NULL,
   type varchar(32) NOT NULL,
   status varchar(16) DEFAULT 'Active',
@@ -188,10 +188,10 @@ CREATE TABLE IF NOT EXISTS emr.wards (
   UNIQUE (tenant_id, name)
 );
 
-CREATE TABLE IF NOT EXISTS emr.beds (
+CREATE TABLE IF NOT EXISTS nexus.beds (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-  ward_id uuid NOT NULL REFERENCES emr.wards(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+  ward_id uuid NOT NULL REFERENCES nexus.wards(id) ON DELETE CASCADE,
   bed_number varchar(16) NOT NULL,
   status varchar(16) DEFAULT 'Available',
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -203,11 +203,11 @@ CREATE TABLE IF NOT EXISTS emr.beds (
 -- 6. FINANCE & BILLING
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.invoices (
+CREATE TABLE IF NOT EXISTS nexus.invoices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-  patient_id uuid NOT NULL REFERENCES emr.patients(id) ON DELETE RESTRICT,
-  encounter_id uuid REFERENCES emr.encounters(id) ON DELETE SET NULL,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+  patient_id uuid NOT NULL REFERENCES nexus.patients(id) ON DELETE RESTRICT,
+  encounter_id uuid REFERENCES nexus.encounters(id) ON DELETE SET NULL,
   invoice_number varchar(64) NOT NULL,
   total numeric(12,2) DEFAULT 0,
   paid numeric(12,2) DEFAULT 0,
@@ -217,9 +217,9 @@ CREATE TABLE IF NOT EXISTS emr.invoices (
   UNIQUE (tenant_id, invoice_number)
 );
 
-CREATE TABLE IF NOT EXISTS emr.inventory_items (
+CREATE TABLE IF NOT EXISTS nexus.inventory_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   item_code varchar(64) NOT NULL,
   name text NOT NULL,
   category text,
@@ -230,9 +230,9 @@ CREATE TABLE IF NOT EXISTS emr.inventory_items (
   UNIQUE (tenant_id, item_code)
 );
 
-CREATE TABLE IF NOT EXISTS emr.expenses (
+CREATE TABLE IF NOT EXISTS nexus.expenses (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   category varchar(64) NOT NULL,
   amount numeric(12,2) NOT NULL,
   date date NOT NULL DEFAULT CURRENT_DATE,
@@ -245,9 +245,9 @@ CREATE TABLE IF NOT EXISTS emr.expenses (
 -- 7. HR & PAYROLL
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.employees (
+CREATE TABLE IF NOT EXISTS nexus.employees (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   code varchar(64) NOT NULL,
   name text NOT NULL,
   role varchar(32),
@@ -258,9 +258,9 @@ CREATE TABLE IF NOT EXISTS emr.employees (
   UNIQUE (tenant_id, code)
 );
 
-CREATE TABLE IF NOT EXISTS emr.payroll_runs (
+CREATE TABLE IF NOT EXISTS nexus.payroll_runs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   period_month int NOT NULL,
   period_year int NOT NULL,
   status varchar(16) DEFAULT 'draft',
@@ -271,9 +271,9 @@ CREATE TABLE IF NOT EXISTS emr.payroll_runs (
 -- 8. ADVANCED MODULES (BLOOD BANK, AMBULANCE)
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.donors (
+CREATE TABLE IF NOT EXISTS nexus.donors (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   code varchar(32) NOT NULL,
   name text NOT NULL,
   blood_group varchar(8) NOT NULL,
@@ -282,10 +282,10 @@ CREATE TABLE IF NOT EXISTS emr.donors (
   UNIQUE (tenant_id, code)
 );
 
-CREATE TABLE IF NOT EXISTS emr.blood_units (
+CREATE TABLE IF NOT EXISTS nexus.blood_units (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-  created_by uuid REFERENCES emr.users(id) ON DELETE SET NULL,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+  created_by uuid REFERENCES nexus.users(id) ON DELETE SET NULL,
   unit_number varchar(48) NOT NULL,
   blood_group varchar(8) NOT NULL,
   component varchar(24) NOT NULL,
@@ -298,9 +298,9 @@ CREATE TABLE IF NOT EXISTS emr.blood_units (
   UNIQUE (tenant_id, unit_number)
 );
 
-CREATE TABLE IF NOT EXISTS emr.ambulances (
+CREATE TABLE IF NOT EXISTS nexus.ambulances (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
   vehicle_number varchar(32) NOT NULL,
   model text,
   status varchar(24) DEFAULT 'Available',
@@ -316,17 +316,17 @@ CREATE TABLE IF NOT EXISTS emr.ambulances (
 -- 9. SECURITY & GOVERNANCE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.global_kill_switches (
+CREATE TABLE IF NOT EXISTS nexus.global_kill_switches (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   feature_flag VARCHAR(100) NOT NULL UNIQUE,
   enabled BOOLEAN NOT NULL DEFAULT false,
   created_at timestamptz DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS emr.audit_logs (
+CREATE TABLE IF NOT EXISTS nexus.audit_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid REFERENCES emr.tenants(id) ON DELETE CASCADE,
-  user_id uuid REFERENCES emr.users(id) ON DELETE SET NULL,
+  tenant_id uuid REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES nexus.users(id) ON DELETE SET NULL,
   user_name text,
   action text NOT NULL,
   entity_name text,
@@ -340,9 +340,9 @@ CREATE TABLE IF NOT EXISTS emr.audit_logs (
 -- =====================================================
 
 -- Initial Superadmin
-INSERT INTO emr.users (email, password_hash, name, role, is_active)
+INSERT INTO nexus.users (email, password_hash, name, role, is_active)
 VALUES (
-  'superadmin@emr.local',
+  'superadmin@nexus.local',
   '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC', -- Admin@123
   'Global Administrator',
   'Superadmin',
@@ -350,7 +350,7 @@ VALUES (
 ) ON CONFLICT (email) WHERE (tenant_id IS NULL) DO NOTHING;
 
 -- Demo Tenant: New Age Hospital (NAH)
-INSERT INTO emr.tenants (id, name, code, subdomain, subscription_tier, theme)
+INSERT INTO nexus.tenants (id, name, code, subdomain, subscription_tier, theme)
 VALUES (
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed',
   'New Age Hospital',
@@ -361,7 +361,7 @@ VALUES (
 ) ON CONFLICT (code) DO UPDATE SET subscription_tier = 'Professional';
 
 -- Demo Tenant Admin: admin@newage.hospital
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO nexus.users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed',
   'admin@newage.hospital',

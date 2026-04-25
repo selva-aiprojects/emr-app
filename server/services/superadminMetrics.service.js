@@ -30,46 +30,40 @@ export async function ensureManagementPlaneInfrastructure() {
     
     await pool.query(SERVICE_LAYER_EXTENSIONS);
 
+    // Management subscriptions are now managed in SHARD_MASTER_BASELINE.sql
+    /*
     await pool.query(`
-      INSERT INTO emr.management_subscriptions (tier, plan_name, price, limit_users, features)
-      VALUES 
-        ('Free', 'Hobbyist Pilot', 'Rs0', 1, '["permission-core_engine-access"]'),
-        ('Basic', 'Small Clinic', 'Rs1999', 5, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access"]'),
-        ('Professional', 'Specialty Center', 'Rs5999', 25, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access"]'),
-        ('Enterprise', 'Full Hospital OS', 'Rs9999', 1000, '["permission-core_engine-access", "permission-pharmacy_lab-access", "permission-customer_support-access", "permission-inpatient-access", "permission-accounts-access", "permission-hr_payroll-access"]')
-      ON CONFLICT (tier) DO UPDATE SET 
-        plan_name = EXCLUDED.plan_name,
-        price = EXCLUDED.price,
-        limit_users = EXCLUDED.limit_users,
-        features = EXCLUDED.features
+      INSERT INTO nexus.management_subscriptions (tier, plan_name, price, limit_users, features)
+      ...
     `);
+    */
 
     const adminHash = '$2a$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC'; // Admin@123
     
     console.log('🔍 [INFRA] Institutional Auto-Discovery is now dormant (Clean State Enabled).');
 
     await pool.query(`
-      INSERT INTO emr.users (email, password_hash, role, name, is_active)
-      VALUES ('admin@healthezee.com', $1, 'Superadmin', 'Healthezee Governance', true)
+      INSERT INTO users (email, password_hash, role_id, name, is_active)
+      VALUES ('admin@healthezee.com', $1, 'superadmin', 'Healthezee Governance', true)
       ON CONFLICT (email) DO UPDATE SET is_active = true
     `, [adminHash]);
 
     console.log('🔄 [INFRA] Finalizing Management Plane Mapping...');
-    const { rows: tenants } = await pool.query('SELECT * FROM emr.tenants');
+    const { rows: tenants } = await pool.query('SELECT * FROM nexus.tenants');
     for (const t of tenants) {
       try {
         const scName = (t.schema_name || t.code || 'public').toLowerCase();
         await pool.query(`
-          INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status)
+          INSERT INTO nexus.management_tenants (id, name, code, subdomain, schema_name, status)
           VALUES ($1, $2, $3, $4, $5, 'active')
           ON CONFLICT (id) DO UPDATE SET 
             code = EXCLUDED.code,
             name = EXCLUDED.name,
             subdomain = EXCLUDED.subdomain,
             schema_name = CASE 
-              WHEN emr.management_tenants.schema_name IS NULL OR emr.management_tenants.schema_name = '' 
+              WHEN nexus.management_tenants.schema_name IS NULL OR nexus.management_tenants.schema_name = '' 
               THEN EXCLUDED.schema_name 
-              ELSE emr.management_tenants.schema_name 
+              ELSE nexus.management_tenants.schema_name 
             END,
             updated_at = NOW()
         `, [t.id, t.name, t.code, t.subdomain, scName]);
@@ -94,6 +88,7 @@ export async function ensureManagementPlaneInfrastructure() {
         console.error('❌ [INFRA_ERROR] Management Plane stabilization failed:', err.message);
         // Don't set infrastructureReady = true if it's a different error
     }
+
   }
 }
 
@@ -101,7 +96,7 @@ export async function performFullTelemetrySync() {
   await ensureManagementPlaneInfrastructure();
   try {
      console.log('🔄 [TELEMETRY] Starting platform-wide telemetry audit...');
-     await pool.query('SELECT emr.refresh_all_management_tenant_metrics()');
+     await pool.query('SELECT refresh_all_management_tenant_metrics()');
      console.log('✅ [TELEMETRY] Platform-wide audit complete.');
   } catch (e) {
      console.error('❌ [TELEMETRY_ERROR] Audit failed:', e.message);
@@ -110,31 +105,23 @@ export async function performFullTelemetrySync() {
 
 export async function installTenantMetricsSync(schemaName, tenantId) {
   await ensureManagementPlaneInfrastructure();
-  await pool.query('SELECT emr.install_tenant_metrics_sync($1, $2::text)', [schemaName, tenantId]);
+  await pool.query('SELECT nexus.install_tenant_metrics_sync($1, $2::text)', [schemaName, tenantId]);
 }
 
 export async function refreshTenantMetrics(tenantId, schemaName = null) {
   await ensureManagementPlaneInfrastructure();
   // Self-heal registry drift: ensure tenant exists in management_tenants before metric refresh.
   await pool.query(`
-    INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, created_at, updated_at)
-    SELECT
-      t.id,
-      COALESCE(NULLIF(t.name, ''), t.code),
-      t.code,
-      COALESCE(NULLIF(t.subdomain, ''), lower(t.code)),
-      COALESCE(NULLIF(t.schema_name, ''), lower(t.code)),
-      COALESCE(NULLIF(t.status, ''), 'active'),
-      NOW(),
-      NOW()
-    FROM emr.tenants t
+    INSERT INTO nexus.management_tenants (id, name, code, subdomain, status)
+    SELECT id, name, code, subdomain, status
+    FROM nexus.tenants t
     WHERE t.id::text = $1::text
-    ON CONFLICT (code) DO UPDATE SET
+    ON CONFLICT (id) DO UPDATE SET
       name = EXCLUDED.name,
       updated_at = NOW()
   `, [tenantId]).catch(() => {});
 
-  await pool.query('SELECT emr.refresh_management_tenant_metrics($1::text, $2)', [tenantId, schemaName]).catch(e => {
+  await pool.query('SELECT nexus.refresh_management_tenant_metrics($1::text, $2)', [tenantId, schemaName]).catch(e => {
     console.warn('[refreshTenantMetrics] Postgres function unavailable:', e.message);
   });
 }
@@ -153,9 +140,9 @@ export async function getSuperadminOverview() {
           MAX(COALESCE(mtm.available_beds, 0)) AS available_beds,
           MAX(COALESCE(mtm.available_ambulances, 0)) AS available_ambulances,
           MAX(COALESCE(mtm.active_users_count, 0)) AS active_users_count
-        FROM emr.management_tenant_metrics mtm
-        LEFT JOIN emr.management_tenants mt ON mt.id::text = mtm.tenant_id::text
-        GROUP BY lower(coalesce(mt.code, mtm.tenant_code))
+          FROM nexus.management_tenant_metrics mtm
+          LEFT JOIN nexus.management_tenants mt ON mt.id::text = mtm.tenant_id::text
+          GROUP BY lower(coalesce(mt.code, mtm.tenant_code))
       )
       SELECT 
         t.id as tenant_id,
@@ -170,7 +157,7 @@ export async function getSuperadminOverview() {
         COALESCE(mbc.available_beds, 0) as available_beds,
         COALESCE(mbc.available_ambulances, 0) as available_ambulances,
         COALESCE(mbc.active_users_count, 0) as active_users_count
-      FROM emr.management_tenants t
+      FROM nexus.management_tenants t
       LEFT JOIN metrics_by_code mbc ON lower(t.code) = mbc.code_key
       ORDER BY t.created_at DESC
     `);
@@ -203,10 +190,10 @@ export async function getSuperadminOverview() {
         const liveDoctors  = dRes.rows[0]?.c || 0;
         const liveBeds     = bRes.rows[0]?.c || 0;
         const liveAmb      = aRes.rows[0]?.c || 0;
-        const legacyPatientsRes = await pool.query(`SELECT COUNT(*)::int AS c FROM emr.patients WHERE tenant_id::text = $1::text`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
-        const legacyDoctorsRes = await pool.query(`SELECT COUNT(*)::int AS c FROM emr.users WHERE tenant_id::text = $1::text AND lower(coalesce(role, '')) LIKE '%doctor%'`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
-        const legacyBedsRes = await pool.query(`SELECT COUNT(*)::int AS c FROM emr.beds WHERE tenant_id::text = $1::text AND lower(coalesce(status, '')) = 'available'`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
-        const legacyAmbRes = await pool.query(`SELECT COUNT(*)::int AS c FROM emr.ambulances WHERE tenant_id::text = $1::text AND lower(coalesce(status, '')) IN ('available', 'online', 'active')`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
+        const legacyPatientsRes = await pool.query(`SELECT COUNT(*)::int AS c FROM nexus.patients WHERE tenant_id::text = $1::text`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
+        const legacyDoctorsRes = await pool.query(`SELECT COUNT(*)::int AS c FROM nexus.users WHERE tenant_id::text = $1::text AND lower(coalesce(role_id, '')) LIKE '%doctor%'`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
+        const legacyBedsRes = await pool.query(`SELECT COUNT(*)::int AS c FROM nexus.beds WHERE tenant_id::text = $1::text AND lower(coalesce(status, '')) = 'available'`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
+        const legacyAmbRes = await pool.query(`SELECT COUNT(*)::int AS c FROM nexus.ambulances WHERE tenant_id::text = $1::text AND lower(coalesce(status, '')) IN ('available', 'online', 'active')`, [row.tenant_id]).catch(() => ({ rows: [{ c: 0 }] }));
 
         const mergedPatients = Math.max(livePatients, Number(legacyPatientsRes.rows[0]?.c || 0));
         const mergedDoctors = Math.max(liveDoctors, Number(legacyDoctorsRes.rows[0]?.c || 0));
@@ -214,7 +201,7 @@ export async function getSuperadminOverview() {
         const mergedAmb = Math.max(liveAmb, Number(legacyAmbRes.rows[0]?.c || 0));
 
         await pool.query(`
-          INSERT INTO emr.management_tenant_metrics
+          INSERT INTO nexus.management_tenant_metrics
             (tenant_id, tenant_code, tenant_name, schema_name, patients_count, doctors_count, available_beds, available_ambulances, active_users_count, updated_at)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
           ON CONFLICT (tenant_id) DO UPDATE SET
@@ -247,7 +234,7 @@ export async function getSuperadminOverview() {
 
     // 4. Update global summary cache
     await pool.query(`
-      INSERT INTO emr.management_dashboard_summary
+      INSERT INTO nexus.management_dashboard_summary
         (summary_key, total_tenants, total_doctors, total_patients, available_beds, updated_at)
       VALUES ('global', $1, $2, $3, $4, NOW())
       ON CONFLICT (summary_key) DO UPDATE SET

@@ -10,14 +10,14 @@ import { createAuditLog } from './tenant.service.js';
  * Department Functions
  */
 export async function getDepartments(tenantId) {
-  const sql = 'SELECT * FROM emr.departments WHERE tenant_id::text = $1::text ORDER BY name';
+  const sql = 'SELECT * FROM nexus.departments WHERE tenant_id::text = $1::text ORDER BY name';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
 
 export async function createDepartment({ tenantId, name, code, hod_user_id }) {
   const sql = `
-    INSERT INTO emr.departments (tenant_id, name, code, hod_user_id)
+    INSERT INTO nexus.departments (tenant_id, name, code, hod_user_id)
     VALUES ($1, $2, $3, $4)
     RETURNING *
   `;
@@ -39,14 +39,14 @@ export async function createDepartment({ tenantId, name, code, hod_user_id }) {
  * Ward Functions
  */
 export async function getWards(tenantId) {
-  const sql = 'SELECT * FROM emr.wards WHERE tenant_id::text = $1::text ORDER BY name';
+  const sql = 'SELECT * FROM nexus.wards WHERE tenant_id::text = $1::text ORDER BY name';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
 
 export async function createWard({ tenantId, name, type, base_rate }) {
   const sql = `
-    INSERT INTO emr.wards (tenant_id, name, type, base_rate)
+    INSERT INTO nexus.wards (tenant_id, name, type, base_rate)
     VALUES ($1, $2, $3, $4)
     RETURNING *
   `;
@@ -60,10 +60,10 @@ export async function createWard({ tenantId, name, type, base_rate }) {
 export async function getBeds(tenantId, wardId = null) {
   let sql, params;
   if (wardId) {
-    sql = 'SELECT * FROM emr.beds WHERE tenant_id::text = $1::text AND ward_id::text = $2::text ORDER BY bed_number';
+    sql = 'SELECT * FROM nexus.beds WHERE tenant_id::text = $1::text AND ward_id::text = $2::text ORDER BY bed_number';
     params = [tenantId, wardId];
   } else {
-    sql = 'SELECT * FROM emr.beds WHERE tenant_id::text = $1::text ORDER BY bed_number';
+    sql = 'SELECT * FROM nexus.beds WHERE tenant_id::text = $1::text ORDER BY bed_number';
     params = [tenantId];
   }
   const result = await query(sql, params);
@@ -72,7 +72,7 @@ export async function getBeds(tenantId, wardId = null) {
 
 export async function createBed({ tenantId, wardId, bedNumber }) {
   const sql = `
-    INSERT INTO emr.beds (tenant_id, ward_id, bed_number, status)
+    INSERT INTO nexus.beds (tenant_id, ward_id, bed_number, status)
     VALUES ($1, $2, $3, 'available')
     RETURNING *
   `;
@@ -82,7 +82,7 @@ export async function createBed({ tenantId, wardId, bedNumber }) {
 
 export async function updateBedStatus(tenantId, bedId, status) {
   const sql = `
-    UPDATE emr.beds 
+    UPDATE nexus.beds 
     SET status = $1, updated_at = NOW() 
     WHERE tenant_id::text = $2::text AND id::text = $3::text 
     RETURNING *
@@ -95,14 +95,14 @@ export async function updateBedStatus(tenantId, bedId, status) {
  * Service Catalog
  */
 export async function getServices(tenantId) {
-  const sql = 'SELECT * FROM emr.services WHERE tenant_id::text = $1::text ORDER BY category, name';
+  const sql = 'SELECT * FROM nexus.services WHERE tenant_id::text = $1::text ORDER BY category, name';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
 
 export async function createService({ tenantId, name, code, category, base_rate, tax_percent }) {
   const sql = `
-    INSERT INTO emr.services (tenant_id, name, code, category, base_rate, tax_percent)
+    INSERT INTO nexus.services (tenant_id, name, code, category, base_rate, tax_percent)
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *
   `;
@@ -122,7 +122,7 @@ export async function createService({ tenantId, name, code, category, base_rate,
 
 export async function updateService({ tenantId, serviceId, name, code, category, base_rate, tax_percent }) {
   const sql = `
-    UPDATE emr.services
+    UPDATE nexus.services
     SET name = $1,
         code = $2,
         category = $3,
@@ -150,7 +150,7 @@ export async function updateService({ tenantId, serviceId, name, code, category,
 
 export async function deleteService({ tenantId, serviceId }) {
   const sql = `
-    DELETE FROM emr.services
+    DELETE FROM nexus.services
     WHERE tenant_id::text = $1::text AND id::text = $2::text
     RETURNING *
   `;

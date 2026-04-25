@@ -17,6 +17,7 @@ const DoctorAvailabilityPage = lazy(() => import('./pages/DoctorAvailabilityPage
 const DoctorSchedulePage = lazy(() => import('./pages/DoctorSchedulePage.jsx'));
 const SuperadminOnlyPage = lazy(() => import('./pages/SuperadminOnlyPage.jsx'));
 const EmrOnlyPage = lazy(() => import('./pages/EmrOnlyPage.jsx'));
+const EmrPage = lazy(() => import('./pages/EmrPage.jsx'));
 const BillingPage = lazy(() => import('./pages/BillingPage.jsx'));
 const EnhancedInsurancePage = lazy(() => import('./pages/EnhancedInsurancePage.jsx'));
 const InpatientPage = lazy(() => import('./pages/InpatientPage.jsx'));
@@ -103,7 +104,8 @@ export default function App() {
   const { showToast } = useToast();
 
 
-  console.log('DEBUG: EnhancedSuperadminPage render', { superOverview, tenantsLength: tenants?.length });
+
+
   const [error, setError] = useState('');
 
   const tenant = useMemo(() => tenants.find((t) => t.id === session?.tenantId), [tenants, session]);
@@ -198,19 +200,22 @@ export default function App() {
 
       // Backward fallback if catalog is unavailable
       if (tier === 'free') {
-        // Basic: Out-patient + Day care + Insurance
-        const basicModules = ['dashboard', 'patients', 'appointments', 'emr', 'insurance', 'billing', 'reports', 'support', 'communication', 'hospital_settings'];
+        const freeModules = ['superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'hospital_settings'];
+        return candidates.some((key) => freeModules.includes(key));
+      }
+      if (tier === 'basic') {
+        const basicModules = ['superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents', 'inventory', 'pharmacy', 'ambulance', 'lab', 'hospital_settings', 'departments'];
         return candidates.some((key) => basicModules.includes(key));
       }
-      if (tier === 'basic' || tier === 'professional') {
-        // Pro/Standard: Inpatient (No Pharmacy/Ambulance/BloodBank)
-        const standardModules = [
-          'dashboard', 'patients', 'appointments', 'emr', 'insurance', 'billing', 'reports', 'support', 'communication', 'hospital_settings',
-          'inpatient', 'bed_management', 'service_catalog', 'departments', 'documents', 'lab', 'pharmacy'
+      if (tier === 'professional') {
+        const proModules = [
+          'superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents',
+          'inventory', 'pharmacy', 'ambulance', 'lab', 'inpatient', 'billing', 'accounts', 'accounts_receivable', 'accounts_payable',
+          'insurance', 'service_catalog', 'hospital_settings', 'departments', 'bed_management'
         ];
-        return candidates.some((key) => standardModules.includes(key));
+        return candidates.some((key) => proModules.includes(key));
       }
-      return true; // Enterprise falls through to true
+      return true;
     });
   }, [permissions, activeUser, tenant, tierModuleMap]);
 
@@ -398,7 +403,7 @@ export default function App() {
       setMenuData(bootstrap.menuStructure);
     }
     
-    if (!activePatientId && bootstrap.patients?.length && !isDoctor) {
+    if (!activePatientId && bootstrap.patients?.length) {
       setActivePatientId(bootstrap.patients[0].id);
     }
 
@@ -894,6 +899,7 @@ export default function App() {
                   initialWorkflow={emrWorkflow}
                   onWorkflowChange={setEmrWorkflow}
                   onCreateEncounter={async (data) => {
+
               try {
                 // 1. Create main encounter record
                 const encounterRes = await api.addEncounter({
@@ -911,6 +917,7 @@ export default function App() {
                   hr: data.vitals?.heartRate || data.hr,
                   temperature: data.vitals?.temperature || data.temperature,
                   oxygen_saturation: data.vitals?.oxygenSat || data.oxygen_saturation,
+
                   wardId: data.wardId,
                   bedId: data.bedId
                 });
@@ -1019,9 +1026,9 @@ export default function App() {
               ...payload
             }))}
           />
-              )}
-            </>
-          )}
+        )}
+      </>
+    )}
 
         {view === 'inpatient' && (
           <InpatientPage

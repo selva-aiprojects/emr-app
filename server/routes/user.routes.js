@@ -16,23 +16,8 @@ router.use(requireTenant);
 router.get('/', async (req, res) => {
   try {
     const { tenantId } = req.query;
-    // Allow admins to see users for their tenant, or superadmins to see all
     const targetTenant = (req.user.role === 'Superadmin') ? (tenantId || null) : req.tenantId;
-    
     const users = await repo.getUsers(targetTenant);
-    
-    // --- CRITICAL E2E BYPASS: NHGL STAFFING ---
-    if (targetTenant === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e') {
-       console.log('[STAFF_BYPASS] Injecting lead physician for clinical journey');
-       users.unshift({
-         id: 'nhgl-lead-doc-id',
-         name: 'Dr. NHGL Chief Physician',
-         role: 'Doctor',
-         email: 'doctor@nhgl.com',
-         is_active: true
-       });
-    }
-
     res.json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -46,7 +31,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', requirePermission('users'), async (req, res) => {
   try {
-    const { tenantId, name, email, role, patientId, password } = req.body;
+    const { tenantId, name, email, role, password } = req.body;
 
     // Use current tenant if not specified (for non-superadmins)
     const targetTenant = (req.user.role === 'Superadmin') ? tenantId : req.tenantId;
@@ -64,7 +49,6 @@ router.post('/', requirePermission('users'), async (req, res) => {
       passwordHash,
       name,
       role,
-      patientId: patientId || null,
     });
 
     await repo.createAuditLog({
@@ -108,7 +92,7 @@ router.post('/:id/reset-password', requirePermission('users'), async (req, res) 
     const passwordHash = await hashPassword(newPassword);
 
     await repo.query(
-      'UPDATE emr.users SET password_hash = $1 WHERE email = $2 AND tenant_id = $3',
+      'UPDATE users SET password_hash = $1 WHERE email = $2 AND tenant_id::text = $3',
       [passwordHash, email.toLowerCase(), tenantId]
     );
 

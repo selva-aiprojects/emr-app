@@ -15,7 +15,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- TENANT MANAGEMENT
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.tenants (
+CREATE TABLE IF NOT EXISTS nexus.tenants (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     email TEXT UNIQUE,
@@ -31,9 +31,9 @@ CREATE TABLE IF NOT EXISTS emr.tenants (
 -- USER MANAGEMENT
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.users (
+CREATE TABLE IF NOT EXISTS nexus.users (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     email TEXT NOT NULL,
     password TEXT NOT NULL,
     first_name TEXT NOT NULL,
@@ -49,9 +49,9 @@ CREATE TABLE IF NOT EXISTS emr.users (
 -- DEPARTMENTS
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.departments (
+CREATE TABLE IF NOT EXISTS nexus.departments (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     description TEXT,
     head_of_dept TEXT,
@@ -64,9 +64,9 @@ CREATE TABLE IF NOT EXISTS emr.departments (
 -- EMPLOYEES
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.employees (
+CREATE TABLE IF NOT EXISTS nexus.employees (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     email TEXT NOT NULL,
@@ -88,10 +88,10 @@ CREATE TABLE IF NOT EXISTS emr.employees (
 -- SALARY MANAGEMENT
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.salary (
+CREATE TABLE IF NOT EXISTS nexus.salary (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-    employee_id TEXT NOT NULL REFERENCES emr.employees(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    employee_id TEXT NOT NULL REFERENCES nexus.employees(id) ON DELETE CASCADE,
     month INTEGER NOT NULL,
     year INTEGER NOT NULL,
     basic_salary DECIMAL(12,2) NOT NULL,
@@ -118,10 +118,10 @@ CREATE TABLE IF NOT EXISTS emr.salary (
 -- ATTENDANCE MANAGEMENT
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.attendance (
+CREATE TABLE IF NOT EXISTS nexus.attendance (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-    employee_id TEXT NOT NULL REFERENCES emr.employees(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    employee_id TEXT NOT NULL REFERENCES nexus.employees(id) ON DELETE CASCADE,
     attendance_date DATE NOT NULL,
     check_in TIME,
     check_out TIME,
@@ -141,9 +141,9 @@ CREATE TABLE IF NOT EXISTS emr.attendance (
 -- PAYROLL PROCESSING
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.payroll (
+CREATE TABLE IF NOT EXISTS nexus.payroll (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     month INTEGER NOT NULL,
     year INTEGER NOT NULL,
     total_employees INTEGER NOT NULL,
@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS emr.payroll (
     total_deductions DECIMAL(12,2) NOT NULL,
     total_net_payout DECIMAL(12,2) NOT NULL,
     processing_date DATE,
-    processed_by TEXT REFERENCES emr.users(id),
+    processed_by TEXT REFERENCES nexus.users(id),
     status TEXT DEFAULT 'pending', -- pending, processing, completed, failed
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -162,9 +162,9 @@ CREATE TABLE IF NOT EXISTS emr.payroll (
 -- PATIENT MANAGEMENT
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.patients (
+CREATE TABLE IF NOT EXISTS nexus.patients (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     first_name TEXT NOT NULL,
     last_name TEXT NOT NULL,
     date_of_birth DATE,
@@ -186,11 +186,11 @@ CREATE TABLE IF NOT EXISTS emr.patients (
 -- APPOINTMENTS
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.appointments (
+CREATE TABLE IF NOT EXISTS nexus.appointments (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-    patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-    doctor_id TEXT NOT NULL REFERENCES emr.employees(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    patient_id TEXT NOT NULL REFERENCES nexus.patients(id) ON DELETE CASCADE,
+    doctor_id TEXT NOT NULL REFERENCES nexus.employees(id) ON DELETE CASCADE,
     appointment_date TIMESTAMP WITH TIME ZONE NOT NULL,
     duration INTEGER DEFAULT 30,
     status TEXT DEFAULT 'scheduled',
@@ -203,11 +203,11 @@ CREATE TABLE IF NOT EXISTS emr.appointments (
 -- ENCOUNTERS (Medical Visits)
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.encounters (
+CREATE TABLE IF NOT EXISTS nexus.encounters (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-    patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-    doctor_id TEXT NOT NULL REFERENCES emr.employees(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    patient_id TEXT NOT NULL REFERENCES nexus.patients(id) ON DELETE CASCADE,
+    doctor_id TEXT NOT NULL REFERENCES nexus.employees(id) ON DELETE CASCADE,
     encounter_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     encounter_type TEXT,
     chief_complaint TEXT,
@@ -224,13 +224,13 @@ CREATE TABLE IF NOT EXISTS emr.encounters (
 -- DETAILED BILLING
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.billing (
+CREATE TABLE IF NOT EXISTS nexus.billing (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-    patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-    invoice_id TEXT REFERENCES emr.invoices(id),
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    patient_id TEXT NOT NULL REFERENCES nexus.patients(id) ON DELETE CASCADE,
+    invoice_id TEXT REFERENCES nexus.invoices(id),
     billing_date DATE NOT NULL,
-    service_id TEXT REFERENCES emr.services(id),
+    service_id TEXT REFERENCES nexus.services(id),
     service_name TEXT NOT NULL,
     quantity INTEGER DEFAULT 1,
     unit_price DECIMAL(10,2) NOT NULL,
@@ -241,8 +241,8 @@ CREATE TABLE IF NOT EXISTS emr.billing (
     total_amount DECIMAL(10,2) NOT NULL,
     billing_type TEXT, -- consultation, procedure, lab, pharmacy, room
     status TEXT DEFAULT 'pending', -- pending, approved, rejected, billed
-    created_by TEXT REFERENCES emr.users(id),
-    approved_by TEXT REFERENCES emr.users(id),
+    created_by TEXT REFERENCES nexus.users(id),
+    approved_by TEXT REFERENCES nexus.users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -251,11 +251,11 @@ CREATE TABLE IF NOT EXISTS emr.billing (
 -- INVOICE & BILLING
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.invoices (
+CREATE TABLE IF NOT EXISTS nexus.invoices (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-    patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-    user_id TEXT NOT NULL REFERENCES emr.users(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    patient_id TEXT NOT NULL REFERENCES nexus.patients(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES nexus.users(id) ON DELETE CASCADE,
     invoice_number TEXT UNIQUE,
     invoice_date DATE NOT NULL,
     due_date DATE,
@@ -276,11 +276,11 @@ CREATE TABLE IF NOT EXISTS emr.invoices (
 -- ACCOUNTS RECEIVABLE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.accounts_receivable (
+CREATE TABLE IF NOT EXISTS nexus.accounts_receivable (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-    patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-    invoice_id TEXT NOT NULL REFERENCES emr.invoices(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    patient_id TEXT NOT NULL REFERENCES nexus.patients(id) ON DELETE CASCADE,
+    invoice_id TEXT NOT NULL REFERENCES nexus.invoices(id) ON DELETE CASCADE,
     amount DECIMAL(10,2) NOT NULL,
     paid_amount DECIMAL(10,2) DEFAULT 0,
     balance_amount DECIMAL(10,2) NOT NULL,
@@ -297,9 +297,9 @@ CREATE TABLE IF NOT EXISTS emr.accounts_receivable (
 -- ACCOUNTS PAYABLE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.accounts_payable (
+CREATE TABLE IF NOT EXISTS nexus.accounts_payable (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     vendor_name TEXT NOT NULL,
     invoice_number TEXT,
     invoice_date DATE NOT NULL,
@@ -318,9 +318,9 @@ CREATE TABLE IF NOT EXISTS emr.accounts_payable (
 -- EXPENSES
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.expenses (
+CREATE TABLE IF NOT EXISTS nexus.expenses (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     expense_date DATE NOT NULL,
     category TEXT NOT NULL, -- salary, utilities, rent, supplies, equipment, marketing
     subcategory TEXT,
@@ -329,7 +329,7 @@ CREATE TABLE IF NOT EXISTS emr.expenses (
     payment_method TEXT,
     vendor TEXT,
     receipt_number TEXT,
-    approved_by TEXT REFERENCES emr.users(id),
+    approved_by TEXT REFERENCES nexus.users(id),
     status TEXT DEFAULT 'pending', -- pending, approved, rejected
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -339,16 +339,16 @@ CREATE TABLE IF NOT EXISTS emr.expenses (
 -- REVENUE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.revenue (
+CREATE TABLE IF NOT EXISTS nexus.revenue (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     revenue_date DATE NOT NULL,
     category TEXT NOT NULL, -- consultation, procedures, lab, pharmacy, room_rent, other
     subcategory TEXT,
     description TEXT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     payment_method TEXT,
-    invoice_id TEXT REFERENCES emr.invoices(id),
+    invoice_id TEXT REFERENCES nexus.invoices(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -357,9 +357,9 @@ CREATE TABLE IF NOT EXISTS emr.revenue (
 -- INVENTORY
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.inventory (
+CREATE TABLE IF NOT EXISTS nexus.inventory (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     category TEXT,
     quantity INTEGER NOT NULL DEFAULT 0,
@@ -380,9 +380,9 @@ CREATE TABLE IF NOT EXISTS emr.inventory (
 -- SERVICES CATALOG
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.services (
+CREATE TABLE IF NOT EXISTS nexus.services (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     code TEXT,
     category TEXT,
@@ -400,13 +400,13 @@ CREATE TABLE IF NOT EXISTS emr.services (
 -- FHIR RESOURCES
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS emr.fhir_resources (
+CREATE TABLE IF NOT EXISTS nexus.fhir_resources (
     id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
     resource_type TEXT NOT NULL,
     resource_id TEXT NOT NULL,
     resource_data JSONB,
     last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+    tenant_id TEXT NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
     UNIQUE(tenant_id, resource_type, resource_id)
 );
 
@@ -415,166 +415,166 @@ CREATE TABLE IF NOT EXISTS emr.fhir_resources (
 -- =====================================================
 
 -- Tenant indexes
-CREATE INDEX IF NOT EXISTS idx_emr_users_tenant_id ON emr.users(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_patients_tenant_id ON emr.patients(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_appointments_tenant_id ON emr.appointments(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_encounters_tenant_id ON emr.encounters(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_invoices_tenant_id ON emr.invoices(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_inventory_tenant_id ON emr.inventory(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_services_tenant_id ON emr.services(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_departments_tenant_id ON emr.departments(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_employees_tenant_id ON emr.employees(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_users_tenant_id ON nexus.users(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_patients_tenant_id ON nexus.patients(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_appointments_tenant_id ON nexus.appointments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_encounters_tenant_id ON nexus.encounters(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_invoices_tenant_id ON nexus.invoices(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_inventory_tenant_id ON nexus.inventory(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_services_tenant_id ON nexus.services(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_departments_tenant_id ON nexus.departments(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_employees_tenant_id ON nexus.employees(tenant_id);
 
 -- Financial indexes
-CREATE INDEX IF NOT EXISTS idx_emr_billing_tenant_id ON emr.billing(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_billing_patient_id ON emr.billing(patient_id);
-CREATE INDEX IF NOT EXISTS idx_emr_billing_date ON emr.billing(billing_date);
-CREATE INDEX IF NOT EXISTS idx_emr_accounts_receivable_tenant_id ON emr.accounts_receivable(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_accounts_payable_tenant_id ON emr.accounts_payable(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_expenses_tenant_id ON emr.expenses(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_revenue_tenant_id ON emr.revenue(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_billing_tenant_id ON nexus.billing(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_billing_patient_id ON nexus.billing(patient_id);
+CREATE INDEX IF NOT EXISTS idx_emr_billing_date ON nexus.billing(billing_date);
+CREATE INDEX IF NOT EXISTS idx_emr_accounts_receivable_tenant_id ON nexus.accounts_receivable(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_accounts_payable_tenant_id ON nexus.accounts_payable(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_expenses_tenant_id ON nexus.expenses(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_revenue_tenant_id ON nexus.revenue(tenant_id);
 
 -- HR indexes
-CREATE INDEX IF NOT EXISTS idx_emr_salary_tenant_id ON emr.salary(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_salary_employee_id ON emr.salary(employee_id);
-CREATE INDEX IF NOT EXISTS idx_emr_attendance_tenant_id ON emr.attendance(tenant_id);
-CREATE INDEX IF NOT EXISTS idx_emr_attendance_employee_id ON emr.attendance(employee_id);
-CREATE INDEX IF NOT EXISTS idx_emr_attendance_date ON emr.attendance(attendance_date);
-CREATE INDEX IF NOT EXISTS idx_emr_payroll_tenant_id ON emr.payroll(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_salary_tenant_id ON nexus.salary(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_salary_employee_id ON nexus.salary(employee_id);
+CREATE INDEX IF NOT EXISTS idx_emr_attendance_tenant_id ON nexus.attendance(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_emr_attendance_employee_id ON nexus.attendance(employee_id);
+CREATE INDEX IF NOT EXISTS idx_emr_attendance_date ON nexus.attendance(attendance_date);
+CREATE INDEX IF NOT EXISTS idx_emr_payroll_tenant_id ON nexus.payroll(tenant_id);
 
 -- Performance indexes
-CREATE INDEX IF NOT EXISTS idx_emr_patients_active ON emr.patients(tenant_id, is_active);
-CREATE INDEX IF NOT EXISTS idx_emr_appointments_date ON emr.appointments(appointment_date);
-CREATE INDEX IF NOT EXISTS idx_emr_appointments_status ON emr.appointments(status);
-CREATE INDEX IF NOT EXISTS idx_emr_encounters_patient ON emr.encounters(patient_id);
-CREATE INDEX IF NOT EXISTS idx_emr_encounters_date ON emr.encounters(encounter_date);
-CREATE INDEX IF NOT EXISTS idx_emr_invoices_status ON emr.invoices(payment_status);
-CREATE INDEX IF NOT EXISTS idx_emr_inventory_category ON emr.inventory(category);
-CREATE INDEX IF NOT EXISTS idx_emr_services_category ON emr.services(category);
+CREATE INDEX IF NOT EXISTS idx_emr_patients_active ON nexus.patients(tenant_id, is_active);
+CREATE INDEX IF NOT EXISTS idx_emr_appointments_date ON nexus.appointments(appointment_date);
+CREATE INDEX IF NOT EXISTS idx_emr_appointments_status ON nexus.appointments(status);
+CREATE INDEX IF NOT EXISTS idx_emr_encounters_patient ON nexus.encounters(patient_id);
+CREATE INDEX IF NOT EXISTS idx_emr_encounters_date ON nexus.encounters(encounter_date);
+CREATE INDEX IF NOT EXISTS idx_emr_invoices_status ON nexus.invoices(payment_status);
+CREATE INDEX IF NOT EXISTS idx_emr_inventory_category ON nexus.inventory(category);
+CREATE INDEX IF NOT EXISTS idx_emr_services_category ON nexus.services(category);
 
 -- =====================================================
 -- ROW LEVEL SECURITY (RLS)
 -- =====================================================
 
 -- Enable RLS on all tables
-ALTER TABLE emr.tenants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.patients ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.departments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.employees ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.appointments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.encounters ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.invoices ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.billing ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.accounts_receivable ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.accounts_payable ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.revenue ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.salary ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.attendance ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.payroll ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.inventory ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.services ENABLE ROW LEVEL SECURITY;
-ALTER TABLE emr.fhir_resources ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.tenants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.patients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.departments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.encounters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.invoices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.billing ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.accounts_receivable ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.accounts_payable ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.revenue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.salary ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.attendance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.payroll ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.inventory ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nexus.fhir_resources ENABLE ROW LEVEL SECURITY;
 
 -- =====================================================
 -- RLS POLICIES
 -- =====================================================
 
 -- Tenants policy
-CREATE POLICY "Admins can view all tenants" ON emr.tenants
+CREATE POLICY "Admins can view all tenants" ON nexus.tenants
     FOR ALL USING (
         auth.jwt() ->> 'role' = 'admin'
     );
 
 -- Users policy
-CREATE POLICY "Users can view tenant users" ON emr.users
+CREATE POLICY "Users can view tenant users" ON nexus.users
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
 -- Similar policies for all tables
-CREATE POLICY "Users can view tenant patients" ON emr.patients
+CREATE POLICY "Users can view tenant patients" ON nexus.patients
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant appointments" ON emr.appointments
+CREATE POLICY "Users can view tenant appointments" ON nexus.appointments
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant encounters" ON emr.encounters
+CREATE POLICY "Users can view tenant encounters" ON nexus.encounters
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant invoices" ON emr.invoices
+CREATE POLICY "Users can view tenant invoices" ON nexus.invoices
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant billing" ON emr.billing
+CREATE POLICY "Users can view tenant billing" ON nexus.billing
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant accounts_receivable" ON emr.accounts_receivable
+CREATE POLICY "Users can view tenant accounts_receivable" ON nexus.accounts_receivable
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant accounts_payable" ON emr.accounts_payable
+CREATE POLICY "Users can view tenant accounts_payable" ON nexus.accounts_payable
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant expenses" ON emr.expenses
+CREATE POLICY "Users can view tenant expenses" ON nexus.expenses
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant revenue" ON emr.revenue
+CREATE POLICY "Users can view tenant revenue" ON nexus.revenue
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant salary" ON emr.salary
+CREATE POLICY "Users can view tenant salary" ON nexus.salary
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant attendance" ON emr.attendance
+CREATE POLICY "Users can view tenant attendance" ON nexus.attendance
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant payroll" ON emr.payroll
+CREATE POLICY "Users can view tenant payroll" ON nexus.payroll
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant inventory" ON emr.inventory
+CREATE POLICY "Users can view tenant inventory" ON nexus.inventory
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant services" ON emr.services
+CREATE POLICY "Users can view tenant services" ON nexus.services
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant departments" ON emr.departments
+CREATE POLICY "Users can view tenant departments" ON nexus.departments
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant employees" ON emr.employees
+CREATE POLICY "Users can view tenant employees" ON nexus.employees
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
 
-CREATE POLICY "Users can view tenant fhir_resources" ON emr.fhir_resources
+CREATE POLICY "Users can view tenant fhir_resources" ON nexus.fhir_resources
     FOR ALL USING (
         tenant_id = auth.jwt() ->> 'tenant_id'
     );
@@ -584,7 +584,7 @@ CREATE POLICY "Users can view tenant fhir_resources" ON emr.fhir_resources
 -- =====================================================
 
 -- Function to update updated_at column
-CREATE OR REPLACE FUNCTION emr.update_updated_at_column()
+CREATE OR REPLACE FUNCTION nexus.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
@@ -593,59 +593,59 @@ END;
 $$ language 'plpgsql';
 
 -- Create triggers for all tables with updated_at
-CREATE TRIGGER update_emr_tenants_updated_at BEFORE UPDATE ON emr.tenants
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_tenants_updated_at BEFORE UPDATE ON nexus.tenants
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_users_updated_at BEFORE UPDATE ON emr.users
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_users_updated_at BEFORE UPDATE ON nexus.users
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_patients_updated_at BEFORE UPDATE ON emr.patients
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_patients_updated_at BEFORE UPDATE ON nexus.patients
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_departments_updated_at BEFORE UPDATE ON emr.departments
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_departments_updated_at BEFORE UPDATE ON nexus.departments
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_employees_updated_at BEFORE UPDATE ON emr.employees
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_employees_updated_at BEFORE UPDATE ON nexus.employees
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_appointments_updated_at BEFORE UPDATE ON emr.appointments
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_appointments_updated_at BEFORE UPDATE ON nexus.appointments
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_encounters_updated_at BEFORE UPDATE ON emr.encounters
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_encounters_updated_at BEFORE UPDATE ON nexus.encounters
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_invoices_updated_at BEFORE UPDATE ON emr.invoices
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_invoices_updated_at BEFORE UPDATE ON nexus.invoices
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_billing_updated_at BEFORE UPDATE ON emr.billing
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_billing_updated_at BEFORE UPDATE ON nexus.billing
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_accounts_receivable_updated_at BEFORE UPDATE ON emr.accounts_receivable
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_accounts_receivable_updated_at BEFORE UPDATE ON nexus.accounts_receivable
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_accounts_payable_updated_at BEFORE UPDATE ON emr.accounts_payable
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_accounts_payable_updated_at BEFORE UPDATE ON nexus.accounts_payable
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_expenses_updated_at BEFORE UPDATE ON emr.expenses
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_expenses_updated_at BEFORE UPDATE ON nexus.expenses
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_revenue_updated_at BEFORE UPDATE ON emr.revenue
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_revenue_updated_at BEFORE UPDATE ON nexus.revenue
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_salary_updated_at BEFORE UPDATE ON emr.salary
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_salary_updated_at BEFORE UPDATE ON nexus.salary
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_attendance_updated_at BEFORE UPDATE ON emr.attendance
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_attendance_updated_at BEFORE UPDATE ON nexus.attendance
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_payroll_updated_at BEFORE UPDATE ON emr.payroll
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_payroll_updated_at BEFORE UPDATE ON nexus.payroll
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_inventory_updated_at BEFORE UPDATE ON emr.inventory
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_inventory_updated_at BEFORE UPDATE ON nexus.inventory
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
-CREATE TRIGGER update_emr_services_updated_at BEFORE UPDATE ON emr.services
-    FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
+CREATE TRIGGER update_emr_services_updated_at BEFORE UPDATE ON nexus.services
+    FOR EACH ROW EXECUTE FUNCTION nexus.update_updated_at_column();
 
 -- =====================================================
 -- COMPLETION MESSAGE

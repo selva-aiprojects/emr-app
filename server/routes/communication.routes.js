@@ -19,11 +19,13 @@ router.get('/notices', async (req, res) => {
     const statusCondition = status === 'all' ? '' : 'AND n.status = $3';
     const params = status === 'all' ? [req.tenantId, role] : [req.tenantId, role, status];
     
-const result = await query(
-      `SELECT n.*, 'System' AS created_by_name FROM emr.notices n 
-       WHERE n.tenant_id = $1 
-       ORDER BY n.created_at DESC`,
-      [req.tenantId]
+    const result = await query(
+      `SELECT n.*, u.name AS created_by_name FROM emr.notices n 
+       LEFT JOIN emr.users u ON u.id = n.created_by
+       WHERE n.tenant_id = $1 AND (jsonb_array_length(n.audience_roles) = 0 OR n.audience_roles ? $2) ${statusCondition}
+       ORDER BY n.priority DESC, n.starts_at DESC, n.created_at DESC`,
+      params
+
     );
     res.json(result.rows);
   } catch (error) {

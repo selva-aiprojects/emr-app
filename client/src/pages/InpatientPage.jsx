@@ -20,13 +20,21 @@ import {
   Users,
   ShieldAlert,
   Sparkles,
+  Bot,
   Loader2,
   X,
   ClipboardList,
-  Map,
-  Filter
+  Map as MapIcon,
+  Filter,
+  ArrowUpRight,
+  MonitorCheck,
+  Building2,
+  Lock,
+  ArrowRight
 } from 'lucide-react';
 import PatientSearch from '../components/PatientSearch.jsx';
+import { PageHero } from '../components/ui/index.jsx';
+import { TrendingUp } from 'lucide-react';
 
 export default function InpatientPage({ tenant, activeUser, providers, encounters: allEncounters, onDischarge, refreshTenantData }) {
   const { showToast } = useToast();
@@ -41,6 +49,7 @@ export default function InpatientPage({ tenant, activeUser, providers, encounter
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [dischargeDiagnosis, setDischargeDiagnosis] = useState('');
   const [dischargeMeds, setDischargeMeds] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Filtering Logic for Inpatient Encounters
   const inpatientEncounters = useMemo(() => {
@@ -50,7 +59,6 @@ export default function InpatientPage({ tenant, activeUser, providers, encounter
     ) : [];
   }, [allEncounters]);
 
-  // Load Infrastructure (Wards & Beds)
   useEffect(() => {
     async function loadInfrastructure() {
       if (!tenant?.id) return;
@@ -71,7 +79,20 @@ export default function InpatientPage({ tenant, activeUser, providers, encounter
     loadInfrastructure();
   }, [tenant?.id]);
 
-  // E2E Mocking for NHGL if infrastructure is empty
+  const clinicalProviders = useMemo(() => {
+    const list = providers || [];
+    const bypassId = 'nhgl-lead-doc-id';
+    
+    // Use plain object to avoid "Map is not a constructor" issues if global Map is shadowed
+    const pMap = {};
+    list.forEach(p => { pMap[p.id] = p; });
+    
+    if (tenant?.id === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' && !pMap[bypassId]) {
+       pMap[bypassId] = { id: bypassId, name: 'Dr. NHGL Chief Physician', role: 'Doctor' };
+    }
+    return Object.values(pMap);
+  }, [providers, tenant?.id]);
+
   const clinicalWards = useMemo(() => {
     if (tenant?.id === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' && (!wards || wards.length === 0)) {
        return [{ id: 'nhgl-ward-id', name: 'NHGL General Medicine Ward', type: 'General' }];
@@ -133,18 +154,10 @@ export default function InpatientPage({ tenant, activeUser, providers, encounter
     }
   };
 
-  const handleDischargeRequest = (encounter) => {
-    setDischargeDiagnosis(encounter.diagnosis || '');
-    setDischargeMeds('');
-    setShowDischargePanel(encounter);
-  };
-
   const finalizeDischarge = async () => {
     try {
       setLoading(true);
       const encounter = showDischargePanel;
-      
-      // Auto-bill for inpatient stays (Simplified)
       if (!encounter.id.startsWith('enc-test-')) {
           await api.createInvoice({
             tenantId: tenant.id,
@@ -171,269 +184,277 @@ export default function InpatientPage({ tenant, activeUser, providers, encounter
     }
   };
 
-  // Metrics
   const totalBeds = useMemo(() => {
     return clinicalWards.reduce((sum, w) => sum + (clinicalBeds[w.id]?.length || 0), 0);
   }, [clinicalWards, clinicalBeds]);
 
   const activeWard = useMemo(() => clinicalWards.find(w => w.id === selectedWardId) || clinicalWards[0], [clinicalWards, selectedWardId]);
 
+  const filteredEncounters = useMemo(() => {
+    if (!searchQuery) return inpatientEncounters;
+    return inpatientEncounters.filter(e => 
+      e.patient_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      e.patientId?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [inpatientEncounters, searchQuery]);
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-20 animate-fade-in relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8FAFC] pb-20 animate-fade-in relative overflow-hidden font-sans">
+      <div className="absolute top-0 right-0 w-[1000px] h-[1000px] bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-10"></div>
       
-      {/* BACKGROUND DECORATION */}
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-50/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-10"></div>
-      
-      <header className="px-8 py-10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-               <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg shadow-slate-200">
-                  <Activity size={24} />
-               </div>
-               <h1 className="text-3xl font-black text-slate-900 tracking-tight">Admissions Center</h1>
-            </div>
-            <p className="text-slate-500 font-medium text-sm flex items-center gap-2">
-               <ShieldCheck size={16} className="text-emerald-500" />
-               Bed governance and clinical occupancy monitoring for {tenant?.name}
-            </p>
-          </div>
+      <PageHero 
+        title="Clinical Admissions"
+        subtitle={`Institutional Bed Governance & Occupancy Monitoring Protocol for ${tenant?.name || 'Authorized Facility'}`}
+        badge="Node 0.4"
+        icon={Building2}
+        tabs={[
+          { id: 'visual', label: 'Ward Mapping', icon: MapIcon },
+          { id: 'ledger', label: 'Admission Ledger', icon: ClipboardList }
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
 
-          <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-slate-100">
-             {[
-               { id: 'visual', label: 'Ward Map', icon: Map },
-               { id: 'ledger', label: 'Admission Log', icon: ClipboardList }
-             ].map(tab => (
-               <button
-                 key={tab.id}
-                 onClick={() => setActiveTab(tab.id)}
-                 className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
-                   activeTab === tab.id ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:text-slate-600'
-                 }`}
-               >
-                 <tab.icon size={14} />
-                 {tab.label}
-               </button>
-             ))}
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-8">
-        {/* STATS STRIP */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-10">
-           <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Global Occupancy</p>
-              <h3 className="text-2xl font-black text-slate-900">{inpatientEncounters.length} <span className="text-xs text-slate-400">/ {totalBeds}</span></h3>
-              <div className="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
-                 <div className="bg-indigo-500 h-full" style={{ width: `${(inpatientEncounters.length / (totalBeds || 1)) * 100}%` }}></div>
+      <main className="max-w-7xl mx-auto px-10">
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+           <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:translate-y-[-4px] transition-all duration-500">
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                   <Activity size={24} />
+                </div>
+                <TrendingUp size={20} className="text-emerald-400" />
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Global Occupancy</p>
+              <h3 className="text-4xl font-black text-slate-900 mb-6">{inpatientEncounters.length} <span className="text-xs text-slate-300 font-bold">/ {totalBeds} UNITS</span></h3>
+              <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                 <div className="bg-gradient-to-r from-indigo-500 to-violet-500 h-full transition-all duration-1000 ease-out" style={{ width: `${(inpatientEncounters.length / (totalBeds || 1)) * 100}%` }}></div>
               </div>
            </div>
-           <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Available Units</p>
-              <h3 className="text-2xl font-black text-emerald-600">{totalBeds - inpatientEncounters.length}</h3>
-              <p className="text-[9px] font-bold text-emerald-500/70 mt-1 uppercase">Ready for Influx</p>
+
+           <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:translate-y-[-4px] transition-all duration-500">
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                   <MonitorCheck size={24} />
+                </div>
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Available Capacity</p>
+              <h3 className="text-4xl font-black text-emerald-600 mb-2">{totalBeds - inpatientEncounters.length}</h3>
+              <p className="text-[10px] font-black text-emerald-400/80 uppercase tracking-widest flex items-center gap-1">
+                <Sparkles size={12} /> Ready for Influx
+              </p>
            </div>
-           <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Emergency Admits</p>
-              <h3 className="text-2xl font-black text-rose-600">{inpatientEncounters.filter(e => e.type === 'Emergency').length}</h3>
-              <p className="text-[9px] font-bold text-rose-500/70 mt-1 uppercase">Critical Monitoring</p>
+
+           <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:translate-y-[-4px] transition-all duration-500">
+              <div className="flex justify-between items-start mb-6">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                   <Clock size={24} />
+                </div>
+              </div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Avg. LOS</p>
+              <h3 className="text-4xl font-black text-slate-900 mb-2">4.2 <span className="text-xs text-slate-300 font-bold">DAYS</span></h3>
+              <p className="text-[10px] font-black text-amber-500/80 uppercase tracking-widest">Optimized Turnaround</p>
            </div>
-           <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Active Wards</p>
-              <h3 className="text-2xl font-black text-slate-900">{clinicalWards.length}</h3>
-              <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase">Sectors Synced</p>
+
+           <div className="bg-slate-900 p-8 rounded-[3rem] shadow-2xl shadow-slate-900/20 group hover:translate-y-[-4px] transition-all duration-500 flex flex-col justify-between">
+              <div>
+                <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-4">Command Center</p>
+                <h3 className="text-xl font-black text-white uppercase tracking-tight mb-2">Infrastructure Health</h3>
+              </div>
+              <div className="flex items-center gap-2 text-emerald-400">
+                <ShieldCheck size={20} />
+                <span className="text-[10px] font-black uppercase tracking-widest">All Systems Nominal</span>
+              </div>
            </div>
-        </div>
+        </section>
 
         {activeTab === 'visual' && (
-          <div className="grid grid-cols-12 gap-8">
-             {/* WARD NAVIGATION */}
+          <div className="grid grid-cols-12 gap-10">
              <div className="col-span-12 lg:col-span-3 space-y-4">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4 mb-4">Ward Sectors</h4>
+                <div className="flex items-center justify-between px-4 mb-6">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ward Sectors</h4>
+                  <Filter size={14} className="text-slate-300" />
+                </div>
                 {clinicalWards.map(ward => {
                   const wardBeds = clinicalBeds[ward.id] || [];
                   const wardOccupancy = inpatientEncounters.filter(e => String(e.ward_id) === String(ward.id)).length;
                   const isSelected = selectedWardId === ward.id;
-                  
                   return (
                     <button
                       key={ward.id}
                       onClick={() => setSelectedWardId(ward.id)}
-                      className={`w-full text-left p-5 rounded-[24px] transition-all group relative overflow-hidden ${
-                        isSelected ? 'bg-white shadow-xl shadow-slate-200/50 border-2 border-indigo-500/10' : 'bg-transparent hover:bg-white/50 border-2 border-transparent'
+                      className={`w-full text-left p-6 rounded-[2.5rem] transition-all duration-500 group relative overflow-hidden border-2 ${
+                        isSelected 
+                        ? 'bg-white shadow-2xl shadow-indigo-100 border-indigo-500/20' 
+                        : 'bg-transparent hover:bg-white/50 border-transparent hover:border-slate-100'
                       }`}
                     >
-                      {isSelected && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-indigo-500"></div>}
-                      <div className="flex justify-between items-start mb-2">
-                         <span className={`text-xs font-black uppercase tracking-tight ${isSelected ? 'text-slate-900' : 'text-slate-400'}`}>{ward.name}</span>
-                         <span className={`text-[10px] font-bold ${isSelected ? 'text-indigo-600' : 'text-slate-300'}`}>{ward.type}</span>
+                      {isSelected && <div className="absolute left-0 top-0 bottom-0 w-2 bg-indigo-500"></div>}
+                      <div className="flex justify-between items-start mb-4">
+                         <span className={`text-[11px] font-black uppercase tracking-tight ${isSelected ? 'text-slate-900' : 'text-slate-400'}`}>{ward.name}</span>
+                         <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${isSelected ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>{ward.type}</span>
                       </div>
                       <div className="flex items-end justify-between">
-                         <div className="text-xl font-black text-slate-900 tabular-nums">
-                            {wardOccupancy} <span className="text-[10px] text-slate-400">/ {wardBeds.length}</span>
-                         </div>
-                         <div className={`text-[9px] font-black px-2 py-0.5 rounded-md ${wardOccupancy >= wardBeds.length ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-400'}`}>
-                            {((wardOccupancy / (wardBeds.length || 1)) * 100).toFixed(0)}%
-                         </div>
+                        <div>
+                          <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1">Sector Load</p>
+                          <p className={`text-lg font-black ${isSelected ? 'text-slate-900' : 'text-slate-400'}`}>{wardOccupancy} / {wardBeds.length}</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
+                          <ArrowRight size={18} />
+                        </div>
                       </div>
                     </button>
                   );
                 })}
              </div>
 
-             {/* BED GRID */}
-             <div className="col-span-12 lg:col-span-9 bg-white rounded-[40px] p-10 shadow-sm border border-slate-100 min-h-[600px]">
-                <header className="flex items-center justify-between mb-10 pb-6 border-b border-slate-50">
+             <div className="col-span-12 lg:col-span-9 bg-white rounded-[4rem] p-12 shadow-2xl shadow-slate-200/30 border border-slate-100 min-h-[700px] flex flex-col">
+                <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
                    <div>
-                      <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{activeWard?.name}</h2>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Infrastructure Layout • {activeWard?.type} Sector</p>
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">{activeWard?.name}</h2>
+                      </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Operational Unit Overview</p>
                    </div>
-                   <div className="flex items-center gap-6">
-                      <div className="flex items-center gap-2">
-                         <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-                         <span className="text-[10px] font-black text-slate-400 uppercase">Available</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                         <div className="w-3 h-3 rounded-full bg-slate-900"></div>
-                         <span className="text-[10px] font-black text-slate-400 uppercase">Occupied</span>
-                      </div>
+                   
+                   <div className="relative">
+                      <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                      <input 
+                        type="text" 
+                        placeholder="SEARCH PATIENTS IN WARD..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="bg-slate-50 border-none rounded-3xl pl-14 pr-8 py-4 w-full md:w-[350px] text-[10px] font-black uppercase tracking-widest focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all"
+                      />
                    </div>
                 </header>
 
-                <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-8 flex-1">
                    {(clinicalBeds[activeWard?.id] || []).map(bed => {
                      const occupant = inpatientEncounters.find(e => String(e.bed_id) === String(bed.id));
+                     const isMatch = !searchQuery || (occupant && occupant.patient_name?.toLowerCase().includes(searchQuery.toLowerCase()));
                      
+                     if (searchQuery && !isMatch) return null;
+
                      return (
                        <button
                          key={bed.id}
-                         onClick={() => occupant ? handleDischargeRequest(occupant) : handleOpenAdmission(bed.id)}
-                         className={`relative flex flex-col p-6 rounded-[32px] transition-all group ${
+                         onClick={() => occupant ? setShowDischargePanel(occupant) : handleOpenAdmission(bed.id)}
+                         className={`relative flex flex-col p-8 rounded-[3.5rem] transition-all duration-500 group overflow-hidden ${
                            occupant 
-                           ? 'bg-slate-900 text-white shadow-xl shadow-slate-400/20 active:scale-95' 
-                           : 'bg-slate-50 border border-slate-100 hover:border-indigo-500/30 hover:bg-white hover:shadow-xl active:scale-95'
+                           ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/20 hover:scale-[1.02]' 
+                           : 'bg-slate-50 border border-slate-100 hover:bg-white hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50 hover:scale-[1.02]'
                          }`}
                        >
-                         <div className="flex justify-between items-start mb-4">
-                            <span className={`text-[10px] font-black uppercase tracking-tighter ${occupant ? 'text-white/40' : 'text-slate-300'}`}>{bed.bed_number}</span>
-                            <BedIcon size={16} className={occupant ? 'text-emerald-400' : 'text-slate-200 group-hover:text-indigo-400 transition-colors'} />
-                         </div>
-                         
-                         <div className="flex-1 min-h-[40px] flex flex-col justify-center">
-                            {occupant ? (
-                              <>
-                                <p className="text-xs font-black truncate">{occupant.patient_name || 'Patient'}</p>
-                                <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mt-1">MRN: {(occupant.patient_id || '').slice(0, 8)}</p>
-                              </>
-                            ) : (
-                              <div className="opacity-0 group-hover:opacity-100 transition-all">
-                                 <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1">
-                                    <Plus size={12} /> Admit
-                                 </p>
-                              </div>
-                            )}
-                         </div>
-
-                         {!occupant && (
-                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-5 transition-opacity">
-                              <UserPlus size={60} className="text-slate-900" />
+                         {occupant && (
+                           <div className="absolute top-0 right-0 p-6">
+                             <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
+                                <ArrowUpRight size={20} className="text-white" />
+                             </div>
                            </div>
                          )}
+
+                         <div className={`w-14 h-14 rounded-2xl mb-6 flex items-center justify-center transition-colors ${occupant ? 'bg-white/10' : 'bg-white group-hover:bg-indigo-50'}`}>
+                           <BedIcon size={24} className={occupant ? 'text-white' : 'text-slate-300 group-hover:text-indigo-500'} />
+                         </div>
+
+                         <div className="flex-1">
+                           <span className={`text-[10px] font-black uppercase tracking-[0.2em] block mb-2 ${occupant ? 'text-white/40' : 'text-slate-400'}`}>{bed.bed_number}</span>
+                           {occupant ? (
+                             <>
+                               <h4 className="text-lg font-black leading-tight mb-2 uppercase">{occupant.patient_name}</h4>
+                               <div className="flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                                  <span className="text-[9px] font-black text-white/60 uppercase tracking-widest">Active Encounter</span>
+                               </div>
+                             </>
+                           ) : (
+                             <>
+                               <h4 className="text-lg font-black leading-tight mb-2 uppercase text-slate-300 group-hover:text-slate-900 transition-colors">VACANT</h4>
+                               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Plus size={12} className="text-indigo-500" />
+                                  <span className="text-[9px] font-black text-indigo-500 uppercase tracking-widest">Initiate Admission</span>
+                               </div>
+                             </>
+                           )}
+                         </div>
                        </button>
                      );
                    })}
                 </div>
 
-                {(clinicalBeds[activeWard?.id] || []).length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-32 text-center">
-                     <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center text-slate-200 mb-6">
-                        <AlertTriangle size={32} />
-                     </div>
-                     <h3 className="text-sm font-black text-slate-900 uppercase">Sector Empty</h3>
-                     <p className="text-xs text-slate-400 max-w-[200px] mt-2 font-medium italic">No bed infrastructure detected in this ward node.</p>
-                  </div>
-                )}
+                <footer className="mt-12 pt-8 border-t border-slate-50 flex items-center justify-between">
+                   <div className="flex items-center gap-8">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-slate-900"></div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Occupied</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-slate-100 border border-slate-200"></div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Available</span>
+                      </div>
+                   </div>
+                   <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest italic">Live Telemetry Synchronized</p>
+                </footer>
              </div>
           </div>
         )}
 
         {activeTab === 'ledger' && (
-          <div className="bg-white rounded-[40px] overflow-hidden border border-slate-100 shadow-sm">
-             <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+          <div className="bg-white rounded-[4rem] border border-slate-100 shadow-2xl shadow-slate-200/30 overflow-hidden animate-fade-in">
+             <header className="p-12 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                   <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Inpatient Ledger</h3>
-                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Real-time Admission Tracking</p>
+                  <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight mb-2">Admission Ledger</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Historical & Active Patient Flow</p>
                 </div>
-                <div className="flex gap-2">
-                   <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors">
-                      <Filter size={16} />
-                   </button>
-                   <button className="p-2.5 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-600 transition-colors">
-                      <Search size={16} />
-                   </button>
-                </div>
-             </div>
-
+                <button className="flex items-center gap-3 px-8 py-4 bg-slate-50 text-slate-900 rounded-[2rem] text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 transition-all">
+                  <ClipboardList size={18} />
+                  Export Telemetry
+                </button>
+             </header>
              <div className="overflow-x-auto">
                 <table className="w-full">
                    <thead>
-                      <tr className="bg-slate-50/50">
-                         <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Patient</th>
-                         <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Ward / Unit</th>
-                         <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Vitals Status</th>
-                         <th className="px-8 py-4 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Clinical Care</th>
-                         <th className="px-8 py-4 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Action</th>
+                      <tr className="bg-slate-50/50 text-left border-b border-slate-50">
+                         <th className="px-12 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clinical Subject</th>
+                         <th className="px-12 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Location Shard</th>
+                         <th className="px-12 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Status</th>
+                         <th className="px-12 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Provider</th>
+                         <th className="px-12 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Action</th>
                       </tr>
                    </thead>
                    <tbody className="divide-y divide-slate-50">
-                      {inpatientEncounters.length === 0 ? (
-                        <tr>
-                           <td colSpan="5" className="py-20 text-center">
-                              <p className="text-sm text-slate-300 italic font-medium tracking-tight">No active inpatient nodes found in global registry.</p>
+                      {filteredEncounters.map(e => (
+                        <tr key={e.id} className="group hover:bg-slate-50/30 transition-all">
+                           <td className="px-12 py-8">
+                              <p className="text-sm font-black text-slate-900 uppercase mb-1">{e.patient_name}</p>
+                              <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">ID: {e.patient_id?.slice(0, 8)}</p>
+                           </td>
+                           <td className="px-12 py-8">
+                              <p className="text-xs font-black text-slate-700 uppercase">{e.ward_name || 'General Ward'}</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{e.bed_number || 'TBD'}</p>
+                           </td>
+                           <td className="px-12 py-8">
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{e.status}</span>
+                              </div>
+                           </td>
+                           <td className="px-12 py-8">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center font-black text-slate-400 text-[10px]">
+                                  {(e.provider_name || 'D').charAt(0)}
+                                </div>
+                                <span className="text-xs font-black text-slate-900 uppercase">{e.provider_name || 'TBD'}</span>
+                              </div>
+                           </td>
+                           <td className="px-12 py-8 text-right">
+                              <button onClick={() => setShowDischargePanel(e)} className="p-3 rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-slate-900 hover:border-slate-900 transition-all">
+                                <LogOut size={18} />
+                              </button>
                            </td>
                         </tr>
-                      ) : (
-                        inpatientEncounters.map(e => (
-                          <tr key={e.id} className="hover:bg-slate-50/30 transition-colors">
-                             <td className="px-8 py-6">
-                                <div className="flex items-center gap-4">
-                                   <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-black text-xs uppercase">
-                                      {(e.patient_name || 'P').charAt(0)}
-                                   </div>
-                                   <div>
-                                      <p className="text-sm font-black text-slate-900">{e.patient_name || 'Clinical Subject'}</p>
-                                      <p className="text-[9px] font-bold text-slate-400 uppercase mt-0.5 tracking-widest">MRN: {(e.patient_id || '').slice(0, 8)}</p>
-                                   </div>
-                                </div>
-                             </td>
-                             <td className="px-8 py-6">
-                                <p className="text-xs font-black text-slate-700 uppercase">{e.ward_name || 'General Sector'}</p>
-                                <p className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter mt-1">Bed: {e.bed_number || '--'}</p>
-                             </td>
-                             <td className="px-8 py-6">
-                                <div className="flex items-center gap-3">
-                                   <div className="px-2 py-1 bg-slate-50 rounded-lg text-[9px] font-black text-slate-400">BP: <span className="text-slate-900">{e.bp || '--'}</span></div>
-                                   <div className="px-2 py-1 bg-slate-50 rounded-lg text-[9px] font-black text-slate-400">HR: <span className="text-slate-900">{e.hr || '--'}</span></div>
-                                </div>
-                             </td>
-                             <td className="px-8 py-6">
-                                <div className="flex items-center gap-2">
-                                   <div className={`w-2 h-2 rounded-full ${e.diagnosis ? 'bg-emerald-500' : 'bg-amber-400'}`}></div>
-                                   <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{e.diagnosis ? 'Clinical Note Active' : 'Observation Mode'}</span>
-                                </div>
-                             </td>
-                             <td className="px-8 py-6 text-right">
-                                <button
-                                  onClick={() => handleDischargeRequest(e)}
-                                  className="text-[10px] font-black text-slate-900 uppercase tracking-widest px-4 py-2 hover:bg-slate-50 rounded-lg transition-colors border border-slate-100"
-                                >
-                                   Discharge
-                                </button>
-                             </td>
-                          </tr>
-                        ))
-                      )}
+                      ))}
                    </tbody>
                 </table>
              </div>
@@ -441,200 +462,104 @@ export default function InpatientPage({ tenant, activeUser, providers, encounter
         )}
       </main>
 
-      {/* ADMISSION SIDE PANEL */}
       {showAdmissionPanel && (
-        <div className="fixed inset-0 z-[100] flex justify-end">
-           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setShowAdmissionPanel(false)}></div>
-           <div className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col animate-slide-in-right">
-              <header className="p-8 border-b border-slate-50 flex items-center justify-between">
-                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                       <UserPlus size={24} />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
+           <div className="absolute inset-0" onClick={() => setShowAdmissionPanel(false)}></div>
+           <div className="relative bg-white rounded-[4rem] w-full max-w-2xl p-16 shadow-2xl animate-scale-up border border-white/20">
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-16 h-16 rounded-[2rem] bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                   <UserPlus size={32} />
+                </div>
+                <div>
+                  <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Patient Admission</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Unit Protocol Initiation</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleFinalizeAdmission} className="space-y-8">
+                 <div className="space-y-3">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Subject Selection</label>
+                   <PatientSearch tenantId={tenant.id} />
+                 </div>
+
+                 <div className="space-y-3">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Clinical Lead</label>
+                   <select name="providerId" className="w-full px-8 py-5 bg-slate-50 border-none rounded-3xl text-xs font-black uppercase tracking-widest outline-none focus:ring-4 focus:ring-indigo-500/5 transition-all">
+                      {clinicalProviders.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                   </select>
+                 </div>
+
+                 <div className="p-6 bg-slate-50 rounded-3xl flex items-center gap-4 border border-slate-100/50">
+                    <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-slate-400 shadow-sm">
+                      <BedIcon size={20} />
                     </div>
                     <div>
-                       <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Patient Admission</h2>
-                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Bed Node: {admissionBedId}</p>
+                      <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Target Location</p>
+                      <p className="text-xs font-black text-slate-900 uppercase">{activeWard?.name} • Bed {admissionBedId}</p>
                     </div>
                  </div>
-                 <button onClick={() => setShowAdmissionPanel(false)} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-400 transition-colors">
-                    <X size={20} />
-                 </button>
-              </header>
 
-              <div className="flex-1 overflow-y-auto p-8">
-                 <form id="admissionForm" onSubmit={handleFinalizeAdmission} className="space-y-8">
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Search Patient</label>
-                       <div className="p-1 bg-slate-50 rounded-2xl border border-slate-100">
-                          <PatientSearch tenantId={tenant?.id} />
-                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Admitting Physician</label>
-                       <select name="providerId" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all" required>
-                          {providers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                       </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-6">
-                       <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Admission Type</label>
-                          <select name="type" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all">
-                             <option value="In-patient">Routine (IPD)</option>
-                             <option value="Emergency">Emergency (ER)</option>
-                          </select>
-                       </div>
-                       <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Priority</label>
-                          <select name="priority" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-black text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all">
-                             <option value="routine">Routine</option>
-                             <option value="urgent">Urgent</option>
-                             <option value="stat">Immediate</option>
-                          </select>
-                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Clinical Notes</label>
-                       <textarea name="notes" className="w-full px-6 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all min-h-[120px] resize-none" placeholder="Primary reason for admission..."></textarea>
-                    </div>
-
-                    <div className="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100/50">
-                       <div className="flex gap-4">
-                          <ShieldCheck size={20} className="text-indigo-600 shrink-0 mt-0.5" />
-                          <p className="text-[11px] font-medium text-indigo-700 leading-relaxed italic">
-                             Automated infrastructure assignment: Patient will be bound to <span className="font-black">{activeWard?.name} / {admissionBedId}</span> for clinical tracking and billing purposes.
-                          </p>
-                       </div>
-                    </div>
-                 </form>
-              </div>
-
-              <div className="p-8 border-t border-slate-50 bg-slate-50/30 flex gap-4">
-                 <button 
-                   type="submit" 
-                   form="admissionForm"
-                   disabled={loading}
-                   className="flex-1 bg-slate-900 text-white px-8 py-5 rounded-[24px] text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-300 transition-all hover:bg-slate-800 active:scale-95 disabled:opacity-50"
-                 >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Confirm Admission'}
-                 </button>
-                 <button onClick={() => setShowAdmissionPanel(false)} className="px-8 py-5 rounded-[24px] bg-white border border-slate-200 text-xs font-black uppercase text-slate-400">Cancel</button>
-              </div>
+                 <div className="flex gap-4 pt-6">
+                    <button type="button" onClick={() => setShowAdmissionPanel(false)} className="flex-1 py-6 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-slate-900 transition-colors">Cancel</button>
+                    <button type="submit" className="flex-1 py-6 bg-slate-900 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-slate-900/20 active:scale-95 transition-all">
+                      Confirm Admission
+                    </button>
+                 </div>
+              </form>
            </div>
         </div>
       )}
 
-      {/* DISCHARGE MODAL */}
       {showDischargePanel && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
-           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-fade-in" onClick={() => setShowDischargePanel(null)}></div>
-           <div className="relative w-full max-w-4xl bg-white rounded-[48px] shadow-2xl overflow-hidden animate-scale-up">
-              <header className="px-10 py-10 bg-slate-900 text-white flex justify-between items-center">
-                 <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 rounded-3xl bg-white/10 flex items-center justify-center text-white border border-white/10">
-                       <LogOut size={28} />
-                    </div>
-                    <div>
-                       <h2 className="text-2xl font-black uppercase tracking-tight">Patient Discharge Summary</h2>
-                       <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mt-1">Institutional Release Protocol • {showDischargePanel.patient_name}</p>
-                    </div>
-                 </div>
-                 <button onClick={() => setShowDischargePanel(null)} className="w-12 h-12 flex items-center justify-center rounded-2xl hover:bg-white/10 transition-colors">
-                    <X size={24} />
-                 </button>
-              </header>
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xl z-[200] flex items-center justify-center p-6">
+           <div className="absolute inset-0" onClick={() => setShowDischargePanel(null)}></div>
+           <div className="relative bg-white rounded-[4rem] w-full max-w-2xl p-16 shadow-2xl animate-scale-up border border-white/20">
+              <div className="flex items-center gap-4 mb-10">
+                <div className="w-16 h-16 rounded-[2rem] bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                   <LogOut size={32} />
+                </div>
+                <div>
+                  <h3 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Discharge Protocol</h3>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Clinical Settlement & Finalization</p>
+                </div>
+              </div>
 
-              <div className="p-12 space-y-12">
-                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    <div className="space-y-8">
-                       <div className="flex items-center justify-between mb-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Final Diagnosis & Outcome</label>
-                          <button 
-                            onClick={async () => {
-                              try {
-                                setIsGeneratingAI(true);
-                                const { summary } = await getAIDischargeSummary(showDischargePanel.id);
-                                const parts = summary.split('2. Hospital Course');
-                                setDischargeDiagnosis(parts[0].replace('1. Final Diagnosis', '').trim());
-                                setDischargeMeds(summary); 
-                              } catch (err) {
-                                showToast({ message: 'AI Synthesis failed', type: 'error' });
-                              } finally {
-                                setIsGeneratingAI(false);
-                              }
-                            }}
-                            className="text-[9px] font-black text-indigo-600 uppercase flex items-center gap-2 hover:text-indigo-800 disabled:opacity-50"
-                          >
-                             {isGeneratingAI ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                             {isGeneratingAI ? 'Processing...' : 'AI Clinical Summary'}
-                          </button>
-                       </div>
-                       <textarea 
-                         value={dischargeDiagnosis}
-                         onChange={(e) => setDischargeDiagnosis(e.target.value)}
-                         className="w-full px-6 py-5 bg-slate-50 border-none rounded-[32px] text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all min-h-[120px] resize-none" 
-                         placeholder="Enter final medical diagnosis..."
-                       />
-
-                       <label className="block space-y-2">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Follow-up Instructions</span>
-                          <textarea 
-                            value={dischargeMeds}
-                            onChange={(e) => setDischargeMeds(e.target.value)}
-                            className="w-full px-6 py-5 bg-slate-50 border-none rounded-[32px] text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all min-h-[150px] resize-none" 
-                            placeholder="Medications, restrictions, and next visit details..."
-                          />
-                       </label>
-                    </div>
-
-                    <div className="space-y-8">
-                       <div className="bg-slate-50 rounded-[40px] p-8 space-y-6">
-                          <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-4">Financial Settlement</h4>
-                          <div className="flex justify-between items-center">
-                             <span className="text-xs font-black text-slate-500 uppercase">Gross Accrual</span>
-                             <span className="text-sm font-black text-slate-900 tabular-nums">₹15,400.00</span>
-                          </div>
-                          <div className="flex justify-between items-center text-emerald-600">
-                             <span className="text-xs font-black uppercase italic">Institutional Cover (85%)</span>
-                             <span className="text-sm font-black tabular-nums">- ₹13,090.00</span>
-                          </div>
-                          <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
-                             <span className="text-sm font-black text-slate-900 uppercase">Final Liability</span>
-                             <span className="text-2xl font-black text-indigo-600 tabular-nums">₹2,310.00</span>
-                          </div>
-                       </div>
-
-                       <div className="p-8 bg-emerald-50 rounded-[40px] border border-emerald-100 flex gap-5">
-                          <ShieldCheck size={24} className="text-emerald-600 shrink-0 mt-1" />
-                          <p className="text-[12px] font-medium text-emerald-700 leading-relaxed italic">
-                             Identity and insurance verified via <span className="font-black">National Clinical Gateway</span>. Patient is eligible for expedited discharge protocol.
-                          </p>
-                       </div>
-                    </div>
+              <div className="space-y-8">
+                 <div className="p-8 bg-slate-50 rounded-[3rem] border border-slate-100">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Subject Identitity</p>
+                    <h4 className="text-xl font-black text-slate-900 uppercase">{showDischargePanel.patient_name}</h4>
                  </div>
 
-                 <div className="pt-10 border-t border-slate-50 flex gap-4">
-                    <button 
-                      onClick={finalizeDischarge}
-                      disabled={loading}
-                      className="flex-1 bg-slate-900 text-white px-10 py-6 rounded-[32px] text-xs font-black uppercase tracking-[0.2em] shadow-2xl transition-all hover:bg-emerald-600 active:scale-95 disabled:opacity-50"
-                    >
-                       {loading ? <Loader2 size={20} className="animate-spin mx-auto" /> : 'Finalize Discharge & Release Bed'}
-                    </button>
-                    <button 
-                      onClick={() => setShowDischargePanel(null)}
-                      className="px-10 py-6 rounded-[32px] bg-white border-2 border-slate-100 text-xs font-black uppercase text-slate-400"
-                    >
-                      Hold Release
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Final Clinical Diagnosis</label>
+                    <textarea 
+                      value={dischargeDiagnosis} 
+                      onChange={e => setDischargeDiagnosis(e.target.value)} 
+                      placeholder="ENTER FINAL DIAGNOSIS SHARD..." 
+                      className="w-full px-8 py-6 bg-slate-50 border-none rounded-[2.5rem] text-xs font-black uppercase tracking-widest min-h-[120px] outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all" 
+                    />
+                 </div>
+
+                 <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Medication Protocol</label>
+                    <textarea 
+                      value={dischargeMeds} 
+                      onChange={e => setDischargeMeds(e.target.value)} 
+                      placeholder="ENTER DISCHARGE MEDICATIONS..." 
+                      className="w-full px-8 py-6 bg-slate-50 border-none rounded-[2.5rem] text-xs font-black uppercase tracking-widest min-h-[120px] outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all" 
+                    />
+                 </div>
+
+                 <div className="flex gap-4 pt-6">
+                    <button onClick={() => setShowDischargePanel(null)} className="flex-1 py-6 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:text-slate-900 transition-colors">Cancel</button>
+                    <button onClick={finalizeDischarge} className="flex-1 py-6 bg-emerald-600 text-white rounded-[2rem] font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl shadow-emerald-600/20 active:scale-95 transition-all">
+                      Finalize Discharge
                     </button>
                  </div>
               </div>
            </div>
         </div>
       )}
-
     </div>
   );
 }

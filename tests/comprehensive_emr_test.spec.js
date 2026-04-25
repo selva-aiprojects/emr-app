@@ -153,7 +153,11 @@ test.describe('Comprehensive EMR System Test', () => {
             
             for (const endpoint of apiEndpoints) {
                 try {
+<<<<<<< HEAD
                     const response = await page.request.get(`http://localhost:4005${endpoint}`);
+=======
+                    const response = await page.request.get(`http://localhost:4000${endpoint}`);
+>>>>>>> 52791cbe98012868f178ca6ba1e3c297477226fe
                     if (response.status() < 500) {
                         console.log(`✅ API endpoint ${endpoint} responding (Status: ${response.status()})`);
                     } else {
@@ -168,7 +172,11 @@ test.describe('Comprehensive EMR System Test', () => {
         // Step 6: Test Database Connectivity
         await test.step('Database Connectivity Test', async () => {
             try {
+<<<<<<< HEAD
                 const response = await page.request.get('http://localhost:4005/api/tenants');
+=======
+                const response = await page.request.get('http://localhost:4000/api/tenants');
+>>>>>>> 52791cbe98012868f178ca6ba1e3c297477226fe
                 if (response.status() === 200) {
                     const data = await response.json();
                     if (Array.isArray(data)) {

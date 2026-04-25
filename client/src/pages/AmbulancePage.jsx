@@ -18,6 +18,7 @@ import {
   Shield
 } from 'lucide-react';
 import '../styles/critical-care.css';
+import { PageHero } from '../components/ui/index.jsx';
 
 export default function AmbulancePage({ tenant }) {
   const { showToast } = useToast();
@@ -92,42 +93,25 @@ export default function AmbulancePage({ tenant }) {
 
   return (
     <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium mb-8">
-        <div>
-           <h1 className="page-title-rich flex items-center gap-4 text-white">
-              Ambulance Dispatch Hub
-              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">GPS Mesh Shard</span>
-           </h1>
-           <p className="dim-label">Real-time emergency fleet orchestration and predictive logistics for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-xs font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/60">
-              <Activity className="w-4 h-4 text-emerald-400" /> GPS Mesh Active • Response Readiness: 98.4%
-           </p>
-        </div>
-
-        <div className="flex flex-col items-end gap-3">
-          <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
-            {[
-              { id: 'live', label: 'Live Response', icon: Navigation },
-              { id: 'fleet', label: 'Fleet Registry', icon: Truck }
-            ].map(tab => (
-              <button 
-                key={tab.id}
-                className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                <tab.icon className="w-3.5 h-3.5 mr-2" /> {tab.label}
-              </button>
-            ))}
-          </div>
-          <button 
-            onClick={() => setShowRegModal(true)}
-            className="px-8 py-3 bg-white text-slate-900 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl hover:bg-slate-50 border-none min-w-[180px]"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Enroll Vehicle
-          </button>
-        </div>
-      </header>
+      <PageHero 
+        title="Ambulance Dispatch Hub"
+        subtitle={`Real-time emergency fleet orchestration and predictive logistics for ${tenant?.name || 'Authorized Facility'}`}
+        badge="GPS Mesh Shard"
+        icon={Truck}
+        tabs={[
+          { id: 'live', label: 'Live Response', icon: Navigation },
+          { id: 'fleet', label: 'Fleet Registry', icon: Truck }
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        actions={[
+          { label: 'Enroll Vehicle', icon: Plus, variant: 'primary', onClick: () => setShowRegModal(true) }
+        ]}
+        stats={[
+          { label: 'Available', value: `${stats.available} Units`, icon: CheckCircle, color: 'text-emerald-400' },
+          { label: 'Active', value: stats.active, icon: Activity, color: 'text-rose-400' }
+        ]}
+      />
 
       <section className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
         <div className="glass-panel p-8 border-l-4 border-l-emerald-500">

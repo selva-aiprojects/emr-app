@@ -63,6 +63,7 @@ async function setup() {
 
         // Seed encounter
         let encounterId;
+<<<<<<< HEAD
         const visitDate = new Date().toISOString().split('T')[0];
         try {
           const encounterRes = await query(`
@@ -77,6 +78,21 @@ async function setup() {
               VALUES ($1, $2, $3, 'open', 'OPD', $4)
               RETURNING id
             `, [tenantId, patientId, userId, visitDate]);
+=======
+        try {
+          const encounterRes = await query(`
+            INSERT INTO emr.encounters (tenant_id, patient_id, provider_id, status, encounter_type)
+            VALUES ($1, $2, $3, 'open', 'Out-patient')
+            RETURNING id
+          `, [tenantId, patientId, userId]);
+          encounterId = encounterRes.rows[0].id;
+        } catch (e) {
+             const encounterRes = await query(`
+              INSERT INTO emr.encounters (tenant_id, patient_id, provider_id, status, encounter_type)
+              VALUES ($1, $2, $3, 'open', 'OPD')
+              RETURNING id
+            `, [tenantId, patientId, userId]);
+>>>>>>> 52791cbe98012868f178ca6ba1e3c297477226fe
             encounterId = encounterRes.rows[0].id;
         }
 
@@ -89,7 +105,11 @@ async function setup() {
         
         // Seed prescription
         if (t.tier === 'Basic' || t.tier === 'Enterprise') {
+<<<<<<< HEAD
           const drugs = await query(`SELECT id as drug_id, generic_name FROM emr.drug_master LIMIT 1`);
+=======
+          const drugs = await query(`SELECT drug_id, generic_name FROM emr.drug_master LIMIT 1`);
+>>>>>>> 52791cbe98012868f178ca6ba1e3c297477226fe
           if (drugs.rows.length > 0) {
             const drugId = drugs.rows[0].drug_id;
             const drugName = drugs.rows[0].generic_name;
@@ -102,7 +122,11 @@ async function setup() {
             
             await query(`
               INSERT INTO emr.prescription_items (prescription_id, drug_id, sequence, dose, dose_unit, frequency, quantity_prescribed, status)
+<<<<<<< HEAD
               VALUES ($1, $2, 1, 500, 'mg', '1-0-1', 10, 'pending')
+=======
+              VALUES ($1, $2, 1, '500', 'mg', '1-0-1', 10, 'pending')
+>>>>>>> 52791cbe98012868f178ca6ba1e3c297477226fe
             `, [rxRes.rows[0].id, drugId]);
             console.log(`💊 Prescription seeded for ${t.code}`);
           }

@@ -169,7 +169,7 @@ function formatRole(role) {
 }
 
 /* ─── COLLAPSIBLE GROUP COMPONENT ────────────────────────────────── */
-function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebarCollapsed, databaseMenu }) {
+function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebarCollapsed, databaseMenu, onEmrWorkflowChange }) {
   const [open, setOpen] = useState(true);
 
   if (visibleModules.length === 0) return null;
@@ -205,18 +205,15 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
       >
         <div className={`space-y-1.5 ${!sidebarCollapsed && open ? "pt-2 pb-4" : ""}`}>
           {visibleModules.map((moduleName) => {
-            // Try to get icon and info from database first, then fallback to hardcoded
             let Icon = LayoutDashboard;
             let moduleInfo = moduleMeta[moduleName];
             let displayName = moduleInfo?.title || moduleName;
             let subtitle = moduleInfo?.subtitle;
             
             if (databaseMenu) {
-              // Find this module in database menu
               for (const header of databaseMenu) {
                 const item = header.items.find(i => i.code === moduleName);
                 if (item) {
-                  // Use specific icon from DB, then fallback to navIcons map, then default
                   Icon = lucideIcons[item.icon_name] || navIcons[item.icon_name] || navIcons[moduleName] || LayoutDashboard;
                   displayName = item.name;
                   subtitle = item.description;
@@ -224,7 +221,6 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
                 }
               }
             } else {
-              // Fallback to hardcoded icons
               Icon = navIcons[moduleName] || LayoutDashboard;
             }
             
@@ -235,17 +231,13 @@ function NavGroup({ group, visibleModules, view, setView, setMobileOpen, sidebar
                 key={moduleName}
                 data-testid={`nav-${moduleName}`}
                 onClick={() => {
-                  // Special handling for EMR workflow navigation
                   if (moduleName === 'emr') {
                     setView(moduleName);
-                    // Reset EMR to dashboard when navigating from sidebar
                     onEmrWorkflowChange?.('dashboard');
                     const event = new CustomEvent('emrWorkflowChange', { detail: 'dashboard' });
                     window.dispatchEvent(event);
                   } else if (moduleName.startsWith('emr_')) {
-                    // Handle EMR workflow-specific menu items
                     setView('emr');
-                    // Extract target workflow from module code
                     const targetWorkflow = moduleName.replace('emr_', '').replace('_', '-');
                     onEmrWorkflowChange?.(targetWorkflow);
                     const event = new CustomEvent('emrWorkflowChange', { detail: targetWorkflow });
@@ -315,7 +307,7 @@ export default function AppLayout({
   patients = [],
   appointments = [],
   menuData = null, 
-  onEmrWorkflowChange, // New prop
+  onEmrWorkflowChange,
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -326,7 +318,7 @@ export default function AppLayout({
     view === "doctor_workspace"
       ? "My Schedule"
       : moduleMeta[view]?.title || "Clinical Workspace";
-  
+
   const [databaseMenu, setDatabaseMenu] = useState(menuData);
   const [menuLoading, setMenuLoading] = useState(!menuData);
 
@@ -339,7 +331,6 @@ export default function AppLayout({
 
   useEffect(() => {
     const loadMenuFromDatabase = async () => {
-      // If we already have menuData from bootstrap, skip the extra fetch
       if (databaseMenu && databaseMenu.length > 0) {
         setMenuLoading(false);
         return;
@@ -351,8 +342,8 @@ export default function AppLayout({
       }
 
       try {
-        const menuData = await menuService.getUserMenu();
-        setDatabaseMenu(menuData);
+        const data = await menuService.getUserMenu();
+        setDatabaseMenu(data);
       } catch (error) {
         console.warn('Failed to load menu from database, falling back to defaults:', error);
         setDatabaseMenu(null);
@@ -364,18 +355,15 @@ export default function AppLayout({
     loadMenuFromDatabase();
   }, [activeUser?.role]);
 
-  // Convert database menu to sidebar groups format
   const sidebarGroups = useMemo(() => {
     if (menuLoading) return [];
     
     if (databaseMenu && databaseMenu.length > 0) {
-      // Use database menu
       const groups = databaseMenu.map(header => ({
         name: header.title || header.name,
         modules: header.items.map(item => item.code)
       }));
 
-      // Ensure Doctor Desk is always visible for doctors
       const hasWorkspace = groups.some(g => g.modules.includes('doctor_workspace'));
       if (isDoctor && !hasWorkspace) {
         groups.unshift({
@@ -386,12 +374,10 @@ export default function AppLayout({
       return groups;
     }
     
-    // Fallback to hardcoded groups
     return getSidebarGroups(activeUser?.role);
-  }, [activeUser?.role, databaseMenu, menuLoading]);
+  }, [activeUser?.role, databaseMenu, menuLoading, isDoctor]);
 
   const effectiveAccessibleModules = useMemo(() => {
-    // If we have database menu, extract modules from there
     if (databaseMenu && databaseMenu.length > 0) {
       const dbModules = [];
       databaseMenu.forEach(header => {
@@ -400,10 +386,7 @@ export default function AppLayout({
         });
       });
       
-      // Deduplicate modules from database
       const uniqueDbModules = [...new Set(dbModules)];
-      
-      // CRITICAL: Filter database modules by allowedViews to maintain RBAC consistency
       const filtered = uniqueDbModules.filter(m => allowedViews.includes(m));
       
       if (isDoctor && !filtered.includes("doctor_workspace")) {
@@ -412,23 +395,11 @@ export default function AppLayout({
       return filtered;
     }
     
-    // Fallback to original logic
     if (isDoctor && !allowedViews.includes("doctor_workspace")) {
       return ["doctor_workspace", ...allowedViews];
     }
     return allowedViews;
   }, [isDoctor, allowedViews, databaseMenu]);
-
-  const today = useMemo(
-    () =>
-      new Date().toLocaleDateString("en-IN", {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      }),
-    []
-  );
 
   const handleSearchResult = (result) => {
     if (result?.type === "nav") {
@@ -459,24 +430,14 @@ export default function AppLayout({
               </div>
             )}
             <div className="min-w-0">
-              <h1 
-                className="text-[14px] font-black tracking-tight text-white uppercase leading-tight" 
-                style={{ color: '#ffffff !important', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}
-              >
-                {BRAND.name}
-              </h1>
-              <p 
-                className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] truncate mt-1" 
-                style={{ color: 'rgba(255, 255, 255, 0.9) !important', textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)' }}
-              >
-                {facilityName}
-              </p>
+              <h1 className="text-[14px] font-black tracking-tight text-white uppercase leading-tight" style={{ color: '#ffffff !important', textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)' }}>{BRAND.name}</h1>
+              <p className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] truncate mt-1" style={{ color: 'rgba(255, 255, 255, 0.9) !important', textShadow: '0 1px 2px rgba(0, 0, 0, 0.2)' }}>{facilityName}</p>
             </div>
           </div>
         )}
 
-        {sidebarCollapsed &&
-          (tenant?.logo_url ? (
+        {sidebarCollapsed && (
+          tenant?.logo_url ? (
             <div className="w-10 h-10 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-lg">
               <img src={tenant.logo_url} alt="Logo" className="max-w-full max-h-full object-contain" />
             </div>
@@ -484,26 +445,18 @@ export default function AppLayout({
             <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-white">
               <Activity size={18} />
             </div>
-          ))}
+          )
+        )}
 
-        <button
-          onClick={() => setSidebarCollapsed((c) => !c)}
-          className="flex-shrink-0 p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/10 text-white/30 hover:text-white transition-all"
-          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
+        <button onClick={() => setSidebarCollapsed((c) => !c)} className="flex-shrink-0 p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/10 text-white/30 hover:text-white transition-all">
           {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </div>
 
-      <nav
-        className="sidebar-custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-0.5"
-      >
+      <nav className="sidebar-custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-0.5">
         {sidebarGroups.map((group) => {
           const visibleModules = group.modules.filter((m) => effectiveAccessibleModules.includes(m));
-          
-          // Skip empty groups
           if (visibleModules.length === 0) return null;
-          
           return (
             <NavGroup
               key={group.name}
@@ -514,6 +467,7 @@ export default function AppLayout({
               setMobileOpen={setMobileOpen}
               sidebarCollapsed={sidebarCollapsed}
               databaseMenu={databaseMenu}
+              onEmrWorkflowChange={onEmrWorkflowChange}
             />
           );
         })}
@@ -527,18 +481,10 @@ export default function AppLayout({
           {!sidebarCollapsed && (
             <>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-white truncate leading-none">
-                  {activeUser?.name || "Administrator"}
-                </p>
-                <p className="text-[10px] font-medium text-white/30 truncate leading-none uppercase tracking-widest mt-0.5">
-                  {formatRole(activeUser?.role)}
-                </p>
+                <p className="text-xs font-bold text-white truncate leading-none">{activeUser?.name || "Administrator"}</p>
+                <p className="text-[10px] font-medium text-white/30 truncate leading-none uppercase tracking-widest mt-0.5">{formatRole(activeUser?.role)}</p>
               </div>
-              <button
-                onClick={onLogout}
-                title="Sign out"
-                className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-all flex-shrink-0"
-              >
+              <button onClick={onLogout} title="Sign out" className="p-1.5 rounded-lg hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-all flex-shrink-0">
                 <LogOut size={13} />
               </button>
             </>
@@ -550,61 +496,28 @@ export default function AppLayout({
 
   return (
     <div className="flex h-screen bg-[#EFF5FA] overflow-hidden">
-      <aside
-        className={`
-          fixed lg:static inset-y-0 left-0 z-[100]
-          bg-[var(--medical-navy-light)] flex-shrink-0
-          transition-all duration-300 ease-in-out h-full
-          ${sidebarCollapsed ? "w-[60px]" : "w-[260px]"}
-          ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
-        `}
-      >
+      <aside className={`fixed lg:static inset-y-0 left-0 z-[100] bg-[var(--medical-navy-light)] flex-shrink-0 transition-all duration-300 ease-in-out h-full ${sidebarCollapsed ? "w-[60px]" : "w-[260px]"} ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         {SidebarContent}
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <div className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-100">
-          <button onClick={() => setMobileOpen(true)} className="p-2 text-slate-500 rounded-lg hover:bg-slate-100">
-            <Menu size={20} />
-          </button>
-          <span className="text-xs font-black uppercase tracking-widest text-slate-800">{BRAND.name}</span>
-          <div className="w-9" />
-        </div>
-
         <header className="flex-shrink-0 bg-white border-b border-[rgba(0,119,182,0.12)] px-6 h-20 flex items-center justify-between shadow-sm shadow-[rgba(0,119,182,0.04)]">
           <div className="flex items-center gap-6 min-w-0 flex-shrink-0">
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-3 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all hidden lg:flex flex-shrink-0"
-            >
+            <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-3 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all hidden lg:flex flex-shrink-0">
               <Menu size={22} />
             </button>
             <div className="flex flex-col justify-center min-w-0">
-              <h2 className="text-base lg:text-lg font-black tracking-tight text-slate-900 leading-none flex items-center gap-2 truncate">
-                {currentModule}
-              </h2>
+              <h2 className="text-base lg:text-lg font-black tracking-tight text-slate-900 leading-none flex items-center gap-2 truncate">{currentModule}</h2>
               <div className="hidden sm:flex items-center gap-2 mt-2 overflow-hidden">
-                <span 
-                  className="text-[11px] font-black uppercase tracking-tight text-white px-3 py-1 rounded-lg shadow-md flex-shrink-0"
-                  style={{ backgroundColor: tenant?.theme?.primary || '#0f5a6e' }}
-                >
-                  {facilityName}
-                </span>
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none truncate opacity-60">
-                  Secure Control Room
-                </span>
+                <span className="text-[11px] font-black uppercase tracking-tight text-white px-3 py-1 rounded-lg shadow-md flex-shrink-0" style={{ backgroundColor: tenant?.theme?.primary || '#0f5a6e' }}>{facilityName}</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none truncate opacity-60">Secure Control Room</span>
               </div>
             </div>
           </div>
 
           <div className="flex items-center flex-1 justify-end gap-3 lg:gap-10 min-w-0 ml-6 h-12">
             <div className="hidden md:block w-48 lg:w-56 flex-shrink">
-              <SmartSearch
-                onSearch={handleSearchResult}
-                placeholder="Search resources..."
-                patients={patients}
-                appointments={appointments}
-              />
+              <SmartSearch onSearch={handleSearchResult} placeholder="Search resources..." patients={patients} appointments={appointments} />
             </div>
             
             <div className="flex items-center gap-4 lg:gap-6 flex-shrink-0">
@@ -612,16 +525,11 @@ export default function AppLayout({
               <ActionMenu
                 trigger={
                   <div className="flex items-center gap-3 hover:bg-slate-50 p-1.5 rounded-2xl cursor-pointer transition-colors">
-                    <div className="w-10 h-10 rounded-[12px] bg-[var(--clinical-secondary)]/10 text-[var(--clinical-secondary)] flex items-center justify-center font-black text-[12px] border border-[var(--clinical-secondary)]/20 uppercase shadow-sm">
-                      {(activeUser?.name || "A").charAt(0)}
-                    </div>
+                    <div className="w-10 h-10 rounded-[12px] bg-[var(--clinical-secondary)]/10 text-[var(--clinical-secondary)] flex items-center justify-center font-black text-[12px] border border-[var(--clinical-secondary)]/20 uppercase shadow-sm">{(activeUser?.name || "A").charAt(0)}</div>
                     <ChevronDown className="hidden md:block w-4 h-4 text-slate-400" />
                   </div>
                 }
-                actions={[
-                  { label: "Settings", onClick: () => setView("admin") },
-                  { label: "Sign Out", onClick: onLogout },
-                ]}
+                actions={[{ label: "Settings", onClick: () => setView("admin") }, { label: "Sign Out", onClick: onLogout }]}
               />
             </div>
 
@@ -648,10 +556,7 @@ export default function AppLayout({
       </div>
 
       {mobileOpen && (
-        <div
-          onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] lg:hidden"
-        />
+        <div onClick={() => setMobileOpen(false)} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] lg:hidden" />
       )}
     </div>
   );

@@ -19,6 +19,7 @@ import {
   Loader2
 } from 'lucide-react';
 import MetricCard from '../components/MetricCard.jsx';
+import { PageHero } from '../components/ui/index.jsx';
 
 export default function DonorPage({ tenant }) {
   const { showToast } = useToast();
@@ -119,27 +120,19 @@ export default function DonorPage({ tenant }) {
 
   return (
     <div className="page-shell-premium animate-fade-in space-y-10 pb-20">
-      <header className="page-header-premium">
-        <div>
-           <h1 className="flex items-center gap-4 text-white">
-              Institutional Blood Bank Shard
-              <span className="system-shard-badge">Vital Inventory Shard</span>
-           </h1>
-           <p className="dim-label">Strategic donor registry and high-velocity vital inventory monitoring for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black uppercase tracking-widest mt-4 flex items-center gap-2 text-white/50">
-              <Activity className="w-3.5 h-3.5 text-emerald-400" /> Inventory Integrity: 100% • Real-time Cross-match Active
-           </p>
-        </div>
-        <div className="flex items-center gap-4 relative z-20">
-           <button 
-             onClick={() => setShowRegModal(true)}
-             className="clinical-btn bg-white !text-slate-900 px-8 rounded-2xl text-meta-sm shadow-2xl hover:bg-slate-50 transition-all border-none font-black min-w-[180px]"
-           >
-              <Plus className="w-4 h-4 mr-2" />
-              Register Donor
-           </button>
-        </div>
-      </header>
+      <PageHero 
+        title="Institutional Blood Bank Shard"
+        subtitle={`Strategic donor registry and high-velocity vital inventory monitoring for ${tenant?.name || 'Authorized Facility'}`}
+        badge="Vital Inventory Shard"
+        icon={Droplet}
+        actions={[
+          { label: 'Register Donor', icon: Plus, variant: 'primary', onClick: () => setShowRegModal(true) }
+        ]}
+        stats={[
+          { label: 'Integrity', value: '100%', icon: ShieldCheck, color: 'text-emerald-400' },
+          { label: 'Cross-match', value: 'Active', icon: Activity, color: 'text-blue-400' }
+        ]}
+      />
 
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

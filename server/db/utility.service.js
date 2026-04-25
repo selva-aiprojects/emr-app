@@ -14,10 +14,10 @@ export async function getReportSummary(tenantId) {
     // Parallel fetch for overview counts
     const overviewSql = `
       SELECT
-        (SELECT COUNT(*) FROM emr.users WHERE tenant_id::text = $1::text) as users,
-        (SELECT COUNT(*) FROM patients WHERE tenant_id::text = $1::text) as patients,
-        (SELECT COUNT(*) FROM appointments WHERE tenant_id::text = $1::text) as appointments,
-        (SELECT COALESCE(SUM(total), 0) FROM invoices WHERE tenant_id::text = $1::text AND status = 'paid') as revenue
+        (SELECT COUNT(*) FROM nexus.users WHERE tenant_id::text = $1::text) as users,
+        (SELECT COUNT(*) FROM nexus.patients WHERE tenant_id::text = $1::text) as patients,
+        (SELECT COUNT(*) FROM nexus.appointments WHERE tenant_id::text = $1::text) as appointments,
+        (SELECT COALESCE(SUM(total), 0) FROM nexus.invoices WHERE tenant_id::text = $1::text AND status = 'paid') as revenue
     `;
     const overviewRes = await query(overviewSql, [tenantId]);
     const overview = overviewRes.rows[0];

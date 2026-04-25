@@ -17,9 +17,9 @@ export async function getAppointments(tenantId, filters = {}) {
       a.*, p.first_name || ' ' || p.last_name as patient_name,
       p.phone as patient_phone,
       u.name as doctor_name
-    FROM appointments a
-    LEFT JOIN patients p ON a.patient_id = p.id
-    LEFT JOIN emr.users u ON a.provider_id = u.id
+    FROM nexus.appointments a
+    LEFT JOIN nexus.patients p ON a.patient_id::text = p.id::text
+    LEFT JOIN nexus.users u ON a.provider_id::text = u.id::text
     WHERE a.tenant_id::text = $1::text
   `;
   
@@ -32,7 +32,7 @@ export async function getAppointments(tenantId, filters = {}) {
   }
   
   if (doctorId) {
-    sql += ` AND a.provider_id = $${paramIndex++}`;
+    sql += ` AND a.provider_id::text = $${paramIndex++}::text`;
     params.push(doctorId);
   }
   
@@ -42,7 +42,7 @@ export async function getAppointments(tenantId, filters = {}) {
   }
   
   if (patientId) {
-    sql += ` AND a.patient_id = $${paramIndex++}`;
+    sql += ` AND a.patient_id::text = $${paramIndex++}::text`;
     params.push(patientId);
   }
   
@@ -54,7 +54,7 @@ export async function getAppointments(tenantId, filters = {}) {
 
 export async function createAppointment({ tenantId, patientId, providerId, start, end, status = 'scheduled', reason, source = 'staff' }) {
   const sql = `
-    INSERT INTO appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, status, reason, source)
+    INSERT INTO nexus.appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, status, reason, source)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
@@ -68,7 +68,7 @@ export async function createAppointment({ tenantId, patientId, providerId, start
 
 export async function updateAppointmentStatus(appointmentId, tenantId, status) {
   const sql = `
-    UPDATE appointments 
+    UPDATE nexus.appointments 
     SET status = $1, updated_at = NOW() 
     WHERE id::text = $2::text AND tenant_id::text = $3::text
     RETURNING *
@@ -83,9 +83,9 @@ export async function getAvailableSlots(tenantId, doctorId, date) {
     SELECT 
       COUNT(*) as booked_count,
       EXTRACT(HOUR FROM scheduled_start) as hour_slot
-    FROM appointments 
-    WHERE tenant_id = $1 
-      AND provider_id = $2 
+    FROM nexus.appointments 
+    WHERE tenant_id::text = $1::text 
+      AND provider_id::text = $2::text 
       AND DATE(scheduled_start) = $3 
       AND status != 'cancelled'
     GROUP BY EXTRACT(HOUR FROM scheduled_start)
@@ -101,9 +101,9 @@ export async function bookAppointment({ tenantId, patientId, doctorId, start, en
   // Check for conflicts
   const conflictSql = `
     SELECT COUNT(*) as conflict_count
-    FROM appointments 
-    WHERE tenant_id = $1 
-      AND provider_id = $2 
+    FROM nexus.appointments 
+    WHERE tenant_id::text = $1::text 
+      AND provider_id::text = $2::text 
       AND (
         (scheduled_start <= $3 AND scheduled_end > $3) OR 
         (scheduled_start < $4 AND scheduled_end >= $4)
@@ -119,13 +119,13 @@ export async function bookAppointment({ tenantId, patientId, doctorId, start, en
   
   // Create appointment
   return await createAppointment({
-    tenantId, patientId, providerId: doctorId, scheduledStart: start, scheduledEnd: end, reason, status: 'scheduled'
+    tenantId, patientId, providerId: doctorId, start, end, reason, status: 'scheduled'
   });
 }
 
 export async function rescheduleAppointment({ appointmentId, tenantId, userId, start, end, reason }) {
   const sql = `
-    UPDATE appointments 
+    UPDATE nexus.appointments 
     SET 
       scheduled_start = $1, 
       scheduled_end = $2, 

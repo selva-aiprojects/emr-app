@@ -2,13 +2,13 @@
 -- This script (Phase 04) establishes the core doctor availability framework
 
 -- Ensure clean state for supporting tables during modernization
-DROP TABLE IF EXISTS emr.doctor_availability CASCADE;
+DROP TABLE IF EXISTS doctor_availability CASCADE;
 
-CREATE TABLE emr.doctor_availability (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-    doctor_id UUID NOT NULL REFERENCES emr.users(id) ON DELETE CASCADE,
-    department_id UUID REFERENCES emr.departments(id) ON DELETE SET NULL,
+CREATE TABLE IF NOT EXISTS doctor_availability (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    tenant_id VARCHAR(255) NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    doctor_id VARCHAR(255) NOT NULL REFERENCES nexus.users(id) ON DELETE CASCADE,
+    department_id VARCHAR(255) REFERENCES departments(id) ON DELETE SET NULL,
     day_of_week INTEGER NOT NULL CHECK (day_of_week BETWEEN 0 AND 6),
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
@@ -20,11 +20,11 @@ CREATE TABLE emr.doctor_availability (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_doctor_availability_tenant ON emr.doctor_availability(tenant_id);
-CREATE INDEX idx_doctor_availability_doctor ON emr.doctor_availability(doctor_id);
-CREATE INDEX idx_doctor_availability_day ON emr.doctor_availability(day_of_week);
+CREATE INDEX IF NOT EXISTS idx_doctor_availability_tenant ON doctor_availability(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_doctor_availability_doctor ON doctor_availability(doctor_id);
+CREATE INDEX IF NOT EXISTS idx_doctor_availability_day ON doctor_availability(day_of_week);
 
--- Trigger logic (Corrected Syntax and Drop)
+-- Trigger logic
 CREATE OR REPLACE FUNCTION update_doctor_availability_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -33,8 +33,8 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-DROP TRIGGER IF EXISTS trigger_doctor_availability_updated_at ON emr.doctor_availability;
+DROP TRIGGER IF EXISTS trigger_doctor_availability_updated_at ON doctor_availability;
 CREATE TRIGGER trigger_doctor_availability_updated_at
-    BEFORE UPDATE ON emr.doctor_availability
+    BEFORE UPDATE ON doctor_availability
     FOR EACH ROW
     EXECUTE FUNCTION update_doctor_availability_updated_at();

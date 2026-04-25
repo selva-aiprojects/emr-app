@@ -18,6 +18,7 @@ import {
   Clock4
 } from 'lucide-react';
 import AppointmentRescheduleModal from '../components/AppointmentRescheduleModal.jsx';
+import { PageHero } from '../components/ui/index.jsx';
 
 export default function AppointmentsPage({
   activeUser, session, patients, providers, walkins, appointments, users,
@@ -158,7 +159,9 @@ export default function AppointmentsPage({
   };
 
   return (
-    <div className="page-shell-premium animate-fade-in">
+    <div className="min-h-screen bg-[#F8FAFC] pb-20 animate-fade-in relative overflow-hidden font-sans">
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-10"></div>
+      
       {reschedulingAppointment && (
         <AppointmentRescheduleModal 
           appointment={reschedulingAppointment}
@@ -168,46 +171,26 @@ export default function AppointmentsPage({
           providers={providers}
         />
       )}
-      <header className="page-header-premium mb-10">
-        <div>
-           <h1 className="page-title-rich flex items-center gap-3 text-white">
-              {isDoctor ? 'Clinical Appointment Schedule' : 'Appointments & Scheduling Hub'}
-              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">
-                {isDoctor ? 'Clinical Node' : 'Reception Shard'}
-              </span>
-           </h1>
-           <p className="dim-label">
-             {isDoctor
-               ? 'Your scheduled consultations and patient encounters.'
-               : `Manage hospital appointments and walk-in patient flow for ${session?.tenantName || 'Authorized Facility'}.`}
-           </p>
-           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> System Online • Reception Protocol Active
-           </p>
-        </div>
-        <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
-          <button 
-            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'appointments' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-            onClick={() => setActiveTab('appointments')}
-          >
-            <Calendar className="w-3.5 h-3.5" /> {isDoctor ? 'Book Slot' : 'Appointments'}
-          </button>
-          {!isPatient && !isDoctor && (
-            <button 
-              className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'walkins' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-              onClick={() => setActiveTab('walkins')}
-            >
-              <Users className="w-3.5 h-3.5" /> Reception Queue
-            </button>
-          )}
-          <button 
-            className={`flex items-center gap-2 px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'availability' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-            onClick={() => setActiveTab('availability')}
-          >
-            <Clock3 className="w-3.5 h-3.5" /> Availability
-          </button>
-        </div>
-      </header>
+
+      <PageHero 
+        title={isDoctor ? 'Clinical Appointment Schedule' : 'Appointments & Scheduling Hub'}
+        subtitle={isDoctor ? 'Your scheduled consultations and patient encounters.' : `Manage hospital appointments and walk-in patient flow for ${session?.tenantName || 'Authorized Facility'}.`}
+        badge={isDoctor ? 'Clinical Node' : 'Reception Shard'}
+        icon={Calendar}
+        tabs={[
+          { id: 'appointments', label: isDoctor ? 'Book Slot' : 'Appointments', icon: Calendar },
+          ...(!isPatient && !isDoctor ? [{ id: 'walkins', label: 'Reception Queue', icon: Users }] : []),
+          { id: 'availability', label: 'Availability', icon: Clock3 }
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        stats={[
+          { label: 'Active Slots', value: appointments.length, icon: Calendar },
+          { label: 'Waiting Queue', value: walkins.length, icon: Users, color: 'text-amber-500' }
+        ]}
+      />
+
+      <div className="max-w-7xl mx-auto px-8 -mt-8 relative z-10">
 
       <div className="grid grid-cols-12 gap-8">
         {/* MAIN WORKFLOW: BOOKING FORMS */}
@@ -554,5 +537,6 @@ export default function AppointmentsPage({
         </aside>
       </div>
     </div>
+  </div>
   );
 }

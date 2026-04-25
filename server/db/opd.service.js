@@ -19,7 +19,7 @@ export async function createOPDToken({
   // Get token number for the department for today
   const tokenSql = `
     SELECT COALESCE(MAX(CAST(SUBSTRING(full_token FROM '[0-9]+$') AS INTEGER)), 0) + 1 as next_number
-    FROM emr.opd_tokens
+    FROM nexus.opd_tokens
     WHERE tenant_id::text = $1::text
       AND department_id = $2
       AND DATE(created_at) = CURRENT_DATE
@@ -28,14 +28,14 @@ export async function createOPDToken({
   const nextNumber = tokenResult.rows[0]?.next_number || 1;
 
   // Get department code
-  const deptSql = 'SELECT code FROM emr.departments WHERE id = $1';
+  const deptSql = 'SELECT code FROM nexus.departments WHERE id::text = $1::text';
   const deptResult = await query(deptSql, [departmentId]);
   const deptCode = deptResult.rows[0]?.code || 'GEN';
 
   const fullToken = `${deptCode}-${nextNumber.toString().padStart(3, '0')}`;
 
   const sql = `
-    INSERT INTO emr.opd_tokens (
+    INSERT INTO nexus.opd_tokens (
       tenant_id,
       patient_id,
       department_id,
@@ -78,10 +78,10 @@ export async function getOPDTokens(tenantId, filters = {}) {
       p.phone as patient_phone,
       d.name as department_name,
       u.name as doctor_name
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.patients p ON t.patient_id = p.id
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    FROM nexus.opd_tokens t
+    LEFT JOIN nexus.patients p ON t.patient_id = p.id
+    LEFT JOIN nexus.departments d ON t.department_id = d.id
+    LEFT JOIN nexus.users u ON t.doctor_id = u.id
     WHERE t.tenant_id::text = $1::text
   `;
 
@@ -147,13 +147,13 @@ export async function createOPDBill({
   notes,
   createdBy,
 }) {
-  // Generate bill number correctly from emr schema
-  const billNumberSql = `SELECT emr.get_next_bill_number($1) as bill_number`;
+  // Generate bill number correctly from nexus schema
+  const billNumberSql = `SELECT nexus.get_next_bill_number($1) as bill_number`;
   const billNumberResult = await query(billNumberSql, [tenantId]);
   const billNumber = billNumberResult.rows[0].bill_number;
 
   const sql = `
-    INSERT INTO emr.opd_bills (
+    INSERT INTO nexus.opd_bills (
       tenant_id,
       patient_id,
       token_id,
@@ -240,11 +240,11 @@ export async function getOPDBills(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    FROM nexus.opd_bills b
+    LEFT JOIN nexus.patients p ON b.patient_id = p.id
+    LEFT JOIN nexus.departments d ON b.department_id = d.id
+    LEFT JOIN nexus.users u ON b.doctor_id = u.id
+    LEFT JOIN nexus.opd_tokens t ON b.token_id = t.id
     WHERE b.tenant_id::text = $1::text
   `;
 
@@ -291,12 +291,12 @@ export async function getOPDBillById(billId, tenantId) {
       d.name as department_name,
       u.name as doctor_name,
       t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    WHERE b.id = $1 AND b.tenant_id = $2
+    FROM nexus.opd_bills b
+    LEFT JOIN nexus.patients p ON b.patient_id = p.id
+    LEFT JOIN nexus.departments d ON b.department_id = d.id
+    LEFT JOIN nexus.users u ON b.doctor_id = u.id
+    LEFT JOIN nexus.opd_tokens t ON b.token_id = t.id
+    WHERE b.id::text = $1::text AND b.tenant_id::text = $2::text
   `;
 
   const result = await query(sql, [billId, tenantId]);
@@ -321,9 +321,9 @@ export async function updateBillStatus(
   fields.push('updated_at = NOW()');
 
   const sql = `
-    UPDATE emr.opd_bills
+    UPDATE nexus.opd_bills
     SET ${fields.join(', ')}
-    WHERE id = $${paramIndex++} AND tenant_id = $${paramIndex++}
+    WHERE id::text = $${paramIndex++}::text AND tenant_id::text = $${paramIndex++}::text
     RETURNING *
   `;
 
@@ -348,7 +348,7 @@ export async function addBillItem({
   createdBy,
 }) {
   const sql = `
-    INSERT INTO emr.opd_bill_items (
+    INSERT INTO nexus.opd_bill_items (
       tenant_id,
       bill_id,
       service_type,
@@ -385,8 +385,8 @@ export async function addBillItem({
     createdBy,
   ]);
 
-  // Update bill totals correctly from emr schema
-  await query(`SELECT emr.calculate_bill_totals($1)`, [billId]);
+  // Update bill totals correctly from nexus schema
+  await query(`SELECT nexus.calculate_bill_totals($1)`, [billId]);
 
   return result.rows[0];
-}
+}

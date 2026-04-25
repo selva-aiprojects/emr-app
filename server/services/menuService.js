@@ -37,6 +37,7 @@ class MenuService {
       FROM emr.menu_item mi
       LEFT JOIN emr.role_menu_access rma ON mi.id = rma.menu_item_id 
         AND LOWER(rma.role_name) = LOWER($2) 
+
         AND (rma.tenant_id = $3 OR rma.tenant_id IS NULL)
       WHERE mi.header_id = $1 
         AND mi.is_active = true 
@@ -116,6 +117,7 @@ class MenuService {
       FROM emr.menu_item mi
       LEFT JOIN emr.role_menu_access rma ON mi.id = rma.menu_item_id 
         AND LOWER(rma.role_name) = LOWER($2) 
+
         AND (rma.tenant_id = $3 OR rma.tenant_id IS NULL)
       WHERE mi.code = $1 
         AND mi.is_active = true 

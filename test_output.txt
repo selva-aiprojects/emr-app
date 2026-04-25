@@ -1,0 +1,144 @@
+
+Running 6 tests using 4 workers
+
+Testing login for Dr. Emily Chen...
+Testing login for Nurse Sarah Jones...
+Testing login for Dr. Mark Davis...
+Testing login for Admin Lisa White...
+  ✘  1 [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Dr. Emily Chen (Doctor at City General Hospital) (2.8s)
+  ✘  2 [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Admin Lisa White (Admin at City General Hospital) (2.9s)
+  ✘  4 [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Nurse Sarah Jones (Nurse at City General Hospital) (2.9s)
+  ✘  3 [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Dr. Mark Davis (Doctor at Valley Health Clinic) (2.9s)
+Testing login for Dr. Anita Sharma...
+Testing login for Meera Pharmacist...
+  ✘  5 [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Dr. Anita Sharma (Admin at Kidz Clinic) (2.8s)
+  ✘  6 [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Meera Pharmacist (Pharmacy at Kidz Clinic) (2.7s)
+
+
+  1) [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Admin Lisa White (Admin at City General Hospital) 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5174/
+    Call log:
+    [2m  - navigating to "http://localhost:5174/", waiting until "load"[22m
+
+
+      59 |             console.log(`Testing login for ${user.name}...`);
+      60 |
+    > 61 |             await page.goto(CLIENT_URL);
+         |                        ^
+      62 |
+      63 |             // Select Tenant
+      64 |             await page.selectOption('select', { label: user.tenant });
+        at D:\Training\working\EMR-Application\tests\multi_tenant_workflow.spec.js:61:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\multi_tenant_workflow-Mult-d1423-n-at-City-General-Hospital--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Dr. Emily Chen (Doctor at City General Hospital) 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5174/
+    Call log:
+    [2m  - navigating to "http://localhost:5174/", waiting until "load"[22m
+
+
+      59 |             console.log(`Testing login for ${user.name}...`);
+      60 |
+    > 61 |             await page.goto(CLIENT_URL);
+         |                        ^
+      62 |
+      63 |             // Select Tenant
+      64 |             await page.selectOption('select', { label: user.tenant });
+        at D:\Training\working\EMR-Application\tests\multi_tenant_workflow.spec.js:61:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\multi_tenant_workflow-Mult-bccb5-r-at-City-General-Hospital--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Nurse Sarah Jones (Nurse at City General Hospital) 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5174/
+    Call log:
+    [2m  - navigating to "http://localhost:5174/", waiting until "load"[22m
+
+
+      59 |             console.log(`Testing login for ${user.name}...`);
+      60 |
+    > 61 |             await page.goto(CLIENT_URL);
+         |                        ^
+      62 |
+      63 |             // Select Tenant
+      64 |             await page.selectOption('select', { label: user.tenant });
+        at D:\Training\working\EMR-Application\tests\multi_tenant_workflow.spec.js:61:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\multi_tenant_workflow-Mult-e73b0-e-at-City-General-Hospital--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Dr. Mark Davis (Doctor at Valley Health Clinic) 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5174/
+    Call log:
+    [2m  - navigating to "http://localhost:5174/", waiting until "load"[22m
+
+
+      59 |             console.log(`Testing login for ${user.name}...`);
+      60 |
+    > 61 |             await page.goto(CLIENT_URL);
+         |                        ^
+      62 |
+      63 |             // Select Tenant
+      64 |             await page.selectOption('select', { label: user.tenant });
+        at D:\Training\working\EMR-Application\tests\multi_tenant_workflow.spec.js:61:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\multi_tenant_workflow-Mult-6acbe-or-at-Valley-Health-Clinic--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Dr. Anita Sharma (Admin at Kidz Clinic) 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5174/
+    Call log:
+    [2m  - navigating to "http://localhost:5174/", waiting until "load"[22m
+
+
+      59 |             console.log(`Testing login for ${user.name}...`);
+      60 |
+    > 61 |             await page.goto(CLIENT_URL);
+         |                        ^
+      62 |
+      63 |             // Select Tenant
+      64 |             await page.selectOption('select', { label: user.tenant });
+        at D:\Training\working\EMR-Application\tests\multi_tenant_workflow.spec.js:61:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\multi_tenant_workflow-Mult-a5649-harma-Admin-at-Kidz-Clinic--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Meera Pharmacist (Pharmacy at Kidz Clinic) 
+
+    Error: page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:5174/
+    Call log:
+    [2m  - navigating to "http://localhost:5174/", waiting until "load"[22m
+
+
+      59 |             console.log(`Testing login for ${user.name}...`);
+      60 |
+    > 61 |             await page.goto(CLIENT_URL);
+         |                        ^
+      62 |
+      63 |             // Select Tenant
+      64 |             await page.selectOption('select', { label: user.tenant });
+        at D:\Training\working\EMR-Application\tests\multi_tenant_workflow.spec.js:61:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\multi_tenant_workflow-Mult-581ea-st-Pharmacy-at-Kidz-Clinic--chromium\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6 failed
+    [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Admin Lisa White (Admin at City General Hospital) 
+    [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Dr. Emily Chen (Doctor at City General Hospital) 
+    [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Nurse Sarah Jones (Nurse at City General Hospital) 
+    [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Dr. Mark Davis (Doctor at Valley Health Clinic) 
+    [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Dr. Anita Sharma (Admin at Kidz Clinic) 
+    [chromium] › tests\multi_tenant_workflow.spec.js:58:9 › Multi-Tenant User Workflows › Login and Verify Workflow for Meera Pharmacist (Pharmacy at Kidz Clinic) 

@@ -11,7 +11,7 @@ import { query } from './connection.js';
 
 export async function searchDrugs(queryText) {
   const sql = `
-    SELECT * FROM drug_master 
+    SELECT * FROM nexus.drug_master 
     WHERE brand_name ILIKE $1 OR generic_name ILIKE $1 
     LIMIT 20
   `;
@@ -22,8 +22,8 @@ export async function searchDrugs(queryText) {
 export async function getPharmacyAlerts(tenantId) {
   const sql = `
     SELECT id, alert_type, message, severity, is_read, created_at, updated_at
-    FROM demo_emr.pharmacy_alerts 
-    WHERE tenant_id = $1 
+    FROM nexus.pharmacy_alerts 
+    WHERE tenant_id::text = $1::text 
     ORDER BY created_at DESC 
     LIMIT 50
   `;
@@ -36,7 +36,7 @@ export async function createEnhancedPrescription(tenantId, data) {
   try {
     // 1. Create the prescription header
     const headerSql = `
-      INSERT INTO emr.prescriptions_enhanced (
+      INSERT INTO nexus.prescriptions_enhanced (
         tenant_id, encounter_id, patient_id, provider_id, 
         priority, status, notes, ward_id, bed_id
       ) VALUES ($1, $2, $3, $4, $5, 'PENDING', $6, $7, $8)
@@ -52,7 +52,7 @@ export async function createEnhancedPrescription(tenantId, data) {
     if (data.items && data.items.length > 0) {
       for (const item of data.items) {
         const itemSql = `
-          INSERT INTO emr.prescription_items_enhanced (
+          INSERT INTO nexus.prescription_items_enhanced (
             prescription_id, drug_id, drug_name, dosage, 
             frequency, duration_days, total_quantity, instructions
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -88,9 +88,9 @@ export async function getPharmacyInventory(tenantId, filters = {}) {
         WHEN pie.expiry_date <= CURRENT_DATE + INTERVAL '30 days' THEN 'EXPIRING_SOON'
         ELSE 'ACTIVE'
       END as expiry_status
-    FROM pharmacy_inventory_enhanced pie
-    JOIN drug_master dm ON pie.drug_id::text = dm.id::text
-    WHERE pie.tenant_id::text = $1
+    FROM nexus.pharmacy_inventory_enhanced pie
+    JOIN nexus.drug_master dm ON pie.drug_id::text = dm.id::text
+    WHERE pie.tenant_id::text = $1::text
   `;
   
   const params = [tenantId];
@@ -125,15 +125,15 @@ export async function getEnhancedPrescriptions(tenantId, filters = {}) {
       p.first_name || ' ' || p.last_name as patient_name,
       p.mrn as patient_mrn,
       u.name as doctor_name,
-      (SELECT COUNT(*) FROM prescription_items_enhanced WHERE prescription_id::text = pe.id::text) as item_count,
+      (SELECT COUNT(*) FROM nexus.prescription_items_enhanced WHERE prescription_id::text = pe.id::text) as item_count,
       CASE 
         WHEN (pe.prescription_date + (COALESCE(pe.validity_days, 30) * INTERVAL '1 day')) < CURRENT_DATE THEN 'EXPIRED'
         ELSE pe.status
       END as calculated_status
-    FROM prescriptions_enhanced pe
-    JOIN patients p ON pe.patient_id::text = p.id::text
-    LEFT JOIN users u ON pe.provider_id::text = u.id::text
-    WHERE pe.tenant_id::text = $1
+    FROM nexus.prescriptions_enhanced pe
+    JOIN nexus.patients p ON pe.patient_id::text = p.id::text
+    LEFT JOIN nexus.users u ON pe.provider_id::text = u.id::text
+    WHERE pe.tenant_id::text = $1::text
   `;
   
   const params = [tenantId];
@@ -161,10 +161,10 @@ export async function dispenseEnhancedMedication(tenantId, { prescriptionId, ite
     for (const item of items) {
       // 1. Update inventory
       const updateInventorySql = `
-        UPDATE emr.pharmacy_inventory_enhanced 
+        UPDATE nexus.pharmacy_inventory_enhanced 
         SET quantity_remaining = quantity_remaining - $1,
             updated_at = NOW()
-        WHERE id = $2 AND tenant_id = $3 AND quantity_remaining >= $1
+        WHERE id = $2 AND tenant_id::text = $3::text AND quantity_remaining >= $1
       `;
       const invRes = await query(updateInventorySql, [item.quantity, item.inventoryId, tenantId]);
       
@@ -174,7 +174,7 @@ export async function dispenseEnhancedMedication(tenantId, { prescriptionId, ite
       
       // 2. Record dispensing
       const dispenseSql = `
-        INSERT INTO emr.medication_dispensing (
+        INSERT INTO nexus.medication_dispensing (
           tenant_id, prescription_id, drug_id, batch_id, 
           quantity_dispensed, dispensed_by, dispensed_at
         ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -186,7 +186,7 @@ export async function dispenseEnhancedMedication(tenantId, { prescriptionId, ite
       
       // 3. Update prescription item status
       const updateItemSql = `
-        UPDATE emr.prescription_items_enhanced 
+        UPDATE nexus.prescription_items_enhanced 
         SET status = 'DISPENSED', dispensed_quantity = $1
         WHERE prescription_id = $2 AND drug_id = $3
       `;
@@ -195,10 +195,10 @@ export async function dispenseEnhancedMedication(tenantId, { prescriptionId, ite
     
     // 4. Update prescription status if all items handled
     await query(`
-      UPDATE emr.prescriptions_enhanced 
+      UPDATE nexus.prescriptions_enhanced 
       SET status = 'COMPLETED', updated_at = NOW()
       WHERE id = $1 AND NOT EXISTS (
-        SELECT 1 FROM emr.prescription_items_enhanced 
+        SELECT 1 FROM nexus.prescription_items_enhanced 
         WHERE prescription_id = $1 AND status != 'DISPENSED'
       )
     `, [prescriptionId]);
@@ -213,7 +213,7 @@ export async function dispenseEnhancedMedication(tenantId, { prescriptionId, ite
 
 export async function addDrugBatch(tenantId, data) {
   const sql = `
-    INSERT INTO emr.pharmacy_inventory_enhanced (
+    INSERT INTO nexus.pharmacy_inventory_enhanced (
       tenant_id, drug_id, batch_number, expiry_date, 
       quantity_received, quantity_remaining, unit_cost, 
       unit_price, location, status, created_at
@@ -231,13 +231,13 @@ export async function getPharmacyDashboard(tenantId) {
   try {
     const sql = `
       SELECT 
-        (SELECT COUNT(*) FROM inventory_items WHERE tenant_id::text = $1) as total_inventory_items,
-        (SELECT COUNT(*) FROM inventory_items WHERE tenant_id::text = $1 AND current_stock <= reorder_level) as critical_stock_items,
-        (SELECT COUNT(*) FROM pharmacy_inventory_enhanced WHERE tenant_id::text = $1 AND status = 'ACTIVE') as total_active_batches,
-        (SELECT COUNT(*) FROM pharmacy_inventory_enhanced WHERE tenant_id::text = $1 AND expiry_date <= CURRENT_DATE + INTERVAL '30 days' AND status = 'ACTIVE') as expiring_items,
-        (SELECT COUNT(*) FROM pharmacy_inventory_enhanced WHERE tenant_id::text = $1 AND expiry_date < CURRENT_DATE AND status = 'ACTIVE') as expired_items,
-        (SELECT COUNT(*) FROM prescriptions_enhanced WHERE tenant_id::text = $1 AND status = 'PENDING') as active_prescriptions,
-        (SELECT COALESCE(SUM(quantity_remaining * unit_price), 0) FROM pharmacy_inventory_enhanced WHERE tenant_id::text = $1 AND status = 'ACTIVE') as today_revenue
+        (SELECT COUNT(*) FROM nexus.inventory_items WHERE tenant_id::text = $1) as total_inventory_items,
+        (SELECT COUNT(*) FROM nexus.inventory_items WHERE tenant_id::text = $1 AND current_stock <= reorder_level) as critical_stock_items,
+        (SELECT COUNT(*) FROM nexus.pharmacy_inventory_enhanced WHERE tenant_id::text = $1 AND status = 'ACTIVE') as total_active_batches,
+        (SELECT COUNT(*) FROM nexus.pharmacy_inventory_enhanced WHERE tenant_id::text = $1 AND expiry_date <= CURRENT_DATE + INTERVAL '30 days' AND status = 'ACTIVE') as expiring_items,
+        (SELECT COUNT(*) FROM nexus.pharmacy_inventory_enhanced WHERE tenant_id::text = $1 AND expiry_date < CURRENT_DATE AND status = 'ACTIVE') as expired_items,
+        (SELECT COUNT(*) FROM nexus.prescriptions_enhanced WHERE tenant_id::text = $1 AND status = 'PENDING') as active_prescriptions,
+        (SELECT COALESCE(SUM(quantity_remaining * unit_price), 0) FROM nexus.pharmacy_inventory_enhanced WHERE tenant_id::text = $1 AND status = 'ACTIVE') as today_revenue
     `;
     const result = await query(sql, [tenantId]);
     
@@ -280,8 +280,8 @@ export async function getExpiringInventory(tenantId, days = 90) {
         ELSE 'NORMAL'
       END as expiry_status,
       (pie.expiry_date::date - CURRENT_DATE)::integer as days_to_expiry
-    FROM emr.pharmacy_inventory_enhanced pie
-    JOIN emr.drug_master dm ON pie.drug_id = dm.id
+    FROM nexus.pharmacy_inventory_enhanced pie
+    JOIN nexus.drug_master dm ON pie.drug_id = dm.id
     WHERE pie.tenant_id = $1 AND pie.status = 'ACTIVE' 
       AND pie.expiry_date <= CURRENT_DATE + ($2 || ' days')::interval
     ORDER BY pie.expiry_date ASC

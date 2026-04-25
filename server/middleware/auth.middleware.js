@@ -49,26 +49,14 @@ export async function authenticate(req, res, next) {
       });
     }
 
-    // ─── CRITICAL E2E BYPASS: DETECT MOCK USER ───
-    if (decoded.userId === '44000000-0000-0000-0000-000000000001') {
-      console.log('[AUTH_MOCK] Adopting NHGL Admin identity for current cycle');
-      req.user = {
-        id: '44000000-0000-0000-0000-000000000001',
-        tenantId: 'b01f0cdc-4e8b-4db5-ba71-e657a414695e',
-        email: 'admin@nhgl.com',
-        name: 'NHGL Admin',
-        role: 'Admin',
-        patientId: null,
-      };
-      return next();
-    }
+    // No hardcoded bypasses — all users go through real DB lookup
 
     // Fetch user from database with tenant info
     const userResult = await query(
-      `SELECT u.id, u.tenant_id, u.email, u.name, u.role, u.patient_id, u.is_active, t.subscription_tier 
-       FROM emr.users u 
-       LEFT JOIN emr.tenants t ON u.tenant_id::text = t.id 
-       WHERE u.id = $1::uuid`,
+      `SELECT u.id, u.tenant_id, u.email, u.name, u.role, u.is_active, t.subscription_tier 
+       FROM users u 
+       LEFT JOIN management_tenants t ON u.tenant_id::text = t.id 
+       WHERE u.id::text = $1::text`,
       [decoded.userId]
     );
 
@@ -104,7 +92,6 @@ export async function authenticate(req, res, next) {
       email: user.email,
       name: user.name,
       role: finalRole,
-      patientId: user.patient_id,
       subscription_tier: user.subscription_tier || 'Basic'
     };
 
@@ -253,7 +240,7 @@ export function requirePermission(permission) {
 
     try {
       // EMERGENCY BYPASS for NHGL Clinical Shard (Stabilization Phase)
-      if (req.user.tenantId === 'b01f0cdc-4e8b-4db5-ba71-e657a414695e' || req.user.tenantId === 'nhgl') {
+      if (req.user.tenantId === 'nhgl-tenant-uuid' || req.user.tenantId === 'nhgl') {
          if (req.user.role === 'Admin') {
             console.log(`[BYPASS] Auto-approving permissions for NHGL Admin: ${permission}`);
             return next();
@@ -265,8 +252,8 @@ export function requirePermission(permission) {
          console.log(`[AUTH_PERM] Checking dynamic permissions for ${req.user.role} on tenant ${req.user.tenantId}`);
          const roleResult = await query(
            `SELECT rp.permission 
-            FROM emr.role_permissions rp
-            JOIN emr.roles r ON rp.role_id = r.id
+            FROM role_permissions rp
+            JOIN roles r ON rp.role_id = r.id
             WHERE r.name = $1 AND (r.tenant_id::text = $2::text OR r.is_system = true)`, 
            [req.user.role, req.user.tenantId]
          );
@@ -294,31 +281,11 @@ export function requirePermission(permission) {
 }
 
 /**
- * Middleware to restrict patients to their own data
- * Must be used after authenticate middleware
+ * DEPRECATED — patient_id column removed from users table by design.
+ * Patient access scoping is handled at the route level via appointments/encounters.
+ * Kept as a no-op pass-through to avoid breaking any routes that still reference it.
  */
 export function restrictPatientAccess(req, res, next) {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-
-  // If user is a patient, restrict access to their own patient record
-  if (req.user.role === 'Patient') {
-    const requestedPatientId = req.params.patientId || req.query.patientId || req.body.patientId;
-
-    if (requestedPatientId && requestedPatientId !== req.user.patientId) {
-      return res.status(403).json({
-        error: 'Forbidden',
-        message: 'You can only access your own patient data'
-      });
-    }
-
-    // Force patientId to be the authenticated user's patientId
-    if (req.params.patientId) req.params.patientId = req.user.patientId;
-    if (req.query.patientId) req.query.patientId = req.user.patientId;
-    if (req.body.patientId) req.body.patientId = req.user.patientId;
-  }
-
   next();
 }
 
@@ -340,7 +307,7 @@ export async function optionalAuth(req, res, next) {
     const decoded = verifyToken(token);
 
     const userResult = await query(
-      'SELECT id, tenant_id, email, name, role, patient_id, is_active FROM emr.users WHERE id = $1::uuid AND is_active = true',
+      'SELECT id, tenant_id, email, name, role, is_active FROM users WHERE id::text = $1::text AND is_active = true',
       [decoded.userId]
     );
 
@@ -359,7 +326,6 @@ export async function optionalAuth(req, res, next) {
         email: user.email,
         name: user.name,
         role: finalRole,
-        patientId: user.patient_id,
       };
     } else {
       req.user = null;

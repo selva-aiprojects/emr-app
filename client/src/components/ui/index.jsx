@@ -1,4 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
+export { PageHero } from './PageHero';
 
 export function StatusBadge({ status = "pending", size = "md" }) {
   const statusKey = String(status).toLowerCase();

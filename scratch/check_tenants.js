@@ -1,15 +1,17 @@
-import { query } from '../server/db/connection.js';
+import pkg from 'pg';
+const { Client } = pkg;
+import dotenv from 'dotenv';
+dotenv.config();
 
 async function checkTenants() {
-    try {
-        console.log('🔍 Checking emr.tenants contents for NHGL...');
-        const res = await query("SELECT id, code, subdomain, schema_name FROM emr.tenants WHERE code = 'NHGL' OR subdomain = 'nhgl'");
-        console.table(res.rows);
-    } catch (err) {
-        console.error('❌ Check failed:', err.message);
-    } finally {
-        process.exit();
-    }
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }
+  });
+  await client.connect();
+  const res = await client.query('SELECT * FROM nexus.tenants');
+  console.log('--- NEXUS TENANTS ---');
+  res.rows.forEach(r => console.log(`${r.code} (${r.id})`));
+  await client.end();
 }
-
 checkTenants();

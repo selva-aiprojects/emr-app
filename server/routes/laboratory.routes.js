@@ -25,7 +25,8 @@ router.get('/orders', async (req, res) => {
       SELECT sr.*, p.first_name as patient_first_name, p.last_name as patient_last_name, u.name as ordered_by_name
       FROM service_requests sr
       LEFT JOIN patients p ON sr.patient_id::uuid = p.id
-      LEFT JOIN users u ON sr.requester_id::uuid = u.id
+      LEFT JOIN emr.users u ON sr.requester_id::uuid = u.id
+
       WHERE sr.tenant_id::text = $1::text AND sr.category = 'lab'
     `;
     const params = [req.tenantId];

@@ -1,40 +1,21 @@
 -- Migration: Add missing branding and status columns to tenant management tables
--- This ensures that institutional branding (logo, theme) and status tracking are supported across all management layers.
+-- Standardized for institutional shards
 
 DO $$ 
+DECLARE
+    v_schema TEXT;
 BEGIN
-    -- 1. Patch emr.tenants (Sharded settings table)
-    IF EXISTS (SELECT to_regclass('emr.tenants')) THEN
-        IF NOT EXISTS (SELECT column_name FROM information_schema.columns WHERE table_schema = 'emr' AND table_name = 'tenants' AND column_name = 'logo_url') THEN
-            ALTER TABLE emr.tenants ADD COLUMN logo_url TEXT;
-        END IF;
-        
-        IF NOT EXISTS (SELECT column_name FROM information_schema.columns WHERE table_schema = 'emr' AND table_name = 'tenants' AND column_name = 'status') THEN
-            ALTER TABLE emr.tenants ADD COLUMN status VARCHAR(32) DEFAULT 'active';
-        END IF;
+    SELECT current_schema() INTO v_schema;
 
-        IF NOT EXISTS (SELECT column_name FROM information_schema.columns WHERE table_schema = 'emr' AND table_name = 'tenants' AND column_name = 'theme') THEN
-            ALTER TABLE emr.tenants ADD COLUMN theme JSONB DEFAULT '{}';
-        END IF;
-
-        IF NOT EXISTS (SELECT column_name FROM information_schema.columns WHERE table_schema = 'emr' AND table_name = 'tenants' AND column_name = 'features') THEN
-            ALTER TABLE emr.tenants ADD COLUMN features JSONB DEFAULT '{}';
-        END IF;
-
-        IF NOT EXISTS (SELECT column_name FROM information_schema.columns WHERE table_schema = 'emr' AND table_name = 'tenants' AND column_name = 'billing_config') THEN
-            ALTER TABLE emr.tenants ADD COLUMN billing_config JSONB DEFAULT '{}';
+    -- 1. Patch current shard's tenants table (if it exists)
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = v_schema AND table_name = 'tenants') THEN
+        IF NOT EXISTS (SELECT column_name FROM information_schema.columns WHERE table_schema = v_schema AND table_name = 'tenants' AND column_name = 'logo_url') THEN
+            EXECUTE 'ALTER TABLE tenants ADD COLUMN logo_url TEXT';
         END IF;
     END IF;
 
-    -- 2. Patch emr.management_tenants (Control plane registry)
-    IF EXISTS (SELECT to_regclass('emr.management_tenants')) THEN
-        IF NOT EXISTS (SELECT column_name FROM information_schema.columns WHERE table_schema = 'emr' AND table_name = 'management_tenants' AND column_name = 'logo_url') THEN
-            ALTER TABLE emr.management_tenants ADD COLUMN logo_url TEXT;
-        END IF;
-
-        -- Ensure theme and features are also replicated to management plane for UI consistency
-        IF NOT EXISTS (SELECT column_name FROM information_schema.columns WHERE table_schema = 'emr' AND table_name = 'management_tenants' AND column_name = 'theme') THEN
-            ALTER TABLE emr.management_tenants ADD COLUMN theme JSONB DEFAULT '{}';
-        END IF;
+    -- 2. Patch nexus.management_tenants (Global registry)
+    IF NOT EXISTS (SELECT column_name FROM information_schema.columns WHERE table_schema = 'nexus' AND table_name = 'management_tenants' AND column_name = 'logo_url') THEN
+        ALTER TABLE nexus.management_tenants ADD COLUMN logo_url TEXT;
     END IF;
 END $$;

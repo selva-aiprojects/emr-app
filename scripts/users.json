@@ -1,7 +1,7 @@
 [
   {
     "tenant": {
-      "name": "abhinand medicare pvt ltd (Updated) (Fresh Test) (Relogin Test)",
+      "name": "Abhinand Medicare Pvt Ltd",
       "code": "AMPL",
       "id": "4886f5ed-9d4f-4cdb-b579-f62a6e2a53cc"
     },
@@ -9,7 +9,7 @@
   },
   {
     "tenant": {
-      "name": "Balvatika hospitals & pharmacies ltd (Test Save)",
+      "name": "Balvatika Hospitals & Pharmacies Ltd",
       "code": "BHPL",
       "id": "9f15285d-024c-416d-9bb5-6c7ac42be525"
     },
@@ -108,196 +108,6 @@
   },
   {
     "tenant": {
-      "name": "Enterprise Test",
-      "code": "ENT",
-      "id": "21674a9a-dc7b-4b09-a777-dac5e1feec8c"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "global hospitals Pvt ltd",
-      "code": "GHPL",
-      "id": "1c6031eb-ca87-4432-a8d7-57131118b644"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "Kidz clinic pvt ltd",
-      "code": "KCPL",
-      "id": "3cf8ca75-4741-4b85-aadc-bfd3a3232e41"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "KIDZ Hospital - Professional",
-      "code": "KIDZ",
-      "id": "f09d601e-d25a-4cfa-8c83-b33519cc963b"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "magnum healthcare pvt ltd",
-      "code": "MHPL",
-      "id": "89a61aac-ea1c-4b9c-aa0d-851cda9f678c"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "Magnum Healthcare Pvt Ltd",
-      "code": "MAGNUM",
-      "id": "08a0f781-79ac-40dd-8d0e-2c0e2a479bff"
-    },
-    "users": [
-      {
-        "name": "Bill Gates",
-        "email": "billing@magnum.local",
-        "role": "Accounts"
-      },
-      {
-        "name": "Dr. John Magnum",
-        "email": "doctor@magnum.local",
-        "role": "Doctor"
-      },
-      {
-        "name": "Dr. Magnum Admin",
-        "email": "admin@magnum.local",
-        "role": "Admin"
-      },
-      {
-        "name": "Nur. Mary Smith",
-        "email": "nurse@magnum.local",
-        "role": "Nurse"
-      }
-    ]
-  },
-  {
-    "tenant": {
-      "name": "Magnum Pharmacy & Hospitals Ltd",
-      "code": "MGHPL",
-      "id": "6dda48e1-51ea-4661-91c5-94a9c72f489c"
-    },
-    "users": [
-      {
-        "name": "Anita Kumar",
-        "email": "anita.nurse@mghplhospital.com",
-        "role": "Nurse"
-      },
-      {
-        "name": "Dr. Priya Patel",
-        "email": "priya.patel@mghplhospital.com",
-        "role": "Doctor"
-      },
-      {
-        "name": "Dr. Raj Sharma",
-        "email": "raj.sharma@mghplhospital.com",
-        "role": "Doctor"
-      },
-      {
-        "name": "Dr. Ramesh Kumar",
-        "email": "administrator@mghplhospital.com",
-        "role": "admin"
-      },
-      {
-        "name": "Dr. Vijay Lab",
-        "email": "lab.services@mghplhospital.com",
-        "role": "lab"
-      },
-      {
-        "name": "Geeta Pharmacist",
-        "email": "pharmacy.mghpl@mghplhospital.com",
-        "role": "pharmacy"
-      },
-      {
-        "name": "Mukesh Gupta",
-        "email": "billing.dept@mghplhospital.com",
-        "role": "billing"
-      },
-      {
-        "name": "Sunita Reddy",
-        "email": "reception.mghpl@mghplhospital.com",
-        "role": "Front Office"
-      }
-    ]
-  },
-  {
-    "tenant": {
-      "name": "MAIN Hospital - Enterprise",
-      "code": "MAIN",
-      "id": "a546f1e5-ee8e-42f5-b28e-03c17ce6436b"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "MED-FLow medicare hospitals inc",
-      "code": "MMHI",
-      "id": "e97f03ae-525c-4c82-973c-4a94f6582c84"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "MedFlow Demo: Basic Tier",
-      "code": "greenvalley",
-      "id": "fa3caa97-d81b-4296-a3a7-315aa9122165"
-    },
-    "users": [
-      {
-        "name": "Admin MedFlow Demo: Basic Tier",
-        "email": "admin@greenvalley.local",
-        "role": "Admin"
-      }
-    ]
-  },
-  {
-    "tenant": {
-      "name": "MedFlow Demo: Enterprise Tier",
-      "code": "apollo",
-      "id": "98eba17b-9d67-4473-b21d-7c1f30f2ce67"
-    },
-    "users": [
-      {
-        "name": "Admin MedFlow Demo: Enterprise Tier",
-        "email": "admin@apollo.local",
-        "role": "Admin"
-      }
-    ]
-  },
-  {
-    "tenant": {
-      "name": "MedFlow Demo: Free Tier",
-      "code": "seedling",
-      "id": "ea4f9fe1-6fdd-4cd9-972b-b753d0d51f66"
-    },
-    "users": [
-      {
-        "name": "Admin MedFlow Demo: Free Tier",
-        "email": "admin@seedling.local",
-        "role": "Admin"
-      }
-    ]
-  },
-  {
-    "tenant": {
-      "name": "MedFlow Demo: Pro Tier",
-      "code": "sunrise",
-      "id": "c2c6fb4d-8a69-49c3-a965-e527e1a99e8e"
-    },
-    "users": [
-      {
-        "name": "Admin MedFlow Demo: Pro Tier",
-        "email": "admin@sunrise.local",
-        "role": "Admin"
-      }
-    ]
-  },
-  {
-    "tenant": {
       "name": "New Age Hospital",
       "code": "NAH",
       "id": "f998a8f5-95b9-4fd7-a583-63cf574d65ed"
@@ -356,97 +166,31 @@
   },
   {
     "tenant": {
-      "name": "nitra healthcare solutions ltd",
-      "code": "NHSL",
-      "id": "a730192d-efe3-4fd8-82a3-829ad905acff"
+      "name": "Magnum Healthcare Pvt Ltd",
+      "code": "MAGNUM",
+      "id": "08a0f781-79ac-40dd-8d0e-2c0e2a479bff"
     },
     "users": [
       {
-        "name": "nitra healthcare solutions ltd Admin",
-        "email": "admin@nitra-healthcare.com",
-        "role": "Admin"
-      }
-    ]
-  },
-  {
-    "tenant": {
-      "name": "omega healthcare  corporation ltd",
-      "code": "OHCL",
-      "id": "554a9b9b-83c0-4093-87ce-0b872935b7e2"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "omega medicare institue of science",
-      "code": "OMIOS",
-      "id": "ac436f83-826f-4ff6-ab3e-39204cc72b3f"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "Starlight Mega Center",
-      "code": "SMC-MEGA",
-      "id": "bb80c757-2dc5-447d-9bfd-0acc53bcc762"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "Starlight Mega Center",
-      "code": "SMC-MEGA",
-      "id": "fd0a2138-8abe-4a6d-af5b-c93765c5afaa"
-    },
-    "users": [
+        "name": "Bill Gates",
+        "email": "billing@magnum.local",
+        "role": "Accounts"
+      },
       {
-        "name": "Mega Admin",
-        "email": "admin@smcmega.local",
-        "role": "Admin"
-      }
-    ]
-  },
-  {
-    "tenant": {
-      "name": "TEST Hospital - Standard",
-      "code": "TEST",
-      "id": "ea023926-ce85-4936-b9a6-1c58fc641576"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "Valley Health Clinic",
-      "code": "valley_health",
-      "id": "bdfa9903-f203-4199-8cfd-70eb74e10ff3"
-    },
-    "users": [
-      {
-        "name": "Dr. Mark Davis",
-        "email": "mark.davis@valley.local",
+        "name": "Dr. John Magnum",
+        "email": "doctor@magnum.local",
         "role": "Doctor"
       },
       {
-        "name": "Nurse David Wilson",
-        "email": "david.wilson@valley.local",
+        "name": "Dr. Magnum Admin",
+        "email": "admin@magnum.local",
+        "role": "Admin"
+      },
+      {
+        "name": "Nur. Mary Smith",
+        "email": "nurse@magnum.local",
         "role": "Nurse"
       }
     ]
-  },
-  {
-    "tenant": {
-      "name": "victory healthcare services pvt ltd",
-      "code": "VHSPL",
-      "id": "d910604b-7e0b-4a16-a9d2-1763fc474c0e"
-    },
-    "users": []
-  },
-  {
-    "tenant": {
-      "name": "Zigma Healthcare Pvt Ltd.",
-      "code": "ZHPL",
-      "id": "d4d02e28-df25-4d64-bf37-55133fd159e7"
-    },
-    "users": []
   }
 ]

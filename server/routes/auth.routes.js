@@ -106,7 +106,7 @@ router.post('/login', async (req, res) => {
     let subscriptionTier = 'Basic';
     try {
       const tenantTierResult = await query(
-        'SELECT subscription_tier FROM emr.tenants WHERE id = $1',
+        'SELECT subscription_tier FROM management_tenants WHERE id::text = $1::text',
         [user.tenant_id]
       );
       subscriptionTier = tenantTierResult.rows[0]?.subscription_tier || 'Basic';
@@ -119,7 +119,6 @@ router.post('/login', async (req, res) => {
       tenantId: user.tenant_id,
       role: finalRole,
       email: user.email,
-      patientId: user.patient_id,
       subscription_tier: subscriptionTier
     });
 
@@ -127,8 +126,8 @@ router.post('/login', async (req, res) => {
     let rolePermissions = [];
     try {
       const roleResult = await query(
-        `SELECT rp.permission FROM emr.role_permissions rp
-         JOIN emr.roles r ON rp.role_id = r.id
+        `SELECT rp.permission FROM role_permissions rp
+         JOIN roles r ON rp.role_id = r.id
          WHERE r.name = $1 AND (r.tenant_id::text = $2::text OR r.is_system = true)`,
         [finalRole, user.tenant_id]
       );
@@ -195,7 +194,7 @@ router.get('/debug-token', async (req, res) => {
 
     let userInDb = null;
     if (decoded?.userId) {
-      const result = await query('SELECT id, email, role, is_active FROM emr.users WHERE id = $1', [decoded.userId]);
+      const result = await query('SELECT id, email, role, is_active FROM users WHERE id = $1', [decoded.userId]);
       userInDb = result.rows[0];
     }
 

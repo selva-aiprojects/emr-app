@@ -47,61 +47,58 @@ export async function getBootstrapData(tenantId, userId) {
     tenantResult,
     menuStructureResult
   ] = await Promise.all([
-    runSafeQuery('SELECT * FROM emr.users WHERE id = $1', [userId]),
+    runSafeQuery('SELECT * FROM nexus.users WHERE id::text = $1::text', [userId]),
     runSafeQuery(
-      'SELECT * FROM patients WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 100',
+      'SELECT * FROM nexus.patients WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 100',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM walkins WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM nexus.walkins WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
       `SELECT e.*, 
               TRIM(COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '')) as patient_name,
               u.name as provider_name
-       FROM encounters e
-       LEFT JOIN patients p ON e.patient_id::text = p.id::text
-       LEFT JOIN emr.users u ON e.provider_id::text = u.id::text
+       FROM nexus.encounters e
+       LEFT JOIN nexus.patients p ON e.patient_id::text = p.id::text
+       LEFT JOIN nexus.users u ON e.provider_id::text = u.id::text
        WHERE e.tenant_id::text = $1::text
        ORDER BY e.created_at DESC LIMIT 50`,
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM invoices WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM nexus.invoices WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM inventory_items WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM nexus.inventory_items WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM employees WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM nexus.employees WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      `SELECT '[]'::text as dummy`,
-      []
-    ),
-    runSafeQuery(
-      'SELECT * FROM insurance_providers WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM nexus.employee_leaves WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      `SELECT '[]'::text as dummy`,
-      []
+      'SELECT * FROM nexus.insurance_providers WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
+      [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM emr.management_tenants WHERE id = $1',
+      'SELECT * FROM nexus.claims WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
+      [tenantId]
+    ),
+    runSafeQuery(
+      'SELECT * FROM nexus.management_tenants WHERE id::text = $1::text',
       [tenantId]
     ),
     // Fetch menu structure in parallel
     runSafeQuery('SELECT 1').then(async () => {
         // We need user role and tenant plan for menu. 
         // Since we are in Promise.all, we don't have them yet.
-        // But we can query them separately or just wait for the results.
-        // Better: Fetch menu after the user/tenant queries or use a sub-query if possible.
-        // Actually, let's just fetch it normally after the parallel block to ensure accuracy.
         return []; 
     })
   ]);
@@ -160,5 +157,6 @@ export async function getBootstrapData(tenantId, userId) {
     claims: snakeToCamel(claimsResult.rows),
     tenant: snakeToCamel(tenantResult.rows[0] || {}),
     menuStructure: menuStructure,
+
   };
 }

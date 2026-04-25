@@ -179,7 +179,8 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
     return "Good Evening";
   };
 
-  async function loadDashboardData() {
+
+  async function loadDashboardData() { // Refactored for Stability
     try {
       if (!tenant?.id) {
         console.error('No tenant available for dashboard');
@@ -189,52 +190,55 @@ export default function DashboardPage({ metrics, activeUser, setView, tenant, vi
       
       const data = await api.get(`/reports/dashboard/metrics?tenantId=${tenant.id}&timeFilter=${timeFilter}`);
       
-      setRealtimeMetrics({
-        totalPatients: data.totalPatients || 0,
-        totalAppointments: data.totalAppointments || 0,
-        totalRevenue: data.totalRevenue || 0,
-        criticalAlerts: data.criticalAlerts || 0,
-        patientStats: data.patientStats || {},
-        appointmentStats: data.appointmentStats || {},
-        bedOccupancy: data.bedOccupancy || {},
-        departmentDistribution: data.departmentDistribution || [],
-        doctors: data.doctors || [],
-        visits: data.visits || {},
-        requests: data.requests || {},
-        topDiagnoses: data.topDiagnoses || [],
-        topServices: data.topServices || [],
-        staffStats: data.staffStats || data.staffDistribution || [],
-        patientJourney: data.patientJourney || [],
-        masterStats: data.masterStats || data.masterCounts || {},
-        noShowTrend: data.noShowTrend || [],
-        bloodBank: data.bloodBank || { value: 0, label: 'Units' },
-        labProgress: data.labProgress || { value: 0, label: '%' },
-        fleetStatus: data.fleetStatus || { available: 0, total: 0 },
-        growth: data.growth || { revenue: 0, patients: 0 }
-      });
-
-      setSecondsSinceSync(0);
-
-      // Set report data for charts - use real historical data
-      setReportData({
-        patientData: data.patientTrend || [],
-        financialData: data.revenueTrend || [],
-        departmentDistribution: data.departmentDistribution || [],
-        appointmentStatus: [
-          { label: 'Scheduled', value: data.appointmentStats?.scheduled_today || 0 },
-          { label: 'Completed', value: data.appointmentStats?.completed_today || 0 },
-          { label: 'Cancelled', value: data.appointmentStats?.cancelled_today || 0 },
-          { label: 'No-Show', value: data.appointmentStats?.no_show_today || 0 }
-        ],
-        bedOccupancy: [
-          { label: 'Occupied', value: data.bedOccupancy?.occupied || 0 },
-          { label: 'Available', value: data.bedOccupancy?.available || 0 }
-        ],
-      });
+      const hasData = (data.totalPatients > 0 || data.totalAppointments > 0 || data.totalRevenue > 0);
       
+      if (!hasData) {
+        setLoading(false);
+        return;
+      }
+        setRealtimeMetrics({
+          totalPatients: data.totalPatients || 0,
+          totalAppointments: data.totalAppointments || 0,
+          totalRevenue: data.totalRevenue || 0,
+          criticalAlerts: data.criticalAlerts || 0,
+          patientStats: data.patientStats || {},
+          appointmentStats: data.appointmentStats || {},
+          bedOccupancy: data.bedOccupancy || {},
+          departmentDistribution: data.departmentDistribution || [],
+          doctors: data.doctors || [],
+          visits: data.visits || {},
+          requests: data.requests || {},
+          topDiagnoses: data.topDiagnoses || [],
+          topServices: data.topServices || [],
+          staffStats: data.staffStats || data.staffDistribution || [],
+          patientJourney: data.patientJourney || [],
+          masterStats: data.masterStats || data.masterCounts || {},
+          noShowTrend: data.noShowTrend || [],
+          bloodBank: data.bloodBank || { value: 0, label: 'Units' },
+          labProgress: data.labProgress || { value: 0, label: '%' },
+          fleetStatus: data.fleetStatus || { available: 0, total: 0 },
+          growth: data.growth || { revenue: 0, patients: 0 }
+        });
+
+        setReportData({
+          patientData: data.patientTrend || [],
+          financialData: data.revenueTrend || [],
+          departmentDistribution: data.departmentDistribution || [],
+          appointmentStatus: [
+            { label: 'Scheduled', value: data.appointmentStats?.scheduled_today || 0 },
+            { label: 'Completed', value: data.appointmentStats?.completed_today || 0 },
+            { label: 'Cancelled', value: data.appointmentStats?.cancelled_today || 0 },
+            { label: 'No-Show', value: data.appointmentStats?.no_show_today || 0 }
+          ],
+          bedOccupancy: [
+            { label: 'Occupied', value: data.bedOccupancy?.occupied || 0 },
+            { label: 'Available', value: data.bedOccupancy?.available || 0 }
+          ],
+        });
+
       setLoading(false);
     } catch (err) {
-      console.error('Failed to load dashboard data:', err);
+      console.error('Failed to sync dashboard metrics:', err);
       setLoading(false);
     }
   }

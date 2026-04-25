@@ -36,30 +36,59 @@
 - Verify all '✅ Password match: true' via `node scripts/debug_login_fixed.cjs`
 - Target: NHGL, EHS, all tenants
 
-## [ ] 2. Test API login endpoints
-```
+### [ ] 2. Test API login endpoints
+```bash
 curl -X POST http://127.0.0.1:4000/api/login \
 -H "Content-Type: application/json" \
 -d '{"tenantId":"superadmin","email":"superadmin@emr.local","password":"Admin@123"}'
 ```
-```
-curl ... tenantId:"nhgl" ... "admin@nhgl.com"
-```
 
-## [ ] 3. Update credentials docs
+### [ ] 3. Update credentials docs
 - Edit TENANT_CREDENTIALS.md: Add verified working combos
 - Mark passwords as confirmed
 
-## [ ] 4. Frontend verification
+### [ ] 4. Frontend verification
 - Start dev servers: `npm run dev`
 - http://127.0.0.1:5175 → UnifiedLoginPage
 - Login: nhgl / admin@nhgl.com / Admin@123 → Success, no 401
 
-## [ ] 5. Sentry handling (optional)
+### [ ] 5. Sentry handling (optional)
 - If disruptive: Search/disable init()
 - Monitor console post-fix
 
-## [ ] 6. Completion
-- Update TODO.md: Mark all ✅
-- Test E2E: `npx playwright test`
+### [ ] 6. Database Schema & Migration Stability
+- [ ] Run `node scripts/create_schedule_table.js` to ensure doctor schedules are provisioned across all schemas.
+- [ ] Apply `database/migrations/018_inventory_constraints_fix.sql` to fix inventory constraints.
+
+## 🚀 **E2E Testing: Fresh Tenant Full Journey**
+
+### Phase 1: Clean MAGNUM Setup [Pending]
+- [ ] Complete & run magnum_full_setup.js (NEXUS + SHARD + verify metrics)
+
+### Phase 2: Fresh Tenant Creation [Pending]
+- [ ] Superadmin login (magnum tenant)
+- [ ] Create new tenant: 'fresh-hospital' (Enterprise)
+- [ ] Verify shard schema/seeds auto-applied
+
+### Phase 3: Seed Core Data [Pending]
+- [ ] Add staff (Admin/Nurse/Frontdesk)
+- [ ] Pharmacy: Equipment/stock (Paracetamol, etc.)
+- [ ] Doctors (5 specialists)
+
+### Phase 4: Patient Journey Simulation [Pending]
+- [ ] OPD: Register patient → Appointment → Encounter → Prescription
+- [ ] Lab: Order test → Diagnostic report
+- [ ] IPD: Admit → Bed assign → Discharge
+- [ ] Billing: Invoice → AR entry (partial pay)
+- [ ] Pharmacy: Dispense → Inventory update → AP if needed
+
+### Phase 5: Verify Dashboards [Pending]
+- [ ] Tenant Dashboard: Graphs (revenue, pending appts/invoices, stock low)
+- [ ] Superadmin Dashboard: Metrics (patients/doctors/beds across tenants)
+- [ ] Accounts: AR/AP balances reflected
+
+### Phase 6: Tests & Reports [Pending]
+- [ ] npm run test:release-gate
+- [ ] Update DEMO_USER_MANUAL.md
+- [ ] PR: blackboxai/fresh-tenant-e2e
 

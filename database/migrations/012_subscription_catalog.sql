@@ -1,13 +1,11 @@
 -- =============================================================
 -- Migration 012: Subscription Catalog Table
 -- Stores the platform-level pricing and module-access matrix
--- for each subscription plan (Starter, Basic, Professional, Enterprise).
--- The application falls back to in-memory defaults if this table
--- does not exist, so this migration is non-breaking.
+-- TARGET: nexus (Master Plane)
 -- =============================================================
 
--- Create the table
-CREATE TABLE IF NOT EXISTS emr.subscription_catalog (
+-- Create the table in nexus
+CREATE TABLE IF NOT EXISTS nexus.subscription_catalog (
     plan_id         varchar(32)  PRIMARY KEY,        -- 'free' | 'basic' | 'professional' | 'enterprise'
     name            varchar(64)  NOT NULL,            -- Display name, e.g. 'Starter'
     cost            varchar(16)  NOT NULL DEFAULT '0',-- Monthly price (string to support "0", "199", etc.)
@@ -20,18 +18,18 @@ CREATE TABLE IF NOT EXISTS emr.subscription_catalog (
 );
 
 -- Trigger for auto-updating updated_at
-CREATE OR REPLACE FUNCTION emr.update_subscription_catalog_updated_at()
+CREATE OR REPLACE FUNCTION nexus.update_subscription_catalog_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trg_subscription_catalog_updated_at ON emr.subscription_catalog;
+DROP TRIGGER IF EXISTS trg_subscription_catalog_updated_at ON nexus.subscription_catalog;
 CREATE TRIGGER trg_subscription_catalog_updated_at
-BEFORE UPDATE ON emr.subscription_catalog
-FOR EACH ROW EXECUTE FUNCTION emr.update_subscription_catalog_updated_at();
+BEFORE UPDATE ON nexus.subscription_catalog
+FOR EACH ROW EXECUTE FUNCTION nexus.update_subscription_catalog_updated_at();
 
 -- Seed default plans (idempotent)
-INSERT INTO emr.subscription_catalog (plan_id, name, cost, period, color, module_keys, features)
+INSERT INTO nexus.subscription_catalog (plan_id, name, cost, period, color, module_keys, features)
 VALUES
   (
     'free', 'Starter', '0', 'Forever', 'slate',
@@ -53,9 +51,4 @@ VALUES
     '["dashboard","patients","appointments","emr","reports","admin","users","support","communication","documents","inventory","pharmacy","ambulance","lab","inpatient","billing","accounts","accounts_receivable","accounts_payable","insurance","service_catalog","hospital_settings","departments","bed_management","employees","hr","payroll","donor","ai_analysis","document_vault"]'::jsonb,
     '["Dedicated Server","AI Assistance Matrix","99.9% SLM Guarantee"]'::jsonb
   )
-ON CONFLICT (plan_id) DO NOTHING;   -- Don't overwrite any admin customisations
-
--- Confirm
-SELECT plan_id, name, cost, jsonb_array_length(module_keys) AS modules_count
-FROM emr.subscription_catalog
-ORDER BY CASE plan_id WHEN 'free' THEN 0 WHEN 'basic' THEN 1 WHEN 'professional' THEN 2 WHEN 'enterprise' THEN 3 ELSE 4 END;
+ON CONFLICT (plan_id) DO NOTHING;

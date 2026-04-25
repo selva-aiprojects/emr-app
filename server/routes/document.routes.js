@@ -21,9 +21,15 @@ router.get('/', async (req, res) => {
     if (patientId) { params.push(patientId); conditions.push(`d.patient_id = $${params.length}`); }
     if (String(includeDeleted).toLowerCase() !== 'true') conditions.push('d.is_deleted = false');
     
-const result = await query(
-      `SELECT 'No documents available' as message`,
-      []
+    const result = await query(
+      `SELECT d.*, 
+              CASE WHEN p.id IS NULL THEN NULL ELSE CONCAT(p.first_name, ' ', p.last_name) END AS patient_name
+       FROM emr.documents d 
+       LEFT JOIN emr.patients p ON p.id::text = d.patient_id::text
+       WHERE ${conditions.join(' AND ')} 
+       ORDER BY d.created_at DESC`,
+      params
+
     );
     res.json(result.rows);
   } catch (error) {

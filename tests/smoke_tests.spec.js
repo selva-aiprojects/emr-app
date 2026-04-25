@@ -4,13 +4,21 @@ import { test, expect } from '@playwright/test';
 const TENANT_LABEL = 'New Age Hospital';
 
 const users = [
+<<<<<<< HEAD
     { tenant: TENANT_LABEL, email: 'admin@newage.hospital', password: 'Admin@123', name: /Sarah/i, role: 'Admin' },
+=======
+    { tenant: TENANT_LABEL, email: 'admin@nah.local', password: 'Admin@123', name: /Sarah/i, role: 'Admin' },
+>>>>>>> 52791cbe98012868f178ca6ba1e3c297477226fe
     { tenant: TENANT_LABEL, email: 'cmo@nah.local', password: 'Admin@123', name: /Michael/i, role: 'Doctor' },
 ];
 
 for (const user of users) {
     test(`${user.role} can login - ${user.tenant}`, async ({ page }) => {
+<<<<<<< HEAD
 await page.goto('http://localhost:5175/');
+=======
+        await page.goto('/');
+>>>>>>> 52791cbe98012868f178ca6ba1e3c297477226fe
 
         // Wait for tenant dropdown to be interactive
         const tenantSelect = page.locator('select[name="tenantId"]');

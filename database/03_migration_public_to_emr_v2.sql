@@ -1,14 +1,14 @@
 -- =====================================================
--- COMPREHENSIVE SCHEMA MIGRATION: PUBLIC -> EMR
+-- COMPREHENSIVE SCHEMA MIGRATION: PUBLIC -> NEXUS
 -- =====================================================
--- Description: Copies all objects from public to emr schema
+-- Description: Copies all objects from public to nexus schema
 -- using a non-destructive approach (no drops).
 -- =====================================================
 
 BEGIN;
 
--- 1. Create EMR schema if it doesn't exist
-CREATE SCHEMA IF NOT EXISTS emr;
+-- 1. Create NEXUS schema if it doesn't exist
+CREATE SCHEMA IF NOT EXISTS nexus;
 
 -- 2. Move/Copy Custom Types
 DO $$
@@ -25,7 +25,7 @@ BEGIN
         -- Unfortunately, there's no "CREATE TYPE LIKE"
         -- We would need to extract the definition.
         -- For now, we assume standard types or manual copy if needed.
-        RAISE NOTICE 'Found custom enum type in public: %. Please ensure it is recreated in emr if used.', type_record.type_name;
+        RAISE NOTICE 'Found custom enum type in public: %. Please ensure it is recreated in nexus if used.', type_record.type_name;
     END LOOP;
 END $$;
 
@@ -44,14 +44,14 @@ BEGIN
         AND tablename NOT IN ('pg_stat_statements') -- Exclude system/extension tables
     LOOP
         source_table := 'public.' || quote_ident(table_record.tablename);
-        target_table := 'emr.' || quote_ident(table_record.tablename);
+        target_table := 'nexus.' || quote_ident(table_record.tablename);
         
-        -- Create table in emr if not exists
-        IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = table_record.tablename) THEN
+        -- Create table in nexus if not exists
+        IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'nexus' AND table_name = table_record.tablename) THEN
             EXECUTE format('CREATE TABLE %s (LIKE %s INCLUDING ALL)', target_table, source_table);
             RAISE NOTICE 'Created table: % (Copied structure from public)', target_table;
         ELSE
-            RAISE NOTICE 'Table % already exists in emr. Attempting to merge data.', target_table;
+            RAISE NOTICE 'Table % already exists in nexus. Attempting to merge data.', target_table;
         END IF;
         
         -- Copy data
@@ -81,15 +81,15 @@ BEGIN
         JOIN pg_namespace n ON n.oid = p.pronamespace
         WHERE n.nspname = 'public'
     LOOP
-        -- Replace 'public.' with 'emr.' in the function definition body if it exists
+        -- Replace 'public.' with 'nexus.' in the function definition body if it exists
         -- This is a bit risky but often necessary
-        func_def := replace(func_record.definition, 'public.', 'emr.');
+        func_def := replace(func_record.definition, 'public.', 'nexus.');
         -- Also replace naming in the CREATE string
-        func_def := replace(func_def, 'CREATE OR REPLACE FUNCTION public.' || func_record.function_name, 'CREATE OR REPLACE FUNCTION emr.' || func_record.function_name);
+        func_def := replace(func_def, 'CREATE OR REPLACE FUNCTION public.' || func_record.function_name, 'CREATE OR REPLACE FUNCTION nexus.' || func_record.function_name);
         
         BEGIN
             EXECUTE func_def;
-            RAISE NOTICE 'Copied function: emr.%', func_record.function_name;
+            RAISE NOTICE 'Copied function: nexus.%', func_record.function_name;
         EXCEPTION WHEN OTHERS THEN
             RAISE WARNING 'Could not copy function %: %', func_record.function_name, SQLERRM;
         END;
@@ -107,22 +107,22 @@ BEGIN
         FROM information_schema.sequences 
         WHERE sequence_schema = 'public'
     LOOP
-        -- Create sequence in emr if not exists
-        IF NOT EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_schema = 'emr' AND sequence_name = seq_record.sequence_name) THEN
-            EXECUTE format('CREATE SEQUENCE emr.%I', seq_record.sequence_name);
+        -- Create sequence in nexus if not exists
+        IF NOT EXISTS (SELECT 1 FROM information_schema.sequences WHERE sequence_schema = 'nexus' AND sequence_name = seq_record.sequence_name) THEN
+            EXECUTE format('CREATE SEQUENCE nexus.%I', seq_record.sequence_name);
         END IF;
         
         -- Sync value
         EXECUTE format('SELECT last_value FROM public.%I', seq_record.sequence_name) INTO current_val;
-        EXECUTE format('SELECT setval(''emr.%I'', %L)', seq_record.sequence_name, current_val);
+        EXECUTE format('SELECT setval(''nexus.%I'', %L)', seq_record.sequence_name, current_val);
         
-        RAISE NOTICE 'Synced sequence: emr.% (value: %)', seq_record.sequence_name, current_val;
+        RAISE NOTICE 'Synced sequence: nexus.% (value: %)', seq_record.sequence_name, current_val;
     END LOOP;
 END $$;
 
 -- 6. Update search_path for the database
 -- Note: This needs to be run outside a transaction usually for global effect, 
 -- but we provide the command here.
--- ALTER DATABASE postgres SET search_path TO emr, public, extensions;
+-- ALTER DATABASE postgres SET search_path TO nexus, public, extensions;
 
 COMMIT;

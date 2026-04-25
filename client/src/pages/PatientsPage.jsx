@@ -20,7 +20,7 @@ import {
   ClipboardList,
   UserX
 } from 'lucide-react';
-import { EmptyState } from '../components/ui/index.jsx';
+import { EmptyState, PageHero } from '../components/ui/index.jsx';
 import { useToast } from '../hooks/useToast.jsx';
 
 
@@ -229,34 +229,27 @@ export default function PatientsPage({
   }
 
   return (
-    <div className="page-shell-premium animate-fade-in">
-      <header className="page-header-premium">
-        <div>
-           <h1 className="page-title-rich flex items-center gap-3">
-              {isDoctor ? 'My Patients' : 'Patient Directory'}
-              <span className="text-meta-sm bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Patient Files</span>
-           </h1>
-           <p className="dim-label">View and manage all registered patients for {tenant?.name || 'Facility'}.</p>
-           <p className="text-meta-sm text-white/60 mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Records verified • Directory Active
-           </p>
-        </div>
-        <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">
-          <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'registry' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-            onClick={() => setActiveTab('registry')}
-          >
-            <ClipboardList className="w-3.5 h-3.5 mr-2" /> Patient List
-          </button>
-          <button 
-            className={`clinical-btn !min-h-[44px] px-8 rounded-xl text-meta-sm transition-all ${activeTab === 'onboard' ? 'bg-white text-slate-900 shadow-xl' : 'text-white/60 hover:text-white hover:bg-white/10'}`}
-            onClick={() => setActiveTab('onboard')}
-          >
-            <UserPlus className="w-3.5 h-3.5 mr-2" /> New Registration
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#F8FAFC] pb-20 animate-fade-in relative overflow-hidden font-sans">
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-50/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 -z-10"></div>
+      
+      <PageHero 
+        title={isDoctor ? 'My Patients' : 'Patient Directory'}
+        subtitle={`Institutional health records and clinical registry for ${tenant?.name || 'Facility'}`}
+        badge="Patient Ledger"
+        icon={Users}
+        tabs={[
+          { id: 'registry', label: 'Patient List', icon: ClipboardList },
+          { id: 'onboard', label: 'New Registration', icon: UserPlus }
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        stats={[
+          { label: 'Total Files', value: patients.length, icon: Users },
+          { label: 'Active Directory', value: '100%', icon: ShieldCheck, color: 'text-emerald-400' }
+        ]}
+      />
 
+      <main className="max-w-7xl mx-auto px-8 -mt-8 relative z-10">
       {activeTab === 'registry' && (
         <section className="space-y-8">
           <div className="flex flex-col md:flex-row gap-6 items-stretch">
@@ -587,7 +580,7 @@ export default function PatientsPage({
            </aside>
         </section>
       )}
-
+      </main>
       <footer className="mt-12 py-8 border-t border-slate-100 flex justify-between items-center">
          <div className="flex items-center gap-3 text-[10px] font-black text-slate-300 uppercase tracking-widest">
             <ShieldCheck className="w-4 h-4" /> SECURE DEPLOYMENT NODE • v1.0.4-BETA
