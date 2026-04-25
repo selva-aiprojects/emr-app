@@ -18,16 +18,16 @@ async function inspect() {
   await client.connect();
   console.log('🔍 Database Inspection starting...\n');
 
-  console.log('--- emr.management_tenants ---');
-  const mRes = await client.query(`SELECT id, name, code, subdomain, schema_name FROM emr.management_tenants`);
+  console.log('--- management_tenants ---');
+  const mRes = await client.query(`SELECT id, name, code, subdomain, schema_name FROM management_tenants`);
   console.table(mRes.rows);
 
-  console.log('\n--- emr.tenants ---');
-  const tRes = await client.query(`SELECT id, name, code, subdomain FROM emr.tenants`);
+  console.log('\n--- tenants ---');
+  const tRes = await client.query(`SELECT id, name, code, subdomain FROM tenants`);
   console.table(tRes.rows);
 
   console.log('\n--- User Tenant Association ---');
-  const uRes = await client.query(`SELECT email, tenant_id FROM emr.users WHERE email = 'admin@nhgl.local'`);
+  const uRes = await client.query(`SELECT email, tenant_id FROM users WHERE email = 'admin@nhgl.local'`);
   console.table(uRes.rows);
 
   await client.end();

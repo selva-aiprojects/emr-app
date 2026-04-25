@@ -98,39 +98,6 @@ export async function getManagementOverview(req, res) {
   }
 }
 
-export async function getConsolidatedStats(req, res) {
-  try {
-    const overview = await getSuperadminOverview();
-    res.json({
-      summary: {
-        totalTenants: overview.totals.tenants,
-        totalDoctors: overview.totals.doctors,
-        totalPatients: overview.totals.patients,
-        availableBeds: overview.totals.bedsAvailable,
-        availableAmbulances: overview.totals.ambulancesAvailable,
-        insuranceCapacity: overview.totals.insuranceCapacity,
-        activeOffers: overview.totals.activeOffers,
-        openTickets: overview.totals.openTickets,
-        issues: overview.totals.issues
-      },
-      infra: overview.infra,
-      tenants: overview.tenants,
-      generatedAt: overview.generatedAt
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
-export async function getManagementOverview(req, res) {
-  try {
-    const overview = await getSuperadminOverview();
-    res.json(overview);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-
 /**
  * Global Support Ticket Management
  */
@@ -318,36 +285,6 @@ export async function globalPasswordReset(req, res) {
       emailDelivery
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-}
-       `, [JSON.stringify({ tenantId: id, tenantCode: tenant.code, schemaName })]);
-    } catch (err) {
-       console.warn('[DELETE_WARN] Log deferred:', err.message);
-    }
-
-    // 4. Also remove from nexus.users (the global auth plane entry created during provisioning)
-    await query('DELETE FROM nexus.users WHERE tenant_id::text = $1::text', [id]).catch(() => {});
-
-    // 5. Drop the tenant's isolated schema
-    await query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
-
-    // 6. Purge tenant from management metadata
-    await query('DELETE FROM nexus.management_tenants WHERE id::text = $1::text', [id]);
-
-    // 7. Also remove from legacy table if present
-    await query('DELETE FROM nexus.tenants WHERE id::text = $1::text', [id]).catch(() => {});
-
-    // 8. Release any cached Prisma client for this schema
-    const { releaseTenantClient } = await import('../db/prisma_manager.js');
-    releaseTenantClient(schemaName);
-
-    res.json({ 
-      success: true, 
-      message: `Tenant [${tenant.code}] decommissioned. Schema "${schemaName}" has been purged.` 
-    });
-  } catch (error) {
-    console.error('[DELETE_TENANT_ERROR]', error);
     res.status(500).json({ error: error.message });
   }
 }

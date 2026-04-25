@@ -10,19 +10,19 @@ BEGIN;
 -- ============================================================
 
 -- Add FHIR reference columns to existing tables
-ALTER TABLE emr.patients 
+ALTER TABLE patients 
 ADD COLUMN IF NOT EXISTS fhir_patient_ref uuid,
 ADD COLUMN IF NOT EXISTS ethnicity varchar(64),
 ADD COLUMN IF NOT EXISTS language varchar(64),
 ADD COLUMN IF NOT EXISTS birth_place text;
 
-ALTER TABLE emr.encounters
+ALTER TABLE encounters
 ADD COLUMN IF NOT EXISTS fhir_encounter_ref uuid;
-ALTER TABLE emr.prescriptions DROP CONSTRAINT IF EXISTS prescriptions_status_check;
-UPDATE emr.prescriptions SET status = LOWER(status) WHERE status IN ('Pending', 'Dispensed', 'Cancelled');
-ALTER TABLE emr.prescriptions
-ADD COLUMN IF NOT EXISTS patient_id uuid REFERENCES emr.patients(id),
-ADD COLUMN IF NOT EXISTS provider_id uuid REFERENCES emr.users(id),
+ALTER TABLE prescriptions DROP CONSTRAINT IF EXISTS prescriptions_status_check;
+UPDATE prescriptions SET status = LOWER(status) WHERE status IN ('Pending', 'Dispensed', 'Cancelled');
+ALTER TABLE prescriptions
+ADD COLUMN IF NOT EXISTS patient_id uuid REFERENCES patients(id),
+ADD COLUMN IF NOT EXISTS provider_id uuid REFERENCES users(id),
 ADD COLUMN IF NOT EXISTS prescription_number varchar(64),
 ADD COLUMN IF NOT EXISTS priority varchar(16) DEFAULT 'routine' CHECK (priority IN ('routine', 'urgent', 'stat', 'asap')),
 ADD COLUMN IF NOT EXISTS fhir_medication_request_ref uuid;
@@ -30,10 +30,10 @@ ADD COLUMN IF NOT EXISTS fhir_medication_request_ref uuid;
 
 
 -- Conditions table (FHIR Condition Resource)
-CREATE TABLE IF NOT EXISTS emr.conditions(
+CREATE TABLE IF NOT EXISTS conditions(
   condition_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
   clinical_status varchar(32) NOT NULL CHECK (clinical_status IN ('active', 'recurrence', 'relapse', 'inactive', 'remission', 'resolved')),
   verification_status varchar(32) NOT NULL,
   category varchar(32) DEFAULT 'problem-list-item',
@@ -45,38 +45,38 @@ CREATE TABLE IF NOT EXISTS emr.conditions(
   note text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  created_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
   fhir_condition_ref uuid
 );
 
 -- Procedures table (FHIR Procedure Resource)
-CREATE TABLE IF NOT EXISTS emr.procedures(
+CREATE TABLE IF NOT EXISTS procedures(
   procedure_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  encounter_id uuid REFERENCES emr.encounters(id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  encounter_id uuid REFERENCES encounters(id),
   status varchar(32) NOT NULL CHECK (status IN ('preparation', 'in-progress', 'not-done', 'on-hold', 'stopped', 'completed', 'entered-in-error', 'unknown')),
   category varchar(32) DEFAULT 'procedure',
   code_snomed varchar(64),
   code_cpt varchar(32),
   display_name varchar(255),
   performed_datetime timestamptz,
-  performer_id uuid REFERENCES emr.users(id),
+  performer_id uuid REFERENCES users(id),
   location varchar(255),
   reason_code_snomed varchar(64),
   notes text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  created_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
   fhir_procedure_ref uuid
 );
 
 -- Observations table (FHIR Observation Resource) - Enhanced
-CREATE TABLE IF NOT EXISTS emr.observations(
+CREATE TABLE IF NOT EXISTS observations(
   observation_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  encounter_id uuid REFERENCES emr.encounters(id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  encounter_id uuid REFERENCES encounters(id),
   status varchar(32) NOT NULL CHECK (status IN ('registered', 'preliminary', 'final', 'amended', 'corrected', 'cancelled', 'entered-in-error', 'unknown')),
   category varchar(32) NOT NULL CHECK (category IN ('vital-signs', 'laboratory', 'imaging', 'survey', 'exam', 'procedure', 'activity', 'social-history', 'assessment-plan')),
   code_loinc varchar(32),
@@ -86,23 +86,23 @@ CREATE TABLE IF NOT EXISTS emr.observations(
   value_quantity_unit varchar(64),
   value_string text,
   effective_datetime timestamptz,
-  performer_id uuid REFERENCES emr.users(id),
+  performer_id uuid REFERENCES users(id),
   interpretation varchar(32) CHECK (interpretation IN ('low', 'normal', 'high', 'very-low', 'very-high', 'critical-low', 'critical-high')),
   reference_range_low numeric,
   reference_range_high numeric,
   note text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  created_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
   fhir_observation_ref uuid
 );
 
 -- Diagnostic Reports table (FHIR DiagnosticReport Resource)
-CREATE TABLE IF NOT EXISTS emr.diagnostic_reports(
+CREATE TABLE IF NOT EXISTS diagnostic_reports(
   report_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  encounter_id uuid REFERENCES emr.encounters(id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  encounter_id uuid REFERENCES encounters(id),
   status varchar(32) NOT NULL CHECK (status IN ('registered', 'partial', 'preliminary', 'final', 'amended', 'corrected', 'cancelled', 'entered-in-error', 'unknown')),
   category varchar(32) CHECK (category IN ('laboratory', 'radiology', 'cardiology', 'pathology', 'other')),
   code_loinc varchar(32),
@@ -111,19 +111,19 @@ CREATE TABLE IF NOT EXISTS emr.diagnostic_reports(
   presented_form_data bytea,
   presented_form_content_type varchar(64),
   issued_datetime timestamptz DEFAULT now(),
-  performer_id uuid REFERENCES emr.users(id),
+  performer_id uuid REFERENCES users(id),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  created_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
   fhir_diagnostic_report_ref uuid
 );
 
 -- Service Requests table (FHIR ServiceRequest Resource)
-CREATE TABLE IF NOT EXISTS emr.service_requests(
+CREATE TABLE IF NOT EXISTS service_requests(
   request_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  encounter_id uuid REFERENCES emr.encounters(id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  encounter_id uuid REFERENCES encounters(id),
   status varchar(32) NOT NULL CHECK (status IN ('draft', 'active', 'on-hold', 'revoked', 'completed', 'entered-in-error', 'unknown')),
   intent varchar(32) NOT NULL CHECK (intent IN ('proposal', 'plan', 'order', 'original-order', 'reflex-order', 'filler-order', 'instance-order', 'option')),
   category varchar(32),
@@ -131,7 +131,7 @@ CREATE TABLE IF NOT EXISTS emr.service_requests(
   code_snomed varchar(64),
   display_name varchar(255),
   priority varchar(32) CHECK (priority IN ('stat', 'urgent', 'asap', 'routine')),
-  ordered_by_id uuid REFERENCES emr.users(id),
+  ordered_by_id uuid REFERENCES users(id),
   order_datetime timestamptz DEFAULT now(),
   scheduled_start timestamptz,
   scheduled_end timestamptz,
@@ -139,40 +139,40 @@ CREATE TABLE IF NOT EXISTS emr.service_requests(
   notes text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  created_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
   fhir_service_request_ref uuid
 );
 
 -- Create indexes for performance
-CREATE INDEX IF NOT EXISTS idx_conditions_patient ON emr.conditions(patient_id, clinical_status);
-CREATE INDEX IF NOT EXISTS idx_procedures_patient ON emr.procedures(patient_id, status);
-CREATE INDEX IF NOT EXISTS idx_observations_patient ON emr.observations(patient_id, category);
-CREATE INDEX IF NOT EXISTS idx_diagnostic_reports_patient ON emr.diagnostic_reports(patient_id, status);
-CREATE INDEX IF NOT EXISTS idx_service_requests_patient ON emr.service_requests(patient_id, status);
+CREATE INDEX IF NOT EXISTS idx_conditions_patient ON conditions(patient_id, clinical_status);
+CREATE INDEX IF NOT EXISTS idx_procedures_patient ON procedures(patient_id, status);
+CREATE INDEX IF NOT EXISTS idx_observations_patient ON observations(patient_id, category);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_reports_patient ON diagnostic_reports(patient_id, status);
+CREATE INDEX IF NOT EXISTS idx_service_requests_patient ON service_requests(patient_id, status);
 
 -- ============================================================
 -- PART 2: PHARMACY MODULE TABLES
 -- ============================================================
 
-DROP TABLE IF EXISTS emr.pharmacy_alerts CASCADE;
-DROP TABLE IF EXISTS emr.patient_medication_allocations CASCADE;
-DROP TABLE IF EXISTS emr.ward_stock CASCADE;
-DROP TABLE IF EXISTS emr.purchase_order_items CASCADE;
-DROP TABLE IF EXISTS emr.purchase_orders CASCADE;
-DROP TABLE IF EXISTS emr.vendors CASCADE;
-DROP TABLE IF EXISTS emr.pharmacy_inventory CASCADE;
-DROP TABLE IF EXISTS emr.drug_batches CASCADE;
-DROP TABLE IF EXISTS emr.medication_schedules CASCADE;
-DROP TABLE IF EXISTS emr.medication_administrations CASCADE;
-DROP TABLE IF EXISTS emr.prescription_items CASCADE;
-DROP TABLE IF EXISTS emr.drug_allergies CASCADE;
-DROP TABLE IF EXISTS emr.drug_interactions CASCADE;
-DROP TABLE IF EXISTS emr.drug_master CASCADE;
+DROP TABLE IF EXISTS pharmacy_alerts CASCADE;
+DROP TABLE IF EXISTS patient_medication_allocations CASCADE;
+DROP TABLE IF EXISTS ward_stock CASCADE;
+DROP TABLE IF EXISTS purchase_order_items CASCADE;
+DROP TABLE IF EXISTS purchase_orders CASCADE;
+DROP TABLE IF EXISTS vendors CASCADE;
+DROP TABLE IF EXISTS pharmacy_inventory CASCADE;
+DROP TABLE IF EXISTS drug_batches CASCADE;
+DROP TABLE IF EXISTS medication_schedules CASCADE;
+DROP TABLE IF EXISTS medication_administrations CASCADE;
+DROP TABLE IF EXISTS prescription_items CASCADE;
+DROP TABLE IF EXISTS drug_allergies CASCADE;
+DROP TABLE IF EXISTS drug_interactions CASCADE;
+DROP TABLE IF EXISTS drug_master CASCADE;
 
 -- Drug Master with comprehensive medication metadata
-CREATE TABLE IF NOT EXISTS emr.drug_master(
+CREATE TABLE IF NOT EXISTS drug_master(
   drug_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid REFERENCES emr.tenants(id),
+  tenant_id uuid REFERENCES tenants(id),
   generic_name text NOT NULL,
   brand_names text[] DEFAULT '{}',
   strength text,
@@ -200,10 +200,10 @@ CREATE TABLE IF NOT EXISTS emr.drug_master(
 );
 
 -- Drug-Drug Interactions database
-CREATE TABLE IF NOT EXISTS emr.drug_interactions(
+CREATE TABLE IF NOT EXISTS drug_interactions(
   interaction_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  drug_a uuid NOT NULL REFERENCES emr.drug_master(drug_id),
-  drug_b uuid NOT NULL REFERENCES emr.drug_master(drug_id),
+  drug_a uuid NOT NULL REFERENCES drug_master(drug_id),
+  drug_b uuid NOT NULL REFERENCES drug_master(drug_id),
   severity varchar(32) NOT NULL CHECK (severity IN ('contraindicated', 'major', 'moderate', 'minor')),
   description text NOT NULL,
   mechanism text,
@@ -213,26 +213,26 @@ CREATE TABLE IF NOT EXISTS emr.drug_interactions(
 );
 
 -- Patient Drug Allergies
-CREATE TABLE IF NOT EXISTS emr.drug_allergies(
+CREATE TABLE IF NOT EXISTS drug_allergies(
   allergy_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  drug_id uuid NOT NULL REFERENCES emr.drug_master(drug_id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  drug_id uuid NOT NULL REFERENCES drug_master(drug_id),
   reaction_severity varchar(32) CHECK (reaction_severity IN ('mild', 'moderate', 'severe', 'life-threatening', 'anaphylaxis')),
   reaction_description text,
   criticality varchar(16) CHECK (criticality IN ('low', 'high', 'unable-to-assess')),
   verification_status varchar(32) CHECK (verification_status IN ('unconfirmed', 'provisional', 'confirmed', 'refuted', 'entered-in-error')),
   first_occurrence date,
   recorded_date timestamptz DEFAULT now(),
-  recorded_by uuid REFERENCES emr.users(id),
+  recorded_by uuid REFERENCES users(id),
   created_at timestamptz DEFAULT now()
 );
 
 -- Prescription Items (line items within a prescription)
-CREATE TABLE IF NOT EXISTS emr.prescription_items(
+CREATE TABLE IF NOT EXISTS prescription_items(
   item_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  prescription_id uuid NOT NULL REFERENCES emr.prescriptions(id) ON DELETE CASCADE,
-  drug_id uuid NOT NULL REFERENCES emr.drug_master(drug_id),
+  prescription_id uuid NOT NULL REFERENCES prescriptions(id) ON DELETE CASCADE,
+  drug_id uuid NOT NULL REFERENCES drug_master(drug_id),
   sequence integer NOT NULL,
   dose numeric NOT NULL,
   dose_unit varchar(64) NOT NULL,
@@ -253,27 +253,27 @@ CREATE TABLE IF NOT EXISTS emr.prescription_items(
   dispensed_date timestamptz,
   last_fill_date timestamptz,
   next_fill_date timestamptz,
-  dispensed_by uuid REFERENCES emr.users(id),
+  dispensed_by uuid REFERENCES users(id),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
 -- Medication Administration Record (MAR) - For nurses
-CREATE TABLE IF NOT EXISTS emr.medication_administrations(
+CREATE TABLE IF NOT EXISTS medication_administrations(
   administration_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  encounter_id uuid REFERENCES emr.encounters(id),
-  prescription_item_id uuid REFERENCES emr.prescription_items(item_id),
-  drug_id uuid NOT NULL REFERENCES emr.drug_master(drug_id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  encounter_id uuid REFERENCES encounters(id),
+  prescription_item_id uuid REFERENCES prescription_items(item_id),
+  drug_id uuid NOT NULL REFERENCES drug_master(drug_id),
   scheduled_datetime timestamptz NOT NULL,
   administered_datetime timestamptz,
   dose_administered numeric,
   dose_unit varchar(64),
   route varchar(64),
   site varchar(255), -- Injection site, etc.
-  administered_by uuid REFERENCES emr.users(id),
-  verified_by uuid REFERENCES emr.users(id),
+  administered_by uuid REFERENCES users(id),
+  verified_by uuid REFERENCES users(id),
   status varchar(32) NOT NULL CHECK (status IN ('scheduled', 'administered', 'missed', 'held', 'refused', 'not-applicable')),
   hold_reason varchar(255),
   refusal_reason varchar(255),
@@ -283,13 +283,13 @@ CREATE TABLE IF NOT EXISTS emr.medication_administrations(
 );
 
 -- Medication Schedules (for recurring doses)
-CREATE TABLE IF NOT EXISTS emr.medication_schedules(
+CREATE TABLE IF NOT EXISTS medication_schedules(
   schedule_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  encounter_id uuid REFERENCES emr.encounters(id),
-  prescription_item_id uuid REFERENCES emr.prescription_items(item_id),
-  drug_id uuid NOT NULL REFERENCES emr.drug_master(drug_id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  encounter_id uuid REFERENCES encounters(id),
+  prescription_item_id uuid REFERENCES prescription_items(item_id),
+  drug_id uuid NOT NULL REFERENCES drug_master(drug_id),
   dose numeric NOT NULL,
   dose_unit varchar(64) NOT NULL,
   frequency varchar(64) NOT NULL,
@@ -303,9 +303,9 @@ CREATE TABLE IF NOT EXISTS emr.medication_schedules(
 );
 
 -- Drug Batches/Lots for pharmaceutical inventory
-CREATE TABLE IF NOT EXISTS emr.drug_batches(
+CREATE TABLE IF NOT EXISTS drug_batches(
   batch_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  drug_id uuid NOT NULL REFERENCES emr.drug_master(drug_id),
+  drug_id uuid NOT NULL REFERENCES drug_master(drug_id),
   batch_number varchar(64) NOT NULL,
   serial_number varchar(64), -- Track and trace requirement
   quantity_received numeric NOT NULL,
@@ -325,24 +325,24 @@ CREATE TABLE IF NOT EXISTS emr.drug_batches(
 );
 
 -- Pharmacy Inventory Transactions (audit trail)
-CREATE TABLE IF NOT EXISTS emr.pharmacy_inventory(
+CREATE TABLE IF NOT EXISTS pharmacy_inventory(
   transaction_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  batch_id uuid NOT NULL REFERENCES emr.drug_batches(batch_id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  batch_id uuid NOT NULL REFERENCES drug_batches(batch_id),
   transaction_type varchar(32) NOT NULL CHECK (transaction_type IN ('receive', 'dispense', 'adjustment', 'return', 'transfer', 'discard', 'expire')),
   quantity_change numeric NOT NULL,
   quantity_balance numeric,
   reference_type varchar(32), -- prescription, purchase_order, adjustment, etc.
   reference_id uuid,
-  performed_by uuid REFERENCES emr.users(id),
+  performed_by uuid REFERENCES users(id),
   notes text,
   transaction_datetime timestamptz DEFAULT now()
 );
 
 -- Vendors/Suppliers for drug procurement
-CREATE TABLE IF NOT EXISTS emr.vendors(
+CREATE TABLE IF NOT EXISTS vendors(
   vendor_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid REFERENCES emr.tenants(id),
+  tenant_id uuid REFERENCES tenants(id),
   vendor_name text NOT NULL,
   contact_person text,
   email varchar(255),
@@ -358,10 +358,10 @@ CREATE TABLE IF NOT EXISTS emr.vendors(
 );
 
 -- Purchase Orders for drug procurement
-CREATE TABLE IF NOT EXISTS emr.purchase_orders(
+CREATE TABLE IF NOT EXISTS purchase_orders(
   order_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  vendor_id uuid NOT NULL REFERENCES emr.vendors(vendor_id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  vendor_id uuid NOT NULL REFERENCES vendors(vendor_id),
   order_number varchar(64) UNIQUE NOT NULL,
   order_date timestamptz DEFAULT now(),
   expected_delivery_date date,
@@ -369,18 +369,18 @@ CREATE TABLE IF NOT EXISTS emr.purchase_orders(
   status varchar(32) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'shipped', 'received', 'cancelled', 'closed')),
   total_amount numeric(12,2),
   notes text,
-  ordered_by uuid REFERENCES emr.users(id),
-  approved_by uuid REFERENCES emr.users(id),
-  received_by uuid REFERENCES emr.users(id),
+  ordered_by uuid REFERENCES users(id),
+  approved_by uuid REFERENCES users(id),
+  received_by uuid REFERENCES users(id),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
 -- Purchase Order Line Items
-CREATE TABLE IF NOT EXISTS emr.purchase_order_items(
+CREATE TABLE IF NOT EXISTS purchase_order_items(
   item_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  order_id uuid NOT NULL REFERENCES emr.purchase_orders(order_id) ON DELETE CASCADE,
-  drug_id uuid NOT NULL REFERENCES emr.drug_master(drug_id),
+  order_id uuid NOT NULL REFERENCES purchase_orders(order_id) ON DELETE CASCADE,
+  drug_id uuid NOT NULL REFERENCES drug_master(drug_id),
   quantity_ordered numeric NOT NULL,
   quantity_received numeric,
   unit_price numeric(10,2),
@@ -392,12 +392,12 @@ CREATE TABLE IF NOT EXISTS emr.purchase_order_items(
 );
 
 -- Ward Stock (Inpatient medication supply)
-CREATE TABLE IF NOT EXISTS emr.ward_stock(
+CREATE TABLE IF NOT EXISTS ward_stock(
   stock_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  ward_id uuid REFERENCES emr.tenants(id), -- Could be enhanced with wards table
-  drug_id uuid NOT NULL REFERENCES emr.drug_master(drug_id),
-  batch_id uuid REFERENCES emr.drug_batches(batch_id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  ward_id uuid REFERENCES tenants(id), -- Could be enhanced with wards table
+  drug_id uuid NOT NULL REFERENCES drug_master(drug_id),
+  batch_id uuid REFERENCES drug_batches(batch_id),
   quantity numeric NOT NULL,
   par_level numeric DEFAULT 100,
   reorder_point numeric DEFAULT 50,
@@ -409,15 +409,15 @@ CREATE TABLE IF NOT EXISTS emr.ward_stock(
 );
 
 -- Patient Medication Allocations (for reserved medications)
-CREATE TABLE IF NOT EXISTS emr.patient_medication_allocations(
+CREATE TABLE IF NOT EXISTS patient_medication_allocations(
   allocation_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  drug_id uuid NOT NULL REFERENCES emr.drug_master(drug_id),
-  batch_id uuid REFERENCES emr.drug_batches(batch_id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  drug_id uuid NOT NULL REFERENCES drug_master(drug_id),
+  batch_id uuid REFERENCES drug_batches(batch_id),
   quantity_allocated numeric NOT NULL,
   allocated_for varchar(64), -- surgery, discharge, specialty_meds, etc.
-  allocated_by uuid REFERENCES emr.users(id),
+  allocated_by uuid REFERENCES users(id),
   allocation_date timestamptz DEFAULT now(),
   expiry_date timestamptz,
   status varchar(32) DEFAULT 'active' CHECK (status IN ('active', 'dispensed', 'returned', 'expired')),
@@ -426,29 +426,29 @@ CREATE TABLE IF NOT EXISTS emr.patient_medication_allocations(
 );
 
 -- Pharmacy Alerts System
-CREATE TABLE IF NOT EXISTS emr.pharmacy_alerts(
+CREATE TABLE IF NOT EXISTS pharmacy_alerts(
   alert_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
   alert_type varchar(32) NOT NULL CHECK (alert_type IN ('low-stock', 'expiring', 'recall', 'interaction', 'allergy', 'overdue')),
   severity varchar(32) CHECK (severity IN ('critical', 'warning', 'info')),
-  drug_id uuid REFERENCES emr.drug_master(drug_id),
-  batch_id uuid REFERENCES emr.drug_batches(batch_id),
-  patient_id uuid REFERENCES emr.patients(id),
+  drug_id uuid REFERENCES drug_master(drug_id),
+  batch_id uuid REFERENCES drug_batches(batch_id),
+  patient_id uuid REFERENCES patients(id),
   message text NOT NULL,
   acknowledged boolean DEFAULT false,
-  acknowledged_by uuid REFERENCES emr.users(id),
+  acknowledged_by uuid REFERENCES users(id),
   acknowledged_datetime timestamptz,
   created_datetime timestamptz DEFAULT now(),
   expires_datetime timestamptz
 );
 
 -- Create indexes for pharmacy module
-CREATE INDEX IF NOT EXISTS idx_drug_master_generic ON emr.drug_master(generic_name);
-CREATE INDEX IF NOT EXISTS idx_drug_master_rxnorm ON emr.drug_master(rxnorm_code);
-CREATE INDEX IF NOT EXISTS idx_prescription_items_drug ON emr.prescription_items(drug_id, status);
-CREATE INDEX IF NOT EXISTS idx_medication_administrations_patient ON emr.medication_administrations(patient_id, scheduled_datetime);
-CREATE INDEX IF NOT EXISTS idx_drug_batches_expiry ON emr.drug_batches(expiry_date, status);
-CREATE INDEX IF NOT EXISTS idx_pharmacy_inventory_batch ON emr.pharmacy_inventory(batch_id, transaction_datetime);
+CREATE INDEX IF NOT EXISTS idx_drug_master_generic ON drug_master(generic_name);
+CREATE INDEX IF NOT EXISTS idx_drug_master_rxnorm ON drug_master(rxnorm_code);
+CREATE INDEX IF NOT EXISTS idx_prescription_items_drug ON prescription_items(drug_id, status);
+CREATE INDEX IF NOT EXISTS idx_medication_administrations_patient ON medication_administrations(patient_id, scheduled_datetime);
+CREATE INDEX IF NOT EXISTS idx_drug_batches_expiry ON drug_batches(expiry_date, status);
+CREATE INDEX IF NOT EXISTS idx_pharmacy_inventory_batch ON pharmacy_inventory(batch_id, transaction_datetime);
 
 COMMIT;
 
@@ -459,7 +459,7 @@ COMMIT;
 BEGIN;
 
 -- Common Medications (US Market)
-INSERT INTO emr.drug_master 
+INSERT INTO drug_master 
 (tenant_id, generic_name, brand_names, strength, dosage_form, route,
  ndc_code, rxnorm_code, snomed_code, schedule_type, high_alert_flag, pregnancy_category)
 VALUES
@@ -542,28 +542,28 @@ VALUES
  '00008-0630', '10753', '372552008', 'Prescription', false, 'C');
 
 -- Drug Interactions
-INSERT INTO emr.drug_interactions
+INSERT INTO drug_interactions
 (drug_a, drug_b, severity, description, mechanism, management)
 SELECT 
   da.drug_id, db.drug_id, 'major',
   'Increased risk of bleeding when warfarin is combined with NSAIDs',
   'NSAIDs inhibit platelet aggregation and may damage GI mucosa, potentiating warfarin anticoagulation',
   'Monitor INR closely. Consider alternative analgesic. Educate patient on bleeding signs.'
-FROM emr.drug_master da, emr.drug_master db
+FROM drug_master da, drug_master db
 WHERE da.generic_name = 'Warfarin' AND db.generic_name IN ('Ibuprofen', 'Naproxen');
 
-INSERT INTO emr.drug_interactions
+INSERT INTO drug_interactions
 (drug_a, drug_b, severity, description, mechanism, management)
 SELECT 
   da.drug_id, db.drug_id, 'major',
   'Increased risk of hypoglycemia when insulin is combined with beta-blockers',
   'Beta-blockers may mask hypoglycemia symptoms and prolong insulin effect',
   'Monitor blood glucose closely. Adjust insulin dose as needed.'
-FROM emr.drug_master da, emr.drug_master db
+FROM drug_master da, drug_master db
 WHERE da.generic_name = 'Insulin Glargine' AND db.generic_name = 'Metoprolol';
 
 -- Sample Drug Batches
-INSERT INTO emr.drug_batches
+INSERT INTO drug_batches
 (drug_id, batch_number, quantity_received, quantity_remaining, expiry_date, purchase_price, location, status)
 SELECT 
   dm.drug_id, 
@@ -578,7 +578,7 @@ SELECT
     WHEN 2 THEN 'Refrigerator R-1'
   END,
   'active'
-FROM emr.drug_master dm
+FROM drug_master dm
 WHERE dm.status = 'active'
 LIMIT 50;
 
@@ -589,11 +589,11 @@ COMMIT;
 -- ============================================================
 
 -- Show what was created
-SELECT '✅ Drugs Loaded' as status, COUNT(*) as count FROM emr.drug_master
+SELECT '✅ Drugs Loaded' as status, COUNT(*) as count FROM drug_master
 UNION ALL
-SELECT '✅ Interactions Created', COUNT(*) FROM emr.drug_interactions
+SELECT '✅ Interactions Created', COUNT(*) FROM drug_interactions
 UNION ALL
-SELECT '✅ Batches Created', COUNT(*) FROM emr.drug_batches
+SELECT '✅ Batches Created', COUNT(*) FROM drug_batches
 UNION ALL
 SELECT '✅ Clinical Tables Ready', COUNT(DISTINCT table_name) 
 FROM information_schema.tables 
@@ -602,7 +602,7 @@ AND table_name IN ('conditions', 'procedures', 'observations', 'diagnostic_repor
 
 -- Show sample drugs
 SELECT generic_name, brand_names[1] as brand_name, dosage_form, schedule_type
-FROM emr.drug_master
+FROM drug_master
 WHERE tenant_id IS NULL
 ORDER BY generic_name
 LIMIT 10;

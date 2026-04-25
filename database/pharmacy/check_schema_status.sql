@@ -16,5 +16,5 @@ ORDER BY table_name;
 
 -- Check drug_master specifically
 SELECT COUNT(*) as drug_count 
-FROM emr.drug_master 
+FROM drug_master 
 WHERE tenant_id IS NULL;

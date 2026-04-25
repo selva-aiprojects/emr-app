@@ -2,9 +2,9 @@
 -- Compliance with IRDAI, ICD-10, and Healthcare Standards
 
 -- 1. Enhanced Insurance Providers Table
-CREATE TABLE IF NOT EXISTS emr.insurance_providers_enhanced (
+CREATE TABLE IF NOT EXISTS insurance_providers_enhanced (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   provider_code varchar(20) UNIQUE NOT NULL, -- TPA Provider Code
   provider_name varchar(200) NOT NULL,
   provider_type varchar(50) NOT NULL CHECK (provider_type IN ('TPA', 'INSURANCE', 'GOVT_SCHEME', 'CORPORATE')),
@@ -29,13 +29,13 @@ CREATE TABLE IF NOT EXISTS emr.insurance_providers_enhanced (
 );
 
 -- 2. Insurance Claims Table (IRDAI Compliant)
-CREATE TABLE IF NOT EXISTS emr.insurance_claims (
+CREATE TABLE IF NOT EXISTS insurance_claims (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   claim_number varchar(50) UNIQUE NOT NULL, -- Auto-generated
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  encounter_id uuid REFERENCES emr.encounters(id),
-  provider_id uuid NOT NULL REFERENCES emr.insurance_providers_enhanced(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  encounter_id uuid REFERENCES encounters(id),
+  provider_id uuid NOT NULL REFERENCES insurance_providers_enhanced(id),
   policy_number varchar(100) NOT NULL,
   policy_holder_name varchar(200),
   relationship_to_patient varchar(50), -- Self, Spouse, Child, Parent
@@ -57,16 +57,16 @@ CREATE TABLE IF NOT EXISTS emr.insurance_claims (
   rejection_reason text,
   remarks text,
   supporting_documents text[], -- Array of document URLs
-  created_by uuid REFERENCES emr.users(id),
-  updated_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
+  updated_by uuid REFERENCES users(id),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
 -- 3. Claim Line Items Table (Detailed Breakdown)
-CREATE TABLE IF NOT EXISTS emr.insurance_claim_line_items (
+CREATE TABLE IF NOT EXISTS insurance_claim_line_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  claim_id uuid NOT NULL REFERENCES emr.insurance_claims(id) ON DELETE CASCADE,
+  claim_id uuid NOT NULL REFERENCES insurance_claims(id) ON DELETE CASCADE,
   item_type varchar(30) NOT NULL CHECK (item_type IN ('ROOM_RENT', 'ICU_CHARGES', 'DOCTOR_FEES', 'NURSING_CHARGES', 'MEDICINES', 'INVESTIGATIONS', 'PROCEDURES', 'CONSUMABLES', 'OTHERS')),
   item_description varchar(500) NOT NULL,
   icd10_code varchar(10), -- Diagnosis/Procedure code
@@ -83,9 +83,9 @@ CREATE TABLE IF NOT EXISTS emr.insurance_claim_line_items (
 );
 
 -- 4. Claim Settlement Table
-CREATE TABLE IF NOT EXISTS emr.insurance_claim_settlements (
+CREATE TABLE IF NOT EXISTS insurance_claim_settlements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  claim_id uuid NOT NULL REFERENCES emr.insurance_claims(id) ON DELETE CASCADE,
+  claim_id uuid NOT NULL REFERENCES insurance_claims(id) ON DELETE CASCADE,
   settlement_number varchar(50) UNIQUE NOT NULL,
   settlement_date timestamptz NOT NULL,
   settlement_amount decimal(12,2) NOT NULL,
@@ -97,18 +97,18 @@ CREATE TABLE IF NOT EXISTS emr.insurance_claim_settlements (
   ifsc_code varchar(20),
   status varchar(20) DEFAULT 'PROCESSING' CHECK (status IN ('PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED')),
   remarks text,
-  created_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
 -- 5. Pre-authorization Requests Table
-CREATE TABLE IF NOT EXISTS emr.insurance_preauth_requests (
+CREATE TABLE IF NOT EXISTS insurance_preauth_requests (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   preauth_number varchar(50) UNIQUE NOT NULL,
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  provider_id uuid NOT NULL REFERENCES emr.insurance_providers_enhanced(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  provider_id uuid NOT NULL REFERENCES insurance_providers_enhanced(id),
   policy_number varchar(100) NOT NULL,
   requested_amount decimal(12,2) NOT NULL,
   approved_amount decimal(12,2) DEFAULT 0,
@@ -122,21 +122,21 @@ CREATE TABLE IF NOT EXISTS emr.insurance_preauth_requests (
   approval_date timestamptz,
   expiry_date timestamptz,
   rejection_reason text,
-  created_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );
 
 -- 6. Audit Trail for Compliance
-CREATE TABLE IF NOT EXISTS emr.insurance_audit_log (
+CREATE TABLE IF NOT EXISTS insurance_audit_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+  tenant_id uuid NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
   entity_type varchar(50) NOT NULL, -- CLAIM, PREAUTH, SETTLEMENT
   entity_id uuid NOT NULL,
   action_type varchar(50) NOT NULL, -- CREATE, UPDATE, SUBMIT, APPROVE, REJECT
   old_values jsonb,
   new_values jsonb,
-  user_id uuid REFERENCES emr.users(id),
+  user_id uuid REFERENCES users(id),
   user_name varchar(100),
   ip_address inet,
   user_agent text,
@@ -145,9 +145,9 @@ CREATE TABLE IF NOT EXISTS emr.insurance_audit_log (
 );
 
 -- Indexes for Performance
-CREATE INDEX IF NOT EXISTS idx_insurance_claims_patient ON emr.insurance_claims(patient_id);
-CREATE INDEX IF NOT EXISTS idx_insurance_claims_provider ON emr.insurance_claims(provider_id);
-CREATE INDEX IF NOT EXISTS idx_insurance_claims_status ON emr.insurance_claims(status);
-CREATE INDEX IF NOT EXISTS idx_insurance_claims_claim_number ON emr.insurance_claims(claim_number);
-CREATE INDEX IF NOT EXISTS idx_preauth_patient ON emr.insurance_preauth_requests(patient_id);
-CREATE INDEX IF NOT EXISTS idx_preauth_status ON emr.insurance_preauth_requests(status);
+CREATE INDEX IF NOT EXISTS idx_insurance_claims_patient ON insurance_claims(patient_id);
+CREATE INDEX IF NOT EXISTS idx_insurance_claims_provider ON insurance_claims(provider_id);
+CREATE INDEX IF NOT EXISTS idx_insurance_claims_status ON insurance_claims(status);
+CREATE INDEX IF NOT EXISTS idx_insurance_claims_claim_number ON insurance_claims(claim_number);
+CREATE INDEX IF NOT EXISTS idx_preauth_patient ON insurance_preauth_requests(patient_id);
+CREATE INDEX IF NOT EXISTS idx_preauth_status ON insurance_preauth_requests(status);

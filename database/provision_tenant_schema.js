@@ -4,7 +4,7 @@ async function provisionTenantSchemas() {
   console.log("🚀 Initializing Missing Schema Provisioning...");
   try {
     // Determine the schemas we need based on existing active tenants
-    const tenants = await query('SELECT id, code, schema_name FROM emr.management_tenants');
+    const tenants = await query('SELECT id, code, schema_name FROM management_tenants');
     
     for (const t of tenants.rows) {
       // Use the designated schema_name or fallback to lowercase code

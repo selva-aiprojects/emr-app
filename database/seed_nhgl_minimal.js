@@ -32,11 +32,11 @@ async function run() {
   console.log('🏥 NHGL Minimal Seeder\n');
 
   // ── TENANT ────────────────────────────────────────────────────
-  await q(`INSERT INTO emr.management_tenants (id,name,code,schema_name,subdomain,status)
+  await q(`INSERT INTO management_tenants (id,name,code,schema_name,subdomain,status)
     VALUES ($1,$2,$3,$4,$5,'active')
     ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name`,
     [TENANT_ID,'National Hospital Group Ltd','NHGL',S,'nhgl']);
-  await q(`INSERT INTO emr.tenants (id,name,code,subdomain,status)
+  await q(`INSERT INTO tenants (id,name,code,subdomain,status)
     VALUES ($1,$2,$3,$4,'active') ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name`,
     [TENANT_ID,'National Hospital Group Ltd','NHGL','nhgl']).catch(()=>{});
   console.log('✅ Tenant');
@@ -522,20 +522,20 @@ async function run() {
 
   // ── SINGLE TEST ROW PER TABLE ────────────────────────────────
 
-  // emr.users — admin
+  // users — admin
   const adminId = crypto.randomUUID();
-  await q(`INSERT INTO emr.users (id,tenant_id,email,password_hash,name,role,is_active)
+  await q(`INSERT INTO users (id,tenant_id,email,password_hash,name,role,is_active)
     VALUES ($1,$2,$3,$4,$5,'Admin',true) ON CONFLICT (tenant_id,email) DO NOTHING`,
     [adminId, TENANT_ID, 'admin@nhgl.local',
      '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC','NHGL Admin']);
 
-  // emr.users — doctor
+  // users — doctor
   const doctorId = crypto.randomUUID();
-  await q(`INSERT INTO emr.users (id,tenant_id,email,password_hash,name,role,is_active)
+  await q(`INSERT INTO users (id,tenant_id,email,password_hash,name,role,is_active)
     VALUES ($1,$2,$3,$4,$5,'Doctor',true) ON CONFLICT (tenant_id,email) DO NOTHING`,
     [doctorId, TENANT_ID, 'doctor@nhgl.local',
      '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC','Dr. Smith (Cardiology)']);
-  console.log('✅ emr.users (admin + doctor)');
+  console.log('✅ users (admin + doctor)');
 
   // department
   const deptId = crypto.randomUUID();

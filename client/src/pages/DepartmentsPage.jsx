@@ -3,7 +3,7 @@ import { useToast } from '../hooks/useToast.jsx';
 import { Building2, Plus, Users, Search, Activity, ChevronRight, UserCircle, ShieldCheck, TrendingUp, AlertCircle, Loader2 } from 'lucide-react';
 import { api } from '../api.js';
 
-export default function DepartmentsPage({ tenant }) {
+export default function DepartmentsPage({ tenant, onBack }) {
   const { showToast } = useToast();
 
   const [departments, setDepartments] = useState([]);
@@ -54,16 +54,25 @@ export default function DepartmentsPage({ tenant }) {
   return (
     <div className="page-shell-premium slide-up">
       <header className="page-header-premium mb-10">
-        <div>
-          <h1 className="page-title-rich flex items-center gap-3">
-             <Building2 className="w-8 h-8 text-slate-900" />
-             Institutional Departments Master
-          </h1>
-          <p className="dim-label italic">Manage clinical specialties, ward assignments, and department governance shards for {tenant?.name}.</p>
+        <div className="flex items-center gap-6">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/20 transition-all border border-white/10"
+            >
+              <ChevronRight className="w-6 h-6 rotate-180" />
+            </button>
+          )}
+          <div>
+            <h1 className="page-title-rich flex items-center gap-3 text-white">
+               Institutional Departments Master
+            </h1>
+            <p className="dim-label italic text-white/70">Manage clinical specialties, ward assignments, and department governance shards for {tenant?.name}.</p>
+          </div>
         </div>
         <button 
           onClick={() => setShowAdd(!showAdd)}
-          className="clinical-btn bg-slate-900 text-white px-8 rounded-2xl shadow-2xl hover:bg-emerald-600 transition-all border-none"
+          className="clinical-btn bg-white text-slate-900 px-8 rounded-2xl shadow-2xl hover:bg-emerald-500 hover:text-white transition-all border-none"
         >
            <Plus className="w-4 h-4 mr-2" /> {showAdd ? 'Cancel Action' : 'Add Department Shard'}
         </button>

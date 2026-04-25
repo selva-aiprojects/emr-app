@@ -4,10 +4,10 @@
 BEGIN;
 
 -- Conditions table
-CREATE TABLE IF NOT EXISTS emr.conditions(
+CREATE TABLE IF NOT EXISTS conditions(
   condition_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
   clinical_status varchar(32) NOT NULL,
   verification_status varchar(32) NOT NULL,
   category varchar(32) DEFAULT 'problem-list-item',
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS emr.conditions(
   note text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  created_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
   fhir_condition_ref uuid
 );
 

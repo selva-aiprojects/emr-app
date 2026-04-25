@@ -49,46 +49,46 @@ export async function getBootstrapData(tenantId, userId) {
   ] = await Promise.all([
     runSafeQuery('SELECT * FROM nexus.users WHERE id::text = $1::text', [userId]),
     runSafeQuery(
-      'SELECT * FROM nexus.patients WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 100',
+      'SELECT * FROM patients WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 100',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM nexus.walkins WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM walkins WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
       `SELECT e.*, 
               TRIM(COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '')) as patient_name,
               u.name as provider_name
-       FROM nexus.encounters e
-       LEFT JOIN nexus.patients p ON e.patient_id::text = p.id::text
+       FROM encounters e
+       LEFT JOIN patients p ON e.patient_id::text = p.id::text
        LEFT JOIN nexus.users u ON e.provider_id::text = u.id::text
        WHERE e.tenant_id::text = $1::text
        ORDER BY e.created_at DESC LIMIT 50`,
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM nexus.invoices WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM invoices WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM nexus.inventory_items WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM inventory_items WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM nexus.employees WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM employees WHERE tenant_id::text = $1::text ORDER BY name',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM nexus.employee_leaves WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM employee_leaves WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM nexus.insurance_providers WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM insurance_providers WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(
-      'SELECT * FROM nexus.claims WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
+      'SELECT * FROM claims WHERE tenant_id::text = $1::text ORDER BY created_at DESC LIMIT 50',
       [tenantId]
     ),
     runSafeQuery(

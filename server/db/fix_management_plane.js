@@ -13,9 +13,9 @@ async function repair() {
   try {
     // 1. Wipe old mapping to ensure fresh start
     await pool.query(`
-      DROP TABLE IF EXISTS emr.management_system_logs CASCADE;
-      DROP TABLE IF EXISTS emr.management_tenants CASCADE;
-      DROP TABLE IF EXISTS emr.management_subscriptions CASCADE;
+      DROP TABLE IF EXISTS management_system_logs CASCADE;
+      DROP TABLE IF EXISTS management_tenants CASCADE;
+      DROP TABLE IF EXISTS management_subscriptions CASCADE;
     `);
 
     // 2. Create foundational structure with STRICT Prisma 7 naming
@@ -24,7 +24,7 @@ async function repair() {
       CREATE EXTENSION IF NOT EXISTS pgcrypto;
       CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-      CREATE TABLE emr.management_subscriptions (
+      CREATE TABLE management_subscriptions (
         "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         "tier" VARCHAR(50) NOT NULL DEFAULT 'Enterprise',
         "plan_name" TEXT NOT NULL DEFAULT 'Enterprise Plan',
@@ -32,7 +32,7 @@ async function repair() {
         "is_active" BOOLEAN NOT NULL DEFAULT true
       );
 
-      CREATE TABLE emr.management_tenants (
+      CREATE TABLE management_tenants (
         "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         "name" TEXT NOT NULL,
         "code" VARCHAR(32) UNIQUE NOT NULL,
@@ -41,16 +41,16 @@ async function repair() {
         "status" VARCHAR(16) NOT NULL DEFAULT 'active',
         "contact_email" VARCHAR(128),
         "subscription_tier" VARCHAR(50) NOT NULL DEFAULT 'Professional',
-        "subscription_id" UUID REFERENCES emr.management_subscriptions(id) ON DELETE SET NULL,
+        "subscription_id" UUID REFERENCES management_subscriptions(id) ON DELETE SET NULL,
         "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
 
-      CREATE TABLE emr.management_system_logs (
+      CREATE TABLE management_system_logs (
         "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         "event" TEXT NOT NULL,
         "details" JSONB,
-        "tenant_id" UUID REFERENCES emr.management_tenants(id) ON DELETE SET NULL,
+        "tenant_id" UUID REFERENCES management_tenants(id) ON DELETE SET NULL,
         "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -58,16 +58,16 @@ async function repair() {
     // 3. Migrate data back with UUID stability
     console.log('🔄 Mapping 2 existing tenants to the new Management Plane...');
     await pool.query(`
-      INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, contact_email)
+      INSERT INTO management_tenants (id, name, code, subdomain, schema_name, status, contact_email)
       SELECT id, name, code, subdomain, COALESCE(schema_name, LOWER(code)), status, contact_email
-      FROM emr.tenants
+      FROM tenants
       ON CONFLICT DO NOTHING;
     `);
 
     // 4. Seed a "Ticket" to confirm the bridge works
     console.log('🎫 Seeding initial Support Ticket for dashboard validation...');
     await pool.query(`
-      INSERT INTO emr.management_system_logs (event, details)
+      INSERT INTO management_system_logs (event, details)
       VALUES ('TICKET_CREATED', '{"subject": "Initial Platform Migration", "priority": "normal", "requester": "System Admin"}');
     `);
 

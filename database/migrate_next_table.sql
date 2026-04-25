@@ -124,7 +124,7 @@ SELECT
         WHEN status LIKE '%_FAILED' THEN '❌ Failed'
         ELSE '⏳ Unknown'
     END as result
-FROM emr.migration_log 
+FROM migration_log 
 WHERE table_name = :'table_name'
 ORDER BY migration_time DESC;
 
@@ -143,7 +143,7 @@ WHERE pt.schemaname = 'public'
   AND pt.tablename NOT LIKE 'pg_%'
   AND pt.tablename NOT IN ('spatial_ref_sys', 'geometry_columns')
   AND pt.tablename NOT IN (
-      SELECT table_name FROM emr.migration_log 
+      SELECT table_name FROM migration_log 
       WHERE status IN ('MOVED', 'MERGED')
   )
 ORDER BY tablename;

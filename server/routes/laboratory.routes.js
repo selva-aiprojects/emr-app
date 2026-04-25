@@ -24,8 +24,13 @@ router.get('/orders', async (req, res) => {
     let sql = `
       SELECT sr.*, p.first_name as patient_first_name, p.last_name as patient_last_name, u.name as ordered_by_name
       FROM service_requests sr
-      LEFT JOIN patients p ON sr.patient_id::uuid = p.id
-      LEFT JOIN emr.users u ON sr.requester_id::uuid = u.id
+      LEFT JOIN patients p ON sr.patient_id::text = p.id::text
+      LEFT JOIN nexus.users u ON (
+        CASE WHEN EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name='service_requests' AND column_name='requester_id'
+        ) THEN sr.requester_id::text ELSE NULL END
+      ) = u.id::text
 
       WHERE sr.tenant_id::text = $1::text AND sr.category = 'lab'
     `;
@@ -36,8 +41,9 @@ router.get('/orders', async (req, res) => {
     const result = await query(sql, params);
     res.json(result.rows);
   } catch (error) {
-    console.error('Error fetching lab orders:', error);
-    res.status(500).json({ error: 'Failed to fetch lab orders' });
+    console.error('[LAB_CRITICAL_ERR] Failed to fetch orders:', error.message);
+    console.error(error.stack);
+    res.status(500).json({ error: 'Failed to fetch lab orders', details: error.message });
   }
 });
 

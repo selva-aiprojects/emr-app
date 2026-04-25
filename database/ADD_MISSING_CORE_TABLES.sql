@@ -21,7 +21,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'tenants') THEN
-        CREATE TABLE emr.tenants (
+        CREATE TABLE tenants (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
             name TEXT NOT NULL,
             code TEXT UNIQUE,
@@ -36,9 +36,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.tenants table';
+        RAISE NOTICE 'Created tenants table';
     ELSE
-        RAISE NOTICE 'emr.tenants table already exists';
+        RAISE NOTICE 'tenants table already exists';
     END IF;
 END $$;
 
@@ -46,9 +46,9 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'users') THEN
-        CREATE TABLE emr.users (
+        CREATE TABLE users (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT REFERENCES tenants(id) ON DELETE CASCADE,
             email TEXT NOT NULL,
             password_hash TEXT NOT NULL,
             name TEXT NOT NULL,
@@ -59,9 +59,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.users table';
+        RAISE NOTICE 'Created users table';
     ELSE
-        RAISE NOTICE 'emr.users table already exists';
+        RAISE NOTICE 'users table already exists';
     END IF;
 END $$;
 
@@ -69,9 +69,9 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'departments') THEN
-        CREATE TABLE emr.departments (
+        CREATE TABLE departments (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             name TEXT NOT NULL,
             code TEXT,
             description TEXT,
@@ -80,9 +80,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.departments table';
+        RAISE NOTICE 'Created departments table';
     ELSE
-        RAISE NOTICE 'emr.departments table already exists';
+        RAISE NOTICE 'departments table already exists';
     END IF;
 END $$;
 
@@ -90,9 +90,9 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'employees') THEN
-        CREATE TABLE emr.employees (
+        CREATE TABLE employees (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
             email TEXT NOT NULL,
@@ -108,9 +108,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.employees table';
+        RAISE NOTICE 'Created employees table';
     ELSE
-        RAISE NOTICE 'emr.employees table already exists';
+        RAISE NOTICE 'employees table already exists';
     END IF;
 END $$;
 
@@ -118,9 +118,9 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'patients') THEN
-        CREATE TABLE emr.patients (
+        CREATE TABLE patients (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             first_name TEXT NOT NULL,
             last_name TEXT NOT NULL,
             date_of_birth DATE,
@@ -133,7 +133,7 @@ BEGIN
             country TEXT,
             postal_code TEXT,
             blood_group TEXT,
-            primary_doctor_id TEXT REFERENCES emr.users(id),
+            primary_doctor_id TEXT REFERENCES users(id),
             is_archived BOOLEAN DEFAULT false,
             mrn TEXT UNIQUE,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -141,12 +141,12 @@ BEGIN
         );
         
         -- Add foreign key constraint for users.patient_id after patients table is created
-        ALTER TABLE emr.users ADD CONSTRAINT fk_users_patient_id 
-            FOREIGN KEY (patient_id) REFERENCES emr.patients(id) ON DELETE SET NULL;
+        ALTER TABLE users ADD CONSTRAINT fk_users_patient_id 
+            FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE SET NULL;
             
-        RAISE NOTICE 'Created emr.patients table';
+        RAISE NOTICE 'Created patients table';
     ELSE
-        RAISE NOTICE 'emr.patients table already exists';
+        RAISE NOTICE 'patients table already exists';
     END IF;
 END $$;
 
@@ -154,12 +154,12 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'appointments') THEN
-        CREATE TABLE emr.appointments (
+        CREATE TABLE appointments (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-            doctor_id TEXT NOT NULL REFERENCES emr.employees(id) ON DELETE CASCADE,
-            department_id TEXT REFERENCES emr.departments(id),
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+            doctor_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+            department_id TEXT REFERENCES departments(id),
             start_time TIMESTAMP WITH TIME ZONE NOT NULL,
             end_time TIMESTAMP WITH TIME ZONE NOT NULL,
             duration INTEGER DEFAULT 30,
@@ -169,9 +169,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.appointments table';
+        RAISE NOTICE 'Created appointments table';
     ELSE
-        RAISE NOTICE 'emr.appointments table already exists';
+        RAISE NOTICE 'appointments table already exists';
     END IF;
 END $$;
 
@@ -179,11 +179,11 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'encounters') THEN
-        CREATE TABLE emr.encounters (
+        CREATE TABLE encounters (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-            doctor_id TEXT NOT NULL REFERENCES emr.employees(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+            doctor_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
             encounter_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             encounter_type TEXT,
             chief_complaint TEXT,
@@ -194,9 +194,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.encounters table';
+        RAISE NOTICE 'Created encounters table';
     ELSE
-        RAISE NOTICE 'emr.encounters table already exists';
+        RAISE NOTICE 'encounters table already exists';
     END IF;
 END $$;
 
@@ -204,9 +204,9 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'services') THEN
-        CREATE TABLE emr.services (
+        CREATE TABLE services (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             name TEXT NOT NULL,
             code TEXT,
             category TEXT,
@@ -219,9 +219,9 @@ BEGIN
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             UNIQUE(tenant_id, code)
         );
-        RAISE NOTICE 'Created emr.services table';
+        RAISE NOTICE 'Created services table';
     ELSE
-        RAISE NOTICE 'emr.services table already exists';
+        RAISE NOTICE 'services table already exists';
     END IF;
 END $$;
 
@@ -229,12 +229,12 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'invoices') THEN
-        CREATE TABLE emr.invoices (
+        CREATE TABLE invoices (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-            user_id TEXT NOT NULL REFERENCES emr.users(id) ON DELETE CASCADE,
-            doctor_id TEXT REFERENCES emr.employees(id),
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            doctor_id TEXT REFERENCES employees(id),
             invoice_number TEXT UNIQUE,
             invoice_date DATE NOT NULL,
             description TEXT,
@@ -248,13 +248,13 @@ BEGIN
             payment_status TEXT DEFAULT 'unpaid',
             notes TEXT,
             status TEXT DEFAULT 'draft',
-            created_by TEXT REFERENCES emr.users(id),
+            created_by TEXT REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.invoices table';
+        RAISE NOTICE 'Created invoices table';
     ELSE
-        RAISE NOTICE 'emr.invoices table already exists';
+        RAISE NOTICE 'invoices table already exists';
     END IF;
 END $$;
 
@@ -262,13 +262,13 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'billing') THEN
-        CREATE TABLE emr.billing (
+        CREATE TABLE billing (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-            invoice_id TEXT REFERENCES emr.invoices(id),
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+            invoice_id TEXT REFERENCES invoices(id),
             billing_date DATE NOT NULL,
-            service_id TEXT REFERENCES emr.services(id),
+            service_id TEXT REFERENCES services(id),
             service_name TEXT NOT NULL,
             quantity INTEGER DEFAULT 1,
             unit_price DECIMAL(10,2) NOT NULL,
@@ -277,13 +277,13 @@ BEGIN
             total_amount DECIMAL(10,2) NOT NULL,
             billing_type TEXT,
             status TEXT DEFAULT 'pending',
-            created_by TEXT REFERENCES emr.users(id),
+            created_by TEXT REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.billing table';
+        RAISE NOTICE 'Created billing table';
     ELSE
-        RAISE NOTICE 'emr.billing table already exists';
+        RAISE NOTICE 'billing table already exists';
     END IF;
 END $$;
 
@@ -291,12 +291,12 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'prescriptions') THEN
-        CREATE TABLE emr.prescriptions (
+        CREATE TABLE prescriptions (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-            doctor_id TEXT NOT NULL REFERENCES emr.employees(id) ON DELETE CASCADE,
-            encounter_id TEXT REFERENCES emr.encounters(id),
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+            doctor_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+            encounter_id TEXT REFERENCES encounters(id),
             prescription_number TEXT,
             prescription_date DATE NOT NULL,
             notes TEXT,
@@ -304,9 +304,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.prescriptions table';
+        RAISE NOTICE 'Created prescriptions table';
     ELSE
-        RAISE NOTICE 'emr.prescriptions table already exists';
+        RAISE NOTICE 'prescriptions table already exists';
     END IF;
 END $$;
 
@@ -314,9 +314,9 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'prescription_items') THEN
-        CREATE TABLE emr.prescription_items (
+        CREATE TABLE prescription_items (
             item_id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            prescription_id TEXT NOT NULL REFERENCES emr.prescriptions(id) ON DELETE CASCADE,
+            prescription_id TEXT NOT NULL REFERENCES prescriptions(id) ON DELETE CASCADE,
             drug_name TEXT NOT NULL,
             dosage TEXT,
             frequency TEXT,
@@ -327,9 +327,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.prescription_items table';
+        RAISE NOTICE 'Created prescription_items table';
     ELSE
-        RAISE NOTICE 'emr.prescription_items table already exists';
+        RAISE NOTICE 'prescription_items table already exists';
     END IF;
 END $$;
 
@@ -341,15 +341,15 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'mrn_sequences') THEN
-        CREATE TABLE emr.mrn_sequences (
-            tenant_id TEXT PRIMARY KEY REFERENCES emr.tenants(id) ON DELETE CASCADE,
+        CREATE TABLE mrn_sequences (
+            tenant_id TEXT PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
             sequence_value INTEGER DEFAULT 1,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.mrn_sequences table';
+        RAISE NOTICE 'Created mrn_sequences table';
     ELSE
-        RAISE NOTICE 'emr.mrn_sequences table already exists';
+        RAISE NOTICE 'mrn_sequences table already exists';
     END IF;
 END $$;
 
@@ -357,15 +357,15 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'invoice_sequences') THEN
-        CREATE TABLE emr.invoice_sequences (
-            tenant_id TEXT PRIMARY KEY REFERENCES emr.tenants(id) ON DELETE CASCADE,
+        CREATE TABLE invoice_sequences (
+            tenant_id TEXT PRIMARY KEY REFERENCES tenants(id) ON DELETE CASCADE,
             sequence_value INTEGER DEFAULT 1,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.invoice_sequences table';
+        RAISE NOTICE 'Created invoice_sequences table';
     ELSE
-        RAISE NOTICE 'emr.invoice_sequences table already exists';
+        RAISE NOTICE 'invoice_sequences table already exists';
     END IF;
 END $$;
 
@@ -377,20 +377,20 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'user_roles') THEN
-        CREATE TABLE emr.user_roles (
+        CREATE TABLE user_roles (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            user_id TEXT NOT NULL REFERENCES emr.users(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             role_name TEXT NOT NULL,
             permissions JSONB,
-            assigned_by TEXT REFERENCES emr.users(id),
+            assigned_by TEXT REFERENCES users(id),
             assigned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             is_active BOOLEAN DEFAULT true,
             UNIQUE(tenant_id, user_id, role_name)
         );
-        RAISE NOTICE 'Created emr.user_roles table';
+        RAISE NOTICE 'Created user_roles table';
     ELSE
-        RAISE NOTICE 'emr.user_roles table already exists';
+        RAISE NOTICE 'user_roles table already exists';
     END IF;
 END $$;
 
@@ -398,17 +398,17 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'tenant_features') THEN
-        CREATE TABLE emr.tenant_features (
+        CREATE TABLE tenant_features (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             feature_flag TEXT NOT NULL,
             enabled BOOLEAN DEFAULT false,
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             UNIQUE(tenant_id, feature_flag)
         );
-        RAISE NOTICE 'Created emr.tenant_features table';
+        RAISE NOTICE 'Created tenant_features table';
     ELSE
-        RAISE NOTICE 'emr.tenant_features table already exists';
+        RAISE NOTICE 'tenant_features table already exists';
     END IF;
 END $$;
 
@@ -416,19 +416,19 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'global_kill_switches') THEN
-        CREATE TABLE emr.global_kill_switches (
+        CREATE TABLE global_kill_switches (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
             feature_flag TEXT NOT NULL UNIQUE,
             enabled BOOLEAN DEFAULT false,
-            created_by TEXT REFERENCES emr.users(id),
-            updated_by TEXT REFERENCES emr.users(id),
+            created_by TEXT REFERENCES users(id),
+            updated_by TEXT REFERENCES users(id),
             reason TEXT,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.global_kill_switches table';
+        RAISE NOTICE 'Created global_kill_switches table';
     ELSE
-        RAISE NOTICE 'emr.global_kill_switches table already exists';
+        RAISE NOTICE 'global_kill_switches table already exists';
     END IF;
 END $$;
 
@@ -436,12 +436,12 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'opd_tokens') THEN
-        CREATE TABLE emr.opd_tokens (
+        CREATE TABLE opd_tokens (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-            department_id TEXT NOT NULL REFERENCES emr.departments(id) ON DELETE CASCADE,
-            doctor_id TEXT NOT NULL REFERENCES emr.employees(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+            department_id TEXT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+            doctor_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
             full_token TEXT NOT NULL,
             token_number INTEGER NOT NULL,
             priority TEXT DEFAULT 'routine',
@@ -449,9 +449,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.opd_tokens table';
+        RAISE NOTICE 'Created opd_tokens table';
     ELSE
-        RAISE NOTICE 'emr.opd_tokens table already exists';
+        RAISE NOTICE 'opd_tokens table already exists';
     END IF;
 END $$;
 
@@ -459,29 +459,29 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'opd_bills') THEN
-        CREATE TABLE emr.opd_bills (
+        CREATE TABLE opd_bills (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-            token_id TEXT NOT NULL REFERENCES emr.opd_tokens(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+            token_id TEXT NOT NULL REFERENCES opd_tokens(id) ON DELETE CASCADE,
             bill_number TEXT NOT NULL,
             patient_age INTEGER,
             patient_gender TEXT,
             visit_type TEXT,
-            department_id TEXT NOT NULL REFERENCES emr.departments(id) ON DELETE CASCADE,
-            doctor_id TEXT NOT NULL REFERENCES emr.employees(id) ON DELETE CASCADE,
+            department_id TEXT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+            doctor_id TEXT NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
             consultation_fee DECIMAL(10,2),
             total_amount DECIMAL(10,2),
             payment_method TEXT,
             payment_status TEXT DEFAULT 'pending',
-            created_by TEXT NOT NULL REFERENCES emr.users(id),
+            created_by TEXT NOT NULL REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             UNIQUE(tenant_id, bill_number)
         );
-        RAISE NOTICE 'Created emr.opd_bills table';
+        RAISE NOTICE 'Created opd_bills table';
     ELSE
-        RAISE NOTICE 'emr.opd_bills table already exists';
+        RAISE NOTICE 'opd_bills table already exists';
     END IF;
 END $$;
 
@@ -489,22 +489,22 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'opd_bill_items') THEN
-        CREATE TABLE emr.opd_bill_items (
+        CREATE TABLE opd_bill_items (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            bill_id TEXT NOT NULL REFERENCES emr.opd_bills(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            bill_id TEXT NOT NULL REFERENCES opd_bills(id) ON DELETE CASCADE,
             service_type TEXT,
             service_name TEXT,
             quantity INTEGER DEFAULT 1,
             unit_price DECIMAL(10,2) NOT NULL,
             total_amount DECIMAL(10,2) NOT NULL,
-            created_by TEXT NOT NULL REFERENCES emr.users(id),
+            created_by TEXT NOT NULL REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.opd_bill_items table';
+        RAISE NOTICE 'Created opd_bill_items table';
     ELSE
-        RAISE NOTICE 'emr.opd_bill_items table already exists';
+        RAISE NOTICE 'opd_bill_items table already exists';
     END IF;
 END $$;
 
@@ -512,11 +512,11 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'clinical_records') THEN
-        CREATE TABLE emr.clinical_records (
+        CREATE TABLE clinical_records (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
-            created_by TEXT NOT NULL REFERENCES emr.users(id),
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+            created_by TEXT NOT NULL REFERENCES users(id),
             record_type TEXT,
             diagnosis TEXT,
             treatment TEXT,
@@ -524,9 +524,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.clinical_records table';
+        RAISE NOTICE 'Created clinical_records table';
     ELSE
-        RAISE NOTICE 'emr.clinical_records table already exists';
+        RAISE NOTICE 'clinical_records table already exists';
     END IF;
 END $$;
 
@@ -538,22 +538,22 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'exotel_configurations') THEN
-        CREATE TABLE emr.exotel_configurations (
+        CREATE TABLE exotel_configurations (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             account_sid TEXT NOT NULL,
             api_key TEXT NOT NULL,
             api_token TEXT NOT NULL,
             subdomain TEXT NOT NULL,
             is_default BOOLEAN DEFAULT false,
             is_active BOOLEAN DEFAULT true,
-            created_by TEXT NOT NULL REFERENCES emr.users(id),
+            created_by TEXT NOT NULL REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.exotel_configurations table';
+        RAISE NOTICE 'Created exotel_configurations table';
     ELSE
-        RAISE NOTICE 'emr.exotel_configurations table already exists';
+        RAISE NOTICE 'exotel_configurations table already exists';
     END IF;
 END $$;
 
@@ -561,25 +561,25 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'exotel_number_pools') THEN
-        CREATE TABLE emr.exotel_number_pools (
+        CREATE TABLE exotel_number_pools (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             pool_name TEXT NOT NULL,
             phone_number TEXT NOT NULL,
             number_type TEXT,
-            department_id TEXT REFERENCES emr.departments(id),
-            doctor_id TEXT REFERENCES emr.employees(id),
+            department_id TEXT REFERENCES departments(id),
+            doctor_id TEXT REFERENCES employees(id),
             daily_limit INTEGER,
             monthly_limit INTEGER,
             priority INTEGER DEFAULT 1,
             is_active BOOLEAN DEFAULT true,
-            created_by TEXT NOT NULL REFERENCES emr.users(id),
+            created_by TEXT NOT NULL REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.exotel_number_pools table';
+        RAISE NOTICE 'Created exotel_number_pools table';
     ELSE
-        RAISE NOTICE 'emr.exotel_number_pools table already exists';
+        RAISE NOTICE 'exotel_number_pools table already exists';
     END IF;
 END $$;
 
@@ -587,9 +587,9 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'exotel_sms_campaigns') THEN
-        CREATE TABLE emr.exotel_sms_campaigns (
+        CREATE TABLE exotel_sms_campaigns (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             campaign_name TEXT NOT NULL,
             campaign_type TEXT,
             template_id TEXT,
@@ -598,13 +598,13 @@ BEGIN
             variables_used TEXT,
             priority INTEGER DEFAULT 1,
             status TEXT DEFAULT 'draft',
-            created_by TEXT NOT NULL REFERENCES emr.users(id),
+            created_by TEXT NOT NULL REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.exotel_sms_campaigns table';
+        RAISE NOTICE 'Created exotel_sms_campaigns table';
     ELSE
-        RAISE NOTICE 'emr.exotel_sms_campaigns table already exists';
+        RAISE NOTICE 'exotel_sms_campaigns table already exists';
     END IF;
 END $$;
 
@@ -612,10 +612,10 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'exotel_sms_logs') THEN
-        CREATE TABLE emr.exotel_sms_logs (
+        CREATE TABLE exotel_sms_logs (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            campaign_id TEXT REFERENCES emr.exotel_sms_campaigns(id),
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            campaign_id TEXT REFERENCES exotel_sms_campaigns(id),
             communication_id TEXT,
             account_sid TEXT,
             from_number TEXT,
@@ -628,9 +628,9 @@ BEGIN
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.exotel_sms_logs table';
+        RAISE NOTICE 'Created exotel_sms_logs table';
     ELSE
-        RAISE NOTICE 'emr.exotel_sms_logs table already exists';
+        RAISE NOTICE 'exotel_sms_logs table already exists';
     END IF;
 END $$;
 
@@ -638,18 +638,18 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'exotel_webhook_events') THEN
-        CREATE TABLE emr.exotel_webhook_events (
+        CREATE TABLE exotel_webhook_events (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             event_type TEXT,
             event_data JSONB,
             message_sid TEXT,
             account_sid TEXT,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.exotel_webhook_events table';
+        RAISE NOTICE 'Created exotel_webhook_events table';
     ELSE
-        RAISE NOTICE 'emr.exotel_webhook_events table already exists';
+        RAISE NOTICE 'exotel_webhook_events table already exists';
     END IF;
 END $$;
 
@@ -657,22 +657,22 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'communication_templates') THEN
-        CREATE TABLE emr.communication_templates (
+        CREATE TABLE communication_templates (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
             template_name TEXT NOT NULL,
             template_type TEXT,
             template_content TEXT,
             variables TEXT,
             is_active BOOLEAN DEFAULT true,
-            created_by TEXT NOT NULL REFERENCES emr.users(id),
+            created_by TEXT NOT NULL REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             UNIQUE(tenant_id, template_name)
         );
-        RAISE NOTICE 'Created emr.communication_templates table';
+        RAISE NOTICE 'Created communication_templates table';
     ELSE
-        RAISE NOTICE 'emr.communication_templates table already exists';
+        RAISE NOTICE 'communication_templates table already exists';
     END IF;
 END $$;
 
@@ -680,21 +680,21 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'emr' AND table_name = 'patient_communications') THEN
-        CREATE TABLE emr.patient_communications (
+        CREATE TABLE patient_communications (
             id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
-            tenant_id TEXT NOT NULL REFERENCES emr.tenants(id) ON DELETE CASCADE,
-            patient_id TEXT NOT NULL REFERENCES emr.patients(id) ON DELETE CASCADE,
+            tenant_id TEXT NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
+            patient_id TEXT NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
             communication_type TEXT,
             content TEXT,
             status TEXT DEFAULT 'pending',
             sent_at TIMESTAMP WITH TIME ZONE,
-            created_by TEXT NOT NULL REFERENCES emr.users(id),
+            created_by TEXT NOT NULL REFERENCES users(id),
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
-        RAISE NOTICE 'Created emr.patient_communications table';
+        RAISE NOTICE 'Created patient_communications table';
     ELSE
-        RAISE NOTICE 'emr.patient_communications table already exists';
+        RAISE NOTICE 'patient_communications table already exists';
     END IF;
 END $$;
 
@@ -706,7 +706,7 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.routines WHERE routine_schema = 'emr' AND routine_name = 'get_next_mrn') THEN
-        CREATE OR REPLACE FUNCTION emr.get_next_mrn(tenant_id_param TEXT)
+        CREATE OR REPLACE FUNCTION get_next_mrn(tenant_id_param TEXT)
         RETURNS TEXT AS $$
         DECLARE
             tenant_code TEXT;
@@ -714,10 +714,10 @@ BEGIN
             mrn TEXT;
         BEGIN
             -- Get tenant code
-            SELECT code INTO tenant_code FROM emr.tenants WHERE id = tenant_id_param;
+            SELECT code INTO tenant_code FROM tenants WHERE id = tenant_id_param;
             
             -- Update sequence
-            INSERT INTO emr.mrn_sequences (tenant_id, sequence_value)
+            INSERT INTO mrn_sequences (tenant_id, sequence_value)
             VALUES (tenant_id_param, 1)
             ON CONFLICT (tenant_id)
             DO UPDATE SET sequence_value = mrn_sequences.sequence_value + 1
@@ -729,9 +729,9 @@ BEGIN
             RETURN mrn;
         END;
         $$ LANGUAGE plpgsql;
-        RAISE NOTICE 'Created emr.get_next_mrn function';
+        RAISE NOTICE 'Created get_next_mrn function';
     ELSE
-        RAISE NOTICE 'emr.get_next_mrn function already exists';
+        RAISE NOTICE 'get_next_mrn function already exists';
     END IF;
 END $$;
 
@@ -739,7 +739,7 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.routines WHERE routine_schema = 'emr' AND routine_name = 'get_next_invoice_number') THEN
-        CREATE OR REPLACE FUNCTION emr.get_next_invoice_number(tenant_id_param TEXT)
+        CREATE OR REPLACE FUNCTION get_next_invoice_number(tenant_id_param TEXT)
         RETURNS TEXT AS $$
         DECLARE
             tenant_code TEXT;
@@ -747,10 +747,10 @@ BEGIN
             invoice_number TEXT;
         BEGIN
             -- Get tenant code
-            SELECT code INTO tenant_code FROM emr.tenants WHERE id = tenant_id_param;
+            SELECT code INTO tenant_code FROM tenants WHERE id = tenant_id_param;
             
             -- Update sequence
-            INSERT INTO emr.invoice_sequences (tenant_id, sequence_value)
+            INSERT INTO invoice_sequences (tenant_id, sequence_value)
             VALUES (tenant_id_param, 1)
             ON CONFLICT (tenant_id)
             DO UPDATE SET sequence_value = invoice_sequences.sequence_value + 1
@@ -762,9 +762,9 @@ BEGIN
             RETURN invoice_number;
         END;
         $$ LANGUAGE plpgsql;
-        RAISE NOTICE 'Created emr.get_next_invoice_number function';
+        RAISE NOTICE 'Created get_next_invoice_number function';
     ELSE
-        RAISE NOTICE 'emr.get_next_invoice_number function already exists';
+        RAISE NOTICE 'get_next_invoice_number function already exists';
     END IF;
 END $$;
 
@@ -776,16 +776,16 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_updated_at_column') THEN
-        CREATE OR REPLACE FUNCTION emr.update_updated_at_column()
+        CREATE OR REPLACE FUNCTION update_updated_at_column()
         RETURNS TRIGGER AS $$
         BEGIN
             NEW.updated_at = NOW();
             RETURN NEW;
         END;
         $$ LANGUAGE plpgsql;
-        RAISE NOTICE 'Created emr.update_updated_at_column function';
+        RAISE NOTICE 'Created update_updated_at_column function';
     ELSE
-        RAISE NOTICE 'emr.update_updated_at_column function already exists';
+        RAISE NOTICE 'update_updated_at_column function already exists';
     END IF;
 END $$;
 
@@ -794,191 +794,191 @@ DO $$
 BEGIN
     -- Tenants trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_tenants_updated_at') THEN
-        CREATE TRIGGER update_emr_tenants_updated_at BEFORE UPDATE ON emr.tenants
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.tenants';
+        CREATE TRIGGER update_emr_tenants_updated_at BEFORE UPDATE ON tenants
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for tenants';
     END IF;
     
     -- Users trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_users_updated_at') THEN
-        CREATE TRIGGER update_emr_users_updated_at BEFORE UPDATE ON emr.users
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.users';
+        CREATE TRIGGER update_emr_users_updated_at BEFORE UPDATE ON users
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for users';
     END IF;
     
     -- Patients trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_patients_updated_at') THEN
-        CREATE TRIGGER update_emr_patients_updated_at BEFORE UPDATE ON emr.patients
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.patients';
+        CREATE TRIGGER update_emr_patients_updated_at BEFORE UPDATE ON patients
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for patients';
     END IF;
     
     -- Appointments trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_appointments_updated_at') THEN
-        CREATE TRIGGER update_emr_appointments_updated_at BEFORE UPDATE ON emr.appointments
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.appointments';
+        CREATE TRIGGER update_emr_appointments_updated_at BEFORE UPDATE ON appointments
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for appointments';
     END IF;
     
     -- Encounters trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_encounters_updated_at') THEN
-        CREATE TRIGGER update_emr_encounters_updated_at BEFORE UPDATE ON emr.encounters
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.encounters';
+        CREATE TRIGGER update_emr_encounters_updated_at BEFORE UPDATE ON encounters
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for encounters';
     END IF;
     
     -- Invoices trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_invoices_updated_at') THEN
-        CREATE TRIGGER update_emr_invoices_updated_at BEFORE UPDATE ON emr.invoices
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.invoices';
+        CREATE TRIGGER update_emr_invoices_updated_at BEFORE UPDATE ON invoices
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for invoices';
     END IF;
     
     -- Billing trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_billing_updated_at') THEN
-        CREATE TRIGGER update_emr_billing_updated_at BEFORE UPDATE ON emr.billing
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.billing';
+        CREATE TRIGGER update_emr_billing_updated_at BEFORE UPDATE ON billing
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for billing';
     END IF;
     
     -- Prescriptions trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_prescriptions_updated_at') THEN
-        CREATE TRIGGER update_emr_prescriptions_updated_at BEFORE UPDATE ON emr.prescriptions
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.prescriptions';
+        CREATE TRIGGER update_emr_prescriptions_updated_at BEFORE UPDATE ON prescriptions
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for prescriptions';
     END IF;
     
     -- Prescription Items trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_prescription_items_updated_at') THEN
-        CREATE TRIGGER update_emr_prescription_items_updated_at BEFORE UPDATE ON emr.prescription_items
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.prescription_items';
+        CREATE TRIGGER update_emr_prescription_items_updated_at BEFORE UPDATE ON prescription_items
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for prescription_items';
     END IF;
     
     -- Services trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_services_updated_at') THEN
-        CREATE TRIGGER update_emr_services_updated_at BEFORE UPDATE ON emr.services
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.services';
+        CREATE TRIGGER update_emr_services_updated_at BEFORE UPDATE ON services
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for services';
     END IF;
     
     -- Departments trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_departments_updated_at') THEN
-        CREATE TRIGGER update_emr_departments_updated_at BEFORE UPDATE ON emr.departments
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.departments';
+        CREATE TRIGGER update_emr_departments_updated_at BEFORE UPDATE ON departments
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for departments';
     END IF;
     
     -- Employees trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_employees_updated_at') THEN
-        CREATE TRIGGER update_emr_employees_updated_at BEFORE UPDATE ON emr.employees
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.employees';
+        CREATE TRIGGER update_emr_employees_updated_at BEFORE UPDATE ON employees
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for employees';
     END IF;
     
     -- OPD Tokens trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_opd_tokens_updated_at') THEN
-        CREATE TRIGGER update_emr_opd_tokens_updated_at BEFORE UPDATE ON emr.opd_tokens
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.opd_tokens';
+        CREATE TRIGGER update_emr_opd_tokens_updated_at BEFORE UPDATE ON opd_tokens
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for opd_tokens';
     END IF;
     
     -- OPD Bills trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_opd_bills_updated_at') THEN
-        CREATE TRIGGER update_emr_opd_bills_updated_at BEFORE UPDATE ON emr.opd_bills
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.opd_bills';
+        CREATE TRIGGER update_emr_opd_bills_updated_at BEFORE UPDATE ON opd_bills
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for opd_bills';
     END IF;
     
     -- OPD Bill Items trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_opd_bill_items_updated_at') THEN
-        CREATE TRIGGER update_emr_opd_bill_items_updated_at BEFORE UPDATE ON emr.opd_bill_items
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.opd_bill_items';
+        CREATE TRIGGER update_emr_opd_bill_items_updated_at BEFORE UPDATE ON opd_bill_items
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for opd_bill_items';
     END IF;
     
     -- Clinical Records trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_clinical_records_updated_at') THEN
-        CREATE TRIGGER update_emr_clinical_records_updated_at BEFORE UPDATE ON emr.clinical_records
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.clinical_records';
+        CREATE TRIGGER update_emr_clinical_records_updated_at BEFORE UPDATE ON clinical_records
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for clinical_records';
     END IF;
     
     -- User Roles trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_user_roles_updated_at') THEN
-        CREATE TRIGGER update_emr_user_roles_updated_at BEFORE UPDATE ON emr.user_roles
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.user_roles';
+        CREATE TRIGGER update_emr_user_roles_updated_at BEFORE UPDATE ON user_roles
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for user_roles';
     END IF;
     
     -- Tenant Features trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_tenant_features_updated_at') THEN
-        CREATE TRIGGER update_emr_tenant_features_updated_at BEFORE UPDATE ON emr.tenant_features
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.tenant_features';
+        CREATE TRIGGER update_emr_tenant_features_updated_at BEFORE UPDATE ON tenant_features
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for tenant_features';
     END IF;
     
     -- Global Kill Switches trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_global_kill_switches_updated_at') THEN
-        CREATE TRIGGER update_emr_global_kill_switches_updated_at BEFORE UPDATE ON emr.global_kill_switches
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.global_kill_switches';
+        CREATE TRIGGER update_emr_global_kill_switches_updated_at BEFORE UPDATE ON global_kill_switches
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for global_kill_switches';
     END IF;
     
     -- Exotel Configurations trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_exotel_configurations_updated_at') THEN
-        CREATE TRIGGER update_emr_exotel_configurations_updated_at BEFORE UPDATE ON emr.exotel_configurations
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.exotel_configurations';
+        CREATE TRIGGER update_emr_exotel_configurations_updated_at BEFORE UPDATE ON exotel_configurations
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for exotel_configurations';
     END IF;
     
     -- Exotel Number Pools trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_exotel_number_pools_updated_at') THEN
-        CREATE TRIGGER update_emr_exotel_number_pools_updated_at BEFORE UPDATE ON emr.exotel_number_pools
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.exotel_number_pools';
+        CREATE TRIGGER update_emr_exotel_number_pools_updated_at BEFORE UPDATE ON exotel_number_pools
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for exotel_number_pools';
     END IF;
     
     -- Exotel SMS Campaigns trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_exotel_sms_campaigns_updated_at') THEN
-        CREATE TRIGGER update_emr_exotel_sms_campaigns_updated_at BEFORE UPDATE ON emr.exotel_sms_campaigns
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.exotel_sms_campaigns';
+        CREATE TRIGGER update_emr_exotel_sms_campaigns_updated_at BEFORE UPDATE ON exotel_sms_campaigns
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for exotel_sms_campaigns';
     END IF;
     
     -- Exotel SMS Logs trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_exotel_sms_logs_updated_at') THEN
-        CREATE TRIGGER update_emr_exotel_sms_logs_updated_at BEFORE UPDATE ON emr.exotel_sms_logs
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.exotel_sms_logs';
+        CREATE TRIGGER update_emr_exotel_sms_logs_updated_at BEFORE UPDATE ON exotel_sms_logs
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for exotel_sms_logs';
     END IF;
     
     -- Communication Templates trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_communication_templates_updated_at') THEN
-        CREATE TRIGGER update_emr_communication_templates_updated_at BEFORE UPDATE ON emr.communication_templates
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.communication_templates';
+        CREATE TRIGGER update_emr_communication_templates_updated_at BEFORE UPDATE ON communication_templates
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for communication_templates';
     END IF;
     
     -- Patient Communications trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_patient_communications_updated_at') THEN
-        CREATE TRIGGER update_emr_patient_communications_updated_at BEFORE UPDATE ON emr.patient_communications
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.patient_communications';
+        CREATE TRIGGER update_emr_patient_communications_updated_at BEFORE UPDATE ON patient_communications
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for patient_communications';
     END IF;
     
     -- MRN Sequences trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_mrn_sequences_updated_at') THEN
-        CREATE TRIGGER update_emr_mrn_sequences_updated_at BEFORE UPDATE ON emr.mrn_sequences
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.mrn_sequences';
+        CREATE TRIGGER update_emr_mrn_sequences_updated_at BEFORE UPDATE ON mrn_sequences
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for mrn_sequences';
     END IF;
     
     -- Invoice Sequences trigger
     IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_schema = 'emr' AND trigger_name = 'update_emr_invoice_sequences_updated_at') THEN
-        CREATE TRIGGER update_emr_invoice_sequences_updated_at BEFORE UPDATE ON emr.invoice_sequences
-            FOR EACH ROW EXECUTE FUNCTION emr.update_updated_at_column();
-        RAISE NOTICE 'Created trigger for emr.invoice_sequences';
+        CREATE TRIGGER update_emr_invoice_sequences_updated_at BEFORE UPDATE ON invoice_sequences
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        RAISE NOTICE 'Created trigger for invoice_sequences';
     END IF;
 END $$;
 
@@ -990,117 +990,117 @@ END $$;
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'users' AND indexname = 'idx_emr_users_tenant_id') THEN
-        CREATE INDEX idx_emr_users_tenant_id ON emr.users(tenant_id);
+        CREATE INDEX idx_emr_users_tenant_id ON users(tenant_id);
         RAISE NOTICE 'Created index idx_emr_users_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'patients' AND indexname = 'idx_emr_patients_tenant_id') THEN
-        CREATE INDEX idx_emr_patients_tenant_id ON emr.patients(tenant_id);
+        CREATE INDEX idx_emr_patients_tenant_id ON patients(tenant_id);
         RAISE NOTICE 'Created index idx_emr_patients_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'patients' AND indexname = 'idx_emr_patients_mrn') THEN
-        CREATE INDEX idx_emr_patients_mrn ON emr.patients(mrn);
+        CREATE INDEX idx_emr_patients_mrn ON patients(mrn);
         RAISE NOTICE 'Created index idx_emr_patients_mrn';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'appointments' AND indexname = 'idx_emr_appointments_tenant_id') THEN
-        CREATE INDEX idx_emr_appointments_tenant_id ON emr.appointments(tenant_id);
+        CREATE INDEX idx_emr_appointments_tenant_id ON appointments(tenant_id);
         RAISE NOTICE 'Created index idx_emr_appointments_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'appointments' AND indexname = 'idx_emr_appointments_start_time') THEN
-        CREATE INDEX idx_emr_appointments_start_time ON emr.appointments(start_time);
+        CREATE INDEX idx_emr_appointments_start_time ON appointments(start_time);
         RAISE NOTICE 'Created index idx_emr_appointments_start_time';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'invoices' AND indexname = 'idx_emr_invoices_tenant_id') THEN
-        CREATE INDEX idx_emr_invoices_tenant_id ON emr.invoices(tenant_id);
+        CREATE INDEX idx_emr_invoices_tenant_id ON invoices(tenant_id);
         RAISE NOTICE 'Created index idx_emr_invoices_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'invoices' AND indexname = 'idx_emr_invoices_status') THEN
-        CREATE INDEX idx_emr_invoices_status ON emr.invoices(status);
+        CREATE INDEX idx_emr_invoices_status ON invoices(status);
         RAISE NOTICE 'Created index idx_emr_invoices_status';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'billing' AND indexname = 'idx_emr_billing_tenant_id') THEN
-        CREATE INDEX idx_emr_billing_tenant_id ON emr.billing(tenant_id);
+        CREATE INDEX idx_emr_billing_tenant_id ON billing(tenant_id);
         RAISE NOTICE 'Created index idx_emr_billing_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'services' AND indexname = 'idx_emr_services_tenant_id') THEN
-        CREATE INDEX idx_emr_services_tenant_id ON emr.services(tenant_id);
+        CREATE INDEX idx_emr_services_tenant_id ON services(tenant_id);
         RAISE NOTICE 'Created index idx_emr_services_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'departments' AND indexname = 'idx_emr_departments_tenant_id') THEN
-        CREATE INDEX idx_emr_departments_tenant_id ON emr.departments(tenant_id);
+        CREATE INDEX idx_emr_departments_tenant_id ON departments(tenant_id);
         RAISE NOTICE 'Created index idx_emr_departments_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'employees' AND indexname = 'idx_emr_employees_tenant_id') THEN
-        CREATE INDEX idx_emr_employees_tenant_id ON emr.employees(tenant_id);
+        CREATE INDEX idx_emr_employees_tenant_id ON employees(tenant_id);
         RAISE NOTICE 'Created index idx_emr_employees_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'encounters' AND indexname = 'idx_emr_encounters_tenant_id') THEN
-        CREATE INDEX idx_emr_encounters_tenant_id ON emr.encounters(tenant_id);
+        CREATE INDEX idx_emr_encounters_tenant_id ON encounters(tenant_id);
         RAISE NOTICE 'Created index idx_emr_encounters_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'opd_tokens' AND indexname = 'idx_emr_opd_tokens_tenant_id') THEN
-        CREATE INDEX idx_emr_opd_tokens_tenant_id ON emr.opd_tokens(tenant_id);
+        CREATE INDEX idx_emr_opd_tokens_tenant_id ON opd_tokens(tenant_id);
         RAISE NOTICE 'Created index idx_emr_opd_tokens_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'opd_tokens' AND indexname = 'idx_emr_opd_tokens_full_token') THEN
-        CREATE INDEX idx_emr_opd_tokens_full_token ON emr.opd_tokens(full_token);
+        CREATE INDEX idx_emr_opd_tokens_full_token ON opd_tokens(full_token);
         RAISE NOTICE 'Created index idx_emr_opd_tokens_full_token';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'opd_bills' AND indexname = 'idx_emr_opd_bills_tenant_id') THEN
-        CREATE INDEX idx_emr_opd_bills_tenant_id ON emr.opd_bills(tenant_id);
+        CREATE INDEX idx_emr_opd_bills_tenant_id ON opd_bills(tenant_id);
         RAISE NOTICE 'Created index idx_emr_opd_bills_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'opd_bills' AND indexname = 'idx_emr_opd_bills_bill_number') THEN
-        CREATE INDEX idx_emr_opd_bills_bill_number ON emr.opd_bills(bill_number);
+        CREATE INDEX idx_emr_opd_bills_bill_number ON opd_bills(bill_number);
         RAISE NOTICE 'Created index idx_emr_opd_bills_bill_number';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'exotel_configurations' AND indexname = 'idx_emr_exotel_configurations_tenant_id') THEN
-        CREATE INDEX idx_emr_exotel_configurations_tenant_id ON emr.exotel_configurations(tenant_id);
+        CREATE INDEX idx_emr_exotel_configurations_tenant_id ON exotel_configurations(tenant_id);
         RAISE NOTICE 'Created index idx_emr_exotel_configurations_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'exotel_sms_logs' AND indexname = 'idx_emr_exotel_sms_logs_tenant_id') THEN
-        CREATE INDEX idx_emr_exotel_sms_logs_tenant_id ON emr.exotel_sms_logs(tenant_id);
+        CREATE INDEX idx_emr_exotel_sms_logs_tenant_id ON exotel_sms_logs(tenant_id);
         RAISE NOTICE 'Created index idx_emr_exotel_sms_logs_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'user_roles' AND indexname = 'idx_emr_user_roles_tenant_id') THEN
-        CREATE INDEX idx_emr_user_roles_tenant_id ON emr.user_roles(tenant_id);
+        CREATE INDEX idx_emr_user_roles_tenant_id ON user_roles(tenant_id);
         RAISE NOTICE 'Created index idx_emr_user_roles_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'user_roles' AND indexname = 'idx_emr_user_roles_user_id') THEN
-        CREATE INDEX idx_emr_user_roles_user_id ON emr.user_roles(user_id);
+        CREATE INDEX idx_emr_user_roles_user_id ON user_roles(user_id);
         RAISE NOTICE 'Created index idx_emr_user_roles_user_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'tenant_features' AND indexname = 'idx_emr_tenant_features_tenant_id') THEN
-        CREATE INDEX idx_emr_tenant_features_tenant_id ON emr.tenant_features(tenant_id);
+        CREATE INDEX idx_emr_tenant_features_tenant_id ON tenant_features(tenant_id);
         RAISE NOTICE 'Created index idx_emr_tenant_features_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'clinical_records' AND indexname = 'idx_emr_clinical_records_tenant_id') THEN
-        CREATE INDEX idx_emr_clinical_records_tenant_id ON emr.clinical_records(tenant_id);
+        CREATE INDEX idx_emr_clinical_records_tenant_id ON clinical_records(tenant_id);
         RAISE NOTICE 'Created index idx_emr_clinical_records_tenant_id';
     END IF;
     
     IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE schemaname = 'emr' AND tablename = 'clinical_records' AND indexname = 'idx_emr_clinical_records_patient_id') THEN
-        CREATE INDEX idx_emr_clinical_records_patient_id ON emr.clinical_records(patient_id);
+        CREATE INDEX idx_emr_clinical_records_patient_id ON clinical_records(patient_id);
         RAISE NOTICE 'Created index idx_emr_clinical_records_patient_id';
     END IF;
 END $$;
@@ -1118,18 +1118,18 @@ BEGIN
     RAISE NOTICE 'Your existing pharmacy & insurance modules are preserved.';
     RAISE NOTICE '====================================================';
     RAISE NOTICE 'Core Tables Added (if missing):';
-    RAISE NOTICE '- emr.tenants, emr.users, emr.patients';
-    RAISE NOTICE '- emr.departments, emr.employees';
-    RAISE NOTICE '- emr.appointments, emr.encounters';
-    RAISE NOTICE '- emr.services, emr.invoices, emr.billing';
-    RAISE NOTICE '- emr.prescriptions, emr.prescription_items';
-    RAISE NOTICE '- emr.opd_tokens, emr.opd_bills, emr.opd_bill_items';
-    RAISE NOTICE '- emr.user_roles, emr.tenant_features, emr.clinical_records';
-    RAISE NOTICE '- emr.exotel_* communication tables';
+    RAISE NOTICE '- tenants, users, patients';
+    RAISE NOTICE '- departments, employees';
+    RAISE NOTICE '- appointments, encounters';
+    RAISE NOTICE '- services, invoices, billing';
+    RAISE NOTICE '- prescriptions, prescription_items';
+    RAISE NOTICE '- opd_tokens, opd_bills, opd_bill_items';
+    RAISE NOTICE '- user_roles, tenant_features, clinical_records';
+    RAISE NOTICE '- exotel_* communication tables';
     RAISE NOTICE '====================================================';
     RAISE NOTICE 'Functions Added (if missing):';
-    RAISE NOTICE '- emr.get_next_mrn()';
-    RAISE NOTICE '- emr.get_next_invoice_number()';
+    RAISE NOTICE '- get_next_mrn()';
+    RAISE NOTICE '- get_next_invoice_number()';
     RAISE NOTICE '====================================================';
     RAISE NOTICE 'Triggers Added (if missing):';
     RAISE NOTICE '- updated_at triggers for all tables';

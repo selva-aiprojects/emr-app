@@ -17,7 +17,7 @@ router.get('/overview-fixed', async (req, res) => {
     // Get all active tenants
     const tenantsResult = await query(`
       SELECT id, name, code, schema_name 
-      FROM emr.management_tenants 
+      FROM management_tenants 
       WHERE status = 'active'
       ORDER BY name
     `);
@@ -50,7 +50,7 @@ router.get('/overview-fixed', async (req, res) => {
         
         // Update cache with correct data
         await query(`
-          INSERT INTO emr.management_tenant_metrics
+          INSERT INTO management_tenant_metrics
             (tenant_id, tenant_code, tenant_name, schema_name, patients_count, doctors_count, available_beds, available_ambulances, active_users_count, updated_at)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
           ON CONFLICT (tenant_id) DO UPDATE SET
@@ -68,7 +68,7 @@ router.get('/overview-fixed', async (req, res) => {
     
     // Update global summary
     await query(`
-      INSERT INTO emr.management_dashboard_summary
+      INSERT INTO management_dashboard_summary
         (summary_key, total_tenants, total_doctors, total_patients, available_beds, updated_at)
       VALUES ('global', $1, $2, $3, $4, NOW())
       ON CONFLICT (summary_key) DO UPDATE SET
@@ -87,8 +87,8 @@ router.get('/overview-fixed', async (req, res) => {
         COALESCE(mtm.doctors_count, 0) as doctors,
         COALESCE(mtm.available_beds, 0) as bedsAvailable,
         COALESCE(mtm.available_ambulances, 0) as ambulancesAvailable
-      FROM emr.management_tenants t
-      LEFT JOIN emr.management_tenant_metrics mtm ON t.id::text = mtm.tenant_id::text
+      FROM management_tenants t
+      LEFT JOIN management_tenant_metrics mtm ON t.id::text = mtm.tenant_id::text
       WHERE t.status = 'active'
       ORDER BY t.name
     `);

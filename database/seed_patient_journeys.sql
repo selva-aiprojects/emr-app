@@ -15,7 +15,7 @@ BEGIN;
 -- =====================================================
 -- SCH PATIENTS (10)
 -- =====================================================
-INSERT INTO emr.patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact, insurance, medical_history)
+INSERT INTO patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact, insurance, medical_history)
 VALUES
 ('10000000-0000-0000-0000-000000000001','SCH-1002','Arun','Nair','1990-06-12','Male','+91-9001000101','arun.nair@example.com','45 Anna Salai, Chennai','A+','Priya Nair: +91-9001000102','National Insurance #A100','{"chronicConditions":"None","allergies":"None","surgeries":"None","familyHistory":"Diabetes (Father)"}'),
 ('10000000-0000-0000-0000-000000000001','SCH-1003','Deepa','Rajan','1982-11-25','Female','+91-9001000103','deepa.r@example.com','12 T Nagar, Chennai','B+','Rajan K: +91-9001000104','Star Health #B200','{"chronicConditions":"Asthma","allergies":"Dust","surgeries":"Tonsillectomy (2005)","familyHistory":"Hypertension (Mother)"}'),
@@ -32,7 +32,7 @@ ON CONFLICT (tenant_id, mrn) DO NOTHING;
 -- =====================================================
 -- NHC PATIENTS (10)
 -- =====================================================
-INSERT INTO emr.patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group)
+INSERT INTO patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group)
 VALUES
 ('10000000-0000-0000-0000-000000000002','NHC-1002','Bala','Murugan','1991-02-10','Male','+91-9002000101','bala.m@example.com','15 Saibaba Colony, Coimbatore','O+'),
 ('10000000-0000-0000-0000-000000000002','NHC-1003','Chitra','Devi','1986-09-05','Female','+91-9002000102','chitra.d@example.com','28 RS Puram, Coimbatore','A+'),
@@ -49,7 +49,7 @@ ON CONFLICT (tenant_id, mrn) DO NOTHING;
 -- =====================================================
 -- RCC PATIENTS (10)
 -- =====================================================
-INSERT INTO emr.patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group)
+INSERT INTO patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group)
 VALUES
 ('10000000-0000-0000-0000-000000000003','RCC-1002','Mani','Kandan','1989-05-03','Male','+91-9003000101','mani.k@example.com','12 MG Road, Madurai','B+'),
 ('10000000-0000-0000-0000-000000000003','RCC-1003','Nandini','Raj','1992-10-15','Female','+91-9003000102','nandini.r@example.com','34 KK Nagar, Madurai','A+'),
@@ -66,7 +66,7 @@ ON CONFLICT (tenant_id, mrn) DO NOTHING;
 -- =====================================================
 -- OH PATIENTS (10)
 -- =====================================================
-INSERT INTO emr.patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group)
+INSERT INTO patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group)
 VALUES
 ('10000000-0000-0000-0000-000000000004','OH-1002','Ajay','Reddy','1987-03-15','Male','+91-9004000101','ajay.r@example.com','12 Banjara Hills, Hyderabad','O+'),
 ('10000000-0000-0000-0000-000000000004','OH-1003','Bhavani','Srinivas','1994-07-28','Female','+91-9004000102','bhavani.s@example.com','34 Jubilee Hills, Hyderabad','A+'),
@@ -85,11 +85,11 @@ ON CONFLICT (tenant_id, mrn) DO NOTHING;
 -- =====================================================
 
 -- SCH Appointments
-INSERT INTO emr.appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
+INSERT INTO appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
 SELECT '10000000-0000-0000-0000-000000000001', p.id,
-  (SELECT id FROM emr.users WHERE email='rajesh@sch.local' LIMIT 1),
+  (SELECT id FROM users WHERE email='rajesh@sch.local' LIMIT 1),
   s.start_time::timestamp, s.end_time::timestamp, s.reason, 'staff', s.status
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('2026-02-15 09:00','2026-02-15 09:30','Routine checkup','completed'),
   ('2026-02-16 10:00','2026-02-16 10:30','Follow-up visit','scheduled'),
@@ -100,11 +100,11 @@ AND p.mrn != 'SCH-1001'
 LIMIT 20;
 
 -- NHC Appointments
-INSERT INTO emr.appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
+INSERT INTO appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
 SELECT '10000000-0000-0000-0000-000000000002', p.id,
-  (SELECT id FROM emr.users WHERE email='doctor@nhc.local' LIMIT 1),
+  (SELECT id FROM users WHERE email='doctor@nhc.local' LIMIT 1),
   s.start_time::timestamp, s.end_time::timestamp, s.reason, 'staff', s.status
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('2026-02-15 09:30','2026-02-15 10:00','General consultation','completed'),
   ('2026-02-17 14:00','2026-02-17 14:30','Vaccination','scheduled')
@@ -113,11 +113,11 @@ WHERE p.tenant_id = '10000000-0000-0000-0000-000000000002'
 LIMIT 20;
 
 -- RCC Appointments
-INSERT INTO emr.appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
+INSERT INTO appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
 SELECT '10000000-0000-0000-0000-000000000003', p.id,
-  (SELECT id FROM emr.users WHERE email='admin@rcc.local' LIMIT 1),
+  (SELECT id FROM users WHERE email='admin@rcc.local' LIMIT 1),
   s.start_time::timestamp, s.end_time::timestamp, s.reason, 'staff', s.status
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('2026-02-15 10:00','2026-02-15 10:30','Wellness check','completed'),
   ('2026-02-18 11:00','2026-02-18 11:30','Blood pressure monitoring','scheduled')
@@ -126,11 +126,11 @@ WHERE p.tenant_id = '10000000-0000-0000-0000-000000000003'
 LIMIT 20;
 
 -- OH Appointments
-INSERT INTO emr.appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
+INSERT INTO appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
 SELECT '10000000-0000-0000-0000-000000000004', p.id,
-  (SELECT id FROM emr.users WHERE email='doctor@omega.local' LIMIT 1),
+  (SELECT id FROM users WHERE email='doctor@omega.local' LIMIT 1),
   s.start_time::timestamp, s.end_time::timestamp, s.reason, 'staff', s.status
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('2026-02-15 08:30','2026-02-15 09:00','Pre-surgery consultation','completed'),
   ('2026-02-16 15:00','2026-02-16 15:30','Post-op follow-up','scheduled'),
@@ -144,11 +144,11 @@ LIMIT 20;
 -- =====================================================
 
 -- SCH Encounters
-INSERT INTO emr.encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
+INSERT INTO encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
 SELECT '10000000-0000-0000-0000-000000000001', p.id,
-  (SELECT id FROM emr.users WHERE email='rajesh@sch.local' LIMIT 1),
+  (SELECT id FROM users WHERE email='rajesh@sch.local' LIMIT 1),
   e.etype, e.complaint, e.diagnosis, e.notes, 'open'
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('OPD','Fever and body ache for 3 days','Viral fever','Prescribed antipyretics. Rest for 5 days. Follow-up in a week.'),
   ('OPD','Post-treatment review','Recovering from viral fever','Patient improving. Continue medication for 3 more days.')
@@ -158,11 +158,11 @@ AND p.mrn != 'SCH-1001'
 LIMIT 15;
 
 -- NHC Encounters
-INSERT INTO emr.encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
+INSERT INTO encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
 SELECT '10000000-0000-0000-0000-000000000002', p.id,
-  (SELECT id FROM emr.users WHERE email='doctor@nhc.local' LIMIT 1),
+  (SELECT id FROM users WHERE email='doctor@nhc.local' LIMIT 1),
   'OPD', e.complaint, e.diagnosis, e.notes, 'open'
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('Chronic cough for 2 weeks','Upper respiratory infection','Antibiotics prescribed. Chest X-ray ordered.'),
   ('Knee pain and swelling','Osteoarthritis','Anti-inflammatory medication. Physiotherapy recommended.')
@@ -171,11 +171,11 @@ WHERE p.tenant_id = '10000000-0000-0000-0000-000000000002'
 LIMIT 15;
 
 -- RCC Encounters
-INSERT INTO emr.encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
+INSERT INTO encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
 SELECT '10000000-0000-0000-0000-000000000003', p.id,
-  (SELECT id FROM emr.users WHERE email='admin@rcc.local' LIMIT 1),
+  (SELECT id FROM users WHERE email='admin@rcc.local' LIMIT 1),
   'OPD', e.complaint, e.diagnosis, e.notes, 'open'
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('Skin rash and itching','Contact dermatitis','Topical corticosteroid cream. Avoid allergens.'),
   ('Recurring headaches','Tension headache','Pain management. Stress reduction techniques advised.')
@@ -184,11 +184,11 @@ WHERE p.tenant_id = '10000000-0000-0000-0000-000000000003'
 LIMIT 15;
 
 -- OH Encounters
-INSERT INTO emr.encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
+INSERT INTO encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
 SELECT '10000000-0000-0000-0000-000000000004', p.id,
-  (SELECT id FROM emr.users WHERE email='doctor@omega.local' LIMIT 1),
+  (SELECT id FROM users WHERE email='doctor@omega.local' LIMIT 1),
   e.etype, e.complaint, e.diagnosis, e.notes, 'open'
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('emergency','Chest pain and shortness of breath','Acute angina','ECG normal. Troponin negative. Stress test scheduled.'),
   ('OPD','Persistent back pain','Lumbar disc herniation','MRI ordered. Pain management initiated. Ortho referral.')
@@ -201,10 +201,10 @@ LIMIT 15;
 -- =====================================================
 
 -- SCH Invoices
-INSERT INTO emr.invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
+INSERT INTO invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
 SELECT '10000000-0000-0000-0000-000000000001', p.id,
   'SCH-INV-' || ROW_NUMBER() OVER (), i.description, i.subtotal, i.tax, i.total, i.paid_amt, i.inv_status
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('General consultation fee',500,90,590,590,'paid'),
   ('Lab tests - CBC + Thyroid',1200,216,1416,0,'issued')
@@ -214,10 +214,10 @@ AND p.mrn != 'SCH-1001'
 LIMIT 15;
 
 -- NHC Invoices
-INSERT INTO emr.invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
+INSERT INTO invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
 SELECT '10000000-0000-0000-0000-000000000002', p.id,
   'NHC-INV-' || ROW_NUMBER() OVER (), i.description, i.subtotal, i.tax, i.total, i.paid_amt, i.inv_status
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('Consultation + Prescription',400,72,472,472,'paid'),
   ('X-Ray + Blood work',1800,324,2124,0,'issued')
@@ -226,10 +226,10 @@ WHERE p.tenant_id = '10000000-0000-0000-0000-000000000002'
 LIMIT 15;
 
 -- RCC Invoices
-INSERT INTO emr.invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
+INSERT INTO invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
 SELECT '10000000-0000-0000-0000-000000000003', p.id,
   'RCC-INV-' || ROW_NUMBER() OVER (), i.description, i.subtotal, i.tax, i.total, i.paid_amt, i.inv_status
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('OPD consultation',300,54,354,354,'paid'),
   ('Dermatology treatment',800,144,944,0,'issued')
@@ -238,10 +238,10 @@ WHERE p.tenant_id = '10000000-0000-0000-0000-000000000003'
 LIMIT 15;
 
 -- OH Invoices
-INSERT INTO emr.invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
+INSERT INTO invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
 SELECT '10000000-0000-0000-0000-000000000004', p.id,
   'OH-INV-' || ROW_NUMBER() OVER (), i.description, i.subtotal, i.tax, i.total, i.paid_amt, i.inv_status
-FROM emr.patients p
+FROM patients p
 CROSS JOIN (VALUES
   ('Emergency consultation + ECG',2500,450,2950,2950,'paid'),
   ('MRI Scan - Lumbar',8000,1440,9440,0,'issued'),
@@ -253,7 +253,7 @@ LIMIT 20;
 -- =====================================================
 -- WALK-INS (a few per tenant)
 -- =====================================================
-INSERT INTO emr.walkins (tenant_id, name, phone, reason, status) VALUES
+INSERT INTO walkins (tenant_id, name, phone, reason, status) VALUES
 ('10000000-0000-0000-0000-000000000001','Ravi Shankar','+91-9111000001','Severe headache','waiting'),
 ('10000000-0000-0000-0000-000000000001','Anitha Bai','+91-9111000002','Stomach pain','waiting'),
 ('10000000-0000-0000-0000-000000000002','Sathish Kumar','+91-9222000001','Fever and cold','waiting'),
@@ -266,7 +266,7 @@ INSERT INTO emr.walkins (tenant_id, name, phone, reason, status) VALUES
 -- =====================================================
 -- EMPLOYEES for NHC, RCC, OH (SCH already has some)
 -- =====================================================
-INSERT INTO emr.employees (tenant_id, code, name, department, designation, join_date, shift, salary, leave_balance) VALUES
+INSERT INTO employees (tenant_id, code, name, department, designation, join_date, shift, salary, leave_balance) VALUES
 ('10000000-0000-0000-0000-000000000002','NHC-EMP-001','Ravi Kumar','Nursing','Head Nurse','2019-03-01','Morning',38000,12),
 ('10000000-0000-0000-0000-000000000002','NHC-EMP-002','Saroja Devi','Administration','Receptionist','2020-07-15','Morning',28000,10),
 ('10000000-0000-0000-0000-000000000002','NHC-EMP-003','Manoj Raj','Lab','Lab Technician','2021-01-10','Rotating',32000,8),
@@ -281,7 +281,7 @@ ON CONFLICT (tenant_id, code) DO NOTHING;
 -- =====================================================
 -- INVENTORY for NHC and OH (SCH already has some, RCC has inventory disabled)
 -- =====================================================
-INSERT INTO emr.inventory_items (tenant_id, item_code, name, category, current_stock, reorder_level, unit) VALUES
+INSERT INTO inventory_items (tenant_id, item_code, name, category, current_stock, reorder_level, unit) VALUES
 ('10000000-0000-0000-0000-000000000002','NHC-MED-001','Cetirizine 10mg','Medicines',200,50,'tablets'),
 ('10000000-0000-0000-0000-000000000002','NHC-MED-002','Metformin 500mg','Medicines',350,80,'tablets'),
 ('10000000-0000-0000-0000-000000000002','NHC-SUP-001','Cotton Rolls','Supplies',100,30,'pieces'),
@@ -296,17 +296,17 @@ COMMIT;
 
 -- Verification
 SELECT 'Patients per tenant' AS check_type, t.code, COUNT(p.id) AS count
-FROM emr.tenants t LEFT JOIN emr.patients p ON p.tenant_id = t.id
+FROM tenants t LEFT JOIN patients p ON p.tenant_id = t.id
 GROUP BY t.code ORDER BY t.code;
 
 SELECT 'Appointments per tenant' AS check_type, t.code, COUNT(a.id) AS count
-FROM emr.tenants t LEFT JOIN emr.appointments a ON a.tenant_id = t.id
+FROM tenants t LEFT JOIN appointments a ON a.tenant_id = t.id
 GROUP BY t.code ORDER BY t.code;
 
 SELECT 'Encounters per tenant' AS check_type, t.code, COUNT(e.id) AS count
-FROM emr.tenants t LEFT JOIN emr.encounters e ON e.tenant_id = t.id
+FROM tenants t LEFT JOIN encounters e ON e.tenant_id = t.id
 GROUP BY t.code ORDER BY t.code;
 
 SELECT 'Invoices per tenant' AS check_type, t.code, COUNT(i.id) AS count
-FROM emr.tenants t LEFT JOIN emr.invoices i ON i.tenant_id = t.id
+FROM tenants t LEFT JOIN invoices i ON i.tenant_id = t.id
 GROUP BY t.code ORDER BY t.code;

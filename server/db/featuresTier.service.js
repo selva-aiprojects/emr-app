@@ -41,6 +41,8 @@ const XLSX_FEATURES = [
   { key: 'api_access', name: 'API Access', tiers: { basic: false, professional: false, enterprise: true }, moduleKeys: ['admin'] },
   { key: 'custom_workflows', name: 'Custom Workflows', tiers: { basic: false, professional: false, enterprise: true }, moduleKeys: ['service_catalog'] },
   { key: 'data_exports', name: 'Data Exports', tiers: { basic: false, professional: false, enterprise: true }, moduleKeys: ['reports'] },
+  { key: 'feature_flag_management', name: 'Feature Flag Management', tiers: { basic: false, professional: true, enterprise: true }, moduleKeys: ['feature_flags'] },
+  { key: 'system_settings', name: 'System Settings', tiers: { basic: false, professional: true, enterprise: true }, moduleKeys: ['system_settings'] },
 ];
 
 let _ensured = false;
@@ -48,7 +50,7 @@ let _ensured = false;
 export async function ensureFeaturesTierTable() {
   if (_ensured) return;
   await query(`
-    CREATE TABLE IF NOT EXISTS emr.features_tiers (
+    CREATE TABLE IF NOT EXISTS features_tiers (
       id BIGSERIAL PRIMARY KEY,
       feature_key TEXT NOT NULL,
       feature_name TEXT NOT NULL,
@@ -63,15 +65,15 @@ export async function ensureFeaturesTierTable() {
     )
   `);
 
-  await query(`CREATE INDEX IF NOT EXISTS idx_features_tiers_tier_enabled ON emr.features_tiers(tier_key, enabled)`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_features_tiers_tier_enabled ON features_tiers(tier_key, enabled)`);
 
-  const countRes = await query(`SELECT COUNT(*)::int AS c FROM emr.features_tiers`);
+  const countRes = await query(`SELECT COUNT(*)::int AS c FROM features_tiers`);
   if ((countRes.rows[0]?.c || 0) === 0) {
     for (let i = 0; i < XLSX_FEATURES.length; i++) {
       const feature = XLSX_FEATURES[i];
       for (const tier of TIERS) {
         await query(`
-          INSERT INTO emr.features_tiers
+          INSERT INTO features_tiers
             (feature_key, feature_name, tier_key, tier_label, enabled, module_keys, source_order, updated_at)
           VALUES
             ($1, $2, $3, $4, $5, $6::jsonb, $7, NOW())
@@ -95,7 +97,7 @@ export async function getFeatureTierMatrix() {
   await ensureFeaturesTierTable();
   const res = await query(`
     SELECT feature_key, feature_name, tier_key, tier_label, enabled, module_keys, source_order
-    FROM emr.features_tiers
+    FROM features_tiers
     ORDER BY source_order ASC, feature_name ASC, tier_key ASC
   `);
 
@@ -138,7 +140,7 @@ export async function saveFeatureTierMatrix(features = []) {
     for (const tier of TIERS) {
       const enabled = Boolean(feature?.tiers?.[tier.key]);
       await query(`
-        INSERT INTO emr.features_tiers
+        INSERT INTO features_tiers
           (feature_key, feature_name, tier_key, tier_label, enabled, module_keys, source_order, updated_at)
         VALUES
           ($1, $2, $3, $4, $5, $6::jsonb, $7, NOW())
@@ -169,7 +171,7 @@ export async function getDerivedTierModuleMap() {
     await ensureFeaturesTierTable();
     const res = await query(`
       SELECT tier_key, module_keys
-      FROM emr.features_tiers
+      FROM features_tiers
       WHERE enabled = true
     `);
 

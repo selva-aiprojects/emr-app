@@ -3,7 +3,7 @@
 
 export async function getEnhancedInsuranceProviders(tenantId) {
   const sql = `
-    SELECT * FROM emr.insurance_providers_enhanced 
+    SELECT * FROM insurance_providers_enhanced 
     WHERE tenant_id = $1 
     ORDER BY provider_name
   `;
@@ -18,7 +18,7 @@ export async function createEnhancedInsuranceProvider({
   coPaymentPercentage, deductibleAmount, maxCoverageLimit 
 }) {
   const sql = `
-    INSERT INTO emr.insurance_providers_enhanced (
+    INSERT INTO insurance_providers_enhanced (
       tenant_id, provider_code, provider_name, provider_type, irdai_license,
       pan_number, gst_number, contact_person, contact_email, contact_phone,
       address, city, state, pincode, network_type, settlement_period_days,
@@ -46,7 +46,7 @@ export async function createInsuranceClaim({
   const claimNumber = `CLM-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
   
   const sql = `
-    INSERT INTO emr.insurance_claims (
+    INSERT INTO insurance_claims (
       tenant_id, claim_number, patient_id, encounter_id, provider_id,
       policy_number, policy_holder_name, relationship_to_patient,
       claim_type, claim_category, admission_date, discharge_date,
@@ -86,12 +86,12 @@ export async function getInsuranceClaims(tenantId, filters = {}) {
           'approved_amount', cli.approved_amount,
           'status', cli.status
         )
-        FROM emr.insurance_claim_line_items cli
+        FROM insurance_claim_line_items cli
         WHERE cli.claim_id = ic.id
       ) as line_items
-    FROM emr.insurance_claims ic
-    JOIN emr.patients p ON ic.patient_id = p.id
-    JOIN emr.insurance_providers_enhanced ipe ON ic.provider_id = ipe.id
+    FROM insurance_claims ic
+    JOIN patients p ON ic.patient_id = p.id
+    JOIN insurance_providers_enhanced ipe ON ic.provider_id = ipe.id
     WHERE ic.tenant_id = $1
   `;
   
@@ -124,7 +124,7 @@ export async function createClaimLineItem({
   unitRate, totalAmount 
 }) {
   const sql = `
-    INSERT INTO emr.insurance_claim_line_items (
+    INSERT INTO insurance_claim_line_items (
       claim_id, item_type, item_description, icd10_code, quantity,
       unit_rate, total_amount
     )
@@ -148,7 +148,7 @@ export async function createPreauthorizationRequest({
   const preauthNumber = `PA-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
   
   const sql = `
-    INSERT INTO emr.insurance_preauth_requests (
+    INSERT INTO insurance_preauth_requests (
       tenant_id, preauth_number, patient_id, provider_id, policy_number,
       requested_amount, diagnosis_summary, proposed_treatment,
       estimated_admission_date, estimated_discharge_date, icd10_codes,
@@ -175,9 +175,9 @@ export async function getPreauthorizationRequests(tenantId, filters = {}) {
       p.mrn as patient_mrn,
       ipe.provider_name,
       ipe.provider_type
-    FROM emr.insurance_preauth_requests ipr
-    JOIN emr.patients p ON ipr.patient_id = p.id
-    JOIN emr.insurance_providers_enhanced ipe ON ipr.provider_id = ipe.id
+    FROM insurance_preauth_requests ipr
+    JOIN patients p ON ipr.patient_id = p.id
+    JOIN insurance_providers_enhanced ipe ON ipr.provider_id = ipe.id
     WHERE ipr.tenant_id = $1
   `;
   
@@ -202,7 +202,7 @@ export async function getPreauthorizationRequests(tenantId, filters = {}) {
 
 export async function updateClaimStatus({ claimId, tenantId, status, approvedAmount, rejectionReason, updatedBy }) {
   const sql = `
-    UPDATE emr.insurance_claims
+    UPDATE insurance_claims
     SET 
       status = $1,
       total_approved_amount = COALESCE($2, total_approved_amount),
@@ -226,7 +226,7 @@ export async function updateClaimStatus({ claimId, tenantId, status, approvedAmo
 
 export async function updatePreauthStatus({ preauthId, tenantId, status, approvedAmount, rejectionReason, updatedBy }) {
   const sql = `
-    UPDATE emr.insurance_preauth_requests
+    UPDATE insurance_preauth_requests
     SET 
       status = $1,
       approved_amount = COALESCE($2, approved_amount),
@@ -257,7 +257,7 @@ export async function createClaimSettlement({
   const settlementNumber = `STL-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}`;
   
   const sql = `
-    INSERT INTO emr.insurance_claim_settlements (
+    INSERT INTO insurance_claim_settlements (
       claim_id, settlement_number, settlement_date, settlement_amount,
       settlement_mode, settlement_reference, tpa_reference,
       bank_account_number, bank_name, ifsc_code, status, created_by
@@ -289,26 +289,26 @@ export async function getInsuranceDashboard(tenantId) {
   const sql = `
     SELECT 
       -- Claims Statistics
-      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1) as total_claims,
-      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1 AND status = 'PENDING') as pending_claims,
-      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1 AND status = 'APPROVED') as approved_claims,
-      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1 AND status = 'SETTLED') as settled_claims,
-      (SELECT COUNT(*) FROM emr.insurance_claims WHERE tenant_id = $1 AND status = 'REJECTED') as rejected_claims,
+      (SELECT COUNT(*) FROM insurance_claims WHERE tenant_id = $1) as total_claims,
+      (SELECT COUNT(*) FROM insurance_claims WHERE tenant_id = $1 AND status = 'PENDING') as pending_claims,
+      (SELECT COUNT(*) FROM insurance_claims WHERE tenant_id = $1 AND status = 'APPROVED') as approved_claims,
+      (SELECT COUNT(*) FROM insurance_claims WHERE tenant_id = $1 AND status = 'SETTLED') as settled_claims,
+      (SELECT COUNT(*) FROM insurance_claims WHERE tenant_id = $1 AND status = 'REJECTED') as rejected_claims,
       
       -- Financial Summary
-      (SELECT COALESCE(SUM(total_claimed_amount), 0) FROM emr.insurance_claims WHERE tenant_id = $1) as total_claimed,
-      (SELECT COALESCE(SUM(total_approved_amount), 0) FROM emr.insurance_claims WHERE tenant_id = $1) as total_approved,
-      (SELECT COALESCE(SUM(total_settled_amount), 0) FROM emr.insurance_claims WHERE tenant_id = $1) as total_settled,
+      (SELECT COALESCE(SUM(total_claimed_amount), 0) FROM insurance_claims WHERE tenant_id = $1) as total_claimed,
+      (SELECT COALESCE(SUM(total_approved_amount), 0) FROM insurance_claims WHERE tenant_id = $1) as total_approved,
+      (SELECT COALESCE(SUM(total_settled_amount), 0) FROM insurance_claims WHERE tenant_id = $1) as total_settled,
       
       -- Pre-authorization Statistics
-      (SELECT COUNT(*) FROM emr.insurance_preauth_requests WHERE tenant_id = $1) as total_preauth,
-      (SELECT COUNT(*) FROM emr.insurance_preauth_requests WHERE tenant_id = $1 AND status = 'PENDING') as pending_preauth,
-      (SELECT COUNT(*) FROM emr.insurance_preauth_requests WHERE tenant_id = $1 AND status = 'APPROVED') as approved_preauth,
-      (SELECT COUNT(*) FROM emr.insurance_preauth_requests WHERE tenant_id = $1 AND status = 'EXPIRED') as expired_preauth,
+      (SELECT COUNT(*) FROM insurance_preauth_requests WHERE tenant_id = $1) as total_preauth,
+      (SELECT COUNT(*) FROM insurance_preauth_requests WHERE tenant_id = $1 AND status = 'PENDING') as pending_preauth,
+      (SELECT COUNT(*) FROM insurance_preauth_requests WHERE tenant_id = $1 AND status = 'APPROVED') as approved_preauth,
+      (SELECT COUNT(*) FROM insurance_preauth_requests WHERE tenant_id = $1 AND status = 'EXPIRED') as expired_preauth,
       
       -- Provider Statistics
-      (SELECT COUNT(*) FROM emr.insurance_providers_enhanced WHERE tenant_id = $1) as total_providers,
-      (SELECT COUNT(*) FROM emr.insurance_providers_enhanced WHERE tenant_id = $1 AND status = 'ACTIVE') as active_providers
+      (SELECT COUNT(*) FROM insurance_providers_enhanced WHERE tenant_id = $1) as total_providers,
+      (SELECT COUNT(*) FROM insurance_providers_enhanced WHERE tenant_id = $1 AND status = 'ACTIVE') as active_providers
   `;
   
   const result = await query(sql, [tenantId]);
@@ -320,7 +320,7 @@ export async function createInsuranceAuditLog({
   userId, userName, ipAddress, userAgent, remarks
 }) {
   const sql = `
-    INSERT INTO emr.insurance_audit_log (
+    INSERT INTO insurance_audit_log (
       tenant_id, entity_type, entity_id, action_type, old_values,
       new_values, user_id, user_name, ip_address, user_agent, remarks
     )

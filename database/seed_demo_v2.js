@@ -14,7 +14,7 @@ async function runSeeder() {
     const args = process.argv.slice(2);
     const targetTenantFilter = args[0] ? args[0].toLowerCase() : null;
 
-    let queryStr = 'SELECT id, code, schema_name FROM emr.management_tenants WHERE status = $1';
+    let queryStr = 'SELECT id, code, schema_name FROM management_tenants WHERE status = $1';
     let queryArgs = ['active'];
 
     const tenantsRes = await query(queryStr, queryArgs);
@@ -39,7 +39,7 @@ async function runSeeder() {
 
         const tId = tenant.id;
         
-        // 1. Staff (emr.users but mapped to tenant)
+        // 1. Staff (users but mapped to tenant)
         console.log("-> Seeding Staff...");
         const roles = [
             { email: `admin@${schema}.com`, name: 'Dr. Sarah Admin', role: 'Admin', isDr: false },
@@ -53,12 +53,12 @@ async function runSeeder() {
         let doctorIds = [];
         for(const r of roles) {
             await query(`
-                INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+                INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
                 VALUES ($1, $2, '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC', $3, $4, true)
                 ON CONFLICT (tenant_id, email) DO UPDATE SET name = EXCLUDED.name
             `, [tId, r.email, r.name, r.role]);
             
-            const u = await query(`SELECT id FROM emr.users WHERE tenant_id = $1 AND email = $2`, [tId, r.email]);
+            const u = await query(`SELECT id FROM users WHERE tenant_id = $1 AND email = $2`, [tId, r.email]);
             if(r.isDr) doctorIds.push(u.rows[0].id);
         }
 
@@ -67,10 +67,10 @@ async function runSeeder() {
         await query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
         
         // Ensure core tables exist inside schema
-        await query(`CREATE TABLE IF NOT EXISTS ${schema}.patients (LIKE emr.patients INCLUDING ALL)`);
-        await query(`CREATE TABLE IF NOT EXISTS ${schema}.appointments (LIKE emr.appointments INCLUDING ALL)`);
-        await query(`CREATE TABLE IF NOT EXISTS ${schema}.encounters (LIKE emr.encounters INCLUDING ALL)`);
-        await query(`CREATE TABLE IF NOT EXISTS ${schema}.invoices (LIKE emr.invoices INCLUDING ALL)`);
+        await query(`CREATE TABLE IF NOT EXISTS ${schema}.patients (LIKE patients INCLUDING ALL)`);
+        await query(`CREATE TABLE IF NOT EXISTS ${schema}.appointments (LIKE appointments INCLUDING ALL)`);
+        await query(`CREATE TABLE IF NOT EXISTS ${schema}.encounters (LIKE encounters INCLUDING ALL)`);
+        await query(`CREATE TABLE IF NOT EXISTS ${schema}.invoices (LIKE invoices INCLUDING ALL)`);
         await query(`CREATE TABLE IF NOT EXISTS ${schema}.beds (id uuid DEFAULT gen_random_uuid(), tenant_id uuid, status varchar(20), room_no varchar(20))`);
         await query(`CREATE TABLE IF NOT EXISTS ${schema}.service_requests (id uuid DEFAULT gen_random_uuid(), tenant_id uuid, category varchar(20), status varchar(20), notes text, created_at timestamptz DEFAULT now())`);
 

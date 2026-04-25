@@ -52,17 +52,23 @@ export async function authenticate(req, res, next) {
     // No hardcoded bypasses — all users go through real DB lookup
 
     // Fetch user from database with tenant info
+    console.log(`[AUTH_DB_QUERY] Searching for user ID: ${decoded.userId}`);
     const userResult = await query(
       `SELECT u.id, u.tenant_id, u.email, u.name, u.role, u.is_active, t.subscription_tier 
-       FROM users u 
-       LEFT JOIN management_tenants t ON u.tenant_id::text = t.id 
+       FROM nexus.users u 
+       LEFT JOIN nexus.management_tenants t ON u.tenant_id::text = t.id::text
        WHERE u.id::text = $1::text`,
       [decoded.userId]
     );
+    console.log(`[AUTH_DB_RES] Rows found: ${userResult.rows.length}`);
 
     if (userResult.rows.length === 0) {
-      console.error('[AUTH_ERROR] User not found in database for ID:', decoded.userId);
-      return res.status(401).json({ error: 'User not found' });
+      console.error('[AUTH_CRITICAL_DEBUG] User ID not found in database:', decoded.userId);
+      console.error(`[AUTH_CRITICAL_DEBUG] Token was issued for tenant: ${decoded.tenantId || 'NONE'}`);
+      return res.status(401).json({ 
+        error: 'User not found', 
+        details: `User ${decoded.userId} missing from master plane.` 
+      });
     }
 
     const user = userResult.rows[0];

@@ -11,7 +11,7 @@ async function seedMagnumData() {
 
     // 1. Insert Core Tenant
     const tenantRes = await query(`
-      INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, subscription_tier, status, created_at)
+      INSERT INTO tenants (id, name, code, subdomain, theme, features, subscription_tier, status, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
       ON CONFLICT (code) DO UPDATE SET status = 'active'
       RETURNING id
@@ -29,11 +29,11 @@ async function seedMagnumData() {
     console.log("✅ Seeded Tenant: Magnum Healthcare Pvt Ltd");
 
     // 2. Map to management_tenants for Login screen
-    const existingMgmt = await query('SELECT id FROM emr.management_tenants WHERE code = $1', [code]);
+    const existingMgmt = await query('SELECT id FROM management_tenants WHERE code = $1', [code]);
     if (existingMgmt.rowCount === 0) {
       // Use a highly unique subdomain to brutally avoid constraint collisions
       await query(`
-        INSERT INTO emr.management_tenants (id, name, code, schema_name, subdomain, status, created_at)
+        INSERT INTO management_tenants (id, name, code, schema_name, subdomain, status, created_at)
         VALUES ($1, $2, $3, $4, $5, 'active', NOW())
         ON CONFLICT (subdomain) DO UPDATE SET name = EXCLUDED.name
       `, [actualTenantId, 'Magnum Healthcare Pvt Ltd', code, schemaName, subdomain + '_' + Date.now().toString().slice(-4)]);
@@ -42,7 +42,7 @@ async function seedMagnumData() {
 
     // 3. Create Admin User
     await query(`
-      INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
+      INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, true, NOW())
       ON CONFLICT (tenant_id, email) DO NOTHING
     `, [
@@ -62,7 +62,7 @@ async function seedMagnumData() {
     ];
     for (const r of roles) {
       await query(`
-        INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
+        INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, true, NOW())
         ON CONFLICT DO NOTHING
       `, [crypto.randomUUID(), actualTenantId, r.email, '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC', r.name, r.role]);

@@ -14,7 +14,7 @@ import { query } from './connection.js';
  * Get tenant's subscription tier
  */
 export async function getTenantTier(tenantId) {
-  const sql = 'SELECT subscription_tier FROM emr.tenants WHERE id = $1';
+  const sql = 'SELECT subscription_tier FROM tenants WHERE id = $1';
   const result = await query(sql, [tenantId]);
   return result.rows[0]?.subscription_tier || 'Basic';
 }
@@ -23,7 +23,7 @@ export async function getTenantTier(tenantId) {
  * Get custom feature flags for a tenant
  */
 export async function getTenantCustomFeatures(tenantId) {
-  const sql = 'SELECT feature_flag, enabled FROM emr.tenant_features WHERE tenant_id = $1';
+  const sql = 'SELECT feature_flag, enabled FROM tenant_features WHERE tenant_id = $1';
   const result = await query(sql, [tenantId]);
   return result.rows.map(row => ({
     featureFlag: row.feature_flag,
@@ -35,7 +35,7 @@ export async function getTenantCustomFeatures(tenantId) {
  * Get global kill switches
  */
 export async function getGlobalKillSwitches() {
-  const sql = 'SELECT feature_flag, enabled FROM emr.global_kill_switches WHERE enabled = true';
+  const sql = 'SELECT feature_flag, enabled FROM global_kill_switches WHERE enabled = true';
   const result = await query(sql);
   const killSwitches = {};
   result.rows.forEach(row => {
@@ -49,7 +49,7 @@ export async function getGlobalKillSwitches() {
  */
 export async function setGlobalKillSwitch(featureFlag, enabled, userId, reason) {
   const sql = `
-    INSERT INTO emr.global_kill_switches (feature_flag, enabled, created_by, reason)
+    INSERT INTO global_kill_switches (feature_flag, enabled, created_by, reason)
     VALUES ($1, $2, $3, $4)
     ON CONFLICT (feature_flag) 
     DO UPDATE SET 
@@ -67,7 +67,7 @@ export async function setGlobalKillSwitch(featureFlag, enabled, userId, reason) 
  * Get effective feature flag status for a tenant
  */
 export async function getTenantFeatureStatus(tenantId) {
-  const sql = 'SELECT * FROM emr.tenant_feature_status WHERE tenant_id = $1';
+  const sql = 'SELECT * FROM tenant_feature_status WHERE tenant_id = $1';
   const result = await query(sql, [tenantId]);
 
   const flags = {};
@@ -87,7 +87,7 @@ export async function getTenantFeatureStatus(tenantId) {
  */
 export async function setTenantTier(tenantId, tier) {
   const sql = `
-    UPDATE emr.tenants 
+    UPDATE tenants 
     SET subscription_tier = $1, updated_at = NOW() 
     WHERE id = $2 
     RETURNING *
@@ -101,7 +101,7 @@ export async function setTenantTier(tenantId, tier) {
  */
 export async function setTenantFeatureOverride(tenantId, featureFlag, enabled) {
   const sql = `
-    INSERT INTO emr.tenant_features (tenant_id, feature_flag, enabled, updated_at)
+    INSERT INTO tenant_features (tenant_id, feature_flag, enabled, updated_at)
     VALUES ($1, $2, $3, NOW())
     ON CONFLICT (tenant_id, feature_flag) 
     DO UPDATE SET enabled = $3, updated_at = NOW()
@@ -121,7 +121,7 @@ export async function setTenantFeatureOverride(tenantId, featureFlag, enabled) {
  */
 export async function createAuditLog({ tenantId, userId, userName, action, entityName, entityId, details, ipAddress, userAgent }) {
   const sql = `
-    INSERT INTO emr.audit_logs (tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent)
+    INSERT INTO audit_logs (tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
   `;
@@ -188,7 +188,7 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
   values.push(tenantId);
 
   const sql = `
-    UPDATE emr.tenants 
+    UPDATE tenants 
     SET ${updates.join(', ')}
     WHERE id = $${paramIndex}
     RETURNING *
@@ -198,12 +198,12 @@ export async function updateTenantSettings({ tenantId, displayName, theme, featu
   return result.rows[0];
 }
 export async function generateMRN(tenantId) {
-  const tenantResult = await query('SELECT code FROM emr.tenants WHERE id = $1', [tenantId]);
+  const tenantResult = await query('SELECT code FROM tenants WHERE id = $1', [tenantId]);
   const tenantCode = tenantResult.rows[0]?.code || 'UNK';
 
   // Get the highest numeric MRN for this tenant
   const maxResult = await query(
-    'SELECT MAX(CASE WHEN mrn ~ $2 THEN CAST(SUBSTRING(mrn, LENGTH($2) + 1) AS INTEGER) ELSE 0 END) as max_num FROM emr.patients WHERE tenant_id = $1 AND mrn LIKE $2',
+    'SELECT MAX(CASE WHEN mrn ~ $2 THEN CAST(SUBSTRING(mrn, LENGTH($2) + 1) AS INTEGER) ELSE 0 END) as max_num FROM patients WHERE tenant_id = $1 AND mrn LIKE $2',
     [tenantId, `${tenantCode}-%`]
   );
 
@@ -217,11 +217,11 @@ export async function generateMRN(tenantId) {
  * Generate unique invoice number
  */
 export async function generateInvoiceNumber(tenantId) {
-  const tenantResult = await query('SELECT code FROM emr.tenants WHERE id = $1', [tenantId]);
+  const tenantResult = await query('SELECT code FROM tenants WHERE id = $1', [tenantId]);
   const tenantCode = tenantResult.rows[0]?.code || 'UNK';
 
   const countResult = await query(
-    'SELECT COUNT(*) as count FROM emr.invoices WHERE tenant_id = $1',
+    'SELECT COUNT(*) as count FROM invoices WHERE tenant_id = $1',
     [tenantId]
   );
 
@@ -236,34 +236,34 @@ export async function generateInvoiceNumber(tenantId) {
 export async function getTenants() {
   const result = await query(`
     SELECT t.id, t.name, t.code, t.subdomain, t.theme, t.features, t.billing_config, t.status, t.created_at, t.updated_at, t.subscription_tier, t.logo_url, t.contact_email,
-           (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = t.id) as patient_count
-    FROM emr.tenants t 
+           (SELECT COUNT(*) FROM patients WHERE tenant_id = t.id) as patient_count
+    FROM tenants t 
     ORDER BY t.name
   `);
   return result.rows;
 }
 
 export async function getTenantById(id) {
-  const result = await query('SELECT * FROM emr.tenants WHERE id = $1', [id]);
+  const result = await query('SELECT * FROM tenants WHERE id = $1', [id]);
   return result.rows[0];
 }
 
 export async function updateTenantStatus(id, status) {
   const result = await query(
-    'UPDATE emr.tenants SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+    'UPDATE tenants SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
     [status, id]
   );
   return result.rows[0];
 }
 
 export async function getTenantByCode(code) {
-  const result = await query('SELECT * FROM emr.tenants WHERE code = $1', [code]);
+  const result = await query('SELECT * FROM tenants WHERE code = $1', [code]);
   return result.rows[0];
 }
 
 export async function createTenant({ name, code, subdomain, contactEmail, theme, features }) {
   const sql = `
-    INSERT INTO emr.tenants (name, code, subdomain, contact_email, theme, features, status)
+    INSERT INTO tenants (name, code, subdomain, contact_email, theme, features, status)
     VALUES ($1, $2, $3, $4, $5, $6, 'active')
     RETURNING *
   `;
@@ -283,13 +283,13 @@ export async function createTenant({ name, code, subdomain, contactEmail, theme,
   try {
     // 1. Setup Pharmacy Location structure (Centralized Main Store)
     await query(`
-      INSERT INTO emr.locations (tenant_id, name, type, is_active)
+      INSERT INTO locations (tenant_id, name, type, is_active)
       VALUES ($1, 'Central Hospital Store', 'Main Store', true)
     `, [tenant.id]);
 
     // 2. Setup baseline dynamic roles
     const rolesSql = `
-      INSERT INTO emr.roles (tenant_id, name, description, is_system) VALUES 
+      INSERT INTO roles (tenant_id, name, description, is_system) VALUES 
       ($1, 'Doctor', 'Standard Physician Access', true),
       ($1, 'Nurse', 'Standard Nurse Access', true),
       ($1, 'Pharmacy', 'Standard Central Store Pharmacist', true),
@@ -299,7 +299,7 @@ export async function createTenant({ name, code, subdomain, contactEmail, theme,
     const rolesResult = await query(rolesSql, [tenant.id]);
 
     // 3. Clone Global Master Data (e.g. Master ICD-10s, Essential Drugs)
-    // In production, this would `INSERT INTO emr.drug_master SELECT * FROM emr.global_drug_master`
+    // In production, this would `INSERT INTO drug_master SELECT * FROM global_drug_master`
     
   } catch (err) {
     console.error(`Error provisioning master data for tenant ${tenant.id}:`, err.message);
@@ -315,21 +315,21 @@ export async function createTenant({ name, code, subdomain, contactEmail, theme,
 export async function getUsers(tenantId = null) {
   if (tenantId) {
     const result = await query(
-      'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at FROM emr.users WHERE tenant_id = $1 ORDER BY name',
+      'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at FROM users WHERE tenant_id = $1 ORDER BY name',
       [tenantId]
     );
     return result.rows;
   }
 
   const result = await query(
-    'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at FROM emr.users ORDER BY name'
+    'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at FROM users ORDER BY name'
   );
   return result.rows;
 }
 
 export async function getUserById(id) {
   const result = await query(
-    'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at FROM emr.users WHERE id = $1',
+    'SELECT id, tenant_id, email, name, role, patient_id, is_active, created_at FROM users WHERE id = $1',
     [id]
   );
   return result.rows[0];
@@ -340,11 +340,11 @@ export async function getUserByEmail(email, tenantId = null) {
 
   if (tenantId === null) {
     // Superadmin login
-    sql = 'SELECT * FROM emr.users WHERE LOWER(email) = LOWER($1) AND tenant_id IS NULL';
+    sql = 'SELECT * FROM users WHERE LOWER(email) = LOWER($1) AND tenant_id IS NULL';
     params = [email];
   } else {
     // Tenant user login
-    sql = 'SELECT * FROM emr.users WHERE LOWER(email) = LOWER($1) AND tenant_id = $2';
+    sql = 'SELECT * FROM users WHERE LOWER(email) = LOWER($1) AND tenant_id = $2';
     params = [email, tenantId];
   }
 
@@ -354,7 +354,7 @@ export async function getUserByEmail(email, tenantId = null) {
 
 export async function createUser({ tenantId, email, passwordHash, name, role, patientId }) {
   const sql = `
-    INSERT INTO emr.users (tenant_id, email, password_hash, name, role, patient_id, is_active)
+    INSERT INTO users (tenant_id, email, password_hash, name, role, patient_id, is_active)
     VALUES ($1, $2, $3, $4, $5, $6, true)
     RETURNING id, tenant_id, email, name, role, patient_id, is_active, created_at
   `;
@@ -372,7 +372,7 @@ export async function createUser({ tenantId, email, passwordHash, name, role, pa
 }
 
 export async function updateUserLastLogin(userId) {
-  await query('UPDATE emr.users SET last_login = NOW() WHERE id = $1', [userId]);
+  await query('UPDATE users SET last_login = NOW() WHERE id = $1', [userId]);
 }
 
 // =====================================================
@@ -449,13 +449,13 @@ export async function getPatients(tenantId, userRole = null, limit = 50, offset 
       COALESCE(
         (
           SELECT json_agg(cr.*) 
-          FROM emr.clinical_records cr 
+          FROM clinical_records cr 
           WHERE cr.patient_id = p.id
         ), 
         '[]'::json
       ) as clinical_records
     FROM (
-      SELECT * FROM emr.patients
+      SELECT * FROM patients
       WHERE tenant_id = $1 AND (is_archived = false OR $4 = true)
       ORDER BY created_at DESC
       LIMIT $2 OFFSET $3
@@ -493,9 +493,9 @@ export async function searchPatients(tenantId, { text, date, type, status, limit
            e.encounter_type as latest_encounter_type,
            e.status as latest_encounter_status,
            e.visit_date as latest_visit_date
-    FROM emr.patients p
+    FROM patients p
     LEFT JOIN LATERAL (
-      SELECT * FROM emr.encounters 
+      SELECT * FROM encounters 
       WHERE patient_id = p.id 
       ORDER BY visit_date DESC LIMIT 1
     ) e ON true
@@ -560,9 +560,9 @@ export async function getPatientById(id, tenantId, userRole = null) {
     SELECT p.*,
            json_agg(DISTINCT cr.*) FILTER (WHERE cr.id IS NOT NULL) as clinical_records,
            json_agg(DISTINCT d.*) FILTER (WHERE d.id IS NOT NULL AND d.is_deleted = false) as documents
-    FROM emr.patients p
-    LEFT JOIN emr.clinical_records cr ON p.id = cr.patient_id
-    LEFT JOIN emr.documents d ON p.id = d.patient_id
+    FROM patients p
+    LEFT JOIN clinical_records cr ON p.id = cr.patient_id
+    LEFT JOIN documents d ON p.id = d.patient_id
     WHERE p.id = $1 AND p.tenant_id = $2
     GROUP BY p.id
   `;
@@ -599,7 +599,7 @@ export async function getPatientById(id, tenantId, userRole = null) {
 
 export async function getPatientDocuments(patientId, tenantId) {
   const sql = `
-    SELECT * FROM emr.documents 
+    SELECT * FROM documents 
     WHERE patient_id = $1 AND tenant_id = $2 AND is_deleted = false
     ORDER BY created_at DESC
   `;
@@ -620,7 +620,7 @@ export async function createPatient({ tenantId, userId, firstName, lastName, dob
 
 
   const sql = `
-    INSERT INTO emr.patients (
+    INSERT INTO patients (
       tenant_id, mrn, first_name, last_name, date_of_birth, gender, 
       phone, email, address, blood_group, emergency_contact, insurance, medical_history
     )
@@ -684,7 +684,7 @@ export async function createPatient({ tenantId, userId, firstName, lastName, dob
 
 export async function addClinicalRecord({ tenantId, userId, patientId, section, content }) {
   const sql = `
-    INSERT INTO emr.clinical_records (tenant_id, patient_id, section, content, created_by)
+    INSERT INTO clinical_records (tenant_id, patient_id, section, content, created_by)
     VALUES ($1, $2, $3, $4, $5)
     RETURNING *
   `;
@@ -716,7 +716,7 @@ export async function addClinicalRecord({ tenantId, userId, patientId, section, 
 
 export async function getWalkins(tenantId) {
   const result = await query(
-    'SELECT * FROM emr.walkins WHERE tenant_id = $1 ORDER BY created_at DESC',
+    'SELECT * FROM walkins WHERE tenant_id = $1 ORDER BY created_at DESC',
     [tenantId]
   );
   return result.rows;
@@ -724,7 +724,7 @@ export async function getWalkins(tenantId) {
 
 export async function createWalkin({ tenantId, userId, name, phone, reason }) {
   const sql = `
-    INSERT INTO emr.walkins (tenant_id, name, phone, reason, status)
+    INSERT INTO walkins (tenant_id, name, phone, reason, status)
     VALUES ($1, $2, $3, $4, 'waiting')
     RETURNING *
   `;
@@ -746,7 +746,7 @@ export async function createWalkin({ tenantId, userId, name, phone, reason }) {
 export async function convertWalkinToPatient({ walkinId, tenantId, userId, dob, gender }) {
   // Get walk-in
   const walkinResult = await query(
-    'SELECT * FROM emr.walkins WHERE id = $1 AND tenant_id = $2',
+    'SELECT * FROM walkins WHERE id = $1 AND tenant_id = $2',
     [walkinId, tenantId]
   );
 
@@ -777,7 +777,7 @@ export async function convertWalkinToPatient({ walkinId, tenantId, userId, dob, 
 
   // Update walk-in status
   await query(
-    'UPDATE emr.walkins SET status = $1, patient_id = $2 WHERE id = $3',
+    'UPDATE walkins SET status = $1, patient_id = $2 WHERE id = $3',
     ['converted', patient.id, walkinId]
   );
 
@@ -800,7 +800,7 @@ export async function convertWalkinToPatient({ walkinId, tenantId, userId, dob, 
 
 export async function getAppointments(tenantId, limit = 100, offset = 0) {
   const result = await query(
-    'SELECT * FROM emr.appointments WHERE tenant_id = $1 ORDER BY scheduled_start DESC LIMIT $2 OFFSET $3',
+    'SELECT * FROM appointments WHERE tenant_id = $1 ORDER BY scheduled_start DESC LIMIT $2 OFFSET $3',
     [tenantId, limit, offset]
   );
   return result.rows.map(row => ({
@@ -816,7 +816,7 @@ export async function getAppointments(tenantId, limit = 100, offset = 0) {
 
 export async function createAppointment({ tenantId, userId, patientId, providerId, start, end, reason, source = 'staff', status = 'scheduled' }) {
   const sql = `
-    INSERT INTO emr.appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
+    INSERT INTO appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, reason, source, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
@@ -854,7 +854,7 @@ export async function createAppointment({ tenantId, userId, patientId, providerI
 
 export async function updateAppointmentStatus({ appointmentId, tenantId, userId, status }) {
   const sql = `
-    UPDATE emr.appointments
+    UPDATE appointments
     SET status = $1, updated_at = NOW()
     WHERE id = $2 AND tenant_id = $3
     RETURNING *
@@ -869,7 +869,7 @@ export async function updateAppointmentStatus({ appointmentId, tenantId, userId,
   // If completed, close any open encounters for this patient
   if (status === 'completed') {
     await query(
-      `UPDATE emr.encounters 
+      `UPDATE encounters 
        SET status = 'closed' 
        WHERE tenant_id = $1 AND patient_id = $2 AND status = 'open'`,
       [tenantId, result.rows[0].patient_id]
@@ -897,7 +897,7 @@ export async function updateAppointmentStatus({ appointmentId, tenantId, userId,
 
 export async function rescheduleAppointment({ appointmentId, tenantId, userId, start, end, reason }) {
   const sql = `
-    UPDATE emr.appointments
+    UPDATE appointments
     SET scheduled_start = $1, 
         scheduled_end = $2, 
         reason = COALESCE($3, reason),
@@ -938,9 +938,9 @@ export async function rescheduleAppointment({ appointmentId, tenantId, userId, s
 export async function getEncounters(tenantId) {
   const sql = `
     SELECT e.*, p.first_name, p.last_name, u.name as provider_name
-    FROM emr.encounters e
-    LEFT JOIN emr.patients p ON e.patient_id = p.id
-    LEFT JOIN emr.users u ON e.provider_id = u.id
+    FROM encounters e
+    LEFT JOIN patients p ON e.patient_id = p.id
+    LEFT JOIN users u ON e.provider_id = u.id
     WHERE e.tenant_id = $1
     ORDER BY e.created_at DESC
   `;
@@ -954,7 +954,7 @@ export async function getEncounters(tenantId) {
 
 export async function createEncounter({ tenantId, userId, patientId, providerId, type, complaint, diagnosis, notes }) {
   const sql = `
-    INSERT INTO emr.encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
+    INSERT INTO encounters (tenant_id, patient_id, provider_id, encounter_type, chief_complaint, diagnosis, notes, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7, 'open')
     RETURNING *
   `;
@@ -989,7 +989,7 @@ export async function createEncounter({ tenantId, userId, patientId, providerId,
 
 export async function dischargePatient({ tenantId, userId, encounterId, diagnosis, notes }) {
   const sql = `
-    UPDATE emr.encounters
+    UPDATE encounters
     SET status = 'closed',
         diagnosis = COALESCE($1, diagnosis),
         notes = COALESCE($2, notes),
@@ -1029,7 +1029,7 @@ export async function dischargePatient({ tenantId, userId, encounterId, diagnosi
 
 export async function getInvoices(tenantId) {
   const result = await query(
-    'SELECT * FROM emr.invoices WHERE tenant_id = $1 ORDER BY created_at DESC',
+    'SELECT * FROM invoices WHERE tenant_id = $1 ORDER BY created_at DESC',
     [tenantId]
   );
   return result.rows.map(row => ({
@@ -1057,7 +1057,7 @@ export async function createInvoice({ tenantId, userId, patientId, description, 
   const paidAmount = isPaidNow ? total : 0;
 
   const sql = `
-    INSERT INTO emr.invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
+    INSERT INTO invoices (tenant_id, patient_id, invoice_number, description, subtotal, tax, total, paid, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING *
   `;
@@ -1102,7 +1102,7 @@ export async function createInvoice({ tenantId, userId, patientId, description, 
 
 export async function payInvoice({ invoiceId, tenantId, userId, paymentMethod = 'Cash' }) {
   const sql = `
-    UPDATE emr.invoices
+    UPDATE invoices
     SET paid = total, status = 'paid', updated_at = NOW()
     WHERE id = $1 AND tenant_id = $2
     RETURNING *
@@ -1144,7 +1144,7 @@ export async function payInvoice({ invoiceId, tenantId, userId, paymentMethod = 
 
 export async function getInventoryItems(tenantId) {
   const result = await query(
-    'SELECT * FROM emr.inventory_items WHERE tenant_id = $1 ORDER BY name',
+    'SELECT * FROM inventory_items WHERE tenant_id = $1 ORDER BY name',
     [tenantId]
   );
   return result.rows.map(row => ({
@@ -1159,7 +1159,7 @@ export async function getInventoryItems(tenantId) {
 
 export async function createInventoryItem({ tenantId, userId, code, name, category, stock = 0, reorder = 0 }) {
   const sql = `
-    INSERT INTO emr.inventory_items (tenant_id, item_code, name, category, current_stock, reorder_level)
+    INSERT INTO inventory_items (tenant_id, item_code, name, category, current_stock, reorder_level)
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *
   `;
@@ -1195,7 +1195,7 @@ export async function createInventoryItem({ tenantId, userId, code, name, catego
 
 export async function updateInventoryStock({ itemId, tenantId, userId, delta }) {
   const sql = `
-    UPDATE emr.inventory_items
+    UPDATE inventory_items
     SET current_stock = GREATEST(0, current_stock + $1), updated_at = NOW()
     WHERE id = $2 AND tenant_id = $3
     RETURNING *
@@ -1211,7 +1211,7 @@ export async function updateInventoryStock({ itemId, tenantId, userId, delta }) 
 
   // Create transaction record
   await query(
-    `INSERT INTO emr.inventory_transactions (tenant_id, item_id, transaction_type, quantity, created_by)
+    `INSERT INTO inventory_transactions (tenant_id, item_id, transaction_type, quantity, created_by)
      VALUES ($1, $2, $3, $4, $5)`,
     [tenantId, itemId, transactionType, Math.abs(delta), userId]
   );
@@ -1241,7 +1241,7 @@ export async function updateInventoryStock({ itemId, tenantId, userId, delta }) 
 
 export async function getEmployees(tenantId) {
   const result = await query(
-    'SELECT * FROM emr.employees WHERE tenant_id = $1 ORDER BY name',
+    'SELECT * FROM employees WHERE tenant_id = $1 ORDER BY name',
     [tenantId]
   );
   return result.rows.map(row => ({
@@ -1256,7 +1256,7 @@ export async function getEmployees(tenantId) {
 
 export async function createEmployee({ tenantId, name, code, department, designation, joinDate, shift, salary }) {
   const sql = `
-    INSERT INTO emr.employees (tenant_id, name, code, department, designation, join_date, shift, salary, leave_balance)
+    INSERT INTO employees (tenant_id, name, code, department, designation, join_date, shift, salary, leave_balance)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 12)
     RETURNING *
   `;
@@ -1285,7 +1285,7 @@ export async function createEmployee({ tenantId, name, code, department, designa
 
 export async function getEmployeeLeaves(tenantId) {
   const result = await query(
-    'SELECT * FROM emr.employee_leaves WHERE tenant_id = $1 ORDER BY from_date DESC',
+    'SELECT * FROM employee_leaves WHERE tenant_id = $1 ORDER BY from_date DESC',
     [tenantId]
   );
   return result.rows.map(row => ({
@@ -1306,7 +1306,7 @@ export async function createEmployeeLeave({ tenantId, employeeId, from, to, type
   const days = Math.ceil((toDate - fromDate) / (1000 * 60 * 60 * 24)) + 1;
 
   const sql = `
-    INSERT INTO emr.employee_leaves (tenant_id, employee_id, leave_type, from_date, to_date, days, status)
+    INSERT INTO employee_leaves (tenant_id, employee_id, leave_type, from_date, to_date, days, status)
     VALUES ($1, $2, $3, $4, $5, $6, 'Pending')
     RETURNING *
   `;
@@ -1342,10 +1342,10 @@ export async function getReportSummary(tenantId) {
   // Periodical stats
   const periodicalResult = await query(
     `SELECT
-      (SELECT COUNT(*) FROM emr.appointments WHERE tenant_id = $1 AND DATE(scheduled_start) = $2) as daily_appointments,
-      (SELECT COUNT(*) FROM emr.appointments WHERE tenant_id = $1 AND status IN ('requested', 'scheduled', 'checked_in')) as open_appointments,
-      (SELECT COUNT(*) FROM emr.clinical_records WHERE tenant_id = $1 AND section = 'testReports') as active_lab_tests,
-      (SELECT COUNT(*) FROM emr.invoices WHERE tenant_id = $1 AND status != 'paid') as pending_invoices
+      (SELECT COUNT(*) FROM appointments WHERE tenant_id = $1 AND DATE(scheduled_start) = $2) as daily_appointments,
+      (SELECT COUNT(*) FROM appointments WHERE tenant_id = $1 AND status IN ('requested', 'scheduled', 'checked_in')) as open_appointments,
+      (SELECT COUNT(*) FROM clinical_records WHERE tenant_id = $1 AND section = 'testReports') as active_lab_tests,
+      (SELECT COUNT(*) FROM invoices WHERE tenant_id = $1 AND status != 'paid') as pending_invoices
     `,
     [tenantId, today]
   );
@@ -1355,7 +1355,7 @@ export async function getReportSummary(tenantId) {
     `SELECT 
       TO_CHAR(scheduled_start, 'YYYY-MM') as month,
       COUNT(*) as count
-    FROM emr.appointments
+    FROM appointments
     WHERE tenant_id = $1
     GROUP BY TO_CHAR(scheduled_start, 'YYYY-MM')
     ORDER BY month`,
@@ -1367,7 +1367,7 @@ export async function getReportSummary(tenantId) {
     `SELECT 
       TO_CHAR(created_at, 'YYYY-MM') as month,
       SUM(paid) as amount
-    FROM emr.invoices
+    FROM invoices
     WHERE tenant_id = $1
     GROUP BY TO_CHAR(created_at, 'YYYY-MM')
     ORDER BY month`,
@@ -1376,7 +1376,7 @@ export async function getReportSummary(tenantId) {
 
   // Tax calculation
   const taxResult = await query(
-    `SELECT SUM(tax) as total_tax FROM emr.invoices WHERE tenant_id = $1`,
+    `SELECT SUM(tax) as total_tax FROM invoices WHERE tenant_id = $1`,
     [tenantId]
   );
 
@@ -1385,7 +1385,7 @@ export async function getReportSummary(tenantId) {
     `SELECT 
       COUNT(*) as employees,
       SUM(salary) as salary_outflow
-    FROM emr.employees
+    FROM employees
     WHERE tenant_id = $1`,
     [tenantId]
   );
@@ -1393,8 +1393,8 @@ export async function getReportSummary(tenantId) {
   // Critical lab results (latest 5)
   const criticalLabResult = await query(
     `SELECT sr.*, p.first_name || ' ' || p.last_name as patient_name
-     FROM emr.service_requests sr
-     JOIN emr.patients p ON sr.patient_id = p.id
+     FROM service_requests sr
+     JOIN patients p ON sr.patient_id = p.id
      WHERE sr.tenant_id = $1 AND sr.category = 'lab' AND sr.status = 'completed' AND sr.notes::jsonb->>'criticalFlag' = 'true'
      ORDER BY sr.updated_at DESC LIMIT 5`,
     [tenantId]
@@ -1413,7 +1413,7 @@ export async function getReportSummary(tenantId) {
       SELECT 
         date_trunc('day', scheduled_start)::date as day,
         count(*) as count
-      FROM emr.appointments
+      FROM appointments
       WHERE tenant_id = $1 AND scheduled_start >= current_date - interval '14 days'
       GROUP BY 1
     ),
@@ -1421,7 +1421,7 @@ export async function getReportSummary(tenantId) {
       SELECT
         date_trunc('day', created_at)::date as day,
         sum(paid) as amount
-      FROM emr.invoices
+      FROM invoices
       WHERE tenant_id = $1 AND created_at >= current_date - interval '14 days'
       GROUP BY 1
     )
@@ -1481,7 +1481,7 @@ export async function getReportSummary(tenantId) {
 // =====================================================
 
 export async function getSuperadminOverview() {
-  const tenantsResult = await query('SELECT * FROM emr.tenants ORDER BY name');
+  const tenantsResult = await query('SELECT * FROM tenants ORDER BY name');
   const tenants = tenantsResult.rows;
 
   const tenantStats = [];
@@ -1489,10 +1489,10 @@ export async function getSuperadminOverview() {
   for (const tenant of tenants) {
     const stats = await query(
       `SELECT
-        (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1) as users,
-        (SELECT COUNT(*) FROM emr.patients WHERE tenant_id = $1) as patients,
-        (SELECT COUNT(*) FROM emr.appointments WHERE tenant_id = $1) as appointments,
-        (SELECT SUM(paid) FROM emr.invoices WHERE tenant_id = $1) as revenue
+        (SELECT COUNT(*) FROM users WHERE tenant_id = $1) as users,
+        (SELECT COUNT(*) FROM patients WHERE tenant_id = $1) as patients,
+        (SELECT COUNT(*) FROM appointments WHERE tenant_id = $1) as appointments,
+        (SELECT SUM(paid) FROM invoices WHERE tenant_id = $1) as revenue
       `,
       [tenant.id]
     );
@@ -1509,10 +1509,10 @@ export async function getSuperadminOverview() {
 
   const totals = await query(
     `SELECT
-      (SELECT COUNT(*) FROM emr.tenants) as tenants,
-      (SELECT COUNT(*) FROM emr.users) as users,
-      (SELECT COUNT(*) FROM emr.patients) as patients,
-      (SELECT COUNT(*) FROM emr.appointments) as appointments
+      (SELECT COUNT(*) FROM tenants) as tenants,
+      (SELECT COUNT(*) FROM users) as users,
+      (SELECT COUNT(*) FROM patients) as patients,
+      (SELECT COUNT(*) FROM appointments) as appointments
     `
   );
 
@@ -1521,7 +1521,7 @@ export async function getSuperadminOverview() {
     SELECT
       to_char(created_at, 'Mon') as month,
       SUM(paid) as amount
-    FROM emr.invoices
+    FROM invoices
     WHERE status = 'paid' AND created_at > current_date - interval '6 months'
     GROUP BY to_char(created_at, 'Mon'), date_trunc('month', created_at)
     ORDER BY date_trunc('month', created_at)
@@ -1566,10 +1566,10 @@ export async function getPrescriptions(tenantId, filters = {}) {
            p.first_name || ' ' || p.last_name as patient_name,
            p.mrn as patient_mrn,
            u.name as doctor_name
-    FROM emr.prescriptions pr
-    JOIN emr.encounters e ON pr.encounter_id = e.id
-    JOIN emr.patients p ON e.patient_id = p.id
-    LEFT JOIN emr.users u ON e.provider_id = u.id
+    FROM prescriptions pr
+    JOIN encounters e ON pr.encounter_id = e.id
+    JOIN patients p ON e.patient_id = p.id
+    LEFT JOIN users u ON e.provider_id = u.id
     WHERE pr.tenant_id = $1
   `;
 
@@ -1602,9 +1602,9 @@ export async function getDoctorPayouts(tenantId) {
       COALESCE(SUM(i.paid), 0) as collected_amount,
       -- Assume 30% commission for visiting doctors/consultants
       (COALESCE(SUM(i.paid), 0) * 0.30) as estimated_commission
-    FROM emr.users u
-    JOIN emr.encounters e ON u.id = e.provider_id
-    JOIN emr.invoices i ON e.id = i.encounter_id
+    FROM users u
+    JOIN encounters e ON u.id = e.provider_id
+    JOIN invoices i ON e.id = i.encounter_id
     WHERE u.tenant_id = $1 
       AND u.role = 'Doctor'
       AND i.status = 'paid'
@@ -1625,10 +1625,10 @@ export async function getPrescriptionById(id, tenantId) {
   p.first_name || ' ' || p.last_name as patient_name,
   p.mrn as patient_mrn,
   u.name as doctor_name
-    FROM emr.prescriptions pr
-    JOIN emr.encounters e ON pr.encounter_id = e.id
-    JOIN emr.patients p ON e.patient_id = p.id
-    LEFT JOIN emr.users u ON e.provider_id = u.id
+    FROM prescriptions pr
+    JOIN encounters e ON pr.encounter_id = e.id
+    JOIN patients p ON e.patient_id = p.id
+    LEFT JOIN users u ON e.provider_id = u.id
     WHERE pr.id = $1 AND pr.tenant_id = $2
   `;
   const result = await query(sql, [id, tenantId]);
@@ -1637,7 +1637,7 @@ export async function getPrescriptionById(id, tenantId) {
 
 export async function createPrescription({ tenantId, encounter_id, drug_name, dosage, frequency, duration, instructions, is_followup, followup_date, followup_notes }) {
   const sql = `
-    INSERT INTO emr.prescriptions(
+    INSERT INTO prescriptions(
     tenant_id, encounter_id, drug_name, dosage, frequency, duration, instructions, status, is_followup, followup_date, followup_notes
   )
 VALUES($1, $2, $3, $4, $5, $6, $7, 'Pending', $8, $9, $10)
@@ -1652,7 +1652,7 @@ RETURNING *
 
 export async function updatePrescriptionStatus({ id, tenantId, userId, status }) {
   const sql = `
-    UPDATE emr.prescriptions
+    UPDATE prescriptions
     SET status = $1, updated_at = NOW()
     WHERE id = $2 AND tenant_id = $3
 RETURNING *
@@ -1783,7 +1783,7 @@ export async function getBootstrapData(tenantId, userId) {
 
 export async function getInsuranceProviders(tenantId) {
   const result = await query(
-    'SELECT * FROM emr.insurance_providers WHERE tenant_id = $1 ORDER BY name',
+    'SELECT * FROM insurance_providers WHERE tenant_id = $1 ORDER BY name',
     [tenantId]
   );
   return result.rows;
@@ -1791,7 +1791,7 @@ export async function getInsuranceProviders(tenantId) {
 
 export async function createInsuranceProvider({ tenantId, name, type, coverageLimit, contactPerson, phone, email }) {
   const sql = `
-    INSERT INTO emr.insurance_providers (tenant_id, name, type, coverage_limit, contact_person, phone, email, status)
+    INSERT INTO insurance_providers (tenant_id, name, type, coverage_limit, contact_person, phone, email, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active')
     RETURNING *
   `;
@@ -1802,9 +1802,9 @@ export async function createInsuranceProvider({ tenantId, name, type, coverageLi
 export async function getClaims(tenantId, filters = {}) {
   let sql = `
     SELECT c.*, p.first_name || ' ' || p.last_name as patient_name, ip.name as provider_name
-    FROM emr.claims c
-    JOIN emr.patients p ON c.patient_id = p.id
-    JOIN emr.insurance_providers ip ON c.provider_id = ip.id
+    FROM claims c
+    JOIN patients p ON c.patient_id = p.id
+    JOIN insurance_providers ip ON c.provider_id = ip.id
     WHERE c.tenant_id = $1
   `;
   const params = [tenantId];
@@ -1819,7 +1819,7 @@ export async function getClaims(tenantId, filters = {}) {
 
 export async function createClaim({ tenantId, patientId, providerId, amount, claimNumber, encounterId = null, invoiceId = null }) {
   const sql = `
-    INSERT INTO emr.claims (tenant_id, patient_id, provider_id, amount, claim_number, encounter_id, invoice_id, status)
+    INSERT INTO claims (tenant_id, patient_id, provider_id, amount, claim_number, encounter_id, invoice_id, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7, 'Pending')
     RETURNING *
   `;
@@ -1834,13 +1834,13 @@ export async function createClaim({ tenantId, patientId, providerId, amount, cla
 export async function getFinancialSummary(tenantId, month) {
   // Total Income (Paid Invoices)
   const incomeResult = await query(
-    `SELECT SUM(paid) as income FROM emr.invoices WHERE tenant_id = $1 AND TO_CHAR(created_at, 'YYYY-MM') = $2`,
+    `SELECT SUM(paid) as income FROM invoices WHERE tenant_id = $1 AND TO_CHAR(created_at, 'YYYY-MM') = $2`,
     [tenantId, month.slice(0, 7)]
   );
 
   // Total Expenses
   const expenseResult = await query(
-    `SELECT category, SUM(amount) as amount FROM emr.expenses 
+    `SELECT category, SUM(amount) as amount FROM expenses 
      WHERE tenant_id = $1 AND TO_CHAR(date, 'YYYY-MM') = $2
      GROUP BY category`,
     [tenantId, month.slice(0, 7)]
@@ -1859,7 +1859,7 @@ export async function getFinancialSummary(tenantId, month) {
 }
 
 export async function getExpenses(tenantId, { month } = {}) {
-  let sql = 'SELECT * FROM emr.expenses WHERE tenant_id = $1';
+  let sql = 'SELECT * FROM expenses WHERE tenant_id = $1';
   const params = [tenantId];
   if (month) {
     sql += ` AND TO_CHAR(date, 'YYYY-MM') = $2`;
@@ -1872,7 +1872,7 @@ export async function getExpenses(tenantId, { month } = {}) {
 
 export async function addExpense({ tenantId, category, description, amount, date, paymentMethod, reference, recordedBy }) {
   const sql = `
-    INSERT INTO emr.expenses (tenant_id, category, description, amount, date, payment_method, reference, recorded_by)
+    INSERT INTO expenses (tenant_id, category, description, amount, date, payment_method, reference, recorded_by)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
@@ -1883,8 +1883,8 @@ export async function addExpense({ tenantId, category, description, amount, date
 export async function getAttendance(tenantId, date) {
   const sql = `
     SELECT a.*, e.name, e.code, e.shift
-    FROM emr.attendance a
-    JOIN emr.employees e ON a.employee_id = e.id
+    FROM attendance a
+    JOIN employees e ON a.employee_id = e.id
     WHERE a.tenant_id = $1 AND a.date = $2
   `;
   const result = await query(sql, [tenantId, date]);
@@ -1893,7 +1893,7 @@ export async function getAttendance(tenantId, date) {
 
 export async function recordAttendance({ tenantId, employeeId, date, status, checkIn, checkOut }) {
   const sql = `
-    INSERT INTO emr.attendance (tenant_id, employee_id, date, status, check_in, check_out)
+    INSERT INTO attendance (tenant_id, employee_id, date, status, check_in, check_out)
     VALUES ($1, $2, $3, $4, $5, $6)
     ON CONFLICT (tenant_id, employee_id, date) 
     DO UPDATE SET 
@@ -1909,14 +1909,14 @@ export async function recordAttendance({ tenantId, employeeId, date, status, che
 
 
 export async function getWards(tenantId) {
-  const sql = 'SELECT * FROM emr.wards WHERE tenant_id = $1 ORDER BY name';
+  const sql = 'SELECT * FROM wards WHERE tenant_id = $1 ORDER BY name';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
 
 export async function createWard({ tenantId, name, type, base_rate }) {
   const sql = `
-    INSERT INTO emr.wards (tenant_id, name, type, base_rate)
+    INSERT INTO wards (tenant_id, name, type, base_rate)
     VALUES ($1, $2, $3, $4)
     RETURNING *
   `;
@@ -1925,14 +1925,14 @@ export async function createWard({ tenantId, name, type, base_rate }) {
 }
 
 export async function getBeds(wardId) {
-  const sql = 'SELECT * FROM emr.beds WHERE ward_id = $1 ORDER BY bed_number';
+  const sql = 'SELECT * FROM beds WHERE ward_id = $1 ORDER BY bed_number';
   const result = await query(sql, [wardId]);
   return result.rows;
 }
 
 export async function createBed({ tenant_id, ward_id, bed_number }) {
   const sql = `
-    INSERT INTO emr.beds (tenant_id, ward_id, bed_number)
+    INSERT INTO beds (tenant_id, ward_id, bed_number)
     VALUES ($1, $2, $3)
     RETURNING *
   `;
@@ -1944,14 +1944,14 @@ export async function createBed({ tenant_id, ward_id, bed_number }) {
  * Department Repository Functions
  */
 export async function getDepartments(tenantId) {
-  const sql = 'SELECT * FROM emr.departments WHERE tenant_id = $1 ORDER BY name';
+  const sql = 'SELECT * FROM departments WHERE tenant_id = $1 ORDER BY name';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
 
 export async function createDepartment({ tenantId, name, code, hod_user_id }) {
   const sql = `
-    INSERT INTO emr.departments (tenant_id, name, code, hod_user_id)
+    INSERT INTO departments (tenant_id, name, code, hod_user_id)
     VALUES ($1, $2, $3, $4)
     RETURNING *
   `;
@@ -1973,14 +1973,14 @@ export async function createDepartment({ tenantId, name, code, hod_user_id }) {
  * Service Catalog Repository Functions
  */
 export async function getServices(tenantId) {
-  const sql = 'SELECT * FROM emr.services WHERE tenant_id = $1 ORDER BY category, name';
+  const sql = 'SELECT * FROM services WHERE tenant_id = $1 ORDER BY category, name';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
 
 export async function createService({ tenantId, name, code, category, base_rate, tax_percent }) {
   const sql = `
-    INSERT INTO emr.services (tenant_id, name, code, category, base_rate, tax_percent)
+    INSERT INTO services (tenant_id, name, code, category, base_rate, tax_percent)
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *
   `;
@@ -2179,9 +2179,9 @@ export default {
 export async function getSupportTickets(tenantId) {
   let sql = `
     SELECT t.*, u.name as creator_name, ten.name as tenant_name
-    FROM emr.support_tickets t
-    LEFT JOIN emr.users u ON t.created_by = u.id
-    LEFT JOIN emr.tenants ten ON t.tenant_id = ten.id
+    FROM support_tickets t
+    LEFT JOIN users u ON t.created_by = u.id
+    LEFT JOIN tenants ten ON t.tenant_id = ten.id
   `;
   const params = [];
 
@@ -2198,7 +2198,7 @@ export async function getSupportTickets(tenantId) {
 
 export async function createSupportTicket({ tenantId, userId, type, location, description, priority }) {
   const sql = `
-    INSERT INTO emr.support_tickets (tenant_id, created_by, type, location, description, priority)
+    INSERT INTO support_tickets (tenant_id, created_by, type, location, description, priority)
     VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING *
   `;
@@ -2223,7 +2223,7 @@ export async function updateSupportTicketStatus({ id, tenantId, userId, status }
 
   if (tenantId) {
     sql = `
-      UPDATE emr.support_tickets
+      UPDATE support_tickets
       SET status = $1, updated_at = NOW()
       WHERE id = $2 AND tenant_id = $3
       RETURNING *
@@ -2231,7 +2231,7 @@ export async function updateSupportTicketStatus({ id, tenantId, userId, status }
     params = [status, id, tenantId];
   } else {
     sql = `
-      UPDATE emr.support_tickets
+      UPDATE support_tickets
       SET status = $1, updated_at = NOW()
       WHERE id = $2
       RETURNING *
@@ -2258,14 +2258,14 @@ export async function updateSupportTicketStatus({ id, tenantId, userId, status }
  * Ambulance Repository Functions
  */
 export async function getAmbulances(tenantId) {
-  const sql = 'SELECT * FROM emr.ambulances WHERE tenant_id = $1 ORDER BY vehicle_number';
+  const sql = 'SELECT * FROM ambulances WHERE tenant_id = $1 ORDER BY vehicle_number';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
 
 export async function createAmbulance({ tenantId, userId, vehicle_number, model, status, current_driver, contact_number, lat, lng }) {
   const sql = `
-    INSERT INTO emr.ambulances (tenant_id, vehicle_number, model, status, current_driver, contact_number, lat, lng)
+    INSERT INTO ambulances (tenant_id, vehicle_number, model, status, current_driver, contact_number, lat, lng)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
@@ -2287,7 +2287,7 @@ export async function createAmbulance({ tenantId, userId, vehicle_number, model,
 
 export async function updateAmbulanceStatus(id, tenantId, status, lat, lng) {
   const sql = `
-    UPDATE emr.ambulances
+    UPDATE ambulances
     SET status = $1, lat = COALESCE($2, lat), lng = COALESCE($3, lng), updated_at = NOW()
     WHERE id = $4 AND tenant_id = $5
     RETURNING *
@@ -2327,14 +2327,14 @@ export async function dispatchAmbulance({ id, tenantId, userId, incident_lat, in
  * Blood Bank Repository Functions
  */
 export async function getBloodUnits(tenantId) {
-  const sql = 'SELECT * FROM emr.blood_units WHERE tenant_id = $1 ORDER BY expires_at';
+  const sql = 'SELECT * FROM blood_units WHERE tenant_id = $1 ORDER BY expires_at';
   const result = await query(sql, [tenantId]);
   return result.rows;
 }
 
 export async function createBloodUnit({ tenantId, userId, blood_group, component, volume_ml, expires_at, storage_location }) {
   const sql = `
-    INSERT INTO emr.blood_units (tenant_id, created_by, blood_group, component, volume_ml, expires_at, storage_location, status)
+    INSERT INTO blood_units (tenant_id, created_by, blood_group, component, volume_ml, expires_at, storage_location, status)
     VALUES ($1, $2, $3, $4, $5, $6, $7, 'Available')
     RETURNING *
   `;
@@ -2357,8 +2357,8 @@ export async function createBloodUnit({ tenantId, userId, blood_group, component
 export async function getBloodRequests(tenantId) {
   const sql = `
     SELECT br.*, p.first_name || ' ' || p.last_name as patient_name
-    FROM emr.blood_requests br
-    JOIN emr.patients p ON br.patient_id = p.id
+    FROM blood_requests br
+    JOIN patients p ON br.patient_id = p.id
     WHERE br.tenant_id = $1
     ORDER BY br.created_at DESC
   `;
@@ -2368,7 +2368,7 @@ export async function getBloodRequests(tenantId) {
 
 export async function createBloodRequest({ tenantId, patientId, encounterId, requested_group, component, units_requested, priority, requested_by }) {
   const sql = `
-    INSERT INTO emr.blood_requests (tenant_id, patient_id, encounter_id, requested_group, component, units_requested, priority, requested_by)
+    INSERT INTO blood_requests (tenant_id, patient_id, encounter_id, requested_group, component, units_requested, priority, requested_by)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
@@ -2394,7 +2394,7 @@ export async function getDoctorAvailability(tenantId, doctorId, date) {
       current_appointments,
       status,
       notes
-    FROM emr.doctor_availability 
+    FROM doctor_availability 
     WHERE tenant_id = $1 
       AND ($2::uuid IS NULL OR doctor_id = $2)
       AND ($3::date IS NULL OR date = $3)
@@ -2410,7 +2410,7 @@ export async function getDoctorAvailability(tenantId, doctorId, date) {
 
 export async function createDoctorAvailability({ tenantId, doctorId, date, startTime, endTime, slotDurationMinutes = 15, maxAppointments = 1, notes, createdBy }) {
   const sql = `
-    INSERT INTO emr.doctor_availability (
+    INSERT INTO doctor_availability (
       tenant_id, doctor_id, date, start_time, end_time, 
       slot_duration_minutes, max_appointments, notes, created_by
     )
@@ -2436,7 +2436,7 @@ export async function generateDoctorAvailabilitySlots({ tenantId, doctorId, date
     
     if (slotEndTime <= end) {
       const sql = `
-        INSERT INTO emr.doctor_availability (
+        INSERT INTO doctor_availability (
           tenant_id, doctor_id, date, start_time, end_time, 
           slot_duration_minutes, max_appointments, created_by
         )
@@ -2494,7 +2494,7 @@ export async function updateDoctorAvailabilitySlot(availabilityId, tenantId, upd
   }
   
   const sql = `
-    UPDATE emr.doctor_availability 
+    UPDATE doctor_availability 
     SET ${fields.join(', ')}, updated_at = NOW()
     WHERE id = $1 AND tenant_id = $${paramIndex}
     RETURNING *
@@ -2509,7 +2509,7 @@ export async function updateDoctorAvailabilitySlot(availabilityId, tenantId, upd
 
 export async function incrementAppointmentCount(availabilityId, tenantId) {
   const sql = `
-    UPDATE emr.doctor_availability 
+    UPDATE doctor_availability 
     SET current_appointments = current_appointments + 1,
         updated_at = NOW()
     WHERE id = $1 
@@ -2536,7 +2536,7 @@ export async function generateOPDToken({ tenantId, patientId, departmentId, doct
   
   // Create the token
   const sql = `
-    INSERT INTO emr.opd_tokens (
+    INSERT INTO opd_tokens (
       tenant_id, patient_id, token_number, token_prefix, status, priority,
       department_id, doctor_id, appointment_id, visit_type, chief_complaint, created_by
     )
@@ -2565,11 +2565,11 @@ export async function getOPDTokens(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       a.start as appointment_time
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.patients p ON t.patient_id = p.id
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
-    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    FROM opd_tokens t
+    LEFT JOIN patients p ON t.patient_id = p.id
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
+    LEFT JOIN appointments a ON t.appointment_id = a.id
     WHERE t.tenant_id = $1
   `;
   
@@ -2627,11 +2627,11 @@ export async function getOPDTokenById(tokenId, tenantId) {
       d.name as department_name,
       u.name as doctor_name,
       a.start as appointment_time
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.patients p ON t.patient_id = p.id
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
-    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    FROM opd_tokens t
+    LEFT JOIN patients p ON t.patient_id = p.id
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
+    LEFT JOIN appointments a ON t.appointment_id = a.id
     WHERE t.id = $1 AND t.tenant_id = $2
   `;
   
@@ -2656,11 +2656,11 @@ export async function getOPDBills(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
     WHERE b.tenant_id = $1
   `;
   
@@ -2709,12 +2709,12 @@ export async function getOPDBillById(billId, tenantId) {
       u.name as doctor_name,
       t.full_token as token_number,
       a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
+    LEFT JOIN appointments a ON b.appointment_id = a.id
     WHERE b.id = $1 AND b.tenant_id = $2
   `;
   
@@ -2728,7 +2728,7 @@ export async function getOPDBillById(billId, tenantId) {
 
 export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_configurations (
+    INSERT INTO exotel_configurations (
       tenant_id, account_sid, api_key, api_token, subdomain, from_number,
       webhook_url, delivery_report_webhook, is_active, is_default, created_by
     )
@@ -2746,7 +2746,7 @@ export async function createExotelConfiguration({ tenantId, accountSid, apiKey, 
 
 export async function getExotelConfigurations(tenantId, isActive = true) {
   const sql = `
-    SELECT * FROM emr.exotel_configurations
+    SELECT * FROM exotel_configurations
     WHERE tenant_id = $1 AND is_active = $2
     ORDER BY is_default DESC, created_at DESC
   `;
@@ -2771,7 +2771,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_configurations
+    UPDATE exotel_configurations
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -2785,7 +2785,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
 
 export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_sms_campaigns (
+    INSERT INTO exotel_sms_campaigns (
       tenant_id, campaign_name, campaign_type, description, template_id,
       target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
       status, created_by
@@ -2814,9 +2814,9 @@ export async function getSMSCampaigns(tenantId, filters = {}) {
       COUNT(l.id) as sent_count,
       COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
       COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
-    FROM emr.exotel_sms_campaigns c
-    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
-    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    FROM exotel_sms_campaigns c
+    LEFT JOIN communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN exotel_sms_logs l ON c.id = l.campaign_id
     WHERE c.tenant_id = $1
   `;
   
@@ -2862,7 +2862,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   // Get Exotel configuration
   const configSql = `
     SELECT account_sid, api_key, api_token, subdomain 
-    FROM emr.exotel_configurations 
+    FROM exotel_configurations 
     WHERE tenant_id = $1 AND is_active = true 
     ORDER BY is_default DESC 
     LIMIT 1
@@ -2876,7 +2876,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   
   // Create SMS log entry
   const logSql = `
-    INSERT INTO emr.exotel_sms_logs (
+    INSERT INTO exotel_sms_logs (
       tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
       message_content, message_type, priority, status, external_id, created_at
     )
@@ -3006,7 +3006,7 @@ export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_sms_logs
+    UPDATE exotel_sms_logs
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -3028,11 +3028,11 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
       ct.template_name,
       p.name as patient_name,
       p.phone as patient_phone
-    FROM emr.exotel_sms_logs l
-    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
-    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
-    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    FROM exotel_sms_logs l
+    LEFT JOIN exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN patients p ON pc.patient_id = p.id
     WHERE l.tenant_id = $1
   `;
   
@@ -3078,7 +3078,7 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
 
 export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_number_pools (
+    INSERT INTO exotel_number_pools (
       tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
       daily_limit, monthly_limit, priority, is_active, created_by
     )
@@ -3104,9 +3104,9 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
       u.name as doctor_name,
       ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
       ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
-    FROM emr.exotel_number_pools np
-    LEFT JOIN emr.departments d ON np.department_id = d.id
-    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    FROM exotel_number_pools np
+    LEFT JOIN departments d ON np.department_id = d.id
+    LEFT JOIN users u ON np.doctor_id = u.id
     WHERE np.tenant_id = $1 AND np.is_active = $2
   `;
   
@@ -3136,7 +3136,7 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
 
 export async function processExotelWebhook(tenantId, eventData) {
   const sql = `
-    INSERT INTO emr.exotel_webhook_events (
+    INSERT INTO exotel_webhook_events (
       tenant_id, event_type, event_data, message_sid, account_sid, created_at
     )
     VALUES ($1, $2, $3, $4, $5, NOW())
@@ -3177,7 +3177,7 @@ export async function processExotelDeliveryReport(tenantId, deliveryData) {
   // Find the SMS log entry
   const findSql = `
     SELECT id, communication_id, to_number 
-    FROM emr.exotel_sms_logs 
+    FROM exotel_sms_logs 
     WHERE message_sid = $1 AND tenant_id = $2
   `;
   
@@ -3224,8 +3224,8 @@ export async function getExotelSMSStats(tenantId, filters = {}) {
 export async function retryFailedSMS(tenantId, smsLogId) {
   const sql = `
     SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
-    FROM emr.exotel_sms_logs l
-    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    FROM exotel_sms_logs l
+    JOIN exotel_configurations c ON l.account_sid = c.account_sid
     WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
   `;
   
@@ -3278,7 +3278,7 @@ export async function getPendingRetries(tenantId) {
     SELECT 
       l.*,
       EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
-    FROM emr.exotel_sms_logs l
+    FROM exotel_sms_logs l
     WHERE l.tenant_id = $1 
       AND l.status = 'queued' 
       AND l.next_retry_at IS NOT NULL 
@@ -3294,7 +3294,7 @@ export async function getPendingRetries(tenantId) {
 export async function processScheduledCampaigns(tenantId) {
   const sql = `
     SELECT c.* 
-    FROM emr.exotel_sms_campaigns c
+    FROM exotel_sms_campaigns c
     WHERE c.tenant_id = $1 
       AND c.status = 'scheduled' 
       AND c.scheduled_at <= NOW()
@@ -3306,7 +3306,7 @@ export async function processScheduledCampaigns(tenantId) {
   for (const campaign of campaigns) {
     // Update campaign status to active
     await query(`
-      UPDATE emr.exotel_sms_campaigns 
+      UPDATE exotel_sms_campaigns 
       SET status = 'active', updated_at = NOW()
       WHERE id = $1
     `, [campaign.id]);
@@ -3324,7 +3324,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   switch (targetAudience) {
     case 'all_patients':
       const patientsSql = `
-        SELECT DISTINCT phone FROM emr.patients 
+        SELECT DISTINCT phone FROM patients 
         WHERE tenant_id = $1 AND phone IS NOT NULL
       `;
       const patientsResult = await query(patientsSql, [tenantId]);
@@ -3334,7 +3334,7 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'specific_patients':
       if (filters && filters.patientIds) {
         const specificPatientsSql = `
-          SELECT phone FROM emr.patients 
+          SELECT phone FROM patients 
           WHERE tenant_id = $1 AND id = ANY($2)
         `;
         const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
@@ -3345,8 +3345,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'department':
       if (filters && filters.departmentId) {
         const deptPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -3358,8 +3358,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'doctor':
       if (filters && filters.doctorId) {
         const doctorPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -3388,7 +3388,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   
   // Update campaign statistics
   await query(`
-    UPDATE emr.exotel_sms_campaigns 
+    UPDATE exotel_sms_campaigns 
     SET total_recipients = $1, updated_at = NOW()
     WHERE id = $2
   `, [targetNumbers.length, campaign.id]);
@@ -3396,7 +3396,7 @@ export async function processSMSCampaign(campaign, tenantId) {
 
 export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
   const sql = `
-    INSERT INTO emr.opd_bill_items (
+    INSERT INTO opd_bill_items (
       tenant_id, bill_id, service_type, service_name, service_code, description,
       quantity, unit_price, discount_amount, tax_amount, total_amount,
       doctor_id, department_id, created_by
@@ -3447,7 +3447,7 @@ export async function updateBillStatus(billId, tenantId, status, additionalData 
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.opd_bills 
+    UPDATE opd_bills 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -3472,7 +3472,7 @@ export async function getBillingStats(tenantId, filters = {}) {
       SUM(paid_amount) as total_paid,
       SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
       AVG(total_amount) as avg_bill_amount
-    FROM emr.opd_bills
+    FROM opd_bills
     WHERE tenant_id = $1 
       AND bill_date = $2
       AND ($3::uuid IS NULL OR department_id = $3)
@@ -3491,9 +3491,9 @@ export async function getServicePackages(tenantId, filters = {}) {
       sp.*,
       d.name as department_name,
       COUNT(pi.id) as item_count
-    FROM emr.opd_service_packages sp
-    LEFT JOIN emr.departments d ON sp.department_id = d.id
-    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    FROM opd_service_packages sp
+    LEFT JOIN departments d ON sp.department_id = d.id
+    LEFT JOIN opd_package_items pi ON sp.id = pi.package_id
     WHERE sp.tenant_id = $1
       AND sp.is_active = $2
   `;
@@ -3518,7 +3518,7 @@ export async function getServicePackages(tenantId, filters = {}) {
 
 export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
   const sql = `
-    INSERT INTO emr.communication_templates (
+    INSERT INTO communication_templates (
       tenant_id, template_name, template_type, purpose, subject, message_content,
       variables, is_active, is_default, created_by
     )
@@ -3538,7 +3538,7 @@ export async function getCommunicationTemplates(tenantId, filters = {}) {
   const { templateType, purpose, isActive = true } = filters;
   
   let sql = `
-    SELECT * FROM emr.communication_templates
+    SELECT * FROM communication_templates
     WHERE tenant_id = $1 AND is_active = $2
   `;
   
@@ -3590,12 +3590,12 @@ export async function getPatientCommunications(tenantId, filters = {}) {
       a.start as appointment_time,
       t.full_token as token_number,
       b.bill_number
-    FROM emr.patient_communications pc
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
-    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
-    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
-    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
-    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    FROM patient_communications pc
+    LEFT JOIN patients p ON pc.patient_id = p.id
+    LEFT JOIN communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN appointments a ON pc.appointment_id = a.id
+    LEFT JOIN opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN opd_bills b ON pc.bill_id = b.id
     WHERE pc.tenant_id = $1
   `;
   
@@ -3671,7 +3671,7 @@ export async function updateCommunicationStatus(communicationId, tenantId, statu
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.patient_communications 
+    UPDATE patient_communications 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -3794,7 +3794,7 @@ export async function updateTokenStatus(tokenId, tenantId, status, additionalDat
   // Add called_count increment
   if (status === 'called') {
     fields.push('called_count');
-    values.push(`(SELECT COALESCE(called_count, 0) + 1 FROM emr.opd_tokens WHERE id = $1)`);
+    values.push(`(SELECT COALESCE(called_count, 0) + 1 FROM opd_tokens WHERE id = $1)`);
   }
   
   // Add additional data
@@ -3806,7 +3806,7 @@ export async function updateTokenStatus(tokenId, tenantId, status, additionalDat
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -3820,13 +3820,13 @@ export async function updateTokenStatus(tokenId, tenantId, status, additionalDat
 
 export async function callNextToken(tenantId, departmentId, doctorId = null) {
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET status = 'called',
         last_called_at = NOW(),
         called_count = COALESCE(called_count, 0) + 1,
         updated_at = NOW()
     WHERE id = (
-      SELECT id FROM emr.opd_tokens 
+      SELECT id FROM opd_tokens 
       WHERE tenant_id = $1 
         AND ($2::uuid IS NULL OR department_id = $2)
         AND ($3::uuid IS NULL OR doctor_id = $3)
@@ -3861,7 +3861,7 @@ export async function getTokenQueueStats(tenantId, filters = {}) {
       COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled,
       COUNT(CASE WHEN status = 'no_show' THEN 1 END) as no_show,
       AVG(EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60) as avg_consultation_time_minutes
-    FROM emr.opd_tokens
+    FROM opd_tokens
     WHERE tenant_id = $1 
       AND DATE(created_at) = $2
       AND ($3::uuid IS NULL OR department_id = $3)
@@ -3883,8 +3883,8 @@ export async function getActiveTokensByDepartment(tenantId) {
       MAX(t.token_number) as last_token,
       t.full_token as current_token,
       t.status as current_token_status
-    FROM emr.departments d
-    LEFT JOIN emr.opd_tokens t ON d.id = t.department_id 
+    FROM departments d
+    LEFT JOIN opd_tokens t ON d.id = t.department_id 
       AND t.tenant_id = $1 
       AND DATE(t.created_at) = CURRENT_DATE
       AND t.status IN ('waiting', 'called', 'in_progress')
@@ -3899,7 +3899,7 @@ export async function getActiveTokensByDepartment(tenantId) {
 
 export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET vitals_recorded = true,
         updated_at = NOW()
     WHERE id = $1 AND tenant_id = $2
@@ -3911,7 +3911,7 @@ export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
   // Create vitals record if needed
   if (result.rows[0]) {
     const vitalsSql = `
-      INSERT INTO emr.vitals (
+      INSERT INTO vitals (
         tenant_id, patient_id, encounter_id, blood_pressure_systolic,
         blood_pressure_diastolic, heart_rate, temperature, 
         oxygen_saturation, weight, height, created_by
@@ -3945,9 +3945,9 @@ export async function getTokenHistory(tenantId, patientId, limit = 10) {
       d.name as department_name,
       u.name as doctor_name,
       EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60 as consultation_duration_minutes
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    FROM opd_tokens t
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
     WHERE t.tenant_id = $1 AND t.patient_id = $2
     ORDER BY t.created_at DESC
     LIMIT $3
@@ -3959,7 +3959,7 @@ export async function getTokenHistory(tenantId, patientId, limit = 10) {
 
 export async function deleteOPDToken(tokenId, tenantId) {
   const sql = `
-    DELETE FROM emr.opd_tokens 
+    DELETE FROM opd_tokens 
     WHERE id = $1 AND tenant_id = $2
     RETURNING *
   `;
@@ -3985,11 +3985,11 @@ export async function getOPDBills(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
     WHERE b.tenant_id = $1
   `;
   
@@ -4038,12 +4038,12 @@ export async function getOPDBillById(billId, tenantId) {
       u.name as doctor_name,
       t.full_token as token_number,
       a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
+    LEFT JOIN appointments a ON b.appointment_id = a.id
     WHERE b.id = $1 AND b.tenant_id = $2
   `;
   
@@ -4057,7 +4057,7 @@ export async function getOPDBillById(billId, tenantId) {
 
 export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_configurations (
+    INSERT INTO exotel_configurations (
       tenant_id, account_sid, api_key, api_token, subdomain, from_number,
       webhook_url, delivery_report_webhook, is_active, is_default, created_by
     )
@@ -4075,7 +4075,7 @@ export async function createExotelConfiguration({ tenantId, accountSid, apiKey, 
 
 export async function getExotelConfigurations(tenantId, isActive = true) {
   const sql = `
-    SELECT * FROM emr.exotel_configurations
+    SELECT * FROM exotel_configurations
     WHERE tenant_id = $1 AND is_active = $2
     ORDER BY is_default DESC, created_at DESC
   `;
@@ -4100,7 +4100,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_configurations
+    UPDATE exotel_configurations
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -4114,7 +4114,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
 
 export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_sms_campaigns (
+    INSERT INTO exotel_sms_campaigns (
       tenant_id, campaign_name, campaign_type, description, template_id,
       target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
       status, created_by
@@ -4143,9 +4143,9 @@ export async function getSMSCampaigns(tenantId, filters = {}) {
       COUNT(l.id) as sent_count,
       COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
       COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
-    FROM emr.exotel_sms_campaigns c
-    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
-    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    FROM exotel_sms_campaigns c
+    LEFT JOIN communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN exotel_sms_logs l ON c.id = l.campaign_id
     WHERE c.tenant_id = $1
   `;
   
@@ -4191,7 +4191,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   // Get Exotel configuration
   const configSql = `
     SELECT account_sid, api_key, api_token, subdomain 
-    FROM emr.exotel_configurations 
+    FROM exotel_configurations 
     WHERE tenant_id = $1 AND is_active = true 
     ORDER BY is_default DESC 
     LIMIT 1
@@ -4205,7 +4205,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   
   // Create SMS log entry
   const logSql = `
-    INSERT INTO emr.exotel_sms_logs (
+    INSERT INTO exotel_sms_logs (
       tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
       message_content, message_type, priority, status, external_id, created_at
     )
@@ -4335,7 +4335,7 @@ export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_sms_logs
+    UPDATE exotel_sms_logs
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -4357,11 +4357,11 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
       ct.template_name,
       p.name as patient_name,
       p.phone as patient_phone
-    FROM emr.exotel_sms_logs l
-    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
-    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
-    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    FROM exotel_sms_logs l
+    LEFT JOIN exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN patients p ON pc.patient_id = p.id
     WHERE l.tenant_id = $1
   `;
   
@@ -4407,7 +4407,7 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
 
 export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_number_pools (
+    INSERT INTO exotel_number_pools (
       tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
       daily_limit, monthly_limit, priority, is_active, created_by
     )
@@ -4433,9 +4433,9 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
       u.name as doctor_name,
       ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
       ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
-    FROM emr.exotel_number_pools np
-    LEFT JOIN emr.departments d ON np.department_id = d.id
-    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    FROM exotel_number_pools np
+    LEFT JOIN departments d ON np.department_id = d.id
+    LEFT JOIN users u ON np.doctor_id = u.id
     WHERE np.tenant_id = $1 AND np.is_active = $2
   `;
   
@@ -4465,7 +4465,7 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
 
 export async function processExotelWebhook(tenantId, eventData) {
   const sql = `
-    INSERT INTO emr.exotel_webhook_events (
+    INSERT INTO exotel_webhook_events (
       tenant_id, event_type, event_data, message_sid, account_sid, created_at
     )
     VALUES ($1, $2, $3, $4, $5, NOW())
@@ -4506,7 +4506,7 @@ export async function processExotelDeliveryReport(tenantId, deliveryData) {
   // Find the SMS log entry
   const findSql = `
     SELECT id, communication_id, to_number 
-    FROM emr.exotel_sms_logs 
+    FROM exotel_sms_logs 
     WHERE message_sid = $1 AND tenant_id = $2
   `;
   
@@ -4553,8 +4553,8 @@ export async function getExotelSMSStats(tenantId, filters = {}) {
 export async function retryFailedSMS(tenantId, smsLogId) {
   const sql = `
     SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
-    FROM emr.exotel_sms_logs l
-    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    FROM exotel_sms_logs l
+    JOIN exotel_configurations c ON l.account_sid = c.account_sid
     WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
   `;
   
@@ -4607,7 +4607,7 @@ export async function getPendingRetries(tenantId) {
     SELECT 
       l.*,
       EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
-    FROM emr.exotel_sms_logs l
+    FROM exotel_sms_logs l
     WHERE l.tenant_id = $1 
       AND l.status = 'queued' 
       AND l.next_retry_at IS NOT NULL 
@@ -4623,7 +4623,7 @@ export async function getPendingRetries(tenantId) {
 export async function processScheduledCampaigns(tenantId) {
   const sql = `
     SELECT c.* 
-    FROM emr.exotel_sms_campaigns c
+    FROM exotel_sms_campaigns c
     WHERE c.tenant_id = $1 
       AND c.status = 'scheduled' 
       AND c.scheduled_at <= NOW()
@@ -4635,7 +4635,7 @@ export async function processScheduledCampaigns(tenantId) {
   for (const campaign of campaigns) {
     // Update campaign status to active
     await query(`
-      UPDATE emr.exotel_sms_campaigns 
+      UPDATE exotel_sms_campaigns 
       SET status = 'active', updated_at = NOW()
       WHERE id = $1
     `, [campaign.id]);
@@ -4653,7 +4653,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   switch (targetAudience) {
     case 'all_patients':
       const patientsSql = `
-        SELECT DISTINCT phone FROM emr.patients 
+        SELECT DISTINCT phone FROM patients 
         WHERE tenant_id = $1 AND phone IS NOT NULL
       `;
       const patientsResult = await query(patientsSql, [tenantId]);
@@ -4663,7 +4663,7 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'specific_patients':
       if (filters && filters.patientIds) {
         const specificPatientsSql = `
-          SELECT phone FROM emr.patients 
+          SELECT phone FROM patients 
           WHERE tenant_id = $1 AND id = ANY($2)
         `;
         const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
@@ -4674,8 +4674,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'department':
       if (filters && filters.departmentId) {
         const deptPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -4687,8 +4687,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'doctor':
       if (filters && filters.doctorId) {
         const doctorPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -4717,7 +4717,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   
   // Update campaign statistics
   await query(`
-    UPDATE emr.exotel_sms_campaigns 
+    UPDATE exotel_sms_campaigns 
     SET total_recipients = $1, updated_at = NOW()
     WHERE id = $2
   `, [targetNumbers.length, campaign.id]);
@@ -4725,7 +4725,7 @@ export async function processSMSCampaign(campaign, tenantId) {
 
 export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
   const sql = `
-    INSERT INTO emr.opd_bill_items (
+    INSERT INTO opd_bill_items (
       tenant_id, bill_id, service_type, service_name, service_code, description,
       quantity, unit_price, discount_amount, tax_amount, total_amount,
       doctor_id, department_id, created_by
@@ -4776,7 +4776,7 @@ export async function updateBillStatus(billId, tenantId, status, additionalData 
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.opd_bills 
+    UPDATE opd_bills 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -4801,7 +4801,7 @@ export async function getBillingStats(tenantId, filters = {}) {
       SUM(paid_amount) as total_paid,
       SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
       AVG(total_amount) as avg_bill_amount
-    FROM emr.opd_bills
+    FROM opd_bills
     WHERE tenant_id = $1 
       AND bill_date = $2
       AND ($3::uuid IS NULL OR department_id = $3)
@@ -4820,9 +4820,9 @@ export async function getServicePackages(tenantId, filters = {}) {
       sp.*,
       d.name as department_name,
       COUNT(pi.id) as item_count
-    FROM emr.opd_service_packages sp
-    LEFT JOIN emr.departments d ON sp.department_id = d.id
-    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    FROM opd_service_packages sp
+    LEFT JOIN departments d ON sp.department_id = d.id
+    LEFT JOIN opd_package_items pi ON sp.id = pi.package_id
     WHERE sp.tenant_id = $1
       AND sp.is_active = $2
   `;
@@ -4847,7 +4847,7 @@ export async function getServicePackages(tenantId, filters = {}) {
 
 export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
   const sql = `
-    INSERT INTO emr.communication_templates (
+    INSERT INTO communication_templates (
       tenant_id, template_name, template_type, purpose, subject, message_content,
       variables, is_active, is_default, created_by
     )
@@ -4867,7 +4867,7 @@ export async function getCommunicationTemplates(tenantId, filters = {}) {
   const { templateType, purpose, isActive = true } = filters;
   
   let sql = `
-    SELECT * FROM emr.communication_templates
+    SELECT * FROM communication_templates
     WHERE tenant_id = $1 AND is_active = $2
   `;
   
@@ -4919,12 +4919,12 @@ export async function getPatientCommunications(tenantId, filters = {}) {
       a.start as appointment_time,
       t.full_token as token_number,
       b.bill_number
-    FROM emr.patient_communications pc
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
-    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
-    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
-    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
-    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    FROM patient_communications pc
+    LEFT JOIN patients p ON pc.patient_id = p.id
+    LEFT JOIN communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN appointments a ON pc.appointment_id = a.id
+    LEFT JOIN opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN opd_bills b ON pc.bill_id = b.id
     WHERE pc.tenant_id = $1
   `;
   
@@ -5000,7 +5000,7 @@ export async function updateCommunicationStatus(communicationId, tenantId, statu
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.patient_communications 
+    UPDATE patient_communications 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -5101,7 +5101,7 @@ export async function sendBillingReminder({ tenantId, billId, patientId, patient
 
 export async function decrementAppointmentCount(availabilityId, tenantId) {
   const sql = `
-    UPDATE emr.doctor_availability 
+    UPDATE doctor_availability 
     SET current_appointments = GREATEST(current_appointments - 1, 0),
         updated_at = NOW()
     WHERE id = $1 AND tenant_id = $2
@@ -5126,7 +5126,7 @@ export async function generateOPDToken({ tenantId, patientId, departmentId, doct
   
   // Create the token
   const sql = `
-    INSERT INTO emr.opd_tokens (
+    INSERT INTO opd_tokens (
       tenant_id, patient_id, token_number, token_prefix, status, priority,
       department_id, doctor_id, appointment_id, visit_type, chief_complaint, created_by
     )
@@ -5155,11 +5155,11 @@ export async function getOPDTokens(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       a.start as appointment_time
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.patients p ON t.patient_id = p.id
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
-    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    FROM opd_tokens t
+    LEFT JOIN patients p ON t.patient_id = p.id
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
+    LEFT JOIN appointments a ON t.appointment_id = a.id
     WHERE t.tenant_id = $1
   `;
   
@@ -5217,11 +5217,11 @@ export async function getOPDTokenById(tokenId, tenantId) {
       d.name as department_name,
       u.name as doctor_name,
       a.start as appointment_time
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.patients p ON t.patient_id = p.id
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
-    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    FROM opd_tokens t
+    LEFT JOIN patients p ON t.patient_id = p.id
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
+    LEFT JOIN appointments a ON t.appointment_id = a.id
     WHERE t.id = $1 AND t.tenant_id = $2
   `;
   
@@ -5246,11 +5246,11 @@ export async function getOPDBills(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
     WHERE b.tenant_id = $1
   `;
   
@@ -5299,12 +5299,12 @@ export async function getOPDBillById(billId, tenantId) {
       u.name as doctor_name,
       t.full_token as token_number,
       a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
+    LEFT JOIN appointments a ON b.appointment_id = a.id
     WHERE b.id = $1 AND b.tenant_id = $2
   `;
   
@@ -5318,7 +5318,7 @@ export async function getOPDBillById(billId, tenantId) {
 
 export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_configurations (
+    INSERT INTO exotel_configurations (
       tenant_id, account_sid, api_key, api_token, subdomain, from_number,
       webhook_url, delivery_report_webhook, is_active, is_default, created_by
     )
@@ -5336,7 +5336,7 @@ export async function createExotelConfiguration({ tenantId, accountSid, apiKey, 
 
 export async function getExotelConfigurations(tenantId, isActive = true) {
   const sql = `
-    SELECT * FROM emr.exotel_configurations
+    SELECT * FROM exotel_configurations
     WHERE tenant_id = $1 AND is_active = $2
     ORDER BY is_default DESC, created_at DESC
   `;
@@ -5361,7 +5361,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_configurations
+    UPDATE exotel_configurations
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -5375,7 +5375,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
 
 export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_sms_campaigns (
+    INSERT INTO exotel_sms_campaigns (
       tenant_id, campaign_name, campaign_type, description, template_id,
       target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
       status, created_by
@@ -5404,9 +5404,9 @@ export async function getSMSCampaigns(tenantId, filters = {}) {
       COUNT(l.id) as sent_count,
       COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
       COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
-    FROM emr.exotel_sms_campaigns c
-    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
-    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    FROM exotel_sms_campaigns c
+    LEFT JOIN communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN exotel_sms_logs l ON c.id = l.campaign_id
     WHERE c.tenant_id = $1
   `;
   
@@ -5452,7 +5452,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   // Get Exotel configuration
   const configSql = `
     SELECT account_sid, api_key, api_token, subdomain 
-    FROM emr.exotel_configurations 
+    FROM exotel_configurations 
     WHERE tenant_id = $1 AND is_active = true 
     ORDER BY is_default DESC 
     LIMIT 1
@@ -5466,7 +5466,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   
   // Create SMS log entry
   const logSql = `
-    INSERT INTO emr.exotel_sms_logs (
+    INSERT INTO exotel_sms_logs (
       tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
       message_content, message_type, priority, status, external_id, created_at
     )
@@ -5596,7 +5596,7 @@ export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_sms_logs
+    UPDATE exotel_sms_logs
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -5618,11 +5618,11 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
       ct.template_name,
       p.name as patient_name,
       p.phone as patient_phone
-    FROM emr.exotel_sms_logs l
-    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
-    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
-    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    FROM exotel_sms_logs l
+    LEFT JOIN exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN patients p ON pc.patient_id = p.id
     WHERE l.tenant_id = $1
   `;
   
@@ -5668,7 +5668,7 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
 
 export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_number_pools (
+    INSERT INTO exotel_number_pools (
       tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
       daily_limit, monthly_limit, priority, is_active, created_by
     )
@@ -5694,9 +5694,9 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
       u.name as doctor_name,
       ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
       ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
-    FROM emr.exotel_number_pools np
-    LEFT JOIN emr.departments d ON np.department_id = d.id
-    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    FROM exotel_number_pools np
+    LEFT JOIN departments d ON np.department_id = d.id
+    LEFT JOIN users u ON np.doctor_id = u.id
     WHERE np.tenant_id = $1 AND np.is_active = $2
   `;
   
@@ -5726,7 +5726,7 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
 
 export async function processExotelWebhook(tenantId, eventData) {
   const sql = `
-    INSERT INTO emr.exotel_webhook_events (
+    INSERT INTO exotel_webhook_events (
       tenant_id, event_type, event_data, message_sid, account_sid, created_at
     )
     VALUES ($1, $2, $3, $4, $5, NOW())
@@ -5767,7 +5767,7 @@ export async function processExotelDeliveryReport(tenantId, deliveryData) {
   // Find the SMS log entry
   const findSql = `
     SELECT id, communication_id, to_number 
-    FROM emr.exotel_sms_logs 
+    FROM exotel_sms_logs 
     WHERE message_sid = $1 AND tenant_id = $2
   `;
   
@@ -5814,8 +5814,8 @@ export async function getExotelSMSStats(tenantId, filters = {}) {
 export async function retryFailedSMS(tenantId, smsLogId) {
   const sql = `
     SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
-    FROM emr.exotel_sms_logs l
-    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    FROM exotel_sms_logs l
+    JOIN exotel_configurations c ON l.account_sid = c.account_sid
     WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
   `;
   
@@ -5868,7 +5868,7 @@ export async function getPendingRetries(tenantId) {
     SELECT 
       l.*,
       EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
-    FROM emr.exotel_sms_logs l
+    FROM exotel_sms_logs l
     WHERE l.tenant_id = $1 
       AND l.status = 'queued' 
       AND l.next_retry_at IS NOT NULL 
@@ -5884,7 +5884,7 @@ export async function getPendingRetries(tenantId) {
 export async function processScheduledCampaigns(tenantId) {
   const sql = `
     SELECT c.* 
-    FROM emr.exotel_sms_campaigns c
+    FROM exotel_sms_campaigns c
     WHERE c.tenant_id = $1 
       AND c.status = 'scheduled' 
       AND c.scheduled_at <= NOW()
@@ -5896,7 +5896,7 @@ export async function processScheduledCampaigns(tenantId) {
   for (const campaign of campaigns) {
     // Update campaign status to active
     await query(`
-      UPDATE emr.exotel_sms_campaigns 
+      UPDATE exotel_sms_campaigns 
       SET status = 'active', updated_at = NOW()
       WHERE id = $1
     `, [campaign.id]);
@@ -5914,7 +5914,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   switch (targetAudience) {
     case 'all_patients':
       const patientsSql = `
-        SELECT DISTINCT phone FROM emr.patients 
+        SELECT DISTINCT phone FROM patients 
         WHERE tenant_id = $1 AND phone IS NOT NULL
       `;
       const patientsResult = await query(patientsSql, [tenantId]);
@@ -5924,7 +5924,7 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'specific_patients':
       if (filters && filters.patientIds) {
         const specificPatientsSql = `
-          SELECT phone FROM emr.patients 
+          SELECT phone FROM patients 
           WHERE tenant_id = $1 AND id = ANY($2)
         `;
         const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
@@ -5935,8 +5935,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'department':
       if (filters && filters.departmentId) {
         const deptPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -5948,8 +5948,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'doctor':
       if (filters && filters.doctorId) {
         const doctorPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -5978,7 +5978,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   
   // Update campaign statistics
   await query(`
-    UPDATE emr.exotel_sms_campaigns 
+    UPDATE exotel_sms_campaigns 
     SET total_recipients = $1, updated_at = NOW()
     WHERE id = $2
   `, [targetNumbers.length, campaign.id]);
@@ -5986,7 +5986,7 @@ export async function processSMSCampaign(campaign, tenantId) {
 
 export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
   const sql = `
-    INSERT INTO emr.opd_bill_items (
+    INSERT INTO opd_bill_items (
       tenant_id, bill_id, service_type, service_name, service_code, description,
       quantity, unit_price, discount_amount, tax_amount, total_amount,
       doctor_id, department_id, created_by
@@ -6037,7 +6037,7 @@ export async function updateBillStatus(billId, tenantId, status, additionalData 
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.opd_bills 
+    UPDATE opd_bills 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -6062,7 +6062,7 @@ export async function getBillingStats(tenantId, filters = {}) {
       SUM(paid_amount) as total_paid,
       SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
       AVG(total_amount) as avg_bill_amount
-    FROM emr.opd_bills
+    FROM opd_bills
     WHERE tenant_id = $1 
       AND bill_date = $2
       AND ($3::uuid IS NULL OR department_id = $3)
@@ -6081,9 +6081,9 @@ export async function getServicePackages(tenantId, filters = {}) {
       sp.*,
       d.name as department_name,
       COUNT(pi.id) as item_count
-    FROM emr.opd_service_packages sp
-    LEFT JOIN emr.departments d ON sp.department_id = d.id
-    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    FROM opd_service_packages sp
+    LEFT JOIN departments d ON sp.department_id = d.id
+    LEFT JOIN opd_package_items pi ON sp.id = pi.package_id
     WHERE sp.tenant_id = $1
       AND sp.is_active = $2
   `;
@@ -6108,7 +6108,7 @@ export async function getServicePackages(tenantId, filters = {}) {
 
 export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
   const sql = `
-    INSERT INTO emr.communication_templates (
+    INSERT INTO communication_templates (
       tenant_id, template_name, template_type, purpose, subject, message_content,
       variables, is_active, is_default, created_by
     )
@@ -6128,7 +6128,7 @@ export async function getCommunicationTemplates(tenantId, filters = {}) {
   const { templateType, purpose, isActive = true } = filters;
   
   let sql = `
-    SELECT * FROM emr.communication_templates
+    SELECT * FROM communication_templates
     WHERE tenant_id = $1 AND is_active = $2
   `;
   
@@ -6180,12 +6180,12 @@ export async function getPatientCommunications(tenantId, filters = {}) {
       a.start as appointment_time,
       t.full_token as token_number,
       b.bill_number
-    FROM emr.patient_communications pc
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
-    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
-    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
-    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
-    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    FROM patient_communications pc
+    LEFT JOIN patients p ON pc.patient_id = p.id
+    LEFT JOIN communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN appointments a ON pc.appointment_id = a.id
+    LEFT JOIN opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN opd_bills b ON pc.bill_id = b.id
     WHERE pc.tenant_id = $1
   `;
   
@@ -6261,7 +6261,7 @@ export async function updateCommunicationStatus(communicationId, tenantId, statu
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.patient_communications 
+    UPDATE patient_communications 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -6384,7 +6384,7 @@ export async function updateTokenStatus(tokenId, tenantId, status, additionalDat
   // Add called_count increment
   if (status === 'called') {
     fields.push('called_count');
-    values.push(`(SELECT COALESCE(called_count, 0) + 1 FROM emr.opd_tokens WHERE id = $1)`);
+    values.push(`(SELECT COALESCE(called_count, 0) + 1 FROM opd_tokens WHERE id = $1)`);
   }
   
   // Add additional data
@@ -6396,7 +6396,7 @@ export async function updateTokenStatus(tokenId, tenantId, status, additionalDat
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -6410,13 +6410,13 @@ export async function updateTokenStatus(tokenId, tenantId, status, additionalDat
 
 export async function callNextToken(tenantId, departmentId, doctorId = null) {
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET status = 'called',
         last_called_at = NOW(),
         called_count = COALESCE(called_count, 0) + 1,
         updated_at = NOW()
     WHERE id = (
-      SELECT id FROM emr.opd_tokens 
+      SELECT id FROM opd_tokens 
       WHERE tenant_id = $1 
         AND ($2::uuid IS NULL OR department_id = $2)
         AND ($3::uuid IS NULL OR doctor_id = $3)
@@ -6451,7 +6451,7 @@ export async function getTokenQueueStats(tenantId, filters = {}) {
       COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled,
       COUNT(CASE WHEN status = 'no_show' THEN 1 END) as no_show,
       AVG(EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60) as avg_consultation_time_minutes
-    FROM emr.opd_tokens
+    FROM opd_tokens
     WHERE tenant_id = $1 
       AND DATE(created_at) = $2
       AND ($3::uuid IS NULL OR department_id = $3)
@@ -6473,8 +6473,8 @@ export async function getActiveTokensByDepartment(tenantId) {
       MAX(t.token_number) as last_token,
       t.full_token as current_token,
       t.status as current_token_status
-    FROM emr.departments d
-    LEFT JOIN emr.opd_tokens t ON d.id = t.department_id 
+    FROM departments d
+    LEFT JOIN opd_tokens t ON d.id = t.department_id 
       AND t.tenant_id = $1 
       AND DATE(t.created_at) = CURRENT_DATE
       AND t.status IN ('waiting', 'called', 'in_progress')
@@ -6489,7 +6489,7 @@ export async function getActiveTokensByDepartment(tenantId) {
 
 export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET vitals_recorded = true,
         updated_at = NOW()
     WHERE id = $1 AND tenant_id = $2
@@ -6501,7 +6501,7 @@ export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
   // Create vitals record if needed
   if (result.rows[0]) {
     const vitalsSql = `
-      INSERT INTO emr.vitals (
+      INSERT INTO vitals (
         tenant_id, patient_id, encounter_id, blood_pressure_systolic,
         blood_pressure_diastolic, heart_rate, temperature, 
         oxygen_saturation, weight, height, created_by
@@ -6535,9 +6535,9 @@ export async function getTokenHistory(tenantId, patientId, limit = 10) {
       d.name as department_name,
       u.name as doctor_name,
       EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60 as consultation_duration_minutes
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    FROM opd_tokens t
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
     WHERE t.tenant_id = $1 AND t.patient_id = $2
     ORDER BY t.created_at DESC
     LIMIT $3
@@ -6549,7 +6549,7 @@ export async function getTokenHistory(tenantId, patientId, limit = 10) {
 
 export async function deleteOPDToken(tokenId, tenantId) {
   const sql = `
-    DELETE FROM emr.opd_tokens 
+    DELETE FROM opd_tokens 
     WHERE id = $1 AND tenant_id = $2
     RETURNING *
   `;
@@ -6575,11 +6575,11 @@ export async function getOPDBills(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
     WHERE b.tenant_id = $1
   `;
   
@@ -6628,12 +6628,12 @@ export async function getOPDBillById(billId, tenantId) {
       u.name as doctor_name,
       t.full_token as token_number,
       a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
+    LEFT JOIN appointments a ON b.appointment_id = a.id
     WHERE b.id = $1 AND b.tenant_id = $2
   `;
   
@@ -6647,7 +6647,7 @@ export async function getOPDBillById(billId, tenantId) {
 
 export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_configurations (
+    INSERT INTO exotel_configurations (
       tenant_id, account_sid, api_key, api_token, subdomain, from_number,
       webhook_url, delivery_report_webhook, is_active, is_default, created_by
     )
@@ -6665,7 +6665,7 @@ export async function createExotelConfiguration({ tenantId, accountSid, apiKey, 
 
 export async function getExotelConfigurations(tenantId, isActive = true) {
   const sql = `
-    SELECT * FROM emr.exotel_configurations
+    SELECT * FROM exotel_configurations
     WHERE tenant_id = $1 AND is_active = $2
     ORDER BY is_default DESC, created_at DESC
   `;
@@ -6690,7 +6690,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_configurations
+    UPDATE exotel_configurations
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -6704,7 +6704,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
 
 export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_sms_campaigns (
+    INSERT INTO exotel_sms_campaigns (
       tenant_id, campaign_name, campaign_type, description, template_id,
       target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
       status, created_by
@@ -6733,9 +6733,9 @@ export async function getSMSCampaigns(tenantId, filters = {}) {
       COUNT(l.id) as sent_count,
       COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
       COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
-    FROM emr.exotel_sms_campaigns c
-    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
-    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    FROM exotel_sms_campaigns c
+    LEFT JOIN communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN exotel_sms_logs l ON c.id = l.campaign_id
     WHERE c.tenant_id = $1
   `;
   
@@ -6781,7 +6781,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   // Get Exotel configuration
   const configSql = `
     SELECT account_sid, api_key, api_token, subdomain 
-    FROM emr.exotel_configurations 
+    FROM exotel_configurations 
     WHERE tenant_id = $1 AND is_active = true 
     ORDER BY is_default DESC 
     LIMIT 1
@@ -6795,7 +6795,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   
   // Create SMS log entry
   const logSql = `
-    INSERT INTO emr.exotel_sms_logs (
+    INSERT INTO exotel_sms_logs (
       tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
       message_content, message_type, priority, status, external_id, created_at
     )
@@ -6925,7 +6925,7 @@ export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_sms_logs
+    UPDATE exotel_sms_logs
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -6947,11 +6947,11 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
       ct.template_name,
       p.name as patient_name,
       p.phone as patient_phone
-    FROM emr.exotel_sms_logs l
-    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
-    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
-    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    FROM exotel_sms_logs l
+    LEFT JOIN exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN patients p ON pc.patient_id = p.id
     WHERE l.tenant_id = $1
   `;
   
@@ -6997,7 +6997,7 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
 
 export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_number_pools (
+    INSERT INTO exotel_number_pools (
       tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
       daily_limit, monthly_limit, priority, is_active, created_by
     )
@@ -7023,9 +7023,9 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
       u.name as doctor_name,
       ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
       ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
-    FROM emr.exotel_number_pools np
-    LEFT JOIN emr.departments d ON np.department_id = d.id
-    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    FROM exotel_number_pools np
+    LEFT JOIN departments d ON np.department_id = d.id
+    LEFT JOIN users u ON np.doctor_id = u.id
     WHERE np.tenant_id = $1 AND np.is_active = $2
   `;
   
@@ -7055,7 +7055,7 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
 
 export async function processExotelWebhook(tenantId, eventData) {
   const sql = `
-    INSERT INTO emr.exotel_webhook_events (
+    INSERT INTO exotel_webhook_events (
       tenant_id, event_type, event_data, message_sid, account_sid, created_at
     )
     VALUES ($1, $2, $3, $4, $5, NOW())
@@ -7096,7 +7096,7 @@ export async function processExotelDeliveryReport(tenantId, deliveryData) {
   // Find the SMS log entry
   const findSql = `
     SELECT id, communication_id, to_number 
-    FROM emr.exotel_sms_logs 
+    FROM exotel_sms_logs 
     WHERE message_sid = $1 AND tenant_id = $2
   `;
   
@@ -7143,8 +7143,8 @@ export async function getExotelSMSStats(tenantId, filters = {}) {
 export async function retryFailedSMS(tenantId, smsLogId) {
   const sql = `
     SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
-    FROM emr.exotel_sms_logs l
-    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    FROM exotel_sms_logs l
+    JOIN exotel_configurations c ON l.account_sid = c.account_sid
     WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
   `;
   
@@ -7197,7 +7197,7 @@ export async function getPendingRetries(tenantId) {
     SELECT 
       l.*,
       EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
-    FROM emr.exotel_sms_logs l
+    FROM exotel_sms_logs l
     WHERE l.tenant_id = $1 
       AND l.status = 'queued' 
       AND l.next_retry_at IS NOT NULL 
@@ -7213,7 +7213,7 @@ export async function getPendingRetries(tenantId) {
 export async function processScheduledCampaigns(tenantId) {
   const sql = `
     SELECT c.* 
-    FROM emr.exotel_sms_campaigns c
+    FROM exotel_sms_campaigns c
     WHERE c.tenant_id = $1 
       AND c.status = 'scheduled' 
       AND c.scheduled_at <= NOW()
@@ -7225,7 +7225,7 @@ export async function processScheduledCampaigns(tenantId) {
   for (const campaign of campaigns) {
     // Update campaign status to active
     await query(`
-      UPDATE emr.exotel_sms_campaigns 
+      UPDATE exotel_sms_campaigns 
       SET status = 'active', updated_at = NOW()
       WHERE id = $1
     `, [campaign.id]);
@@ -7243,7 +7243,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   switch (targetAudience) {
     case 'all_patients':
       const patientsSql = `
-        SELECT DISTINCT phone FROM emr.patients 
+        SELECT DISTINCT phone FROM patients 
         WHERE tenant_id = $1 AND phone IS NOT NULL
       `;
       const patientsResult = await query(patientsSql, [tenantId]);
@@ -7253,7 +7253,7 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'specific_patients':
       if (filters && filters.patientIds) {
         const specificPatientsSql = `
-          SELECT phone FROM emr.patients 
+          SELECT phone FROM patients 
           WHERE tenant_id = $1 AND id = ANY($2)
         `;
         const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
@@ -7264,8 +7264,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'department':
       if (filters && filters.departmentId) {
         const deptPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -7277,8 +7277,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'doctor':
       if (filters && filters.doctorId) {
         const doctorPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -7307,7 +7307,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   
   // Update campaign statistics
   await query(`
-    UPDATE emr.exotel_sms_campaigns 
+    UPDATE exotel_sms_campaigns 
     SET total_recipients = $1, updated_at = NOW()
     WHERE id = $2
   `, [targetNumbers.length, campaign.id]);
@@ -7315,7 +7315,7 @@ export async function processSMSCampaign(campaign, tenantId) {
 
 export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
   const sql = `
-    INSERT INTO emr.opd_bill_items (
+    INSERT INTO opd_bill_items (
       tenant_id, bill_id, service_type, service_name, service_code, description,
       quantity, unit_price, discount_amount, tax_amount, total_amount,
       doctor_id, department_id, created_by
@@ -7366,7 +7366,7 @@ export async function updateBillStatus(billId, tenantId, status, additionalData 
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.opd_bills 
+    UPDATE opd_bills 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -7391,7 +7391,7 @@ export async function getBillingStats(tenantId, filters = {}) {
       SUM(paid_amount) as total_paid,
       SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
       AVG(total_amount) as avg_bill_amount
-    FROM emr.opd_bills
+    FROM opd_bills
     WHERE tenant_id = $1 
       AND bill_date = $2
       AND ($3::uuid IS NULL OR department_id = $3)
@@ -7410,9 +7410,9 @@ export async function getServicePackages(tenantId, filters = {}) {
       sp.*,
       d.name as department_name,
       COUNT(pi.id) as item_count
-    FROM emr.opd_service_packages sp
-    LEFT JOIN emr.departments d ON sp.department_id = d.id
-    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    FROM opd_service_packages sp
+    LEFT JOIN departments d ON sp.department_id = d.id
+    LEFT JOIN opd_package_items pi ON sp.id = pi.package_id
     WHERE sp.tenant_id = $1
       AND sp.is_active = $2
   `;
@@ -7437,7 +7437,7 @@ export async function getServicePackages(tenantId, filters = {}) {
 
 export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
   const sql = `
-    INSERT INTO emr.communication_templates (
+    INSERT INTO communication_templates (
       tenant_id, template_name, template_type, purpose, subject, message_content,
       variables, is_active, is_default, created_by
     )
@@ -7457,7 +7457,7 @@ export async function getCommunicationTemplates(tenantId, filters = {}) {
   const { templateType, purpose, isActive = true } = filters;
   
   let sql = `
-    SELECT * FROM emr.communication_templates
+    SELECT * FROM communication_templates
     WHERE tenant_id = $1 AND is_active = $2
   `;
   
@@ -7509,12 +7509,12 @@ export async function getPatientCommunications(tenantId, filters = {}) {
       a.start as appointment_time,
       t.full_token as token_number,
       b.bill_number
-    FROM emr.patient_communications pc
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
-    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
-    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
-    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
-    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    FROM patient_communications pc
+    LEFT JOIN patients p ON pc.patient_id = p.id
+    LEFT JOIN communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN appointments a ON pc.appointment_id = a.id
+    LEFT JOIN opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN opd_bills b ON pc.bill_id = b.id
     WHERE pc.tenant_id = $1
   `;
   
@@ -7590,7 +7590,7 @@ export async function updateCommunicationStatus(communicationId, tenantId, statu
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.patient_communications 
+    UPDATE patient_communications 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -7699,7 +7699,7 @@ export async function getAvailableSlotsForDoctor(tenantId, doctorId, date) {
       max_appointments,
       current_appointments,
       available_slots
-    FROM emr.doctor_availability 
+    FROM doctor_availability 
     WHERE tenant_id = $1 
       AND doctor_id = $2 
       AND date = $3 
@@ -7725,7 +7725,7 @@ export async function getDoctorAvailabilityCalendar(tenantId, doctorId, startDat
       COUNT(CASE WHEN current_appointments >= max_appointments THEN 1 END) as booked_slots,
       MIN(start_time) as first_slot_time,
       MAX(end_time) as last_slot_time
-    FROM emr.doctor_availability 
+    FROM doctor_availability 
     WHERE tenant_id = $1 
       AND ($2::uuid IS NULL OR doctor_id = $2)
       AND date BETWEEN $3 AND $4
@@ -7742,8 +7742,8 @@ export async function deleteDoctorAvailability(availabilityId, tenantId) {
   // Check if there are any appointments booked for this slot
   const checkSql = `
     SELECT COUNT(*) as count 
-    FROM emr.appointments a
-    JOIN emr.doctor_availability da ON a.doctor_availability_id = da.id
+    FROM appointments a
+    JOIN doctor_availability da ON a.doctor_availability_id = da.id
     WHERE da.id = $1 AND da.tenant_id = $2
   `;
   
@@ -7754,7 +7754,7 @@ export async function deleteDoctorAvailability(availabilityId, tenantId) {
   }
   
   const sql = `
-    DELETE FROM emr.doctor_availability 
+    DELETE FROM doctor_availability 
     WHERE id = $1 AND tenant_id = $2
     RETURNING *
   `;
@@ -7777,7 +7777,7 @@ export async function generateOPDToken({ tenantId, patientId, departmentId, doct
   
   // Create the token
   const sql = `
-    INSERT INTO emr.opd_tokens (
+    INSERT INTO opd_tokens (
       tenant_id, patient_id, token_number, token_prefix, status, priority,
       department_id, doctor_id, appointment_id, visit_type, chief_complaint, created_by
     )
@@ -7806,11 +7806,11 @@ export async function getOPDTokens(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       a.start as appointment_time
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.patients p ON t.patient_id = p.id
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
-    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    FROM opd_tokens t
+    LEFT JOIN patients p ON t.patient_id = p.id
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
+    LEFT JOIN appointments a ON t.appointment_id = a.id
     WHERE t.tenant_id = $1
   `;
   
@@ -7868,11 +7868,11 @@ export async function getOPDTokenById(tokenId, tenantId) {
       d.name as department_name,
       u.name as doctor_name,
       a.start as appointment_time
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.patients p ON t.patient_id = p.id
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
-    LEFT JOIN emr.appointments a ON t.appointment_id = a.id
+    FROM opd_tokens t
+    LEFT JOIN patients p ON t.patient_id = p.id
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
+    LEFT JOIN appointments a ON t.appointment_id = a.id
     WHERE t.id = $1 AND t.tenant_id = $2
   `;
   
@@ -7897,11 +7897,11 @@ export async function getOPDBills(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
     WHERE b.tenant_id = $1
   `;
   
@@ -7950,12 +7950,12 @@ export async function getOPDBillById(billId, tenantId) {
       u.name as doctor_name,
       t.full_token as token_number,
       a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
+    LEFT JOIN appointments a ON b.appointment_id = a.id
     WHERE b.id = $1 AND b.tenant_id = $2
   `;
   
@@ -7969,7 +7969,7 @@ export async function getOPDBillById(billId, tenantId) {
 
 export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_configurations (
+    INSERT INTO exotel_configurations (
       tenant_id, account_sid, api_key, api_token, subdomain, from_number,
       webhook_url, delivery_report_webhook, is_active, is_default, created_by
     )
@@ -7987,7 +7987,7 @@ export async function createExotelConfiguration({ tenantId, accountSid, apiKey, 
 
 export async function getExotelConfigurations(tenantId, isActive = true) {
   const sql = `
-    SELECT * FROM emr.exotel_configurations
+    SELECT * FROM exotel_configurations
     WHERE tenant_id = $1 AND is_active = $2
     ORDER BY is_default DESC, created_at DESC
   `;
@@ -8012,7 +8012,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_configurations
+    UPDATE exotel_configurations
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -8026,7 +8026,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
 
 export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_sms_campaigns (
+    INSERT INTO exotel_sms_campaigns (
       tenant_id, campaign_name, campaign_type, description, template_id,
       target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
       status, created_by
@@ -8055,9 +8055,9 @@ export async function getSMSCampaigns(tenantId, filters = {}) {
       COUNT(l.id) as sent_count,
       COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
       COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
-    FROM emr.exotel_sms_campaigns c
-    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
-    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    FROM exotel_sms_campaigns c
+    LEFT JOIN communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN exotel_sms_logs l ON c.id = l.campaign_id
     WHERE c.tenant_id = $1
   `;
   
@@ -8103,7 +8103,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   // Get Exotel configuration
   const configSql = `
     SELECT account_sid, api_key, api_token, subdomain 
-    FROM emr.exotel_configurations 
+    FROM exotel_configurations 
     WHERE tenant_id = $1 AND is_active = true 
     ORDER BY is_default DESC 
     LIMIT 1
@@ -8117,7 +8117,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   
   // Create SMS log entry
   const logSql = `
-    INSERT INTO emr.exotel_sms_logs (
+    INSERT INTO exotel_sms_logs (
       tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
       message_content, message_type, priority, status, external_id, created_at
     )
@@ -8247,7 +8247,7 @@ export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_sms_logs
+    UPDATE exotel_sms_logs
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -8269,11 +8269,11 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
       ct.template_name,
       p.name as patient_name,
       p.phone as patient_phone
-    FROM emr.exotel_sms_logs l
-    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
-    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
-    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    FROM exotel_sms_logs l
+    LEFT JOIN exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN patients p ON pc.patient_id = p.id
     WHERE l.tenant_id = $1
   `;
   
@@ -8319,7 +8319,7 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
 
 export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_number_pools (
+    INSERT INTO exotel_number_pools (
       tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
       daily_limit, monthly_limit, priority, is_active, created_by
     )
@@ -8345,9 +8345,9 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
       u.name as doctor_name,
       ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
       ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
-    FROM emr.exotel_number_pools np
-    LEFT JOIN emr.departments d ON np.department_id = d.id
-    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    FROM exotel_number_pools np
+    LEFT JOIN departments d ON np.department_id = d.id
+    LEFT JOIN users u ON np.doctor_id = u.id
     WHERE np.tenant_id = $1 AND np.is_active = $2
   `;
   
@@ -8377,7 +8377,7 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
 
 export async function processExotelWebhook(tenantId, eventData) {
   const sql = `
-    INSERT INTO emr.exotel_webhook_events (
+    INSERT INTO exotel_webhook_events (
       tenant_id, event_type, event_data, message_sid, account_sid, created_at
     )
     VALUES ($1, $2, $3, $4, $5, NOW())
@@ -8418,7 +8418,7 @@ export async function processExotelDeliveryReport(tenantId, deliveryData) {
   // Find the SMS log entry
   const findSql = `
     SELECT id, communication_id, to_number 
-    FROM emr.exotel_sms_logs 
+    FROM exotel_sms_logs 
     WHERE message_sid = $1 AND tenant_id = $2
   `;
   
@@ -8465,8 +8465,8 @@ export async function getExotelSMSStats(tenantId, filters = {}) {
 export async function retryFailedSMS(tenantId, smsLogId) {
   const sql = `
     SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
-    FROM emr.exotel_sms_logs l
-    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    FROM exotel_sms_logs l
+    JOIN exotel_configurations c ON l.account_sid = c.account_sid
     WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
   `;
   
@@ -8519,7 +8519,7 @@ export async function getPendingRetries(tenantId) {
     SELECT 
       l.*,
       EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
-    FROM emr.exotel_sms_logs l
+    FROM exotel_sms_logs l
     WHERE l.tenant_id = $1 
       AND l.status = 'queued' 
       AND l.next_retry_at IS NOT NULL 
@@ -8535,7 +8535,7 @@ export async function getPendingRetries(tenantId) {
 export async function processScheduledCampaigns(tenantId) {
   const sql = `
     SELECT c.* 
-    FROM emr.exotel_sms_campaigns c
+    FROM exotel_sms_campaigns c
     WHERE c.tenant_id = $1 
       AND c.status = 'scheduled' 
       AND c.scheduled_at <= NOW()
@@ -8547,7 +8547,7 @@ export async function processScheduledCampaigns(tenantId) {
   for (const campaign of campaigns) {
     // Update campaign status to active
     await query(`
-      UPDATE emr.exotel_sms_campaigns 
+      UPDATE exotel_sms_campaigns 
       SET status = 'active', updated_at = NOW()
       WHERE id = $1
     `, [campaign.id]);
@@ -8565,7 +8565,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   switch (targetAudience) {
     case 'all_patients':
       const patientsSql = `
-        SELECT DISTINCT phone FROM emr.patients 
+        SELECT DISTINCT phone FROM patients 
         WHERE tenant_id = $1 AND phone IS NOT NULL
       `;
       const patientsResult = await query(patientsSql, [tenantId]);
@@ -8575,7 +8575,7 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'specific_patients':
       if (filters && filters.patientIds) {
         const specificPatientsSql = `
-          SELECT phone FROM emr.patients 
+          SELECT phone FROM patients 
           WHERE tenant_id = $1 AND id = ANY($2)
         `;
         const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
@@ -8586,8 +8586,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'department':
       if (filters && filters.departmentId) {
         const deptPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -8599,8 +8599,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'doctor':
       if (filters && filters.doctorId) {
         const doctorPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -8629,7 +8629,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   
   // Update campaign statistics
   await query(`
-    UPDATE emr.exotel_sms_campaigns 
+    UPDATE exotel_sms_campaigns 
     SET total_recipients = $1, updated_at = NOW()
     WHERE id = $2
   `, [targetNumbers.length, campaign.id]);
@@ -8637,7 +8637,7 @@ export async function processSMSCampaign(campaign, tenantId) {
 
 export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
   const sql = `
-    INSERT INTO emr.opd_bill_items (
+    INSERT INTO opd_bill_items (
       tenant_id, bill_id, service_type, service_name, service_code, description,
       quantity, unit_price, discount_amount, tax_amount, total_amount,
       doctor_id, department_id, created_by
@@ -8688,7 +8688,7 @@ export async function updateBillStatus(billId, tenantId, status, additionalData 
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.opd_bills 
+    UPDATE opd_bills 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -8713,7 +8713,7 @@ export async function getBillingStats(tenantId, filters = {}) {
       SUM(paid_amount) as total_paid,
       SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
       AVG(total_amount) as avg_bill_amount
-    FROM emr.opd_bills
+    FROM opd_bills
     WHERE tenant_id = $1 
       AND bill_date = $2
       AND ($3::uuid IS NULL OR department_id = $3)
@@ -8732,9 +8732,9 @@ export async function getServicePackages(tenantId, filters = {}) {
       sp.*,
       d.name as department_name,
       COUNT(pi.id) as item_count
-    FROM emr.opd_service_packages sp
-    LEFT JOIN emr.departments d ON sp.department_id = d.id
-    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    FROM opd_service_packages sp
+    LEFT JOIN departments d ON sp.department_id = d.id
+    LEFT JOIN opd_package_items pi ON sp.id = pi.package_id
     WHERE sp.tenant_id = $1
       AND sp.is_active = $2
   `;
@@ -8759,7 +8759,7 @@ export async function getServicePackages(tenantId, filters = {}) {
 
 export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
   const sql = `
-    INSERT INTO emr.communication_templates (
+    INSERT INTO communication_templates (
       tenant_id, template_name, template_type, purpose, subject, message_content,
       variables, is_active, is_default, created_by
     )
@@ -8779,7 +8779,7 @@ export async function getCommunicationTemplates(tenantId, filters = {}) {
   const { templateType, purpose, isActive = true } = filters;
   
   let sql = `
-    SELECT * FROM emr.communication_templates
+    SELECT * FROM communication_templates
     WHERE tenant_id = $1 AND is_active = $2
   `;
   
@@ -8831,12 +8831,12 @@ export async function getPatientCommunications(tenantId, filters = {}) {
       a.start as appointment_time,
       t.full_token as token_number,
       b.bill_number
-    FROM emr.patient_communications pc
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
-    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
-    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
-    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
-    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    FROM patient_communications pc
+    LEFT JOIN patients p ON pc.patient_id = p.id
+    LEFT JOIN communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN appointments a ON pc.appointment_id = a.id
+    LEFT JOIN opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN opd_bills b ON pc.bill_id = b.id
     WHERE pc.tenant_id = $1
   `;
   
@@ -8912,7 +8912,7 @@ export async function updateCommunicationStatus(communicationId, tenantId, statu
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.patient_communications 
+    UPDATE patient_communications 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -9035,7 +9035,7 @@ export async function updateTokenStatus(tokenId, tenantId, status, additionalDat
   // Add called_count increment
   if (status === 'called') {
     fields.push('called_count');
-    values.push(`(SELECT COALESCE(called_count, 0) + 1 FROM emr.opd_tokens WHERE id = $1)`);
+    values.push(`(SELECT COALESCE(called_count, 0) + 1 FROM opd_tokens WHERE id = $1)`);
   }
   
   // Add additional data
@@ -9047,7 +9047,7 @@ export async function updateTokenStatus(tokenId, tenantId, status, additionalDat
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -9061,13 +9061,13 @@ export async function updateTokenStatus(tokenId, tenantId, status, additionalDat
 
 export async function callNextToken(tenantId, departmentId, doctorId = null) {
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET status = 'called',
         last_called_at = NOW(),
         called_count = COALESCE(called_count, 0) + 1,
         updated_at = NOW()
     WHERE id = (
-      SELECT id FROM emr.opd_tokens 
+      SELECT id FROM opd_tokens 
       WHERE tenant_id = $1 
         AND ($2::uuid IS NULL OR department_id = $2)
         AND ($3::uuid IS NULL OR doctor_id = $3)
@@ -9102,7 +9102,7 @@ export async function getTokenQueueStats(tenantId, filters = {}) {
       COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled,
       COUNT(CASE WHEN status = 'no_show' THEN 1 END) as no_show,
       AVG(EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60) as avg_consultation_time_minutes
-    FROM emr.opd_tokens
+    FROM opd_tokens
     WHERE tenant_id = $1 
       AND DATE(created_at) = $2
       AND ($3::uuid IS NULL OR department_id = $3)
@@ -9124,8 +9124,8 @@ export async function getActiveTokensByDepartment(tenantId) {
       MAX(t.token_number) as last_token,
       t.full_token as current_token,
       t.status as current_token_status
-    FROM emr.departments d
-    LEFT JOIN emr.opd_tokens t ON d.id = t.department_id 
+    FROM departments d
+    LEFT JOIN opd_tokens t ON d.id = t.department_id 
       AND t.tenant_id = $1 
       AND DATE(t.created_at) = CURRENT_DATE
       AND t.status IN ('waiting', 'called', 'in_progress')
@@ -9140,7 +9140,7 @@ export async function getActiveTokensByDepartment(tenantId) {
 
 export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET vitals_recorded = true,
         updated_at = NOW()
     WHERE id = $1 AND tenant_id = $2
@@ -9152,7 +9152,7 @@ export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
   // Create vitals record if needed
   if (result.rows[0]) {
     const vitalsSql = `
-      INSERT INTO emr.vitals (
+      INSERT INTO vitals (
         tenant_id, patient_id, encounter_id, blood_pressure_systolic,
         blood_pressure_diastolic, heart_rate, temperature, 
         oxygen_saturation, weight, height, created_by
@@ -9186,9 +9186,9 @@ export async function getTokenHistory(tenantId, patientId, limit = 10) {
       d.name as department_name,
       u.name as doctor_name,
       EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60 as consultation_duration_minutes
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    FROM opd_tokens t
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
     WHERE t.tenant_id = $1 AND t.patient_id = $2
     ORDER BY t.created_at DESC
     LIMIT $3
@@ -9200,7 +9200,7 @@ export async function getTokenHistory(tenantId, patientId, limit = 10) {
 
 export async function deleteOPDToken(tokenId, tenantId) {
   const sql = `
-    DELETE FROM emr.opd_tokens 
+    DELETE FROM opd_tokens 
     WHERE id = $1 AND tenant_id = $2
     RETURNING *
   `;
@@ -9226,11 +9226,11 @@ export async function getOPDBills(tenantId, filters = {}) {
       d.name as department_name,
       u.name as doctor_name,
       t.full_token as token_number
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
     WHERE b.tenant_id = $1
   `;
   
@@ -9279,12 +9279,12 @@ export async function getOPDBillById(billId, tenantId) {
       u.name as doctor_name,
       t.full_token as token_number,
       a.start as appointment_time
-    FROM emr.opd_bills b
-    LEFT JOIN emr.patients p ON b.patient_id = p.id
-    LEFT JOIN emr.departments d ON b.department_id = d.id
-    LEFT JOIN emr.users u ON b.doctor_id = u.id
-    LEFT JOIN emr.opd_tokens t ON b.token_id = t.id
-    LEFT JOIN emr.appointments a ON b.appointment_id = a.id
+    FROM opd_bills b
+    LEFT JOIN patients p ON b.patient_id = p.id
+    LEFT JOIN departments d ON b.department_id = d.id
+    LEFT JOIN users u ON b.doctor_id = u.id
+    LEFT JOIN opd_tokens t ON b.token_id = t.id
+    LEFT JOIN appointments a ON b.appointment_id = a.id
     WHERE b.id = $1 AND b.tenant_id = $2
   `;
   
@@ -9298,7 +9298,7 @@ export async function getOPDBillById(billId, tenantId) {
 
 export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_configurations (
+    INSERT INTO exotel_configurations (
       tenant_id, account_sid, api_key, api_token, subdomain, from_number,
       webhook_url, delivery_report_webhook, is_active, is_default, created_by
     )
@@ -9316,7 +9316,7 @@ export async function createExotelConfiguration({ tenantId, accountSid, apiKey, 
 
 export async function getExotelConfigurations(tenantId, isActive = true) {
   const sql = `
-    SELECT * FROM emr.exotel_configurations
+    SELECT * FROM exotel_configurations
     WHERE tenant_id = $1 AND is_active = $2
     ORDER BY is_default DESC, created_at DESC
   `;
@@ -9341,7 +9341,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_configurations
+    UPDATE exotel_configurations
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -9355,7 +9355,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
 
 export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_sms_campaigns (
+    INSERT INTO exotel_sms_campaigns (
       tenant_id, campaign_name, campaign_type, description, template_id,
       target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
       status, created_by
@@ -9384,9 +9384,9 @@ export async function getSMSCampaigns(tenantId, filters = {}) {
       COUNT(l.id) as sent_count,
       COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
       COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
-    FROM emr.exotel_sms_campaigns c
-    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
-    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    FROM exotel_sms_campaigns c
+    LEFT JOIN communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN exotel_sms_logs l ON c.id = l.campaign_id
     WHERE c.tenant_id = $1
   `;
   
@@ -9432,7 +9432,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   // Get Exotel configuration
   const configSql = `
     SELECT account_sid, api_key, api_token, subdomain 
-    FROM emr.exotel_configurations 
+    FROM exotel_configurations 
     WHERE tenant_id = $1 AND is_active = true 
     ORDER BY is_default DESC 
     LIMIT 1
@@ -9446,7 +9446,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   
   // Create SMS log entry
   const logSql = `
-    INSERT INTO emr.exotel_sms_logs (
+    INSERT INTO exotel_sms_logs (
       tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
       message_content, message_type, priority, status, external_id, created_at
     )
@@ -9576,7 +9576,7 @@ export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_sms_logs
+    UPDATE exotel_sms_logs
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -9598,11 +9598,11 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
       ct.template_name,
       p.name as patient_name,
       p.phone as patient_phone
-    FROM emr.exotel_sms_logs l
-    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
-    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
-    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    FROM exotel_sms_logs l
+    LEFT JOIN exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN patients p ON pc.patient_id = p.id
     WHERE l.tenant_id = $1
   `;
   
@@ -9648,7 +9648,7 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
 
 export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_number_pools (
+    INSERT INTO exotel_number_pools (
       tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
       daily_limit, monthly_limit, priority, is_active, created_by
     )
@@ -9674,9 +9674,9 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
       u.name as doctor_name,
       ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
       ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
-    FROM emr.exotel_number_pools np
-    LEFT JOIN emr.departments d ON np.department_id = d.id
-    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    FROM exotel_number_pools np
+    LEFT JOIN departments d ON np.department_id = d.id
+    LEFT JOIN users u ON np.doctor_id = u.id
     WHERE np.tenant_id = $1 AND np.is_active = $2
   `;
   
@@ -9706,7 +9706,7 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
 
 export async function processExotelWebhook(tenantId, eventData) {
   const sql = `
-    INSERT INTO emr.exotel_webhook_events (
+    INSERT INTO exotel_webhook_events (
       tenant_id, event_type, event_data, message_sid, account_sid, created_at
     )
     VALUES ($1, $2, $3, $4, $5, NOW())
@@ -9747,7 +9747,7 @@ export async function processExotelDeliveryReport(tenantId, deliveryData) {
   // Find the SMS log entry
   const findSql = `
     SELECT id, communication_id, to_number 
-    FROM emr.exotel_sms_logs 
+    FROM exotel_sms_logs 
     WHERE message_sid = $1 AND tenant_id = $2
   `;
   
@@ -9794,8 +9794,8 @@ export async function getExotelSMSStats(tenantId, filters = {}) {
 export async function retryFailedSMS(tenantId, smsLogId) {
   const sql = `
     SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
-    FROM emr.exotel_sms_logs l
-    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    FROM exotel_sms_logs l
+    JOIN exotel_configurations c ON l.account_sid = c.account_sid
     WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
   `;
   
@@ -9848,7 +9848,7 @@ export async function getPendingRetries(tenantId) {
     SELECT 
       l.*,
       EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
-    FROM emr.exotel_sms_logs l
+    FROM exotel_sms_logs l
     WHERE l.tenant_id = $1 
       AND l.status = 'queued' 
       AND l.next_retry_at IS NOT NULL 
@@ -9864,7 +9864,7 @@ export async function getPendingRetries(tenantId) {
 export async function processScheduledCampaigns(tenantId) {
   const sql = `
     SELECT c.* 
-    FROM emr.exotel_sms_campaigns c
+    FROM exotel_sms_campaigns c
     WHERE c.tenant_id = $1 
       AND c.status = 'scheduled' 
       AND c.scheduled_at <= NOW()
@@ -9876,7 +9876,7 @@ export async function processScheduledCampaigns(tenantId) {
   for (const campaign of campaigns) {
     // Update campaign status to active
     await query(`
-      UPDATE emr.exotel_sms_campaigns 
+      UPDATE exotel_sms_campaigns 
       SET status = 'active', updated_at = NOW()
       WHERE id = $1
     `, [campaign.id]);
@@ -9894,7 +9894,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   switch (targetAudience) {
     case 'all_patients':
       const patientsSql = `
-        SELECT DISTINCT phone FROM emr.patients 
+        SELECT DISTINCT phone FROM patients 
         WHERE tenant_id = $1 AND phone IS NOT NULL
       `;
       const patientsResult = await query(patientsSql, [tenantId]);
@@ -9904,7 +9904,7 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'specific_patients':
       if (filters && filters.patientIds) {
         const specificPatientsSql = `
-          SELECT phone FROM emr.patients 
+          SELECT phone FROM patients 
           WHERE tenant_id = $1 AND id = ANY($2)
         `;
         const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
@@ -9915,8 +9915,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'department':
       if (filters && filters.departmentId) {
         const deptPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -9928,8 +9928,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'doctor':
       if (filters && filters.doctorId) {
         const doctorPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -9958,7 +9958,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   
   // Update campaign statistics
   await query(`
-    UPDATE emr.exotel_sms_campaigns 
+    UPDATE exotel_sms_campaigns 
     SET total_recipients = $1, updated_at = NOW()
     WHERE id = $2
   `, [targetNumbers.length, campaign.id]);
@@ -9966,7 +9966,7 @@ export async function processSMSCampaign(campaign, tenantId) {
 
 export async function addBillItem({ tenantId, billId, serviceType, serviceName, serviceCode, description, quantity, unitPrice, discountAmount, taxAmount, totalAmount, doctorId, departmentId, createdBy }) {
   const sql = `
-    INSERT INTO emr.opd_bill_items (
+    INSERT INTO opd_bill_items (
       tenant_id, bill_id, service_type, service_name, service_code, description,
       quantity, unit_price, discount_amount, tax_amount, total_amount,
       doctor_id, department_id, created_by
@@ -10017,7 +10017,7 @@ export async function updateBillStatus(billId, tenantId, status, additionalData 
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.opd_bills 
+    UPDATE opd_bills 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -10042,7 +10042,7 @@ export async function getBillingStats(tenantId, filters = {}) {
       SUM(paid_amount) as total_paid,
       SUM(CASE WHEN status = 'paid' THEN total_amount ELSE 0 END) as collected_revenue,
       AVG(total_amount) as avg_bill_amount
-    FROM emr.opd_bills
+    FROM opd_bills
     WHERE tenant_id = $1 
       AND bill_date = $2
       AND ($3::uuid IS NULL OR department_id = $3)
@@ -10061,9 +10061,9 @@ export async function getServicePackages(tenantId, filters = {}) {
       sp.*,
       d.name as department_name,
       COUNT(pi.id) as item_count
-    FROM emr.opd_service_packages sp
-    LEFT JOIN emr.departments d ON sp.department_id = d.id
-    LEFT JOIN emr.opd_package_items pi ON sp.id = pi.package_id
+    FROM opd_service_packages sp
+    LEFT JOIN departments d ON sp.department_id = d.id
+    LEFT JOIN opd_package_items pi ON sp.id = pi.package_id
     WHERE sp.tenant_id = $1
       AND sp.is_active = $2
   `;
@@ -10088,7 +10088,7 @@ export async function getServicePackages(tenantId, filters = {}) {
 
 export async function createCommunicationTemplate({ tenantId, templateName, templateType, purpose, subject, messageContent, variables, isActive = true, isDefault = false, createdBy }) {
   const sql = `
-    INSERT INTO emr.communication_templates (
+    INSERT INTO communication_templates (
       tenant_id, template_name, template_type, purpose, subject, message_content,
       variables, is_active, is_default, created_by
     )
@@ -10108,7 +10108,7 @@ export async function getCommunicationTemplates(tenantId, filters = {}) {
   const { templateType, purpose, isActive = true } = filters;
   
   let sql = `
-    SELECT * FROM emr.communication_templates
+    SELECT * FROM communication_templates
     WHERE tenant_id = $1 AND is_active = $2
   `;
   
@@ -10160,12 +10160,12 @@ export async function getPatientCommunications(tenantId, filters = {}) {
       a.start as appointment_time,
       t.full_token as token_number,
       b.bill_number
-    FROM emr.patient_communications pc
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
-    LEFT JOIN emr.communication_templates ct ON pc.template_id = ct.id
-    LEFT JOIN emr.appointments a ON pc.appointment_id = a.id
-    LEFT JOIN emr.opd_tokens t ON pc.token_id = t.id
-    LEFT JOIN emr.opd_bills b ON pc.bill_id = b.id
+    FROM patient_communications pc
+    LEFT JOIN patients p ON pc.patient_id = p.id
+    LEFT JOIN communication_templates ct ON pc.template_id = ct.id
+    LEFT JOIN appointments a ON pc.appointment_id = a.id
+    LEFT JOIN opd_tokens t ON pc.token_id = t.id
+    LEFT JOIN opd_bills b ON pc.bill_id = b.id
     WHERE pc.tenant_id = $1
   `;
   
@@ -10241,7 +10241,7 @@ export async function updateCommunicationStatus(communicationId, tenantId, statu
   const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
   
   const sql = `
-    UPDATE emr.patient_communications 
+    UPDATE patient_communications 
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *

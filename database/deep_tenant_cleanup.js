@@ -7,7 +7,7 @@ async function keepQualifiedTenants() {
   console.log("🚀 Initializing deep removal of unwanted tenants...");
   try {
     // 1. Get all tenants and identify which ones to keep/remove
-    const allTenants = await query('SELECT id, code, schema_name FROM emr.tenants');
+    const allTenants = await query('SELECT id, code, schema_name FROM tenants');
     const tenantsToKeep = allTenants.rows.filter(t => QUALIFIED_TENANTS.includes(t.code) || QUALIFIED_TENANTS.includes(t.code.toUpperCase()));
     const tenantsToRemove = allTenants.rows.filter(t => !QUALIFIED_TENANTS.includes(t.code) && !QUALIFIED_TENANTS.includes(t.code.toUpperCase()));
     
@@ -40,8 +40,8 @@ async function keepQualifiedTenants() {
     }
 
     // 4. Delete from the main core tenant tables
-    await query('DELETE FROM emr.tenants WHERE id = ANY($1)', [idsToRemove]);
-    await query('DELETE FROM emr.management_tenants WHERE id = ANY($1)', [idsToRemove]);
+    await query('DELETE FROM tenants WHERE id = ANY($1)', [idsToRemove]);
+    await query('DELETE FROM management_tenants WHERE id = ANY($1)', [idsToRemove]);
     console.log("✅ Removed tenant records from core tables.");
 
     // 5. Drop their isolated clinical data schemas

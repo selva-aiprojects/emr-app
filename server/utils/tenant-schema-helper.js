@@ -9,7 +9,7 @@ export async function getTenantSchema(tenantId) {
   try {
     // First, try looking up the registered schema in management_tenants (most accurate)
     const mgmtResult = await query(`
-      SELECT schema_name FROM emr.management_tenants 
+      SELECT schema_name FROM management_tenants 
       WHERE id::text = $1::text AND schema_name IS NOT NULL
     `, [tenantId]);
 
@@ -22,9 +22,9 @@ export async function getTenantSchema(tenantId) {
       if (schemaCheck.rows.length > 0) return schemaName;
     }
 
-    // Fallback: derive from emr.tenants schema_name or code
+    // Fallback: derive from tenants schema_name or code
     const tenantResult = await query(`
-      SELECT code, schema_name FROM emr.tenants WHERE id::text = $1::text
+      SELECT code, schema_name FROM tenants WHERE id::text = $1::text
     `, [tenantId]);
 
     if (tenantResult.rows.length === 0) {
@@ -94,7 +94,7 @@ export async function getAvailableTenantSchemas() {
           WHEN s.schema_name IS NOT NULL THEN true
           ELSE false
         END as schema_exists
-      FROM emr.tenants t
+      FROM tenants t
       LEFT JOIN information_schema.schemata s ON s.schema_name = CONCAT(LOWER(t.code), '_emr')
       ORDER BY t.code
     `);

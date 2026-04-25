@@ -1,9 +1,9 @@
 /**
  * NHGL FINAL ROUTING SYNC
  * ==========================
- * - Syncs emr.management_tenants
- * - Syncs emr.tenants
- * - Syncs emr.users
+ * - Syncs management_tenants
+ * - Syncs tenants
+ * - Syncs users
  * - Ensures ALL point to ID 'b01f0cdc-4e8b-4db5-ba71-e657a414695e'
  * - Ensures the schema name is 'nhgl'
  */
@@ -26,7 +26,7 @@ async function finalSync() {
 
   // 1. Management Plane
   await client.query(`
-    UPDATE emr.management_tenants 
+    UPDATE management_tenants 
     SET schema_name = 'nhgl', 
         subdomain = 'nhgl',
         code = 'NHGL',
@@ -37,7 +37,7 @@ async function finalSync() {
 
   // 2. Legacy Tenants Table (For Routing Fallback)
   await client.query(`
-    UPDATE emr.tenants 
+    UPDATE tenants 
     SET code = 'NHGL', 
         name = 'NHGL Healthcare Institute',
         subdomain = 'nhgl'
@@ -46,7 +46,7 @@ async function finalSync() {
 
   // 3. User Alignment
   await client.query(`
-    UPDATE emr.users 
+    UPDATE users 
     SET tenant_id = $1 
     WHERE email = $2 OR email = 'admin@nhgl.local'
   `, [NHGL_ID, ADMIN_EMAIL]);

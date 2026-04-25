@@ -28,12 +28,12 @@ async function auditNodes() {
       }
     }
 
-    console.log('\n--- Management Plane Telemetry (emr.management_tenant_metrics) ---');
-    const metrics = await pool.query('SELECT tenant_code, doctors_count, patients_count FROM emr.management_tenant_metrics');
+    console.log('\n--- Management Plane Telemetry (management_tenant_metrics) ---');
+    const metrics = await pool.query('SELECT tenant_code, doctors_count, patients_count FROM management_tenant_metrics');
     console.table(metrics.rows);
 
-    console.log('\n--- Management Plane Global Summary (emr.management_dashboard_summary) ---');
-    const summary = await pool.query('SELECT total_tenants, total_doctors, total_patients FROM emr.management_dashboard_summary');
+    console.log('\n--- Management Plane Global Summary (management_dashboard_summary) ---');
+    const summary = await pool.query('SELECT total_tenants, total_doctors, total_patients FROM management_dashboard_summary');
     console.table(summary.rows);
 
   } catch (err) {

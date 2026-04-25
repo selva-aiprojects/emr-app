@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { api } from '../api.js';
 import { patientName } from '../utils/format.js';
-import '../styles/critical-care.css';
+import '../styles/design-system.css';
 import SaveToast from '../components/ui/SaveToast.jsx';
 import { 
   Users, 
@@ -245,7 +245,7 @@ export default function PatientsPage({
         onTabChange={setActiveTab}
         stats={[
           { label: 'Total Files', value: patients.length, icon: Users },
-          { label: 'Active Directory', value: '100%', icon: ShieldCheck, color: 'text-emerald-400' }
+          { label: 'Active Directory', value: '100%', icon: ShieldCheck }
         ]}
       />
 
@@ -580,15 +580,15 @@ export default function PatientsPage({
            </aside>
         </section>
       )}
+        <footer className="mt-20 py-8 border-t border-slate-100 flex justify-between items-center">
+           <div className="flex items-center gap-3 text-[10px] font-black text-slate-300 uppercase tracking-widest">
+              <ShieldCheck className="w-4 h-4" /> SECURE DEPLOYMENT NODE • v1.0.4-BETA
+           </div>
+            <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+              {patients.length} TOTAL PATIENTS REGISTERED
+            </div>
+        </footer>
       </main>
-      <footer className="mt-12 py-8 border-t border-slate-100 flex justify-between items-center">
-         <div className="flex items-center gap-3 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-            <ShieldCheck className="w-4 h-4" /> SECURE DEPLOYMENT NODE • v1.0.4-BETA
-         </div>
-          <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-            {patients.length} TOTAL PATIENTS REGISTERED
-          </div>
-      </footer>
     </div>
   );
 }

@@ -49,7 +49,7 @@ async function generateNHGL() {
   console.log('🏥 NHGL Final Seeder v7 — Starting Full Scale Generation\n');
 
   // 1. REGISTRY (emr schema)
-  await sq(`INSERT INTO emr.management_tenants (id,name,code,schema_name,subdomain,status)
+  await sq(`INSERT INTO management_tenants (id,name,code,schema_name,subdomain,status)
     VALUES ($1,$2,$3,$4,$5,'active') ON CONFLICT (id) DO UPDATE SET status='active'`,
     [TENANT_ID,'National Hospital Group Ltd','NHGL',S,'nhgl']);
 
@@ -107,7 +107,7 @@ async function generateNHGL() {
     const id = crypto.randomUUID();
     const email = `dr_${runTag}_${i}@nhgl.local`;
     const name = `Dr. ${faker.person.lastName()}`;
-    await q(`INSERT INTO emr.users (id,tenant_id,email,password_hash,name,role) VALUES ($1,$2,$3,$4,$5,'Doctor') ON CONFLICT DO NOTHING`,
+    await q(`INSERT INTO users (id,tenant_id,email,password_hash,name,role) VALUES ($1,$2,$3,$4,$5,'Doctor') ON CONFLICT DO NOTHING`,
       [id, TENANT_ID, email, '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC', name]);
     await q(`INSERT INTO ${S}.employees (id,tenant_id,code,name,email,department,designation,salary)
       VALUES ($1,$2,$3,$4,$5,$6,'Doctor',85000)`,
@@ -118,7 +118,7 @@ async function generateNHGL() {
   for (let i = 1; i <= 50; i++) {
     const id = crypto.randomUUID();
     const name = faker.person.fullName();
-    await q(`INSERT INTO emr.users (id,tenant_id,email,password_hash,name,role) VALUES ($1,$2,$3,$4,$5,'Nurse') ON CONFLICT DO NOTHING`,
+    await q(`INSERT INTO users (id,tenant_id,email,password_hash,name,role) VALUES ($1,$2,$3,$4,$5,'Nurse') ON CONFLICT DO NOTHING`,
       [id, TENANT_ID, `stf_${runTag}_${i}@nhgl.local`, '$2b$10$klEG.AWjdVRs1GJrAtY9Ke6HuHNVuOc.FzlH8TFbJeehca15i1FlC', name]);
     await q(`INSERT INTO ${S}.employees (id,tenant_id,code,name,department,designation,salary)
       VALUES ($1,$2,$3,$4,'General','Nurse',35000)`,

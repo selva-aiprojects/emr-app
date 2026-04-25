@@ -604,7 +604,10 @@ img, svg {
 
 .page-header-premium h1, 
 .page-header-premium h2,
-.page-header-premium h3 {
+.page-header-premium h3,
+header.bg-slate-900 h1,
+header.bg-slate-900 h2,
+header.bg-slate-900 p {
   color: white !important;
 }
 

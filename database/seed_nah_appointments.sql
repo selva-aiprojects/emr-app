@@ -8,7 +8,7 @@ BEGIN;
 -- =====================================================
 WITH patient_list AS (
   SELECT id, row_number() OVER (ORDER BY id) AS rn
-  FROM emr.patients
+  FROM patients
   WHERE tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'
 ),
 seed_today AS (
@@ -74,7 +74,7 @@ seed_future AS (
   FROM patient_list p
   WHERE p.rn > 110 AND p.rn <= 140
 )
-INSERT INTO emr.appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, status, reason, source)
+INSERT INTO appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, status, reason, source)
 SELECT * FROM seed_today
 UNION ALL
 SELECT * FROM seed_yesterday
@@ -87,7 +87,7 @@ ON CONFLICT DO NOTHING;
 -- =====================================================
 -- NAH ENCOUNTERS (Generate from completed appointments)
 -- =====================================================
-INSERT INTO emr.encounters (
+INSERT INTO encounters (
   tenant_id,
   patient_id,
   provider_id,
@@ -115,7 +115,7 @@ SELECT
   END AS diagnosis,
   'Continue medications and follow-up as advised.' AS notes,
   'closed' AS status
-FROM emr.appointments a
+FROM appointments a
 WHERE a.tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'
 AND a.status = 'completed'
 LIMIT 80

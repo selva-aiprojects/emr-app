@@ -11,7 +11,7 @@ import { query } from './connection.js';
 
 export async function recordAttendance({ tenantId, employeeId, date, timeIn, timeOut, status }) {
     const sql = `
-    INSERT INTO nexus.attendance (tenant_id, employee_id, date, check_in, check_out, status)
+    INSERT INTO attendance (tenant_id, employee_id, date, check_in, check_out, status)
     VALUES ($1, $2, $3, $4, $5, $6)
     ON CONFLICT (tenant_id, employee_id, date) DO UPDATE 
     SET check_in = COALESCE(EXCLUDED.check_in, attendance.check_in),
@@ -27,8 +27,8 @@ export async function recordAttendance({ tenantId, employeeId, date, timeIn, tim
 export async function getAttendance(tenantId, date) {
     const sql = `
     SELECT a.*, e.name, e.code, e.shift 
-    FROM nexus.attendance a
-    JOIN nexus.employees e ON a.employee_id = e.id
+    FROM attendance a
+    JOIN employees e ON a.employee_id = e.id
     WHERE a.tenant_id::text = $1::text AND a.date = $2
   `;
     const result = await query(sql, [tenantId, date]);
@@ -41,7 +41,7 @@ export async function getAttendance(tenantId, date) {
 
 export async function addExpense({ tenantId, category, description, amount, date, paymentMethod, reference, recordedBy }) {
     const sql = `
-    INSERT INTO nexus.expenses (tenant_id, category, description, amount, date, payment_method, reference, recorded_by)
+    INSERT INTO expenses (tenant_id, category, description, amount, date, payment_method, reference, recorded_by)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING *
   `;
@@ -50,7 +50,7 @@ export async function addExpense({ tenantId, category, description, amount, date
 }
 
 export async function getExpenses(tenantId, filters = {}) {
-    let sql = `SELECT * FROM nexus.expenses WHERE tenant_id::text = $1::text`;
+    let sql = `SELECT * FROM expenses WHERE tenant_id::text = $1::text`;
     const params = [tenantId];
     if (filters.month) {
         sql += ` AND DATE_TRUNC('month', date) = $2`;
@@ -65,7 +65,7 @@ export async function getFinancialSummary(tenantId, month) {
     // 1. Income (Invoices)
     const incomeSql = `
     SELECT COALESCE(SUM(paid), 0) as total_income 
-    FROM nexus.invoices 
+    FROM invoices 
     WHERE tenant_id::text = $1::text AND status IN ('paid', 'partially_paid') 
     AND DATE_TRUNC('month', created_at) = $2::timestamp
   `;
@@ -73,7 +73,7 @@ export async function getFinancialSummary(tenantId, month) {
     // 2. Expenses
     const expenseSql = `
     SELECT category, COALESCE(SUM(amount), 0) as total 
-    FROM nexus.expenses 
+    FROM expenses 
     WHERE tenant_id::text = $1::text 
     AND DATE_TRUNC('month', date) = $2::timestamp 
     GROUP BY category
@@ -81,7 +81,7 @@ export async function getFinancialSummary(tenantId, month) {
 
     // 3. Salaries (Estimated from Employee Master)
     const salarySql = `
-    SELECT COALESCE(SUM(salary), 0) as total_salaries FROM nexus.employees WHERE tenant_id::text = $1::text
+    SELECT COALESCE(SUM(salary), 0) as total_salaries FROM employees WHERE tenant_id::text = $1::text
   `;
 
     const [incomeRes, expenseRes, salaryRes] = await Promise.all([
@@ -113,8 +113,8 @@ export async function getDoctorPayouts(tenantId) {
       COALESCE(SUM(i.paid), 0) as collected_amount,
       (COALESCE(SUM(i.paid), 0) * 0.30) as estimated_commission
     FROM nexus.users u
-    JOIN nexus.encounters e ON u.id = e.provider_id
-    JOIN nexus.invoices i ON e.id = i.encounter_id
+    JOIN encounters e ON u.id = e.provider_id
+    JOIN invoices i ON e.id = i.encounter_id
     WHERE u.tenant_id::text = $1::text 
       AND u.role = 'Doctor'
       AND i.status = 'paid'

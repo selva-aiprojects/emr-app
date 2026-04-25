@@ -12,13 +12,13 @@ async function seed() {
 
   try {
     // 1. PHARMACY DRUG MASTER (if empty)
-    const checkDrugSql = "SELECT id FROM emr.drug_master LIMIT 1";
+    const checkDrugSql = "SELECT id FROM drug_master LIMIT 1";
     const checkDrug = await query(checkDrugSql);
     
     if (checkDrug.rows.length === 0) {
       console.log('   📦 Seeding Drug Master...');
       const drugMasterSql = `
-        INSERT INTO emr.drug_master (name, brand_name, generic_name, dosage_form, strength, category, schedule_category)
+        INSERT INTO drug_master (name, brand_name, generic_name, dosage_form, strength, category, schedule_category)
         VALUES 
         ('Amoxicillin 500mg', 'Amoxil', 'Amoxicillin', 'Capsule', '500mg', 'Antibiotic', 'H'),
         ('Paracetamol 650mg', 'Dolo-650', 'Paracetamol', 'Tablet', '650mg', 'Antipyretic', 'OTC'),
@@ -28,14 +28,14 @@ async function seed() {
       await query(drugMasterSql);
     }
 
-    const drugs = await query("SELECT id, generic_name FROM emr.drug_master");
+    const drugs = await query("SELECT id, generic_name FROM drug_master");
     const drugMap = {};
     drugs.rows.forEach(d => drugMap[d.generic_name] = d.id);
 
     // 2. PHARMACY INVENTORY (Enhanced)
     console.log('   📦 Seeding Pharmacy Inventory...');
     const inventorySql = `
-      INSERT INTO emr.pharmacy_inventory_enhanced (
+      INSERT INTO pharmacy_inventory_enhanced (
         tenant_id, drug_id, batch_number, expiry_date, current_stock, minimum_stock_level, reorder_level, mrp, status
       ) VALUES 
       ($1, $2, 'BCH-001', CURRENT_DATE + INTERVAL '120 days', 500, 100, 200, 15.50, 'ACTIVE'),
@@ -48,12 +48,12 @@ async function seed() {
     // 3. LAB ORDERS (Service Requests)
     console.log('   📦 Seeding Lab Orders...');
     const labSql = `
-      INSERT INTO emr.service_requests (
+      INSERT INTO service_requests (
         tenant_id, patient_id, category, display, status, priority, requested_at
       ) VALUES 
-      ($1, (SELECT id FROM emr.patients LIMIT 1), 'lab', 'Complete Blood Count', 'pending', 'routine', NOW() - INTERVAL '2 hours'),
-      ($1, (SELECT id FROM emr.patients OFFSET 1 LIMIT 1), 'lab', 'Lipid Profile', 'pending', 'urgent', NOW() - INTERVAL '1 hour'),
-      ($1, (SELECT id FROM emr.patients LIMIT 1), 'lab', 'Blood Sugar (Fasting)', 'completed', 'routine', NOW() - INTERVAL '1 day')
+      ($1, (SELECT id FROM patients LIMIT 1), 'lab', 'Complete Blood Count', 'pending', 'routine', NOW() - INTERVAL '2 hours'),
+      ($1, (SELECT id FROM patients OFFSET 1 LIMIT 1), 'lab', 'Lipid Profile', 'pending', 'urgent', NOW() - INTERVAL '1 hour'),
+      ($1, (SELECT id FROM patients LIMIT 1), 'lab', 'Blood Sugar (Fasting)', 'completed', 'routine', NOW() - INTERVAL '1 day')
       ON CONFLICT DO NOTHING
     `;
     await query(labSql, [NHGL_ID]);

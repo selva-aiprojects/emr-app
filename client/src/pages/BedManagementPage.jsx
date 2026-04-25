@@ -5,7 +5,7 @@ import { api } from '../api.js';
 import WardGraphics from '../components/WardGraphics.jsx';
 import EnhancedBedCards from '../components/EnhancedBedCards.jsx';
 
-export default function BedManagementPage({ tenant }) {
+export default function BedManagementPage({ tenant, onBack }) {
   const { showToast } = useToast();
 
   const [wards, setWards] = useState([]);
@@ -96,15 +96,25 @@ export default function BedManagementPage({ tenant }) {
   return (
     <div className="page-shell-premium slide-up">
       <header className="page-header-premium mb-10">
-        <div>
-           <h1 className="page-title-rich flex items-center gap-3 text-white">
-              Ward & Bed Inventory Governance
-              <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Institutional Shard</span>
-           </h1>
-           <p className="dim-label text-white/70">Track inpatient capacity, ward utilization, and bed availability for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
-              <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Operational Integrity Validated • Resource sync operational
-           </p>
+        <div className="flex items-center gap-6">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/20 transition-all border border-white/10"
+            >
+              <ChevronRight className="w-6 h-6 rotate-180" />
+            </button>
+          )}
+          <div>
+            <h1 className="page-title-rich flex items-center gap-3 text-white">
+                Ward & Bed Inventory Governance
+                <span className="text-xs bg-white/20 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black backdrop-blur-md">Institutional Shard</span>
+            </h1>
+            <p className="dim-label text-white/70">Track inpatient capacity, ward utilization, and bed availability for {tenant?.name || 'Authorized Facility'}.</p>
+            <p className="text-xs font-black text-white/60 uppercase tracking-widest mt-4 flex items-center gap-2">
+                <ShieldCheck className="w-3.5 h-3.5 text-cyan-300" /> Operational Integrity Validated • Resource sync operational
+            </p>
+          </div>
         </div>
         <div className="flex flex-col items-end gap-3">
            <div className="flex bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 shadow-sm gap-1 w-fit">

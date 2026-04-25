@@ -12,7 +12,7 @@ export async function runMegaSeed() {
         const adminEmail = "admin@smcmega.local";
 
         console.log(`[MEGA_SEED] Cleaning up any previous simulation traces for ${tenantCode}...`);
-        await query(`DELETE FROM emr.tenants WHERE code = $1`, [tenantCode]).catch(() => {});
+        await query(`DELETE FROM tenants WHERE code = $1`, [tenantCode]).catch(() => {});
         await query(`DROP SCHEMA IF EXISTS "${tenantSubdomain}" CASCADE`).catch(() => {});
         
         console.log(`[MEGA_SEED] Provisioning tenant ${tenantCode}...`);

@@ -10,7 +10,7 @@ async function seedComprehensiveMagnum() {
   console.log("🚀 Initializing COMPREHENSIVE Journey Seeding for Magnum Healthcare...");
   try {
     // 1. Fetch the exact ID of Magnum Healthcare
-    const tRes = await query(`SELECT id FROM emr.tenants WHERE code = 'MAGNUM'`);
+    const tRes = await query(`SELECT id FROM tenants WHERE code = 'MAGNUM'`);
     if (tRes.rowCount === 0) {
       console.error("❌ Magnum tenant not found! Please run node database/seed_magnum.js first.");
       process.exit(1);
@@ -56,10 +56,10 @@ async function seedComprehensiveMagnum() {
     
     // Using simple queries to replicate the data into the isolated schemas
     try {
-      await query(`INSERT INTO "${schema}".patients SELECT * FROM emr.patients WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [magnumId]);
-      await query(`INSERT INTO "${schema}".appointments SELECT * FROM emr.appointments WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [magnumId]);
-      await query(`INSERT INTO "${schema}".encounters SELECT * FROM emr.encounters WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [magnumId]);
-      await query(`INSERT INTO "${schema}".invoices SELECT * FROM emr.invoices WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [magnumId]);
+      await query(`INSERT INTO "${schema}".patients SELECT * FROM patients WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [magnumId]);
+      await query(`INSERT INTO "${schema}".appointments SELECT * FROM appointments WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [magnumId]);
+      await query(`INSERT INTO "${schema}".encounters SELECT * FROM encounters WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [magnumId]);
+      await query(`INSERT INTO "${schema}".invoices SELECT * FROM invoices WHERE tenant_id = $1 ON CONFLICT DO NOTHING`, [magnumId]);
       console.log(`✅ Clinical datasets replicated safely to isolated schema!`);
     } catch(e) {
       console.log(`⚠️ Minor schema sync error (safe to ignore if columns mismatched): ${e.message}`);

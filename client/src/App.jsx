@@ -15,6 +15,8 @@ const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage.jsx'));
 const FindDoctorPage = lazy(() => import('./pages/FindDoctorPage.jsx'));
 const DoctorAvailabilityPage = lazy(() => import('./pages/DoctorAvailabilityPage.jsx'));
 const DoctorSchedulePage = lazy(() => import('./pages/DoctorSchedulePage.jsx'));
+const MasterClinicalDataPage = lazy(() => import('./pages/MasterClinicalDataPage.jsx'));
+const RoleManagementPage = lazy(() => import('./pages/RoleManagementPage.jsx'));
 const SuperadminOnlyPage = lazy(() => import('./pages/SuperadminOnlyPage.jsx'));
 const EmrOnlyPage = lazy(() => import('./pages/EmrOnlyPage.jsx'));
 const EmrPage = lazy(() => import('./pages/EmrPage.jsx'));
@@ -43,6 +45,7 @@ const ChatPage = lazy(() => import('./pages/ChatPage.jsx'));
 const DepartmentsPage = lazy(() => import('./pages/DepartmentsPage.jsx'));
 const HospitalSettingsPage = lazy(() => import('./pages/HospitalSettingsPage.jsx'));
 const AdminMastersPage = lazy(() => import('./pages/AdminMastersPage.jsx'));
+const BedManagementPage = lazy(() => import('./pages/BedManagementPage.jsx'));
 const PatientProfilePage = lazy(() => import('./pages/PatientProfilePage.jsx'));
 const PayrollServicePage = lazy(() => import('./pages/PayrollServicePage.jsx'));
 const StaffManagementPage = lazy(() => import('./pages/StaffManagementPage.jsx'));
@@ -211,7 +214,8 @@ export default function App() {
         const proModules = [
           'superadmin', 'dashboard', 'patients', 'appointments', 'emr', 'reports', 'admin', 'users', 'support', 'communication', 'documents',
           'inventory', 'pharmacy', 'ambulance', 'lab', 'inpatient', 'billing', 'accounts', 'accounts_receivable', 'accounts_payable',
-          'insurance', 'service_catalog', 'hospital_settings', 'departments', 'bed_management'
+          'insurance', 'service_catalog', 'hospital_settings', 'departments', 'bed_management', 'specialities', 'diseases', 'treatments', 'roles',
+          'feature_flags', 'system_settings'
         ];
         return candidates.some((key) => proModules.includes(key));
       }
@@ -827,6 +831,7 @@ export default function App() {
           <FindDoctorPage
             activeUser={activeUser}
             session={session}
+            tenant={tenant}
             providers={providers}
             patients={scopedPatients}
             onAddUser={(newUser) => {
@@ -1107,6 +1112,22 @@ export default function App() {
           />
         )}
 
+        {['specialities', 'diseases', 'treatments'].includes(view) && (
+          <MasterClinicalDataPage 
+            type={view} 
+            tenant={tenant} 
+            onBack={() => setView('admin_masters')} 
+          />
+        )}
+
+        {view === 'roles' && (
+          <RoleManagementPage 
+            tenant={tenant} 
+            activeUser={activeUser} 
+            onBack={() => setView('admin_masters')} 
+          />
+        )}
+
         {view === 'staff_management' && (
           <StaffManagementPage 
             tenant={tenant} 
@@ -1279,10 +1300,17 @@ export default function App() {
           />
         )}
 
-        {['admin', 'admin_masters', 'bed_management'].includes(view) && (
+        {['admin', 'admin_masters'].includes(view) && (
           <AdminMastersPage 
             tenant={tenant} 
             onViewChange={(newView) => setView(newView)} 
+          />
+        )}
+
+        {view === 'bed_management' && (
+          <BedManagementPage 
+            tenant={tenant} 
+            onBack={() => setView('admin_masters')} 
           />
         )}
         
@@ -1308,9 +1336,29 @@ export default function App() {
           />
         )}
 
-        {view === 'departments' && <DepartmentsPage tenant={tenant} />}
+        {view === 'departments' && (
+          <DepartmentsPage 
+            tenant={tenant} 
+            onBack={() => setView('admin_masters')} 
+          />
+        )}
+
+        {['specialities', 'diseases', 'treatments'].includes(view) && (
+          <MasterClinicalDataPage 
+            type={view}
+            tenant={tenant}
+            onBack={() => setView('admin_masters')}
+          />
+        )}
+
+        {view === 'roles' && (
+          <RoleManagementPage 
+            tenant={tenant}
+            onBack={() => setView('admin_masters')}
+          />
+        )}
         
-        {view === 'donor' && <DonorPage tenant={tenant} />}
+        {['donor', 'donor_management'].includes(view) && <DonorPage tenant={tenant} />}
         {view === 'chat' && <ChatPage activeUser={activeUser} />}
 
         {view === 'reports' && <ReportsPage reportSummary={reportSummary} tenant={tenant} slmInsights={slmInsights} superOverview={superOverview} />}

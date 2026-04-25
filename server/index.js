@@ -31,6 +31,8 @@ import documentRoutes    from './routes/document.routes.js';
 import bloodbankRoutes   from './routes/bloodbank.routes.js';
 import ambulanceRoutes   from './routes/ambulance.routes.js';
 import aiRoutes          from './routes/ai.routes.js';
+import rolesRoutes        from './routes/roles.routes.js';
+import clinicalMastersRoutes from './routes/clinical-masters.routes.js';
 import masterRoutes      from './routes/master.routes.js';  // /api/bootstrap
 
 const app = express();
@@ -80,6 +82,8 @@ app.use('/api/documents',    documentRoutes);
 app.use('/api/bloodbank',    bloodbankRoutes);
 app.use('/api/ambulance',    ambulanceRoutes);
 app.use('/api/ai',           aiRoutes);
+app.use('/api/roles',           rolesRoutes);
+app.use('/api/clinical-masters', clinicalMastersRoutes);
 app.use('/api',              masterRoutes);  // GET /api/bootstrap — must be last /api mount
 
 // ── 404 Fallback ─────────────────────────────────────────────

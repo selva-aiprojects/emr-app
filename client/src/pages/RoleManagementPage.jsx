@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '../hooks/useToast.jsx';
-import axios from 'axios';
+import { api } from '../api.js';
 import { 
   Shield, 
   Plus, 
@@ -14,11 +14,13 @@ import {
   Briefcase,
   Users,
   ChevronRight,
-  Info
+  Info,
+  ArrowLeft,
+  ShieldCheck
 } from 'lucide-react';
 import '../styles/critical-care.css';
 
-export default function RoleManagementPage({ tenant, activeUser }) {
+export default function RoleManagementPage({ tenant, activeUser, onBack }) {
   const { showToast } = useToast();
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -35,8 +37,8 @@ export default function RoleManagementPage({ tenant, activeUser }) {
   const fetchRoles = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/roles');
-      setRoles(response.data);
+      const response = await api.get('/roles');
+      setRoles(response || []);
     } catch (err) {
       setError('Failed to load roles');
       console.error('Error fetching roles:', err);
@@ -48,9 +50,9 @@ export default function RoleManagementPage({ tenant, activeUser }) {
   const handleCreateRole = async (roleData) => {
     try {
       if (editingRole) {
-        await axios.put(`/api/roles/${editingRole.id}`, roleData);
+        await api.put(`/roles/${editingRole.id}`, roleData);
       } else {
-        await axios.post('/api/roles', roleData);
+        await api.post('/roles', roleData);
       }
       fetchRoles();
       setShowCreateModal(false);
@@ -66,7 +68,7 @@ export default function RoleManagementPage({ tenant, activeUser }) {
     if (!confirm('Are you sure you want to delete this operational role? This will impact all assigned identities.')) return;
 
     try {
-      await axios.delete(`/api/roles/${roleId}`);
+      await api.del(`/roles/${roleId}`);
       fetchRoles();
       showToast({ message: 'Role deleted.', type: 'success', title: 'Roles' });
     } catch (err) {
@@ -94,15 +96,25 @@ export default function RoleManagementPage({ tenant, activeUser }) {
     <div className="page-shell-premium animate-fade-in">
       {/* HEADER SECTION */}
       <header className="page-header-premium mb-10 pb-6 border-b border-gray-100">
-        <div>
-           <h1 className="flex items-center gap-3">
-              Role Governance & Access Control
-              <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Security Node</span>
-           </h1>
-           <p className="dim-label">Access control, operational permissions, and institutional role definitions for {tenant?.name || 'Authorized Facility'}.</p>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
-              <ShieldCheck className="w-3 h-3 text-emerald-500" /> Security Integrity Validated • Permissions sync operational
-           </p>
+        <div className="flex items-center gap-6">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:border-slate-400 transition-all shadow-sm"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          )}
+          <div>
+            <h1 className="flex items-center gap-3">
+                Role Governance & Access Control
+                <span className="text-[10px] bg-slate-900 text-white px-3 py-1 rounded-full border border-white/10 uppercase tracking-tighter font-black">Security Node</span>
+            </h1>
+            <p className="dim-label">Access control, operational permissions, and institutional role definitions for {tenant?.name || 'Authorized Facility'}.</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 flex items-center gap-2">
+                <ShieldCheck size={12} className="text-emerald-500" /> Security Integrity Validated • Permissions sync operational
+            </p>
+          </div>
         </div>
         <div className="flex gap-3">
           <button

@@ -68,11 +68,28 @@ The UI adheres to professional healthcare standards:
 
 ---
 
-## 6. Implementation Authoritative Source
+## 7. Subscription & Menu Governance
+MedFlow enforces a strict commercial tiering system that gates module visibility and API access:
+
+### 7.1 Tiering Architecture
+- **Basic (₹1,999)**: OP-only essentials (Registration, Appointments, OPD Consultation, Basic Billing).
+- **Professional (₹5,999)**: Comprehensive clinical suite (IPD, Bed Mgmt, Pharmacy, Lab, Insurance, Feature Flags, System Settings).
+- **Enterprise (₹9,999)**: Full institutional ERP (HRMS, Payroll, Accounts, AI Matrix, Multi-location, White-labeling).
+
+### 7.2 Enforcement Layers
+1. **Database Gate**: `nexus.menu_item` table stores visibility rules (`subscription_plans` JSONB).
+2. **Frontend Intersector**: `App.jsx` calculates `allowedViews` by intersecting the user's role permissions with the current tenant's subscription tier.
+3. **Sidebar Registry**: `AppLayout.jsx` dynamically renders the menu from the `nexus.menu_item` registry, ensuring users only see modules they are paid for and authorized to access.
+
+---
+
+## 8. Implementation Authoritative Source
 - **Root State & Routing**: `client/src/App.jsx`
 - **Identity & Auth Adapter**: `client/src/api.js`
 - **Tenant Isolation Logic**: `server/middleware/auth.middleware.js`
 - **Global Feature Matrix**: `server/services/featureFlag.service.js`
-- **Centralized Test Bypasses**: `server/middleware/testBypass.middleware.js` (v1.5.8 Authority)
+- **Subscription Metadata**: `server/db/subscriptionCatalog.service.js`
+- **Menu System Authority**: `server/services/menuService.js`
+- **Centralized Test Bypasses**: `server/middleware/testBypass.middleware.js`
 - **Clinical AI Logic**: `server/services/ai.service.js`
 - **Clinical Lifecycle Tests**: `tests/nhgl_full_lifecycle.spec.js`

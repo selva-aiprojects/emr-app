@@ -26,7 +26,7 @@ export async function getPatients(tenantId, userRole = null, limit = 50, offset 
       p.is_archived as "isArchived",
       EXTRACT(YEAR FROM AGE(p.date_of_birth)) as age
 
-    FROM nexus.patients p
+    FROM patients p
     WHERE p.tenant_id::text = $1::text
     AND p.is_archived = $2`;
 
@@ -65,7 +65,7 @@ export async function searchPatients(tenantId, searchTermOrFilters, filters = {}
       p.is_archived as "isArchived",
       EXTRACT(YEAR FROM AGE(p.date_of_birth)) as age,
       u.name as primary_doctor_name
-    FROM nexus.patients p
+    FROM patients p
     LEFT JOIN nexus.users u ON p.primary_doctor_id::text = u.id::text
 
     WHERE p.tenant_id::text = $1::text
@@ -132,7 +132,7 @@ export async function getPatientById(id, tenantId, userRole = null) {
       p.is_archived as "isArchived",
       EXTRACT(YEAR FROM AGE(p.date_of_birth)) as age,
       u.name as primary_doctor_name
-    FROM nexus.patients p
+    FROM patients p
     LEFT JOIN nexus.users u ON p.primary_doctor_id::text = u.id::text
     WHERE p.id::text = $1::text AND p.tenant_id::text = $2::text
   `;
@@ -146,7 +146,7 @@ export async function createPatient({ tenantId, firstName, lastName, dob, gender
   console.log(`[PATIENT_CREATE] Creating patient: ${firstName} ${lastName}, MRN: ${mrn}, Tenant: ${tenantId}`);
 
   const insertRes = await query(`
-    INSERT INTO nexus.patients (
+    INSERT INTO patients (
       tenant_id, first_name, last_name, date_of_birth, gender, phone, email, address, 
       blood_group, medical_history, emergency_contact, insurance, mrn, is_archived
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, false)
@@ -174,7 +174,7 @@ export async function updatePatient({ tenantId, id, updates }) {
   values.push(id, tenantId);
 
   const sql = `
-    UPDATE nexus.patients 
+    UPDATE patients 
     SET ${fields.join(', ')}
     WHERE id::text = $${paramIndex++} AND tenant_id::text = $${paramIndex++}
     RETURNING *
@@ -193,7 +193,7 @@ export async function addClinicalRecord({ tenantId, patientId, userId, section, 
   const attachments = content?.vitals ? JSON.stringify(content.vitals) : '{}';
 
   const sql = `
-    INSERT INTO nexus.clinical_records (
+    INSERT INTO clinical_records (
       tenant_id, patient_id, created_by, record_type, diagnosis, treatment, notes, attachments
     )
     VALUES ($1, $2, $3, $4, $5, $6, $7, CAST($8 AS JSONB))

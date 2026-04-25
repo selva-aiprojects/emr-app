@@ -22,16 +22,16 @@ WHERE table_schema = 'emr'
 
 -- 3. Verify Drug Master Data
 SELECT '💉 Drugs Loaded' as category, COUNT(*) as count 
-FROM emr.drug_master 
+FROM drug_master 
 WHERE tenant_id IS NULL;
 
 -- 4. Verify Drug Interactions
 SELECT '⚠️ Drug Interactions' as category, COUNT(*) as count 
-FROM emr.drug_interactions;
+FROM drug_interactions;
 
 -- 5. Verify Drug Batches
 SELECT '📦 Drug Batches' as category, COUNT(*) as count 
-FROM emr.drug_batches;
+FROM drug_batches;
 
 -- 6. List All New Tables Created
 SELECT '🗂️ All EMR Tables' as category, table_name
@@ -48,7 +48,7 @@ SELECT
   rxnorm_code,
   schedule_type,
   high_alert_flag
-FROM emr.drug_master
+FROM drug_master
 WHERE tenant_id IS NULL
 ORDER BY generic_name
 LIMIT 10;
@@ -59,9 +59,9 @@ SELECT
   dm2.generic_name as drug_b,
   di.severity,
   LEFT(di.description, 80) as description_preview
-FROM emr.drug_interactions di
-JOIN emr.drug_master dm1 ON di.drug_a = dm1.drug_id
-JOIN emr.drug_master dm2 ON di.drug_b = dm2.drug_id;
+FROM drug_interactions di
+JOIN drug_master dm1 ON di.drug_a = dm1.drug_id
+JOIN drug_master dm2 ON di.drug_b = dm2.drug_id;
 
 -- 9. Check Batch Expiry Dates
 SELECT 
@@ -70,18 +70,18 @@ SELECT
   db.quantity_remaining,
   db.expiry_date,
   db.location
-FROM emr.drug_batches db
-JOIN emr.drug_master dm ON db.drug_id = dm.drug_id
+FROM drug_batches db
+JOIN drug_master dm ON db.drug_id = dm.drug_id
 ORDER BY db.expiry_date
 LIMIT 10;
 
 -- 10. Summary Statistics
 SELECT 
-  (SELECT COUNT(*) FROM emr.drug_master WHERE tenant_id IS NULL) as total_drugs,
-  (SELECT COUNT(*) FROM emr.drug_interactions) as total_interactions,
-  (SELECT COUNT(*) FROM emr.drug_batches) as total_batches,
-  (SELECT COUNT(*) FROM emr.conditions) as conditions_count,
-  (SELECT COUNT(*) FROM emr.procedures) as procedures_count,
-  (SELECT COUNT(*) FROM emr.observations) as observations_count,
-  (SELECT COUNT(*) FROM emr.diagnostic_reports) as diagnostic_reports_count,
-  (SELECT COUNT(*) FROM emr.service_requests) as service_requests_count;
+  (SELECT COUNT(*) FROM drug_master WHERE tenant_id IS NULL) as total_drugs,
+  (SELECT COUNT(*) FROM drug_interactions) as total_interactions,
+  (SELECT COUNT(*) FROM drug_batches) as total_batches,
+  (SELECT COUNT(*) FROM conditions) as conditions_count,
+  (SELECT COUNT(*) FROM procedures) as procedures_count,
+  (SELECT COUNT(*) FROM observations) as observations_count,
+  (SELECT COUNT(*) FROM diagnostic_reports) as diagnostic_reports_count,
+  (SELECT COUNT(*) FROM service_requests) as service_requests_count;

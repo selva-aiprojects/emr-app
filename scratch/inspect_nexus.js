@@ -1,42 +1,34 @@
-import pkg from 'pg';
-const { Pool } = pkg;
-import dotenv from 'dotenv';
-dotenv.config();
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+import { query } from './server/db/connection.js';
 
-async function inspect() {
-  const client = await pool.connect();
+async function inspectTables() {
   try {
-    const tables = await client.query(`
-      SELECT table_name, table_schema 
+    const tables = await query(`
+      SELECT table_schema, table_name 
       FROM information_schema.tables 
-      WHERE table_schema IN ('nexus', 'public') AND table_name LIKE '%tenant%'
+      WHERE table_schema = 'nexus'
     `);
-    console.log('Tables:', tables.rows);
+    console.log('Nexus Tables:', tables.rows.map(r => r.table_name));
 
-    const columns = await client.query(`
-      SELECT table_name, column_name, data_type, character_maximum_length 
+    const cols = await query(`
+      SELECT column_name, data_type 
       FROM information_schema.columns 
       WHERE table_schema = 'nexus' AND table_name = 'management_tenants'
     `);
-    console.log('Columns for management_tenants:', columns.rows);
+    console.log('management_tenants columns:', cols.rows);
     
-    const constraints = await client.query(`
-      SELECT conname, contype, pg_get_constraintdef(c.oid) as def
-      FROM pg_constraint c
-      JOIN pg_namespace n ON n.oid = c.connamespace
-      WHERE n.nspname = 'nexus'
+    const tenantsCols = await query(`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_schema = 'nexus' AND table_name = 'tenants'
     `);
-    console.log('Constraints in nexus:', constraints.rows);
+    console.log('tenants columns:', tenantsCols.rows);
 
+  } catch (err) {
+    console.error('Inspection failed:', err);
   } finally {
-    client.release();
-    await pool.end();
+    process.exit(0);
   }
 }
 
-inspect();
+inspectTables();

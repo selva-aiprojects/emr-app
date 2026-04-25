@@ -9,7 +9,7 @@ const pool = new pg.Pool({
 
 async function checkTenants() {
   try {
-    const tenants = await pool.query('SELECT name, code, schema_name FROM emr.tenants');
+    const tenants = await pool.query('SELECT name, code, schema_name FROM tenants');
     console.table(tenants.rows);
 
     for (const tenant of tenants.rows) {

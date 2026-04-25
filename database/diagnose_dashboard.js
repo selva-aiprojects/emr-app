@@ -20,7 +20,7 @@ async function runDiag() {
   console.log('🔍 Running Dashboard Diagnostic...');
 
   // 1. Check management record
-  const mRes = await client.query(`SELECT id, name, code, schema_name, subdomain FROM emr.management_tenants`);
+  const mRes = await client.query(`SELECT id, name, code, schema_name, subdomain FROM management_tenants`);
   console.log('\n--- Management Tenants (Registry) ---');
   console.table(mRes.rows);
 
@@ -36,8 +36,8 @@ async function runDiag() {
   }
 
   // 3. Check current users
-  console.log('\n--- Current Users (emr.users) ---');
-  const uRes = await client.query(`SELECT id, name, email, role, tenant_id FROM emr.users LIMIT 5`);
+  console.log('\n--- Current Users (users) ---');
+  const uRes = await client.query(`SELECT id, name, email, role, tenant_id FROM users LIMIT 5`);
   console.table(uRes.rows);
 
   await client.end();

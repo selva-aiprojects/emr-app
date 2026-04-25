@@ -126,7 +126,7 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
 
       safeQuery(`
         SELECT role as label, COUNT(*)::int as value 
-        FROM emr.users 
+        FROM users 
         WHERE tenant_id = $1 AND role IS NOT NULL
         GROUP BY role
         ORDER BY value DESC
@@ -138,7 +138,7 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
           COUNT(a.id)::int as consultations,
           COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (a.scheduled_end - a.scheduled_start)) / 60) FILTER (WHERE a.status = 'completed')), 0)::int as "avgTime",
           95::int as satisfaction
-        FROM emr.users u
+        FROM users u
         LEFT JOIN {schema}.appointments a ON a.provider_id = u.id AND a.tenant_id = u.tenant_id
         WHERE u.tenant_id = $1 AND lower(u.role) = 'doctor'
         GROUP BY u.id, u.name, u.role, u.is_active
@@ -153,7 +153,7 @@ router.get('/dashboard/metrics', requirePermission('dashboard'), async (req, res
           (SELECT COUNT(*) FROM {schema}.wards WHERE tenant_id = $1)::int as wards,
           (SELECT COUNT(*) FROM {schema}.beds WHERE tenant_id = $1)::int as beds,
           (SELECT COUNT(*) FROM {schema}.services WHERE tenant_id = $1)::int as services,
-          (SELECT COUNT(*) FROM emr.users WHERE tenant_id = $1)::int as total_staff
+          (SELECT COUNT(*) FROM users WHERE tenant_id = $1)::int as total_staff
       `, [tenantId]),
       
       safeQuery(`SELECT status, COUNT(*)::int as count FROM {schema}.encounters WHERE tenant_id = $1 GROUP BY status`, [tenantId])

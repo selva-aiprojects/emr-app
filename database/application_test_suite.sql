@@ -6,7 +6,7 @@
 SELECT '=== APPLICATION TEST SUITE ===' as test_suite;
 
 -- Create test results table
-CREATE TABLE IF NOT EXISTS emr.test_results (
+CREATE TABLE IF NOT EXISTS test_results (
     id SERIAL PRIMARY KEY,
     test_name VARCHAR(255) NOT NULL,
     test_type VARCHAR(50) NOT NULL,
@@ -30,14 +30,14 @@ BEGIN
         -- Test basic connectivity
         SELECT current_database(), current_schema(), version() INTO result_data;
         
-        INSERT INTO emr.test_results (test_name, test_type, status, result_data)
+        INSERT INTO test_results (test_name, test_type, status, result_data)
         VALUES ('Database Connectivity', 'INFRASTRUCTURE', 'PASSED', result_data);
         
         RAISE NOTICE '✅ TEST 1 PASSED: Database Connectivity';
         
     EXCEPTION WHEN others THEN
         error_msg := SQLERRM;
-        INSERT INTO emr.test_results (test_name, test_type, status, error_message)
+        INSERT INTO test_results (test_name, test_type, status, error_message)
         VALUES ('Database Connectivity', 'INFRASTRUCTURE', 'FAILED', error_msg);
         
         RAISE NOTICE '❌ TEST 1 FAILED: Database Connectivity - %', error_msg;
@@ -69,7 +69,7 @@ BEGIN
             IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'emr' AND tablename = table_record.tablename) THEN
                 EXECUTE format('SELECT COUNT(*) FROM emr.%I', table_record.tablename) INTO test_count;
                 
-                INSERT INTO emr.test_results (test_name, test_type, status, result_data)
+                INSERT INTO test_results (test_name, test_type, status, result_data)
                 VALUES (
                     format('Access %s table', table_record.tablename), 
                     'TABLE_ACCESS', 
@@ -80,7 +80,7 @@ BEGIN
                 RAISE NOTICE '✅ %s table accessible (% rows)', table_record.tablename, test_count;
                 passed_tests := passed_tests + 1;
             ELSE
-                INSERT INTO emr.test_results (test_name, test_type, status, error_message)
+                INSERT INTO test_results (test_name, test_type, status, error_message)
                 VALUES (
                     format('Access %s table', table_record.tablename), 
                     'TABLE_ACCESS', 
@@ -92,7 +92,7 @@ BEGIN
             END IF;
             
         EXCEPTION WHEN others THEN
-            INSERT INTO emr.test_results (test_name, test_type, status, error_message)
+            INSERT INTO test_results (test_name, test_type, status, error_message)
             VALUES (
                 format('Access %s table', table_record.tablename), 
                 'TABLE_ACCESS', 
@@ -118,9 +118,9 @@ DECLARE
 BEGIN
     BEGIN
         -- Test user query (similar to login)
-        SELECT COUNT(*) INTO user_count FROM emr.users WHERE is_active = true;
+        SELECT COUNT(*) INTO user_count FROM users WHERE is_active = true;
         
-        INSERT INTO emr.test_results (test_name, test_type, status, result_data)
+        INSERT INTO test_results (test_name, test_type, status, result_data)
         VALUES (
             'User Authentication Query', 
             'AUTHENTICATION', 
@@ -131,7 +131,7 @@ BEGIN
         RAISE NOTICE '✅ TEST 3 PASSED: User Authentication Query (% active users)', user_count;
         
     EXCEPTION WHEN others THEN
-        INSERT INTO emr.test_results (test_name, test_type, status, error_message)
+        INSERT INTO test_results (test_name, test_type, status, error_message)
         VALUES ('User Authentication Query', 'AUTHENTICATION', 'FAILED', SQLERRM);
         
         RAISE NOTICE '❌ TEST 3 FAILED: User Authentication Query - %', SQLERRM;
@@ -149,13 +149,13 @@ DECLARE
 BEGIN
     BEGIN
         -- Test tenant access
-        SELECT COUNT(*) INTO tenant_count FROM emr.tenants WHERE status = 'active';
+        SELECT COUNT(*) INTO tenant_count FROM tenants WHERE status = 'active';
         
         -- Test patient-tenant relationship
-        SELECT COUNT(*) INTO patient_count FROM emr.patients p 
-        JOIN emr.tenants t ON p.tenant_id = t.id;
+        SELECT COUNT(*) INTO patient_count FROM patients p 
+        JOIN tenants t ON p.tenant_id = t.id;
         
-        INSERT INTO emr.test_results (test_name, test_type, status, result_data)
+        INSERT INTO test_results (test_name, test_type, status, result_data)
         VALUES (
             'Tenant Functionality', 
             'TENANCY', 
@@ -166,7 +166,7 @@ BEGIN
         RAISE NOTICE '✅ TEST 4 PASSED: Tenant Functionality (% tenants, % linked patients)', tenant_count, patient_count;
         
     EXCEPTION WHEN others THEN
-        INSERT INTO emr.test_results (test_name, test_type, status, error_message)
+        INSERT INTO test_results (test_name, test_type, status, error_message)
         VALUES ('Tenant Functionality', 'TENANCY', 'FAILED', SQLERRM);
         
         RAISE NOTICE '❌ TEST 4 FAILED: Tenant Functionality - %', SQLERRM;
@@ -184,13 +184,13 @@ DECLARE
 BEGIN
     BEGIN
         -- Test appointment queries
-        SELECT COUNT(*) INTO appointment_count FROM emr.appointments;
+        SELECT COUNT(*) INTO appointment_count FROM appointments;
         
         -- Test upcoming appointments
-        SELECT COUNT(*) INTO upcoming_count FROM emr.appointments 
+        SELECT COUNT(*) INTO upcoming_count FROM appointments 
         WHERE start >= CURRENT_DATE;
         
-        INSERT INTO emr.test_results (test_name, test_type, status, result_data)
+        INSERT INTO test_results (test_name, test_type, status, result_data)
         VALUES (
             'Appointment System', 
             'APPOINTMENTS', 
@@ -201,7 +201,7 @@ BEGIN
         RAISE NOTICE '✅ TEST 5 PASSED: Appointment System (% total, % upcoming)', appointment_count, upcoming_count;
         
     EXCEPTION WHEN others THEN
-        INSERT INTO emr.test_results (test_name, test_type, status, error_message)
+        INSERT INTO test_results (test_name, test_type, status, error_message)
         VALUES ('Appointment System', 'APPOINTMENTS', 'FAILED', SQLERRM);
         
         RAISE NOTICE '❌ TEST 5 FAILED: Appointment System - %', SQLERRM;
@@ -219,13 +219,13 @@ DECLARE
 BEGIN
     BEGIN
         -- Test billing queries
-        SELECT COUNT(*) INTO invoice_count FROM emr.invoices;
+        SELECT COUNT(*) INTO invoice_count FROM invoices;
         
         -- Test revenue calculation
-        SELECT COALESCE(SUM(total_amount), 0) INTO total_revenue FROM emr.invoices 
+        SELECT COALESCE(SUM(total_amount), 0) INTO total_revenue FROM invoices 
         WHERE status = 'paid';
         
-        INSERT INTO emr.test_results (test_name, test_type, status, result_data)
+        INSERT INTO test_results (test_name, test_type, status, result_data)
         VALUES (
             'Billing System', 
             'BILLING', 
@@ -236,7 +236,7 @@ BEGIN
         RAISE NOTICE '✅ TEST 6 PASSED: Billing System (% invoices, $% revenue)', invoice_count, total_revenue;
         
     EXCEPTION WHEN others THEN
-        INSERT INTO emr.test_results (test_name, test_type, status, error_message)
+        INSERT INTO test_results (test_name, test_type, status, error_message)
         VALUES ('Billing System', 'BILLING', 'FAILED', SQLERRM);
         
         RAISE NOTICE '❌ TEST 6 FAILED: Billing System - %', SQLERRM;
@@ -261,12 +261,12 @@ BEGIN
         
         -- Check for broken references (simplified)
         SELECT COUNT(*) INTO broken_count FROM (
-            SELECT 1 FROM emr.patients p 
-            LEFT JOIN emr.tenants t ON p.tenant_id = t.id 
+            SELECT 1 FROM patients p 
+            LEFT JOIN tenants t ON p.tenant_id = t.id 
             WHERE p.tenant_id IS NOT NULL AND t.id IS NULL
         ) broken_refs;
         
-        INSERT INTO emr.test_results (test_name, test_type, status, result_data)
+        INSERT INTO test_results (test_name, test_type, status, result_data)
         VALUES (
             'Foreign Key Constraints', 
             'INTEGRITY', 
@@ -281,7 +281,7 @@ BEGIN
         END IF;
         
     EXCEPTION WHEN others THEN
-        INSERT INTO emr.test_results (test_name, test_type, status, error_message)
+        INSERT INTO test_results (test_name, test_type, status, error_message)
         VALUES ('Foreign Key Constraints', 'INTEGRITY', 'FAILED', SQLERRM);
         
         RAISE NOTICE '❌ TEST 7 FAILED: Foreign Key Constraints - %', SQLERRM;
@@ -303,7 +303,7 @@ SELECT
         ELSE '❌'
     END as status_icon,
     test_time
-FROM emr.test_results 
+FROM test_results 
 ORDER BY test_time;
 
 -- Overall test summary
@@ -316,7 +316,7 @@ SELECT
         WHEN COUNT(*) FILTER (WHERE status = 'FAILED') = 0 THEN '✅ ALL TESTS PASSED'
         ELSE '❌ SOME TESTS FAILED'
     END as overall_status
-FROM emr.test_results;
+FROM test_results;
 
 -- =====================================================
 -- APPLICATION TESTING INSTRUCTIONS

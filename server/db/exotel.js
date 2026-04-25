@@ -4,7 +4,7 @@
 
 export async function createExotelConfiguration({ tenantId, accountSid, apiKey, apiToken, subdomain, fromNumber, webhookUrl, deliveryReportWebhook, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_configurations (
+    INSERT INTO exotel_configurations (
       tenant_id, account_sid, api_key, api_token, subdomain, from_number,
       webhook_url, delivery_report_webhook, is_active, is_default, created_by
     )
@@ -22,7 +22,7 @@ export async function createExotelConfiguration({ tenantId, accountSid, apiKey, 
 
 export async function getExotelConfigurations(tenantId, isActive = true) {
   const sql = `
-    SELECT * FROM emr.exotel_configurations
+    SELECT * FROM exotel_configurations
     WHERE tenant_id = $1 AND is_active = $2
     ORDER BY is_default DESC, created_at DESC
   `;
@@ -47,7 +47,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_configurations
+    UPDATE exotel_configurations
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -61,7 +61,7 @@ export async function updateExotelConfiguration(configId, tenantId, updates) {
 
 export async function createSMSCampaign({ tenantId, campaignName, campaignType, description, templateId, targetAudience, filters, scheduleType, scheduledAt, recurringPattern, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_sms_campaigns (
+    INSERT INTO exotel_sms_campaigns (
       tenant_id, campaign_name, campaign_type, description, template_id,
       target_audience, filters, schedule_type, scheduled_at, recurring_pattern,
       status, created_by
@@ -90,9 +90,9 @@ export async function getSMSCampaigns(tenantId, filters = {}) {
       COUNT(l.id) as sent_count,
       COUNT(CASE WHEN l.status = 'delivered' THEN 1 END) as delivered_count,
       COUNT(CASE WHEN l.status = 'failed' THEN 1 END) as failed_count
-    FROM emr.exotel_sms_campaigns c
-    LEFT JOIN emr.communication_templates ct ON c.template_id = ct.id
-    LEFT JOIN emr.exotel_sms_logs l ON c.id = l.campaign_id
+    FROM exotel_sms_campaigns c
+    LEFT JOIN communication_templates ct ON c.template_id = ct.id
+    LEFT JOIN exotel_sms_logs l ON c.id = l.campaign_id
     WHERE c.tenant_id = $1
   `;
   
@@ -138,7 +138,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   // Get Exotel configuration
   const configSql = `
     SELECT account_sid, api_key, api_token, subdomain 
-    FROM emr.exotel_configurations 
+    FROM exotel_configurations 
     WHERE tenant_id = $1 AND is_active = true 
     ORDER BY is_default DESC 
     LIMIT 1
@@ -152,7 +152,7 @@ export async function sendExotelSMS({ tenantId, toNumber, messageContent, messag
   
   // Create SMS log entry
   const logSql = `
-    INSERT INTO emr.exotel_sms_logs (
+    INSERT INTO exotel_sms_logs (
       tenant_id, campaign_id, communication_id, account_sid, from_number, to_number,
       message_content, message_type, priority, status, external_id, created_at
     )
@@ -282,7 +282,7 @@ export async function updateExotelSMSLog(smsLogId, tenantId, updates) {
   const setClause = fields.join(', ');
   
   const sql = `
-    UPDATE emr.exotel_sms_logs
+    UPDATE exotel_sms_logs
     SET ${setClause}
     WHERE id = $${fields.length + 1} AND tenant_id = $${fields.length + 2}
     RETURNING *
@@ -304,11 +304,11 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
       ct.template_name,
       p.name as patient_name,
       p.phone as patient_phone
-    FROM emr.exotel_sms_logs l
-    LEFT JOIN emr.exotel_sms_campaigns c ON l.campaign_id = c.id
-    LEFT JOIN emr.communication_templates ct ON l.template_id = ct.id
-    LEFT JOIN emr.patient_communications pc ON l.communication_id = pc.id
-    LEFT JOIN emr.patients p ON pc.patient_id = p.id
+    FROM exotel_sms_logs l
+    LEFT JOIN exotel_sms_campaigns c ON l.campaign_id = c.id
+    LEFT JOIN communication_templates ct ON l.template_id = ct.id
+    LEFT JOIN patient_communications pc ON l.communication_id = pc.id
+    LEFT JOIN patients p ON pc.patient_id = p.id
     WHERE l.tenant_id = $1
   `;
   
@@ -354,7 +354,7 @@ export async function getExotelSMSLogs(tenantId, filters = {}) {
 
 export async function createExotelNumberPool({ tenantId, poolName, phoneNumber, numberType, departmentId, doctorId, dailyLimit, monthlyLimit, priority = 1, createdBy }) {
   const sql = `
-    INSERT INTO emr.exotel_number_pools (
+    INSERT INTO exotel_number_pools (
       tenant_id, pool_name, phone_number, number_type, department_id, doctor_id,
       daily_limit, monthly_limit, priority, is_active, created_by
     )
@@ -380,9 +380,9 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
       u.name as doctor_name,
       ROUND((np.current_daily_usage::float / NULLIF(np.daily_limit, 0) * 100), 2) as daily_usage_percentage,
       ROUND((np.current_monthly_usage::float / NULLIF(np.monthly_limit, 0) * 100), 2) as monthly_usage_percentage
-    FROM emr.exotel_number_pools np
-    LEFT JOIN emr.departments d ON np.department_id = d.id
-    LEFT JOIN emr.users u ON np.doctor_id = u.id
+    FROM exotel_number_pools np
+    LEFT JOIN departments d ON np.department_id = d.id
+    LEFT JOIN users u ON np.doctor_id = u.id
     WHERE np.tenant_id = $1 AND np.is_active = $2
   `;
   
@@ -412,7 +412,7 @@ export async function getExotelNumberPools(tenantId, filters = {}) {
 
 export async function processExotelWebhook(tenantId, eventData) {
   const sql = `
-    INSERT INTO emr.exotel_webhook_events (
+    INSERT INTO exotel_webhook_events (
       tenant_id, event_type, event_data, message_sid, account_sid, created_at
     )
     VALUES ($1, $2, $3, $4, $5, NOW())
@@ -453,7 +453,7 @@ export async function processExotelDeliveryReport(tenantId, deliveryData) {
   // Find the SMS log entry
   const findSql = `
     SELECT id, communication_id, to_number 
-    FROM emr.exotel_sms_logs 
+    FROM exotel_sms_logs 
     WHERE message_sid = $1 AND tenant_id = $2
   `;
   
@@ -500,8 +500,8 @@ export async function getExotelSMSStats(tenantId, filters = {}) {
 export async function retryFailedSMS(tenantId, smsLogId) {
   const sql = `
     SELECT l.*, c.account_sid, c.api_key, c.api_token, c.subdomain
-    FROM emr.exotel_sms_logs l
-    JOIN emr.exotel_configurations c ON l.account_sid = c.account_sid
+    FROM exotel_sms_logs l
+    JOIN exotel_configurations c ON l.account_sid = c.account_sid
     WHERE l.id = $1 AND l.tenant_id = $2 AND l.status = 'failed'
   `;
   
@@ -554,7 +554,7 @@ export async function getPendingRetries(tenantId) {
     SELECT 
       l.*,
       EXTRACT(EPOCH FROM (next_retry_at - NOW()))/60 as minutes_until_retry
-    FROM emr.exotel_sms_logs l
+    FROM exotel_sms_logs l
     WHERE l.tenant_id = $1 
       AND l.status = 'queued' 
       AND l.next_retry_at IS NOT NULL 
@@ -570,7 +570,7 @@ export async function getPendingRetries(tenantId) {
 export async function processScheduledCampaigns(tenantId) {
   const sql = `
     SELECT c.* 
-    FROM emr.exotel_sms_campaigns c
+    FROM exotel_sms_campaigns c
     WHERE c.tenant_id = $1 
       AND c.status = 'scheduled' 
       AND c.scheduled_at <= NOW()
@@ -582,7 +582,7 @@ export async function processScheduledCampaigns(tenantId) {
   for (const campaign of campaigns) {
     // Update campaign status to active
     await query(`
-      UPDATE emr.exotel_sms_campaigns 
+      UPDATE exotel_sms_campaigns 
       SET status = 'active', updated_at = NOW()
       WHERE id = $1
     `, [campaign.id]);
@@ -600,7 +600,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   switch (targetAudience) {
     case 'all_patients':
       const patientsSql = `
-        SELECT DISTINCT phone FROM emr.patients 
+        SELECT DISTINCT phone FROM patients 
         WHERE tenant_id = $1 AND phone IS NOT NULL
       `;
       const patientsResult = await query(patientsSql, [tenantId]);
@@ -610,7 +610,7 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'specific_patients':
       if (filters && filters.patientIds) {
         const specificPatientsSql = `
-          SELECT phone FROM emr.patients 
+          SELECT phone FROM patients 
           WHERE tenant_id = $1 AND id = ANY($2)
         `;
         const specificResult = await query(specificPatientsSql, [tenantId, filters.patientIds]);
@@ -621,8 +621,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'department':
       if (filters && filters.departmentId) {
         const deptPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.department_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -634,8 +634,8 @@ export async function processSMSCampaign(campaign, tenantId) {
     case 'doctor':
       if (filters && filters.doctorId) {
         const doctorPatientsSql = `
-          SELECT DISTINCT p.phone FROM emr.patients p
-          JOIN emr.opd_tokens t ON p.id = t.patient_id
+          SELECT DISTINCT p.phone FROM patients p
+          JOIN opd_tokens t ON p.id = t.patient_id
           WHERE p.tenant_id = $1 AND p.phone IS NOT NULL 
             AND t.doctor_id = $2 AND DATE(t.created_at) = CURRENT_DATE
         `;
@@ -664,7 +664,7 @@ export async function processSMSCampaign(campaign, tenantId) {
   
   // Update campaign statistics
   await query(`
-    UPDATE emr.exotel_sms_campaigns 
+    UPDATE exotel_sms_campaigns 
     SET total_recipients = $1, updated_at = NOW()
     WHERE id = $2
   `, [targetNumbers.length, campaign.id]);

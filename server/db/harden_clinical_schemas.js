@@ -12,9 +12,9 @@ async function hardenSchemas() {
     console.log('--- CLINICAL SCHEMA HARDENING START ---');
     
     // 1. Ensure MRN sequences table exists in emr schema
-    console.log('Ensuring infrastructure clinical counter: emr.mrn_sequences');
+    console.log('Ensuring infrastructure clinical counter: mrn_sequences');
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS emr.mrn_sequences (
+      CREATE TABLE IF NOT EXISTS mrn_sequences (
         tenant_id UUID PRIMARY KEY,
         sequence_value INTEGER NOT NULL DEFAULT 1,
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

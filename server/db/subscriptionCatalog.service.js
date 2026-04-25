@@ -1,7 +1,7 @@
 /**
  * Subscription Catalog Service
  * Manages plan definitions: pricing, enabled modules, and feature labels.
- * Persists to emr.subscription_catalog if the table exists; falls back to
+ * Persists to subscription_catalog if the table exists; falls back to
  * in-memory defaults so the UI is never blocked.
  */
 
@@ -39,6 +39,8 @@ const ALL_MODULES = [
   { key: 'support',            label: 'Support' },
   { key: 'users',              label: 'User Management' },
   { key: 'admin',              label: 'Admin Console' },
+  { key: 'feature_flags',      label: 'Feature Flag Management' },
+  { key: 'system_settings',    label: 'System Settings' },
 ];
 
 export { ALL_MODULES };
@@ -70,7 +72,7 @@ export const DEFAULT_CATALOG = [
     period: 'per mo',
     color: 'indigo',
     features: ['24/7 Support', 'Custom Branding', 'Unlimited Users'],
-    moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','insurance','service_catalog','hospital_settings','departments','bed_management'],
+    moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','insurance','service_catalog','hospital_settings','departments','bed_management', 'feature_flags', 'system_settings'],
   },
   {
     id: 'enterprise',
@@ -79,7 +81,7 @@ export const DEFAULT_CATALOG = [
     period: 'per mo',
     color: 'emerald',
     features: ['Dedicated Server', 'AI Assistance Matrix', '99.9% SLM Guarantee'],
-    moduleKeys: ['dashboard','patients','appointments','emr','reports','admin','users','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','accounts_receivable','accounts_payable','insurance','service_catalog','hospital_settings','departments','bed_management','employees','hr','payroll','donor','ai_analysis','document_vault'],
+    moduleKeys: ['dashboard','patients','appointments','emr','reports','admin','users','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','accounts_receivable','accounts_payable','insurance','service_catalog','hospital_settings','departments','bed_management','employees','hr','payroll','donor','ai_analysis','document_vault', 'feature_flags', 'system_settings'],
   },
 ];
 
@@ -94,7 +96,7 @@ export async function getSubscriptionCatalog() {
              module_keys  as "moduleKeys",
              features,
              updated_at
-      FROM emr.subscription_catalog
+      FROM subscription_catalog
       ORDER BY CASE plan_id
         WHEN 'free'         THEN 0
         WHEN 'basic'        THEN 1
@@ -108,7 +110,7 @@ export async function getSubscriptionCatalog() {
       catalog = result.rows;
     }
   } catch (e) {
-    console.warn('[CATALOG] emr.subscription_catalog table not found, using in-memory defaults. Run DB migration to persist.', e.message);
+    console.warn('[CATALOG] subscription_catalog table not found, using in-memory defaults. Run DB migration to persist.', e.message);
   }
   if (!catalog) {
     catalog = _memoryCache || DEFAULT_CATALOG;
@@ -140,7 +142,7 @@ export async function upsertSubscriptionPlan(plan) {
 
   try {
     const sql = `
-      INSERT INTO emr.subscription_catalog (plan_id, name, cost, period, module_keys, features, color, updated_at)
+      INSERT INTO subscription_catalog (plan_id, name, cost, period, module_keys, features, color, updated_at)
       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, NOW())
       ON CONFLICT (plan_id) DO UPDATE SET
         name        = EXCLUDED.name,

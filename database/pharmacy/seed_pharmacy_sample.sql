@@ -8,7 +8,7 @@ BEGIN;
 -- =====================================================
 
 -- Pain Management
-INSERT INTO emr.drug_master 
+INSERT INTO drug_master 
 (tenant_id, generic_name, brand_names, strength, dosage_form, route,
  ndc_code, rxnorm_code, snomed_code, schedule_type, high_alert_flag, pregnancy_category)
 VALUES
@@ -103,51 +103,51 @@ VALUES
 -- DRUG INTERACTIONS (Common & Clinically Significant)
 -- =====================================================
 
-INSERT INTO emr.drug_interactions
+INSERT INTO drug_interactions
 (drug_a, drug_b, severity, description, mechanism, management)
 SELECT 
   da.drug_id, db.drug_id, 'major',
   'Increased risk of bleeding when warfarin is combined with NSAIDs',
   'NSAIDs inhibit platelet aggregation and may damage GI mucosa, potentiating warfarin anticoagulation',
   'Monitor INR closely. Consider alternative analgesic. Educate patient on bleeding signs.'
-FROM emr.drug_master da, emr.drug_master db
+FROM drug_master da, drug_master db
 WHERE da.generic_name = 'Warfarin' AND db.generic_name IN ('Ibuprofen', 'Naproxen');
 
-INSERT INTO emr.drug_interactions
+INSERT INTO drug_interactions
 (drug_a, drug_b, severity, description, mechanism, management)
 SELECT 
   da.drug_id, db.drug_id, 'contraindicated',
   'Risk of serotonin syndrome when SSRIs are combined with MAOIs',
   'Excessive serotonin accumulation in CNS',
   'Do not use together. Allow 14-day washout period between MAOI and SSRI.'
-FROM emr.drug_master da, emr.drug_master db
+FROM drug_master da, drug_master db
 WHERE da.generic_name = 'Sertraline' AND db.generic_name LIKE '%MAOI%';
 
-INSERT INTO emr.drug_interactions
+INSERT INTO drug_interactions
 (drug_a, drug_b, severity, description, mechanism, management)
 SELECT 
   da.drug_id, db.drug_id, 'major',
   'Increased risk of hypoglycemia when insulin is combined with beta-blockers',
   'Beta-blockers may mask hypoglycemia symptoms and prolong insulin effect',
   'Monitor blood glucose closely. Adjust insulin dose as needed.'
-FROM emr.drug_master da, emr.drug_master db
+FROM drug_master da, drug_master db
 WHERE da.generic_name = 'Insulin Glargine' AND db.generic_name = 'Metoprolol';
 
-INSERT INTO emr.drug_interactions
+INSERT INTO drug_interactions
 (drug_a, drug_b, severity, description, mechanism, management)
 SELECT 
   da.drug_id, db.drug_id, 'moderate',
   'Reduced effectiveness of clopidogrel when combined with PPIs',
   'PPIs inhibit CYP2C19, reducing conversion of clopidogrel to active metabolite',
   'Consider using H2 blocker instead of PPI. If PPI necessary, use pantoprazole.'
-FROM emr.drug_master da, emr.drug_master db
+FROM drug_master da, drug_master db
 WHERE da.generic_name IN ('Omeprazole', 'Pantoprazole') AND db.generic_name = 'Clopidogrel';
 
 -- =====================================================
 -- SAMPLE DRUG BATCHES (For Inventory Testing)
 -- =====================================================
 
-INSERT INTO emr.drug_batches
+INSERT INTO drug_batches
 (drug_id, batch_number, quantity_received, quantity_remaining, expiry_date, purchase_price, location, status)
 SELECT 
   dm.drug_id, 
@@ -162,7 +162,7 @@ SELECT
     WHEN 2 THEN 'Refrigerator R-1'
   END,
   'active'
-FROM emr.drug_master dm
+FROM drug_master dm
 WHERE dm.status = 'active'
 LIMIT 50; -- Create 50 batches total
 

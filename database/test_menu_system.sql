@@ -13,7 +13,7 @@ WHERE table_schema = 'emr'
 ORDER BY table_name, ordinal_position;
 
 -- Check menu headers
-SELECT * FROM emr.menu_header ORDER BY sort_order;
+SELECT * FROM menu_header ORDER BY sort_order;
 
 -- Check menu items with header names
 SELECT 
@@ -25,8 +25,8 @@ SELECT
     mi.sort_order,
     mi.requires_subscription,
     mi.subscription_plans
-FROM emr.menu_item mi
-JOIN emr.menu_header mh ON mi.header_id = mh.id
+FROM menu_item mi
+JOIN menu_header mh ON mi.header_id = mh.id
 ORDER BY mh.sort_order, mi.sort_order;
 
 -- Check role menu access
@@ -36,9 +36,9 @@ SELECT
     mi.name as item_name,
     mi.code,
     rma.is_visible
-FROM emr.role_menu_access rma
-JOIN emr.menu_item mi ON rma.menu_item_id = mi.id
-JOIN emr.menu_header mh ON mi.header_id = mh.id
+FROM role_menu_access rma
+JOIN menu_item mi ON rma.menu_item_id = mi.id
+JOIN menu_header mh ON mi.header_id = mh.id
 ORDER BY rma.role_name, mh.sort_order, mi.sort_order;
 
 -- Test user menu for admin role
@@ -48,9 +48,9 @@ SELECT
     mi.code,
     mi.icon_name,
     mi.route
-FROM emr.menu_header mh
-JOIN emr.menu_item mi ON mh.id = mi.header_id
-LEFT JOIN emr.role_menu_access rma ON mi.id = rma.menu_item_id 
+FROM menu_header mh
+JOIN menu_item mi ON mh.id = mi.header_id
+LEFT JOIN role_menu_access rma ON mi.id = rma.menu_item_id 
     AND rma.role_name = 'admin'
 WHERE mh.is_active = true 
     AND mi.is_active = true 
@@ -64,8 +64,8 @@ SELECT
     mi.code,
     mi.requires_subscription,
     mi.subscription_plans
-FROM emr.menu_header mh
-JOIN emr.menu_item mi ON mh.id = mi.header_id
+FROM menu_header mh
+JOIN menu_item mi ON mh.id = mi.header_id
 WHERE mh.is_active = true 
     AND mi.is_active = true 
     AND (

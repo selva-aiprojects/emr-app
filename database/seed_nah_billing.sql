@@ -13,7 +13,7 @@ WITH enc AS (
     e.patient_id,
     e.visit_date,
     row_number() OVER (ORDER BY e.visit_date, e.id) AS rn
-  FROM emr.encounters e
+  FROM encounters e
   WHERE e.tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'
 ),
 calc AS (
@@ -23,7 +23,7 @@ calc AS (
     round((100 + (enc.rn % 6) * 75)::numeric * 0.05, 2) AS tax
   FROM enc
 )
-INSERT INTO emr.invoices (
+INSERT INTO invoices (
   tenant_id,
   patient_id,
   encounter_id,
@@ -58,7 +58,7 @@ ON CONFLICT DO NOTHING;
 -- =====================================================
 -- NAH EXPENSES (Operational costs for realistic metrics)
 -- =====================================================
-INSERT INTO emr.expenses (
+INSERT INTO expenses (
   tenant_id,
   category,
   description,

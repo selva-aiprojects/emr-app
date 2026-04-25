@@ -90,10 +90,10 @@ CREATE TABLE IF NOT EXISTS appointments (
 
 CREATE TABLE IF NOT EXISTS encounters (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    tenant_id VARCHAR(255) NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
-    patient_id VARCHAR(255) NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    provider_id VARCHAR(255) REFERENCES users(id),
-    appointment_id VARCHAR(255) REFERENCES appointments(id) ON DELETE SET NULL,
+    tenant_id VARCHAR(255) NOT NULL,
+    patient_id VARCHAR(255) NOT NULL,
+    provider_id VARCHAR(255),
+    appointment_id VARCHAR(255),
     encounter_type VARCHAR(50) NOT NULL,
     visit_date DATE NOT NULL,
     chief_complaint TEXT,
@@ -102,6 +102,40 @@ CREATE TABLE IF NOT EXISTS encounters (
     plan TEXT,
     status VARCHAR(20) DEFAULT 'active',
     vitals JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Laboratory & Radiology Requests
+CREATE TABLE IF NOT EXISTS service_requests (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    tenant_id VARCHAR(255) NOT NULL,
+    patient_id VARCHAR(255) NOT NULL,
+    encounter_id VARCHAR(255),
+    requester_id VARCHAR(255),
+    category VARCHAR(64) DEFAULT 'lab',
+    code VARCHAR(64),
+    display VARCHAR(255),
+    status VARCHAR(32) DEFAULT 'pending',
+    priority VARCHAR(32) DEFAULT 'routine',
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- OPD Token System
+CREATE TABLE IF NOT EXISTS opd_tokens (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    tenant_id VARCHAR(255) NOT NULL,
+    patient_id VARCHAR(255),
+    token_number INTEGER NOT NULL,
+    token_prefix VARCHAR(10) DEFAULT 'OPD',
+    full_token VARCHAR(20),
+    status VARCHAR(20) DEFAULT 'waiting',
+    priority VARCHAR(10) DEFAULT 'general',
+    department_id VARCHAR(255),
+    doctor_id VARCHAR(255),
+    appointment_id VARCHAR(255),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -189,9 +223,9 @@ CREATE TABLE IF NOT EXISTS attendance (
 
 CREATE TABLE IF NOT EXISTS invoices (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    tenant_id VARCHAR(255) NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
-    patient_id VARCHAR(255) NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-    encounter_id VARCHAR(255) REFERENCES encounters(id),
+    tenant_id VARCHAR(255) NOT NULL,
+    patient_id VARCHAR(255) NOT NULL,
+    encounter_id VARCHAR(255),
     invoice_number VARCHAR(64) NOT NULL UNIQUE,
     subtotal NUMERIC(12,2) DEFAULT 0,
     tax NUMERIC(12,2) DEFAULT 0,
@@ -204,13 +238,65 @@ CREATE TABLE IF NOT EXISTS invoices (
 
 CREATE TABLE IF NOT EXISTS invoice_items (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    tenant_id VARCHAR(255) NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
-    invoice_id VARCHAR(255) NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
+    tenant_id VARCHAR(255) NOT NULL,
+    invoice_id VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
     quantity NUMERIC(10,2) DEFAULT 1,
     unit_price NUMERIC(12,2) NOT NULL,
     total_price NUMERIC(12,2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- OPD Specific Billing
+CREATE TABLE IF NOT EXISTS opd_bills (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    tenant_id VARCHAR(255) NOT NULL,
+    patient_id VARCHAR(255) NOT NULL,
+    bill_number VARCHAR(64) UNIQUE,
+    total_amount NUMERIC(12,2) DEFAULT 0,
+    status VARCHAR(32) DEFAULT 'unpaid',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================================
+-- 5. CLINICAL MASTERS (NEW)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS specialities (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    tenant_id VARCHAR(255) NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(tenant_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS diseases (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    tenant_id VARCHAR(255) NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    code VARCHAR(64) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(255),
+    description TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(tenant_id, code)
+);
+
+CREATE TABLE IF NOT EXISTS treatments (
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    tenant_id VARCHAR(255) NOT NULL REFERENCES nexus.tenants(id) ON DELETE CASCADE,
+    code VARCHAR(64) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(255),
+    base_cost NUMERIC(12,2) DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(tenant_id, code)
 );
 
 -- ============================================================
@@ -225,3 +311,30 @@ CREATE TRIGGER update_departments_updated_at BEFORE UPDATE ON departments FOR EA
 
 DROP TRIGGER IF EXISTS update_encounters_updated_at ON encounters;
 CREATE TRIGGER update_encounters_updated_at BEFORE UPDATE ON encounters FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_specialities_updated_at ON specialities;
+CREATE TRIGGER update_specialities_updated_at BEFORE UPDATE ON specialities FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_diseases_updated_at ON diseases;
+CREATE TRIGGER update_diseases_updated_at BEFORE UPDATE ON diseases FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_treatments_updated_at ON treatments;
+CREATE TRIGGER update_treatments_updated_at BEFORE UPDATE ON treatments FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================================
+-- CANONICAL SEED DATA (SHARD LEVEL)
+-- ============================================================
+
+-- Roles Seed
+INSERT INTO roles (id, name, permissions) VALUES 
+('Admin', 'Administrator', '["*"]'),
+('Doctor', 'Medical Doctor', '["clinical.*", "appointments.*", "patients.view"]'),
+('Nurse', 'Nursing Staff', '["clinical.vitals", "appointments.view", "patients.view"]'),
+('Pharmacy', 'Pharmacist', '["inventory.*", "pharmacy.*"]'),
+('Lab', 'Lab Technician', '["lab.*"]'),
+('Frontdesk', 'Front Desk', '["appointments.*", "patients.*", "billing.view"]')
+ON CONFLICT (id) DO NOTHING;
+
+-- Specialities Seed (Placeholder - tenant_id must be provided by the caller if not using a global trigger)
+-- Since this runs during provisioning, we usually handle seeds in the provisioning service.
+-- However, for reference, these are the standard entries.

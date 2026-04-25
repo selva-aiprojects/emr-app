@@ -7,11 +7,11 @@ BEGIN;
 -- SUPERADMIN USER
 -- Password: Admin@123
 -- =====================================================
-INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '00000000-0000-0000-0000-000000000001'::uuid,
   NULL,
-  'superadmin@emr.local',
+  'superadmin@local',
   '$2a$10$qVEQHwCfYj7zV9LQwY6qHO6W0P4PJ2X6K3BQj9.FEpN7E8AJxQ5Ay',
   'Platform Superadmin',
   'Superadmin',
@@ -21,7 +21,7 @@ VALUES (
 -- =====================================================
 -- SAMPLE TENANT
 -- =====================================================
-INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, status)
+INSERT INTO tenants (id, name, code, subdomain, theme, features, status)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'Selva Care Hospital',
@@ -37,7 +37,7 @@ VALUES (
 -- =====================================================
 
 -- Admin: anita@sch.local / Anita@123
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'anita@sch.local',
@@ -48,7 +48,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- Doctor: rajesh@sch.local / Rajesh@123
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'rajesh@sch.local',
@@ -59,7 +59,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- Nurse: priya@sch.local / Priya@123
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'priya@sch.local',
@@ -70,7 +70,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- Front Office: suresh@sch.local / Suresh@123
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'suresh@sch.local',
@@ -83,7 +83,7 @@ VALUES (
 -- =====================================================
 -- SAMPLE PATIENT
 -- =====================================================
-INSERT INTO emr.patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact, insurance, medical_history)
+INSERT INTO patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact, insurance, medical_history)
 VALUES (
   '20000000-0000-0000-0000-000000000001'::uuid,
   '10000000-0000-0000-0000-000000000001'::uuid,
@@ -102,7 +102,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, mrn) DO NOTHING;
 
 -- Patient User: meena@sch.local / Meena@123
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, patient_id, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, patient_id, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'meena@sch.local',
@@ -119,10 +119,10 @@ COMMIT;
 -- SHOW LOADED DATA
 -- =====================================================
 SELECT 'Loaded Users:' as info;
-SELECT name, email, role FROM emr.users ORDER BY role, name;
+SELECT name, email, role FROM users ORDER BY role, name;
 
 SELECT 'Loaded Tenants:' as info;
-SELECT name, code FROM emr.tenants;
+SELECT name, code FROM tenants;
 
 SELECT 'Loaded Patients:' as info;
-SELECT mrn, first_name, last_name FROM emr.patients;
+SELECT mrn, first_name, last_name FROM patients;

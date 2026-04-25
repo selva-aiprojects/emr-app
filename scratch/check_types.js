@@ -1,21 +1,18 @@
-import { query } from '../server/db/connection.js';
 
-async function checkTenantIdTypes() {
+import { query } from './server/db/connection.js';
+
+async function checkTypes() {
     try {
-        console.log('🔍 Checking tenant_id types across tables...');
         const res = await query(`
-            SELECT table_name, column_name, data_type 
+            SELECT column_name, data_type 
             FROM information_schema.columns 
-            WHERE table_schema = 'emr' 
-            AND column_name IN ('tenant_id', 'id')
-            AND table_name IN ('tenants', 'patients', 'users', 'appointments', 'encounters');
+            WHERE table_schema = 'nexus' AND table_name = 'tenants' AND column_name = 'id'
         `);
-        console.table(res.rows);
-    } catch (err) {
-        console.error('❌ Check failed:', err.message);
+        console.log('nexus.tenants.id type:', res.rows[0]);
+    } catch (e) {
+        console.error('Check failed:', e);
     } finally {
-        process.exit();
+        process.exit(0);
     }
 }
-
-checkTenantIdTypes();
+checkTypes();

@@ -6,7 +6,7 @@ BEGIN;
 -- =====================================================
 -- NEW AGE HOSPITAL (NAH) TENANT SETUP
 -- =====================================================
-INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, subscription_tier, status, created_at)
+INSERT INTO tenants (id, name, code, subdomain, theme, features, subscription_tier, status, created_at)
 VALUES (
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid,
   'New Age Hospital',
@@ -23,7 +23,7 @@ VALUES (
 -- NAH ADMIN USER
 -- Email: admin@newage.hospital / Password: Admin@123
 -- =====================================================
-INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
+INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
 VALUES (
   '20000000-0000-0000-0000-000000000101'::uuid,
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid,
@@ -40,7 +40,7 @@ VALUES (
 -- =====================================================
 
 -- Chief Medical Officer
-INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
+INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
 VALUES (
   '20000000-0000-0000-0000-000000000102'::uuid,
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid,
@@ -53,7 +53,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, name = EXCLUDED.name, is_active = EXCLUDED.is_active;
 
 -- Head Nurse
-INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
+INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
 VALUES (
   '20000000-0000-0000-0000-000000000103'::uuid,
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid,
@@ -66,7 +66,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, name = EXCLUDED.name, is_active = EXCLUDED.is_active;
 
 -- Pharmacy Manager
-INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
+INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
 VALUES (
   '20000000-0000-0000-0000-000000000104'::uuid,
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid,
@@ -79,7 +79,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, name = EXCLUDED.name, is_active = EXCLUDED.is_active;
 
 -- Lab Technician
-INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
+INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
 VALUES (
   '20000000-0000-0000-0000-000000000105'::uuid,
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid,
@@ -92,7 +92,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role, name = EXCLUDED.name, is_active = EXCLUDED.is_active;
 
 -- Billing Manager
-INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
+INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active, created_at)
 VALUES (
   '20000000-0000-0000-0000-000000000106'::uuid,
   'f998a8f5-95b9-4fd7-a583-63cf574d65ed'::uuid,
@@ -107,7 +107,7 @@ VALUES (
 -- =====================================================
 -- NAH PATIENTS (50 patients for realistic dashboard data)
 -- =====================================================
-INSERT INTO emr.patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact, insurance, medical_history, created_at)
+INSERT INTO patients (tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact, insurance, medical_history, created_at)
 VALUES
 -- Emergency Department Patients
 ('f998a8f5-95b9-4fd7-a583-63cf574d65ed','NAH-ER-001','John','Smith','1985-03-15','Male','+1-555-0101','john.smith@email.com','123 Main St, New York, NY','O+','Mary Smith: +1-555-0102','BlueCross #BC001','{"chronicConditions":"Hypertension","allergies":"Penicillin","surgeries":"Appendectomy 2010","familyHistory":"Heart Disease"}',NOW()),
@@ -192,6 +192,6 @@ VALUES
 ('f998a8f5-95b9-4fd7-a583-63cf574d65ed','NAH-OPD-018','Gary','Bell','1975-06-25','Male','+1-555-0191','gary.b@email.com','227 Oak Ridge, New York, NY','AB+','Catherine Bell: +1-555-0192','UnitedHealth #UH046','{"chronicConditions":"Gout","allergies":"None","surgeries":"None","familyHistory":"Gout"}',NOW()),
 ('f998a8f5-95b9-4fd7-a583-63cf574d65ed','NAH-OPD-019','Diane','Bailey','1992-04-11','Female','+1-555-0193','diane.b@email.com','338 Birch Valley, New York, NY','A-','Steven Bailey: +1-555-0194','BlueShield #BS047','{"chronicConditions":"PCOS","allergies":"None","surgeries":"None","familyHistory":"PCOS"}',NOW()),
 ('f998a8f5-95b9-4fd7-a583-63cf574d65ed','NAH-OPD-020','Terry','Rivera','1981-08-17','Male','+1-555-0195','terry.r@email.com','449 Cedar Heights, New York, NY','B+','Maria Rivera: +1-555-0196','Humana #HU048','{"chronicConditions":"Ulcerative Colitis","allergies":"None","surgeries":"None","familyHistory":"IBD"}',NOW())
-ON CONFLICT (tenant_id, mrn) DO NOTHING;
+ON CONFLICT (mrn) DO NOTHING;
 
 COMMIT;

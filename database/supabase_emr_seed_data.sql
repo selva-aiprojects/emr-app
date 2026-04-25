@@ -8,7 +8,7 @@
 -- SAMPLE TENANT
 -- =====================================================
 
-INSERT INTO emr.tenants (id, name, email, subscription_tier) 
+INSERT INTO tenants (id, name, email, subscription_tier) 
 VALUES ('demo-tenant-123', 'Demo Hospital', 'demo@hospital.com', 'Professional')
 ON CONFLICT (id) DO NOTHING;
 
@@ -16,7 +16,7 @@ ON CONFLICT (id) DO NOTHING;
 -- SAMPLE DEPARTMENTS
 -- =====================================================
 
-INSERT INTO emr.departments (id, tenant_id, name, description, head_of_dept) VALUES
+INSERT INTO departments (id, tenant_id, name, description, head_of_dept) VALUES
     ('dept-1', 'demo-tenant-123', 'General Medicine', 'General medical services', 'Dr. Smith'),
     ('dept-2', 'demo-tenant-123', 'Emergency', 'Emergency medical services', 'Dr. Johnson'),
     ('dept-3', 'demo-tenant-123', 'Pediatrics', 'Pediatric care', 'Dr. Wilson'),
@@ -27,7 +27,7 @@ ON CONFLICT (id) DO NOTHING;
 -- SAMPLE SERVICES
 -- =====================================================
 
-INSERT INTO emr.services (id, tenant_id, name, code, category, base_rate, tax_percent, description) VALUES
+INSERT INTO services (id, tenant_id, name, code, category, base_rate, tax_percent, description) VALUES
     ('svc-1', 'demo-tenant-123', 'General Consultation', 'GC001', 'Consultation', 50.00, 5.00, 'General physician consultation'),
     ('svc-2', 'demo-tenant-123', 'Specialist Consultation', 'SC001', 'Consultation', 100.00, 5.00, 'Specialist doctor consultation'),
     ('svc-3', 'demo-tenant-123', 'Complete Blood Count', 'LAB001', 'Laboratory', 25.00, 5.00, 'Complete blood count test'),
@@ -40,7 +40,7 @@ ON CONFLICT (id) DO NOTHING;
 -- SAMPLE USERS
 -- =====================================================
 
-INSERT INTO emr.users (id, tenant_id, email, password, first_name, last_name, role) VALUES
+INSERT INTO users (id, tenant_id, email, password, first_name, last_name, role) VALUES
     ('user-admin-1', 'demo-tenant-123', 'admin@hospital.com', '$2b$10$CwTycUXWue0Thq9StjUM0uJ6QGwFUvKyRHGDbe.xjQzV8K4.ABC1C', 'John', 'Admin', 'Admin'),
     ('user-doc-1', 'demo-tenant-123', 'doctor@hospital.com', '$2b$10$CwTycUXWue0Thq9StjUM0uJ6QGwFUvKyRHGDbe.xjQzV8K4.ABC1C', 'Sarah', 'Doctor', 'Doctor'),
     ('user-nurse-1', 'demo-tenant-123', 'nurse@hospital.com', '$2b$10$CwTycUXWue0Thq9StjUM0uJ6QGwFUvKyRHGDbe.xjQzV8K4.ABC1C', 'Emily', 'Nurse', 'Nurse'),
@@ -51,7 +51,7 @@ ON CONFLICT (id) DO NOTHING;
 -- SAMPLE EMPLOYEES
 -- =====================================================
 
-INSERT INTO emr.employees (id, tenant_id, first_name, last_name, email, phone, role, department, join_date, salary) VALUES
+INSERT INTO employees (id, tenant_id, first_name, last_name, email, phone, role, department, join_date, salary) VALUES
     ('emp-1', 'demo-tenant-123', 'Sarah', 'Doctor', 'sarah.doctor@hospital.com', '+1-555-0101', 'Doctor', 'General Medicine', '2023-01-15', 120000.00),
     ('emp-2', 'demo-tenant-123', 'John', 'Smith', 'john.smith@hospital.com', '+1-555-0102', 'Doctor', 'Emergency', '2023-02-01', 130000.00),
     ('emp-3', 'demo-tenant-123', 'Emily', 'Nurse', 'emily.nurse@hospital.com', '+1-555-0103', 'Nurse', 'General Medicine', '2023-03-10', 65000.00),
@@ -64,7 +64,7 @@ ON CONFLICT (id) DO NOTHING;
 -- SAMPLE PATIENTS
 -- =====================================================
 
-INSERT INTO emr.patients (id, tenant_id, first_name, last_name, date_of_birth, gender, phone, email, address, blood_type, emergency_contact_name, emergency_contact_phone) VALUES
+INSERT INTO patients (id, tenant_id, first_name, last_name, date_of_birth, gender, phone, email, address, blood_type, emergency_contact_name, emergency_contact_phone) VALUES
     ('pat-1', 'demo-tenant-123', 'James', 'Anderson', '1985-03-15', 'Male', '+1-555-0201', 'james.anderson@email.com', '123 Main St, City, State 12345', 'O+', 'Mary Anderson', '+1-555-0202'),
     ('pat-2', 'demo-tenant-123', 'Mary', 'Johnson', '1990-07-22', 'Female', '+1-555-0203', 'mary.johnson@email.com', '456 Oak Ave, City, State 12345', 'A+', 'Robert Johnson', '+1-555-0204'),
     ('pat-3', 'demo-tenant-123', 'Robert', 'Williams', '1978-11-30', 'Male', '+1-555-0205', 'robert.williams@email.com', '789 Pine Rd, City, State 12345', 'B+', 'Susan Williams', '+1-555-0206'),
@@ -79,7 +79,7 @@ ON CONFLICT (id) DO NOTHING;
 -- SAMPLE APPOINTMENTS
 -- =====================================================
 
-INSERT INTO emr.appointments (id, tenant_id, patient_id, doctor_id, appointment_date, duration, status, notes) VALUES
+INSERT INTO appointments (id, tenant_id, patient_id, doctor_id, appointment_date, duration, status, notes) VALUES
     ('apt-1', 'demo-tenant-123', 'pat-1', 'emp-1', '2026-04-03 09:00:00', 30, 'scheduled', 'Regular checkup'),
     ('apt-2', 'demo-tenant-123', 'pat-2', 'emp-1', '2026-04-03 10:30:00', 30, 'scheduled', 'Follow-up visit'),
     ('apt-3', 'demo-tenant-123', 'pat-3', 'emp-2', '2026-04-03 14:00:00', 45, 'scheduled', 'Emergency consultation'),
@@ -94,7 +94,7 @@ ON CONFLICT (id) DO NOTHING;
 -- SAMPLE ENCOUNTERS
 -- =====================================================
 
-INSERT INTO emr.encounters (id, tenant_id, patient_id, doctor_id, encounter_date, encounter_type, chief_complaint, diagnosis, treatment_plan, prescription, notes) VALUES
+INSERT INTO encounters (id, tenant_id, patient_id, doctor_id, encounter_date, encounter_type, chief_complaint, diagnosis, treatment_plan, prescription, notes) VALUES
     ('enc-1', 'demo-tenant-123', 'pat-1', 'emp-1', '2026-03-20 10:00:00', 'consultation', 'Annual checkup', 'Healthy', 'Continue current medications', 'None', 'Patient doing well'),
     ('enc-2', 'demo-tenant-123', 'pat-2', 'emp-1', '2026-03-25 14:30:00', 'follow-up', 'Headache', 'Tension headache', 'Pain medication as needed', 'Ibuprofen 400mg PRN', 'Stress management advised'),
     ('enc-3', 'demo-tenant-123', 'pat-3', 'emp-2', '2026-03-28 20:15:00', 'emergency', 'Chest pain', 'Musculoskeletal pain', 'Rest and pain medication', 'Acetaminophen 500mg PRN', 'Cardiac workup negative'),
@@ -106,7 +106,7 @@ ON CONFLICT (id) DO NOTHING;
 -- SAMPLE INVENTORY
 -- =====================================================
 
-INSERT INTO emr.inventory (id, tenant_id, name, category, quantity, unit, min_stock, price, supplier) VALUES
+INSERT INTO inventory (id, tenant_id, name, category, quantity, unit, min_stock, price, supplier) VALUES
     ('inv-1', 'demo-tenant-123', 'Paracetamol 500mg', 'Medicine', 1000, 'tablets', 100, 0.50, 'Pharma Corp'),
     ('inv-2', 'demo-tenant-123', 'Ibuprofen 400mg', 'Medicine', 500, 'tablets', 50, 0.75, 'MedSupply Inc'),
     ('inv-3', 'demo-tenant-123', 'Bandage', 'Medical Supplies', 200, 'pieces', 20, 1.25, 'Health Supplies Co'),
@@ -121,7 +121,7 @@ ON CONFLICT (id) DO NOTHING;
 -- SAMPLE INVOICES
 -- =====================================================
 
-INSERT INTO emr.invoices (id, tenant_id, patient_id, user_id, invoice_number, description, amount, tax_percent, total_amount, payment_method, status, due_date) VALUES
+INSERT INTO invoices (id, tenant_id, patient_id, user_id, invoice_number, description, amount, tax_percent, total_amount, payment_method, status, due_date) VALUES
     ('inv-1', 'demo-tenant-123', 'pat-1', 'user-admin-1', 'INV-2026-001', 'General Consultation Fee', 50.00, 5.00, 52.50, 'Cash', 'paid', '2026-04-10'),
     ('inv-2', 'demo-tenant-123', 'pat-2', 'user-admin-1', 'INV-2026-002', 'Specialist Consultation + Lab Tests', 150.00, 5.00, 157.50, 'Credit Card', 'paid', '2026-04-15'),
     ('inv-3', 'demo-tenant-123', 'pat-3', 'user-admin-1', 'INV-2026-003', 'Emergency Room Visit', 200.00, 5.00, 210.00, 'Insurance', 'unpaid', '2026-04-20'),

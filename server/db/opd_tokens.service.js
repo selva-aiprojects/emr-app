@@ -10,12 +10,12 @@ import { query } from './connection.js';
 // =====================================================
 
 export async function createOPDToken({ tenantId, patientId, departmentId, doctorId, visitType, priority = 'routine', createdBy }) {
-  const tokenNumberSql = 'SELECT emr.get_next_token_number($1, $2, $3)';
+  const tokenNumberSql = 'SELECT get_next_token_number($1, $2, $3)';
   const tokenRes = await query(tokenNumberSql, [tenantId, departmentId, doctorId]);
   const tokenNumber = tokenRes.rows[0].get_next_token_number;
   
   const sql = `
-    INSERT INTO emr.opd_tokens (
+    INSERT INTO opd_tokens (
       tenant_id, patient_id, department_id, doctor_id, token_number, 
       visit_type, priority, status, created_by
     )
@@ -41,10 +41,10 @@ export async function getOPDTokens(tenantId, filters = {}) {
       p.mrn as patient_mrn,
       d.name as department_name,
       u.name as doctor_name
-    FROM emr.opd_tokens t
-    JOIN emr.patients p ON t.patient_id = p.id
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    FROM opd_tokens t
+    JOIN patients p ON t.patient_id = p.id
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
     WHERE t.tenant_id = $1 AND DATE(t.created_at) = ${date}
   `;
   
@@ -78,7 +78,7 @@ export async function updateTokenStatus(tokenId, tenantId, status, userId) {
   if (status === 'completed') extraFields = ', consultation_completed_at = NOW()';
   
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET status = $1, updated_at = NOW() ${extraFields}
     WHERE id = $2 AND tenant_id = $3
     RETURNING *
@@ -90,7 +90,7 @@ export async function updateTokenStatus(tokenId, tenantId, status, userId) {
 
 export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
   const sql = `
-    UPDATE emr.opd_tokens 
+    UPDATE opd_tokens 
     SET vitals_recorded = true,
         updated_at = NOW()
     WHERE id = $1 AND tenant_id = $2
@@ -102,7 +102,7 @@ export async function updateTokenVitals(tokenId, tenantId, vitalsData) {
   // Create vitals record if needed
   if (result.rows[0]) {
     const vitalsSql = `
-      INSERT INTO emr.vitals (
+      INSERT INTO vitals (
         tenant_id, patient_id, encounter_id, blood_pressure_systolic,
         blood_pressure_diastolic, heart_rate, temperature, 
         oxygen_saturation, weight, height, created_by
@@ -136,9 +136,9 @@ export async function getTokenHistory(tenantId, patientId, limit = 10) {
       d.name as department_name,
       u.name as doctor_name,
       EXTRACT(EPOCH FROM (consultation_completed_at - consultation_started_at))/60 as consultation_duration_minutes
-    FROM emr.opd_tokens t
-    LEFT JOIN emr.departments d ON t.department_id = d.id
-    LEFT JOIN emr.users u ON t.doctor_id = u.id
+    FROM opd_tokens t
+    LEFT JOIN departments d ON t.department_id = d.id
+    LEFT JOIN users u ON t.doctor_id = u.id
     WHERE t.tenant_id = $1 AND t.patient_id = $2
     ORDER BY t.created_at DESC
     LIMIT $3

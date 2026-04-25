@@ -109,6 +109,13 @@ router.post('/tenants', async (req, res) => {
       subscriptionTier: subscription_tier || 'Professional'
     });
 
+    // --- AUTOMATED SHARD PROVISIONING ---
+    try {
+      await repo.provisionTenantSchema(tenant.id, code.toLowerCase());
+    } catch (provErr) {
+      console.error(`[PROVISIONING_FAIL] ${code}:`, provErr.message);
+    }
+
     await repo.createAuditLog({
       userId: req.user.id,
       userName: req.user.name,

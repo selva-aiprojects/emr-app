@@ -9,9 +9,9 @@ const pool = new pg.Pool({
 
 async function checkLegacy() {
   try {
-    console.log('Checking for legacy "emr.tenants" data...');
-    const res = await pool.query('SELECT COUNT(*) FROM emr.tenants');
-    console.log('Count in emr.tenants:', res.rows[0].count);
+    console.log('Checking for legacy "tenants" data...');
+    const res = await pool.query('SELECT COUNT(*) FROM tenants');
+    console.log('Count in tenants:', res.rows[0].count);
 
     console.log('Checking for new "management_tenants" data...');
     const res2 = await pool.query('SELECT COUNT(*) FROM management_tenants');

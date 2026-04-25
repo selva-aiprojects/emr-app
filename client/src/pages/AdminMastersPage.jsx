@@ -13,9 +13,14 @@ import {
   Settings,
   ChevronRight,
   Database,
-  Users
+  Users,
+  Stethoscope,
+  BookOpen,
+  Syringe,
+  Key
 } from 'lucide-react';
-import '../styles/critical-care.css';
+
+// ... (rest of imports)
 
 export default function AdminMastersPage({ tenant, onViewChange }) {
   const { showToast } = useToast();
@@ -40,11 +45,47 @@ export default function AdminMastersPage({ tenant, onViewChange }) {
       path: 'departments'
     },
     {
+      id: 'specialities',
+      name: 'Clinical Specialities',
+      description: 'Manage medical specializations and provider expertises.',
+      icon: Stethoscope,
+      color: 'cyan',
+      count: 'Clinical Nodes',
+      path: 'specialities'
+    },
+    {
+      id: 'diseases',
+      name: 'Disease Registry',
+      description: 'Canonical disease database with ICD-10 mapping and categories.',
+      icon: BookOpen,
+      color: 'amber',
+      count: 'Clinical Taxonomy',
+      path: 'diseases'
+    },
+    {
+      id: 'treatments',
+      name: 'Treatment Registry',
+      description: 'Standardized procedures, clinical protocols, and base rates.',
+      icon: Syringe,
+      color: 'emerald',
+      count: 'Clinical Protocols',
+      path: 'treatments'
+    },
+    {
+      id: 'roles',
+      name: 'Roles & Permissions',
+      description: 'Access control matrices, system roles, and functional permissions.',
+      icon: Key,
+      color: 'rose',
+      count: 'Access Control',
+      path: 'roles'
+    },
+    {
       id: 'bed_management',
       name: 'Bed & Ward Matrix',
       description: 'Physical infrastructure layout, occupancy tracking, and ward rates.',
       icon: Bed,
-      color: 'emerald',
+      color: 'blue',
       count: 'Infrastructure',
       path: 'bed_management'
     },
@@ -53,7 +94,7 @@ export default function AdminMastersPage({ tenant, onViewChange }) {
       name: 'Global Service Catalog',
       description: 'Standardized pricing for labs, procedures, and clinical consults.',
       icon: CreditCard,
-      color: 'blue',
+      color: 'indigo',
       count: 'Revenue Cycle',
       path: 'service_catalog'
     },

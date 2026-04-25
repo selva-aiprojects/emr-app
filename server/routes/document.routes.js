@@ -24,8 +24,8 @@ router.get('/', async (req, res) => {
     const result = await query(
       `SELECT d.*, 
               CASE WHEN p.id IS NULL THEN NULL ELSE CONCAT(p.first_name, ' ', p.last_name) END AS patient_name
-       FROM emr.documents d 
-       LEFT JOIN emr.patients p ON p.id::text = d.patient_id::text
+       FROM documents d 
+       LEFT JOIN patients p ON p.id::text = d.patient_id::text
        WHERE ${conditions.join(' AND ')} 
        ORDER BY d.created_at DESC`,
       params
@@ -48,12 +48,12 @@ router.post('/', requireRole('Admin', 'Doctor', 'Nurse', 'Lab', 'Pharmacy', 'Fro
     if (!title || !fileName) return res.status(400).json({ error: 'title and fileName are required' });
     
     const inserted = await query(
-      `INSERT INTO emr.documents (tenant_id, patient_id, encounter_id, category, title, file_name, mime_type, storage_key, size_bytes, tags, uploaded_by)
+      `INSERT INTO documents (tenant_id, patient_id, encounter_id, category, title, file_name, mime_type, storage_key, size_bytes, tags, uploaded_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11) RETURNING *`,
       [req.tenantId, patientId, encounterId, category, title, fileName, mimeType, storageKey || `manual://${fileName}`, Number(sizeBytes || 0), JSON.stringify(tags), req.user.id]
     );
     
-    await query(`INSERT INTO emr.document_audit_logs (tenant_id, document_id, action, actor_id, metadata) VALUES ($1, $2, 'upload', $3, $4::jsonb)`,
+    await query(`INSERT INTO document_audit_logs (tenant_id, document_id, action, actor_id, metadata) VALUES ($1, $2, 'upload', $3, $4::jsonb)`,
       [req.tenantId, inserted.rows[0].id, req.user.id, JSON.stringify({ category })]
     );
     res.status(201).json(inserted.rows[0]);
@@ -72,12 +72,12 @@ router.patch('/:id/delete', requireRole('Admin', 'Doctor', 'Nurse', 'Lab', 'Phar
     const { id } = req.params;
     const { isDeleted = true } = req.body;
     
-    const updated = await query(`UPDATE emr.documents SET is_deleted = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 RETURNING *`,
+    const updated = await query(`UPDATE documents SET is_deleted = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 RETURNING *`,
       [Boolean(isDeleted), id, req.tenantId]
     );
     if (!updated.rows.length) return res.status(404).json({ error: 'Notice not found' });
     
-    await query(`INSERT INTO emr.document_audit_logs (tenant_id, document_id, action, actor_id, metadata) VALUES ($1, $2, $3, $4, $5::jsonb)`,
+    await query(`INSERT INTO document_audit_logs (tenant_id, document_id, action, actor_id, metadata) VALUES ($1, $2, $3, $4, $5::jsonb)`,
       [req.tenantId, id, isDeleted ? 'delete' : 'restore', req.user.id, JSON.stringify({ softDelete: true })]
     );
     res.json(updated.rows[0]);

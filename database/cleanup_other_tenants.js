@@ -25,21 +25,21 @@ async function runPurge() {
 
   // 1. Break FKs by TRUNCATING the leaf tables (ONLY in emr schema)
   console.log('🔄 Wiping Global Drug/Audit Tables (Cascading TRUNCATE)...');
-  await client.query(`TRUNCATE emr.drug_batches, emr.drug_master, emr.audit_logs CASCADE`);
+  await client.query(`TRUNCATE drug_batches, drug_master, audit_logs CASCADE`);
 
   // 2. Clear Tenants
   console.log('🔄 Cleaning Registries (Keeping Only NHGL)...');
-  await client.query(`DELETE FROM emr.management_tenants WHERE id != $1 AND code != $2`, [KEEP_ID, KEEP_CODE]);
-  await client.query(`DELETE FROM emr.tenants WHERE id != $1 AND code != $2`, [KEEP_ID, KEEP_CODE]);
+  await client.query(`DELETE FROM management_tenants WHERE id != $1 AND code != $2`, [KEEP_ID, KEEP_CODE]);
+  await client.query(`DELETE FROM tenants WHERE id != $1 AND code != $2`, [KEEP_ID, KEEP_CODE]);
 
   // 3. Clear Users (Keep NHGL users)
   console.log('🔄 Cleaning Global Users...');
-  await client.query(`DELETE FROM emr.users WHERE tenant_id != $1`, [KEEP_ID]);
+  await client.query(`DELETE FROM users WHERE tenant_id != $1`, [KEEP_ID]);
 
   // 4. Force NHGL to be "nhgl" for everything
   console.log('🔄 Standardizing NHGL Routing...');
-  await client.query(`UPDATE emr.management_tenants SET name = 'NHGL Healthcare Institute', subdomain = 'nhgl', schema_name = 'nhgl' WHERE id = $1`, [KEEP_ID]);
-  await client.query(`UPDATE emr.tenants SET name = 'NHGL Healthcare Institute', subdomain = 'nhgl' WHERE id = $1`, [KEEP_ID]);
+  await client.query(`UPDATE management_tenants SET name = 'NHGL Healthcare Institute', subdomain = 'nhgl', schema_name = 'nhgl' WHERE id = $1`, [KEEP_ID]);
+  await client.query(`UPDATE tenants SET name = 'NHGL Healthcare Institute', subdomain = 'nhgl' WHERE id = $1`, [KEEP_ID]);
 
   // 5. Schema verification
   console.log('🔄 Final hygiene...');

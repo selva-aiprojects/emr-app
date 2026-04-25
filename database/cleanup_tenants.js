@@ -5,41 +5,41 @@ const RELEVANT_TENANT_CODES = ['seedling', 'greenvalley', 'sunrise', 'apollo', '
 async function cleanupTenants() {
   console.log("🚀 Starting Tenant Cleanup...");
   try {
-    // Check both emr.management_tenants and emr.tenants if they exist
-    // Get all tenants from emr.management_tenants
+    // Check both management_tenants and tenants if they exist
+    // Get all tenants from management_tenants
     let tenantsToKeep = [];
     let tenantsToRemove = [];
     
     try {
-        const res = await query('SELECT id, code, name FROM emr.management_tenants');
+        const res = await query('SELECT id, code, name FROM management_tenants');
         for (const t of res.rows) {
             if (RELEVANT_TENANT_CODES.includes(t.code.toLowerCase())) {
                 tenantsToKeep.push(t.code);
             } else {
                 tenantsToRemove.push(t.code);
                 // Mark for deletion or delete
-                await query('DELETE FROM emr.management_tenants WHERE id = $1', [t.id]);
+                await query('DELETE FROM management_tenants WHERE id = $1', [t.id]);
             }
         }
-        console.log(`✅ Cleaned up emr.management_tenants`);
+        console.log(`✅ Cleaned up management_tenants`);
     } catch(e) {
-        console.warn('emr.management_tenants not found or errored:', e.message);
+        console.warn('management_tenants not found or errored:', e.message);
     }
 
     try {
-        const res = await query('SELECT id, code, name FROM emr.tenants');
+        const res = await query('SELECT id, code, name FROM tenants');
         for (const t of res.rows) {
             if (RELEVANT_TENANT_CODES.includes(t.code.toLowerCase())) {
                 if(!tenantsToKeep.includes(t.code)) tenantsToKeep.push(t.code);
             } else {
                 if(!tenantsToRemove.includes(t.code)) tenantsToRemove.push(t.code);
                 // Mark for deletion or delete
-                await query('DELETE FROM emr.tenants WHERE id = $1', [t.id]);
+                await query('DELETE FROM tenants WHERE id = $1', [t.id]);
             }
         }
-        console.log(`✅ Cleaned up emr.tenants`);
+        console.log(`✅ Cleaned up tenants`);
     } catch(e) {
-        console.warn('emr.tenants not found or errored:', e.message);
+        console.warn('tenants not found or errored:', e.message);
     }
     
     // Attempt to drop their schemas

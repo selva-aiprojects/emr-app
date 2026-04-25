@@ -53,8 +53,8 @@ async function createTestTenants() {
 
       // Insert tenant
       const tenantResult = await query(
-        `INSERT INTO emr.tenants (name, code, subdomain, subscription_tier, theme, is_active, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
+        `INSERT INTO nexus.tenants (name, code, subdomain, subscription_tier, theme, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, 'active', NOW(), NOW())
          RETURNING id`,
         [
           tenantData.name,
@@ -73,7 +73,7 @@ async function createTestTenants() {
         const passwordHash = await hashPassword('Test@123');
 
         const userResult = await query(
-          `INSERT INTO emr.users (tenant_id, name, email, password_hash, role, is_active, created_at, updated_at)
+          `INSERT INTO nexus.users (tenant_id, name, email, password_hash, role, is_active, created_at, updated_at)
            VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
            RETURNING id`,
           [tenantId, userData.name, userData.email, passwordHash, userData.role]

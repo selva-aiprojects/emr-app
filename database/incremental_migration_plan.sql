@@ -7,7 +7,7 @@
 BEGIN;
 
 -- Create migration log table
-CREATE TABLE IF NOT EXISTS emr.migration_log (
+CREATE TABLE IF NOT EXISTS migration_log (
     id SERIAL PRIMARY KEY,
     table_name VARCHAR(255) NOT NULL,
     old_schema VARCHAR(50) NOT NULL,
@@ -81,14 +81,14 @@ BEGIN
                           table_to_migrate, table_to_migrate);
             
             -- Log successful merge
-            INSERT INTO emr.migration_log (table_name, old_schema, new_schema, status, rows_moved)
+            INSERT INTO migration_log (table_name, old_schema, new_schema, status, rows_moved)
             VALUES (table_to_migrate, 'public', 'emr', 'MERGED', rows_count);
             
             RAISE NOTICE 'Successfully merged % rows from public.% to emr.%', rows_count, table_to_migrate, table_to_migrate;
             
         EXCEPTION WHEN others THEN
             error_msg := SQLERRM;
-            INSERT INTO emr.migration_log (table_name, old_schema, new_schema, status, error_message)
+            INSERT INTO migration_log (table_name, old_schema, new_schema, status, error_message)
             VALUES (table_to_migrate, 'public', 'emr', 'MERGE_FAILED', error_msg);
             RAISE EXCEPTION 'Failed to merge table %: %', table_to_migrate, error_msg;
         END;
@@ -103,14 +103,14 @@ BEGIN
             EXECUTE format('ALTER TABLE public.%I SET SCHEMA emr', table_to_migrate);
             
             -- Log successful move
-            INSERT INTO emr.migration_log (table_name, old_schema, new_schema, status, rows_moved)
+            INSERT INTO migration_log (table_name, old_schema, new_schema, status, rows_moved)
             VALUES (table_to_migrate, 'public', 'emr', 'MOVED', rows_count);
             
             RAISE NOTICE 'Successfully moved table % (% rows) from public to emr', table_to_migrate, rows_count;
             
         EXCEPTION WHEN others THEN
             error_msg := SQLERRM;
-            INSERT INTO emr.migration_log (table_name, old_schema, new_schema, status, error_message)
+            INSERT INTO migration_log (table_name, old_schema, new_schema, status, error_message)
             VALUES (table_to_migrate, 'public', 'emr', 'MOVE_FAILED', error_msg);
             RAISE EXCEPTION 'Failed to move table %: %', table_to_migrate, error_msg;
         END;
@@ -130,7 +130,7 @@ SELECT
         WHEN ml.status LIKE '%_FAILED' THEN '❌ Failed'
         ELSE '⏳ Pending'
     END as status_icon
-FROM emr.migration_log ml
+FROM migration_log ml
 ORDER BY ml.migration_time DESC;
 
 -- Step 4: Post-migration cleanup (run after all tables are migrated)

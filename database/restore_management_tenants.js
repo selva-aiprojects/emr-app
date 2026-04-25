@@ -3,8 +3,8 @@ import { query } from '../server/db/connection.js';
 async function restoreTenants() {
   console.log("🚀 Restoring missing tenants to Login dropdown...");
   try {
-    // Check what is in emr.tenants
-    const tenantsRes = await query('SELECT id, name, code, subdomain FROM emr.tenants');
+    // Check what is in tenants
+    const tenantsRes = await query('SELECT id, name, code, subdomain FROM tenants');
     
     let restoredCount = 0;
     for (const t of tenantsRes.rows) {
@@ -12,13 +12,13 @@ async function restoreTenants() {
       const tName = t.name || t.code;
       const schemaName = t.code.toLowerCase().replace(/[^a-z0-9_]/g, '');
 
-      // Check if it exists in emr.management_tenants
-      const existing = await query('SELECT id FROM emr.management_tenants WHERE id = $1 OR code = $2', [t.id, code]);
+      // Check if it exists in management_tenants
+      const existing = await query('SELECT id FROM management_tenants WHERE id = $1 OR code = $2', [t.id, code]);
       
       if (existing.rowCount === 0) {
         // Insert it back
         await query(`
-          INSERT INTO emr.management_tenants (id, name, code, schema_name, subdomain, status, created_at)
+          INSERT INTO management_tenants (id, name, code, schema_name, subdomain, status, created_at)
           VALUES ($1, $2, $3, $4, $5, 'active', NOW())
         `, [t.id, tName, code, schemaName, t.subdomain || code]);
         console.log(`✅ Restored: ${tName} (${code})`);
@@ -30,10 +30,10 @@ async function restoreTenants() {
     // Let's ensure 'sunrise', 'seedling', 'greenvalley', 'apollo', 'dynamic', 'NAH' are known
     const defaultCodes = ['seedling', 'greenvalley', 'sunrise', 'apollo', 'dynamic', 'NAH'];
     for (const dcode of defaultCodes) {
-       const existing = await query('SELECT id FROM emr.management_tenants WHERE code = $1', [dcode.toLowerCase()]);
+       const existing = await query('SELECT id FROM management_tenants WHERE code = $1', [dcode.toLowerCase()]);
        if (existing.rowCount === 0) {
          // Also check upper case for NAH
-         const existingUp = await query('SELECT id FROM emr.management_tenants WHERE code = $1', [dcode]);
+         const existingUp = await query('SELECT id FROM management_tenants WHERE code = $1', [dcode]);
          if(existingUp.rowCount === 0) {
              console.log(`⚠️ Note: ${dcode} does not exist in your database right now. If you want it, please seed it.`);
          }

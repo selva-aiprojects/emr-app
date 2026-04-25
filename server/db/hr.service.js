@@ -13,7 +13,7 @@ import { createUser } from './user.service.js';
  */
 export async function getEmployees(tenantId) {
   const result = await query(
-    'SELECT * FROM nexus.employees WHERE tenant_id::text = $1::text ORDER BY name',
+    'SELECT * FROM employees WHERE tenant_id::text = $1::text ORDER BY name',
     [tenantId]
   );
   return result.rows.map(row => ({
@@ -33,7 +33,7 @@ export async function getEmployees(tenantId) {
  */
 export async function createEmployee({ tenantId, name, code, department, designation, joinDate, shift, salary, email }) {
   const sql = `
-    INSERT INTO nexus.employees (tenant_id, name, code, department, designation, join_date, shift, salary, leave_balance)
+    INSERT INTO employees (tenant_id, name, code, department, designation, join_date, shift, salary, leave_balance)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 12)
     RETURNING *
   `;
@@ -82,7 +82,7 @@ export async function createEmployee({ tenantId, name, code, department, designa
  */
 export async function getEmployeeLeaves(tenantId) {
   const result = await query(
-    'SELECT * FROM nexus.employee_leaves WHERE tenant_id::text = $1::text ORDER BY from_date DESC',
+    'SELECT * FROM employee_leaves WHERE tenant_id::text = $1::text ORDER BY from_date DESC',
     [tenantId]
   );
   return result.rows.map(row => ({
@@ -107,7 +107,7 @@ export async function createEmployeeLeave({ tenantId, employeeId, from, to, type
   const days = Math.ceil((toDate - fromDate) / (1000 * 60 * 60 * 24)) + 1;
 
   const sql = `
-    INSERT INTO nexus.employee_leaves (tenant_id, employee_id, leave_type, from_date, to_date, days, status)
+    INSERT INTO employee_leaves (tenant_id, employee_id, leave_type, from_date, to_date, days, status)
     VALUES ($1, $2, $3, $4, $5, $6, 'Pending')
     RETURNING *
   `;

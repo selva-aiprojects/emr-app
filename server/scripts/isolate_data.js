@@ -4,15 +4,15 @@ import { managementClient, getTenantClient } from "../db/prisma_manager.js";
 async function isolate() {
   console.log("🚀 STARTING DATA ISOLATION MIGRATION...");
   try {
-    const tenants = await managementClient.$queryRawUnsafe('SELECT id, name, code, schema_name FROM emr.management_tenants');
+    const tenants = await managementClient.$queryRawUnsafe('SELECT id, name, code, schema_name FROM management_tenants');
     
     for (const t of tenants) {
       console.log(`⏩ Processing ${t.name} (${t.code}) -> schema: ${t.schema_name}`);
       const target = getTenantClient(t.schema_name);
 
       // 1. Migrate Patients
-      console.log(`   - Querying legacy patients for tenant ${t.id} from emr.patients...`);
-      const legacyPatients = await managementClient.$queryRawUnsafe(`SELECT * FROM emr.patients WHERE tenant_id::text = '${t.id}'`);
+      console.log(`   - Querying legacy patients for tenant ${t.id} from patients...`);
+      const legacyPatients = await managementClient.$queryRawUnsafe(`SELECT * FROM patients WHERE tenant_id::text = '${t.id}'`);
       console.log(`   - Found ${legacyPatients.length} legacy patients.`);
 
       for (const p of legacyPatients) {
@@ -40,7 +40,7 @@ async function isolate() {
 
       // 2. Migrate Staff (Users)
       console.log(`   - Querying legacy users for tenant ${t.id}...`);
-      const legacyUsers = await managementClient.$queryRawUnsafe(`SELECT * FROM emr.users WHERE tenant_id::text = '${t.id}'`);
+      const legacyUsers = await managementClient.$queryRawUnsafe(`SELECT * FROM users WHERE tenant_id::text = '${t.id}'`);
       console.log(`   - Found ${legacyUsers.length} legacy staff.`);
 
       for (const u of legacyUsers) {

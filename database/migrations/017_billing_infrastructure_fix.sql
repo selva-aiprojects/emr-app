@@ -1,15 +1,15 @@
 -- Migration: Billing Infrastructure Fix (V2)
--- Description: Creates emr.invoices and emr.invoice_items, and enhances emr.expenses 
+-- Description: Creates nexus.invoices and nexus.invoice_items, and enhances nexus.expenses 
 -- with UUID tenant_id but without explicit FK to tenants table to match existing clinical architecture.
 
 BEGIN;
 
 -- 1. Create Invoices Table
-CREATE TABLE IF NOT EXISTS emr.invoices (
+CREATE TABLE IF NOT EXISTS nexus.invoices (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL, -- UUID to match patients/users pattern
-  patient_id uuid NOT NULL REFERENCES emr.patients(id) ON DELETE RESTRICT,
-  encounter_id uuid REFERENCES emr.encounters(id) ON DELETE SET NULL,
+  patient_id uuid NOT NULL REFERENCES nexus.patients(id) ON DELETE RESTRICT,
+  encounter_id uuid REFERENCES nexus.encounters(id) ON DELETE SET NULL,
   invoice_number varchar(64) NOT NULL,
   description text,
   subtotal numeric(12,2) NOT NULL DEFAULT 0,
@@ -23,10 +23,10 @@ CREATE TABLE IF NOT EXISTS emr.invoices (
 );
 
 -- 2. Create Invoice Items Table
-CREATE TABLE IF NOT EXISTS emr.invoice_items (
+CREATE TABLE IF NOT EXISTS nexus.invoice_items (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tenant_id uuid NOT NULL,
-  invoice_id uuid NOT NULL REFERENCES emr.invoices(id) ON DELETE CASCADE,
+  invoice_id uuid NOT NULL REFERENCES nexus.invoices(id) ON DELETE CASCADE,
   description text NOT NULL,
   code text,
   quantity numeric(10,2) NOT NULL DEFAULT 1,
@@ -35,10 +35,15 @@ CREATE TABLE IF NOT EXISTS emr.invoice_items (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 3. Enhance Expenses Table
-ALTER TABLE emr.expenses 
-ADD COLUMN IF NOT EXISTS payment_method varchar(64),
-ADD COLUMN IF NOT EXISTS reference text,
-ADD COLUMN IF NOT EXISTS recorded_by uuid REFERENCES emr.users(id);
+-- 3. Enhance Expenses Table (only if table exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'expenses' AND table_schema = 'nexus') THEN
+        ALTER TABLE nexus.expenses 
+        ADD COLUMN IF NOT EXISTS payment_method varchar(64),
+        ADD COLUMN IF NOT EXISTS reference text,
+        ADD COLUMN IF NOT EXISTS recorded_by uuid REFERENCES nexus.users(id);
+    END IF;
+END $$;
 
 COMMIT;

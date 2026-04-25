@@ -39,7 +39,7 @@ async function findSpecificPatient() {
       // Secondary check: Audit log or similar if enabled
       console.log('\nScanning for any recent registration activity in management logs...');
       try {
-         const logRes = await pool.query("SELECT * FROM emr.audit_logs WHERE action ILIKE '%register%' OR details ILIKE $1 ORDER BY timestamp DESC LIMIT 5", [`%${searchTerm}%`]);
+         const logRes = await pool.query("SELECT * FROM audit_logs WHERE action ILIKE '%register%' OR details ILIKE $1 ORDER BY timestamp DESC LIMIT 5", [`%${searchTerm}%`]);
          if (logRes.rows.length > 0) console.table(logRes.rows);
          else console.log('No recent registration audit logs found.');
       } catch (e) {

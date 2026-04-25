@@ -20,7 +20,7 @@ async function megaSeed() {
   await client.connect();
   
   // Resolve Dynamic Tenant ID
-  const tenantRes = await client.query(`SELECT id FROM emr.management_tenants WHERE code = 'NHGL'`);
+  const tenantRes = await client.query(`SELECT id FROM management_tenants WHERE code = 'NHGL'`);
   if (tenantRes.rows.length === 0) {
     console.error('❌ Error: NHGL tenant not found in registry. Run bootstrap first.');
     process.exit(1);
@@ -31,12 +31,12 @@ async function megaSeed() {
   // 1. Diversify Staffing
   console.log('🧑‍💼  Diversifying Hospital Workforce...');
   const diverseRoles = ['Doctor', 'Nurse', 'Lab Technician', 'Pharmacist', 'Receptionist', 'Accountant', 'HR Manager'];
-  const staff = (await client.query(`SELECT id FROM emr.employees WHERE tenant_id = $1`, [TENANT_ID])).rows;
+  const staff = (await client.query(`SELECT id FROM employees WHERE tenant_id = $1`, [TENANT_ID])).rows;
   
   if (staff.length > 0) {
     for (let i = 0; i < staff.length; i++) {
         const designation = diverseRoles[i % diverseRoles.length];
-        await client.query(`UPDATE emr.employees SET designation = $1 WHERE id = $2`, [designation, staff[i].id]);
+        await client.query(`UPDATE employees SET designation = $1 WHERE id = $2`, [designation, staff[i].id]);
     }
   }
 
@@ -56,12 +56,12 @@ async function megaSeed() {
   }
 
   // 3. Seed 500 Patients
-  console.log('👥 Seeding 500 Patients (Unified emr.patients)...');
+  console.log('👥 Seeding 500 Patients (Unified patients)...');
   const patients = [];
   for (let i = 0; i < 500; i++) {
     const id = crypto.randomUUID();
     const created = faker.date.past({ years: 1.2 });
-    await client.query(`INSERT INTO emr.patients (id, tenant_id, mrn, first_name, last_name, gender, date_of_birth, phone, created_at)
+    await client.query(`INSERT INTO patients (id, tenant_id, mrn, first_name, last_name, gender, date_of_birth, phone, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [id, TENANT_ID, `MRN-${10000+i}`, faker.person.firstName(), faker.person.lastName(), i%2===0?'Male':'Female', faker.date.birthdate({ min: 0, max: 90, mode: 'age' }), faker.phone.number(), created]);
     patients.push({ id, created });
@@ -69,7 +69,7 @@ async function megaSeed() {
 
   // 4. Seed 1200 Encounters & Invoices (Unified Core)
   console.log('🏥 Seeding 1200 Encounters & Financials...');
-  const docs = (await client.query(`SELECT id FROM emr.users WHERE role = 'Doctor'`)).rows;
+  const docs = (await client.query(`SELECT id FROM users WHERE role = 'Doctor'`)).rows;
   const commonDiagnoses = ['Essential Hypertension', 'Type 2 Diabetes', 'Acute Pharyngitis', 'Gastroenteritis', 'Upper Respiratory Infection', 'Low Back Pain', 'Urinary Tract Infection', 'Anxiety Disorder', 'Osteoarthritis', 'Dermatitis'];
 
   if (docs.length > 0) {
@@ -82,16 +82,16 @@ async function megaSeed() {
         const type = i % 5 === 0 ? 'IPD' : 'OPD';
         
         // Encounter
-        await client.query(`INSERT INTO emr.encounters (id, tenant_id, patient_id, provider_id, encounter_type, visit_date, diagnosis, status)
+        await client.query(`INSERT INTO encounters (id, tenant_id, patient_id, provider_id, encounter_type, visit_date, diagnosis, status)
         VALUES ($1, $2, $3, $4, $5, $6, $7, 'closed')`,
         [eId, TENANT_ID, p.id, doc.id, type, date.toISOString(), diag]);
 
-        // Financial Record (Unified emr.invoices)
+        // Financial Record (Unified invoices)
         const total = type === 'IPD' ? 15000 + (Math.random() * 5000) : 800 + (Math.random() * 500);
         const subtotal = total / 1.1; 
         const tax = total - subtotal;
         
-        await client.query(`INSERT INTO emr.invoices (tenant_id, patient_id, encounter_id, invoice_number, subtotal, tax, total, paid, status, created_at)
+        await client.query(`INSERT INTO invoices (tenant_id, patient_id, encounter_id, invoice_number, subtotal, tax, total, paid, status, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $7, 'paid', $8)`,
         [TENANT_ID, p.id, eId, `INV-NHGL-${Date.now()}-${i}`, subtotal, tax, total, date.toISOString()]);
     }
@@ -105,7 +105,7 @@ async function megaSeed() {
         const doc = docs[i % docs.length];
         const start = new Date();
         start.setHours(9 + (i % 8), (i % 4) * 15, 0, 0);
-        await client.query(`INSERT INTO emr.appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, status, reason)
+        await client.query(`INSERT INTO appointments (tenant_id, patient_id, provider_id, scheduled_start, scheduled_end, status, reason)
         VALUES ($1, $2, $3, $4, $5, 'scheduled', 'Routine Checkup')`,
         [TENANT_ID, p.id, doc.id, start.toISOString(), new Date(start.getTime() + 15 * 60000).toISOString()]);
     }

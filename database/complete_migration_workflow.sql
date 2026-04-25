@@ -107,7 +107,7 @@ ORDER BY
 SELECT '=== STEP 2: STARTING MIGRATION ===' as step;
 
 -- Create migration log if not exists
-CREATE TABLE IF NOT EXISTS emr.migration_log (
+CREATE TABLE IF NOT EXISTS migration_log (
     id SERIAL PRIMARY KEY,
     table_name VARCHAR(255) NOT NULL,
     old_schema VARCHAR(50) NOT NULL,
@@ -170,7 +170,7 @@ BEGIN
                           table_to_migrate, table_to_migrate);
             
             -- Log successful merge
-            INSERT INTO emr.migration_log (table_name, old_schema, new_schema, status, rows_moved)
+            INSERT INTO migration_log (table_name, old_schema, new_schema, status, rows_moved)
             VALUES (table_to_migrate, 'public', 'emr', 'MERGED', rows_count);
             
             -- Drop original table
@@ -181,7 +181,7 @@ BEGIN
             
         EXCEPTION WHEN others THEN
             error_msg := SQLERRM;
-            INSERT INTO emr.migration_log (table_name, old_schema, new_schema, status, error_message)
+            INSERT INTO migration_log (table_name, old_schema, new_schema, status, error_message)
             VALUES (table_to_migrate, 'public', 'emr', 'MERGE_FAILED', error_msg);
             result_msg := format('❌ Failed to merge table %s: %s', table_to_migrate, error_msg);
             RAISE NOTICE '%', result_msg;
@@ -196,7 +196,7 @@ BEGIN
             EXECUTE format('ALTER TABLE public.%I SET SCHEMA emr', table_to_migrate);
             
             -- Log successful move
-            INSERT INTO emr.migration_log (table_name, old_schema, new_schema, status, rows_moved)
+            INSERT INTO migration_log (table_name, old_schema, new_schema, status, rows_moved)
             VALUES (table_to_migrate, 'public', 'emr', 'MOVED', rows_count);
             
             result_msg := format('✅ Successfully moved table %s (% rows) from public to emr', table_to_migrate, rows_count);
@@ -204,7 +204,7 @@ BEGIN
             
         EXCEPTION WHEN others THEN
             error_msg := SQLERRM;
-            INSERT INTO emr.migration_log (table_name, old_schema, new_schema, status, error_message)
+            INSERT INTO migration_log (table_name, old_schema, new_schema, status, error_message)
             VALUES (table_to_migrate, 'public', 'emr', 'MOVE_FAILED', error_msg);
             result_msg := format('❌ Failed to move table %s: %s', table_to_migrate, error_msg);
             RAISE NOTICE '%', result_msg;
@@ -274,7 +274,7 @@ SELECT
         WHEN status LIKE '%_FAILED' THEN '❌ Failed'
         ELSE '⏳ Unknown'
     END as result
-FROM emr.migration_log 
+FROM migration_log 
 ORDER BY migration_time DESC;
 
 -- Check if any tables remain in public
@@ -304,7 +304,7 @@ BEGIN
     -- Test tenants table
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'emr' AND tablename = 'tenants') THEN
         BEGIN
-            EXECUTE 'SELECT COUNT(*) FROM emr.tenants';
+            EXECUTE 'SELECT COUNT(*) FROM tenants';
             RAISE NOTICE '✅ Tenants table accessible';
         EXCEPTION WHEN others THEN
             RAISE NOTICE '❌ Tenants table error: %', SQLERRM;
@@ -314,7 +314,7 @@ BEGIN
     -- Test users table
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'emr' AND tablename = 'users') THEN
         BEGIN
-            EXECUTE 'SELECT COUNT(*) FROM emr.users';
+            EXECUTE 'SELECT COUNT(*) FROM users';
             RAISE NOTICE '✅ Users table accessible';
         EXCEPTION WHEN others THEN
             RAISE NOTICE '❌ Users table error: %', SQLERRM;
@@ -324,7 +324,7 @@ BEGIN
     -- Test patients table
     IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'emr' AND tablename = 'patients') THEN
         BEGIN
-            EXECUTE 'SELECT COUNT(*) FROM emr.patients';
+            EXECUTE 'SELECT COUNT(*) FROM patients';
             RAISE NOTICE '✅ Patients table accessible';
         EXCEPTION WHEN others THEN
             RAISE NOTICE '❌ Patients table error: %', SQLERRM;

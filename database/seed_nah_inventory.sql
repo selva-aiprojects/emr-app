@@ -6,7 +6,7 @@ BEGIN;
 -- =====================================================
 -- NAH INVENTORY ITEMS (Curated set for E2E)
 -- =====================================================
-INSERT INTO emr.inventory_items (
+INSERT INTO inventory_items (
   tenant_id,
   item_code,
   name,
@@ -49,7 +49,7 @@ ON CONFLICT (tenant_id, item_code) DO NOTHING;
 -- =====================================================
 -- INVENTORY TRANSACTIONS (Receipts + Issues)
 -- =====================================================
-INSERT INTO emr.inventory_transactions (
+INSERT INTO inventory_transactions (
   tenant_id,
   item_id,
   transaction_type,
@@ -64,7 +64,7 @@ SELECT
   CASE WHEN i.current_stock < i.reorder_level THEN 100 ELSE 25 END,
   'Seed transaction',
   NULL
-FROM emr.inventory_items i
+FROM inventory_items i
 WHERE i.tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'
 LIMIT 20
 ON CONFLICT DO NOTHING;
@@ -72,7 +72,7 @@ ON CONFLICT DO NOTHING;
 -- =====================================================
 -- WARDS + BEDS (Basic occupancy model)
 -- =====================================================
-INSERT INTO emr.wards (tenant_id, name, type, base_rate, status)
+INSERT INTO wards (tenant_id, name, type, base_rate, status)
 VALUES
 ('f998a8f5-95b9-4fd7-a583-63cf574d65ed','General Ward','General',1500,'Active'),
 ('f998a8f5-95b9-4fd7-a583-63cf574d65ed','ICU','ICU',5000,'Active'),
@@ -82,7 +82,7 @@ VALUES
 ON CONFLICT (tenant_id, name) DO NOTHING;
 
 -- Create 10 beds per ward with mixed status
-INSERT INTO emr.beds (tenant_id, ward_id, bed_number, status)
+INSERT INTO beds (tenant_id, ward_id, bed_number, status)
 SELECT
   w.tenant_id,
   w.id,
@@ -94,7 +94,7 @@ SELECT
     WHEN s.i % 3 = 0 THEN 'Occupied'
     ELSE 'Available'
   END
-FROM emr.wards w
+FROM wards w
 CROSS JOIN generate_series(1, 10) s(i)
 WHERE w.tenant_id = 'f998a8f5-95b9-4fd7-a583-63cf574d65ed'
 ON CONFLICT (tenant_id, ward_id, bed_number) DO NOTHING;

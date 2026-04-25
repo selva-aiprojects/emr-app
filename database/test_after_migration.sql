@@ -17,7 +17,7 @@ SELECT
         WHEN status LIKE '%_FAILED' THEN '❌ Failed'
         ELSE '⏳ Unknown'
     END as result
-FROM emr.migration_log 
+FROM migration_log 
 ORDER BY migration_time DESC;
 
 -- Step 2: Verify table exists in correct schema
@@ -28,7 +28,7 @@ DECLARE
 BEGIN
     -- Get the most recently migrated table
     SELECT table_name INTO last_migrated_table
-    FROM emr.migration_log 
+    FROM migration_log 
     WHERE status IN ('MOVED', 'MERGED')
     ORDER BY migration_time DESC 
     LIMIT 1;
@@ -108,7 +108,7 @@ BEGIN
         DECLARE
             tenant_count INTEGER;
         BEGIN
-            EXECUTE 'SELECT COUNT(*) FROM emr.tenants' INTO tenant_count;
+            EXECUTE 'SELECT COUNT(*) FROM tenants' INTO tenant_count;
             RAISE NOTICE '✅ Tenant query successful: % tenants found', tenant_count;
         EXCEPTION WHEN others THEN
             RAISE NOTICE '❌ Tenant query failed: %', SQLERRM;
@@ -121,7 +121,7 @@ BEGIN
         DECLARE
             user_count INTEGER;
         BEGIN
-            EXECUTE 'SELECT COUNT(*) FROM emr.users' INTO user_count;
+            EXECUTE 'SELECT COUNT(*) FROM users' INTO user_count;
             RAISE NOTICE '✅ User query successful: % users found', user_count;
         EXCEPTION WHEN others THEN
             RAISE NOTICE '❌ User query failed: %', SQLERRM;
@@ -134,7 +134,7 @@ BEGIN
         DECLARE
             patient_count INTEGER;
         BEGIN
-            EXECUTE 'SELECT COUNT(*) FROM emr.patients' INTO patient_count;
+            EXECUTE 'SELECT COUNT(*) FROM patients' INTO patient_count;
             RAISE NOTICE '✅ Patient query successful: % patients found', patient_count;
         EXCEPTION WHEN others THEN
             RAISE NOTICE '❌ Patient query failed: %', SQLERRM;
@@ -192,7 +192,7 @@ WITH next_candidate AS (
       AND pt.tablename NOT LIKE 'pg_%'
       AND pt.tablename NOT IN ('spatial_ref_sys', 'geometry_columns')
       AND pt.tablename NOT IN (
-          SELECT table_name FROM emr.migration_log 
+          SELECT table_name FROM migration_log 
           WHERE status IN ('MOVED', 'MERGED')
       )
     ORDER BY 

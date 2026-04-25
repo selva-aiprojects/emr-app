@@ -3,11 +3,11 @@
 BEGIN;
 
 -- Service Requests table
-CREATE TABLE IF NOT EXISTS emr.service_requests(
+CREATE TABLE IF NOT EXISTS service_requests(
   request_id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid NOT NULL REFERENCES emr.tenants(id),
-  patient_id uuid NOT NULL REFERENCES emr.patients(id),
-  encounter_id uuid REFERENCES emr.encounters(id),
+  tenant_id uuid NOT NULL REFERENCES tenants(id),
+  patient_id uuid NOT NULL REFERENCES patients(id),
+  encounter_id uuid REFERENCES encounters(id),
   status varchar(32) NOT NULL,
   intent varchar(32) NOT NULL,
   category varchar(32),
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS emr.service_requests(
   code_snomed varchar(64),
   display_name varchar(255),
   priority varchar(32),
-  ordered_by_id uuid REFERENCES emr.users(id),
+  ordered_by_id uuid REFERENCES users(id),
   order_datetime timestamptz DEFAULT now(),
   scheduled_start timestamptz,
   scheduled_end timestamptz,
@@ -23,16 +23,16 @@ CREATE TABLE IF NOT EXISTS emr.service_requests(
   notes text,
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now(),
-  created_by uuid REFERENCES emr.users(id),
+  created_by uuid REFERENCES users(id),
   fhir_service_request_ref uuid
 );
 
 -- Create indexes
-CREATE INDEX IF NOT EXISTS idx_conditions_patient ON emr.conditions(patient_id, clinical_status);
-CREATE INDEX IF NOT EXISTS idx_procedures_patient ON emr.procedures(patient_id, status);
-CREATE INDEX IF NOT EXISTS idx_observations_patient ON emr.observations(patient_id, category);
-CREATE INDEX IF NOT EXISTS idx_diagnostic_reports_patient ON emr.diagnostic_reports(patient_id, status);
-CREATE INDEX IF NOT EXISTS idx_service_requests_patient ON emr.service_requests(patient_id, status);
+CREATE INDEX IF NOT EXISTS idx_conditions_patient ON conditions(patient_id, clinical_status);
+CREATE INDEX IF NOT EXISTS idx_procedures_patient ON procedures(patient_id, status);
+CREATE INDEX IF NOT EXISTS idx_observations_patient ON observations(patient_id, category);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_reports_patient ON diagnostic_reports(patient_id, status);
+CREATE INDEX IF NOT EXISTS idx_service_requests_patient ON service_requests(patient_id, status);
 
 COMMIT;
 

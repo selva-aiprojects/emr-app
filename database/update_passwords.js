@@ -10,7 +10,7 @@ async function updatePasswords() {
     console.log(`Generated hash for ${password}`);
 
     const updateQuery = `
-      UPDATE emr.users 
+      UPDATE users 
       SET password_hash = $1 
       WHERE role = 'Admin' OR role = 'Superadmin'
     `;

@@ -22,7 +22,7 @@ async function runSync() {
   console.log(`🔄 Syncing Admin (${ADMIN_EMAIL}) to seeded data (${TARGET_ID})...`);
 
   // 1. Check if user exists
-  const checkRes = await client.query(`SELECT id, tenant_id FROM emr.users WHERE email = $1`, [ADMIN_EMAIL]);
+  const checkRes = await client.query(`SELECT id, tenant_id FROM users WHERE email = $1`, [ADMIN_EMAIL]);
   if (checkRes.rows.length === 0) {
     console.error('❌ Error: admin@nhgl.local not found in users table.');
     await client.end();
@@ -34,12 +34,12 @@ async function runSync() {
     console.log('✅ Admin is already synced to the correct tenant ID.');
   } else {
     // 2. Perform the update
-    await client.query(`UPDATE emr.users SET tenant_id = $1 WHERE email = $2`, [TARGET_ID, ADMIN_EMAIL]);
+    await client.query(`UPDATE users SET tenant_id = $1 WHERE email = $2`, [TARGET_ID, ADMIN_EMAIL]);
     console.log(`✅ Success! Redirected from ${oldId} to ${TARGET_ID}.`);
   }
 
   // 3. Make sure the tenant registry uses the matched name/code for the seeder
-  await client.query(`UPDATE emr.management_tenants SET status = 'active' WHERE id = $1`, [TARGET_ID]);
+  await client.query(`UPDATE management_tenants SET status = 'active' WHERE id = $1`, [TARGET_ID]);
 
   await client.end();
   console.log('\n🌟 Diagnostic Sync Complete. Please refresh your dashboard.');

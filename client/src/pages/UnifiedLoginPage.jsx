@@ -119,7 +119,7 @@ export default function UnifiedLoginPage({ onLogin, tenants, loading: propLoadin
                     <option value="">Select facility...</option>
                     <option value="superadmin">Platform Governance</option>
                     {tenantOptions.map((tenant) => (
-                      <option key={tenant.id} value={tenant.code || tenant.id}>
+                      <option key={tenant.id} value={tenant.id}>
                         {tenant.name}
                       </option>
                     ))}

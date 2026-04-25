@@ -8,11 +8,11 @@ BEGIN;
 -- Password: Admin@123
 -- Hash generated with bcrypt (cost: 10)
 -- =====================================================
-INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '00000000-0000-0000-0000-000000000001'::uuid,
   NULL, -- Superadmin has no tenant
-  'superadmin@emr.local',
+  'superadmin@local',
   '$2b$10$RQ/2010sUHDLNH2k.sE25.fJLK23MzLmvcFV6O9kc7Ip1krJkSQtG', -- Admin@123
   'Platform Superadmin',
   'Superadmin',
@@ -22,7 +22,7 @@ VALUES (
 -- =====================================================
 -- SAMPLE TENANT: Selva Care Hospital
 -- =====================================================
-INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, status)
+INSERT INTO tenants (id, name, code, subdomain, theme, features, status)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'Selva Care Hospital',
@@ -39,7 +39,7 @@ VALUES (
 -- =====================================================
 
 -- Tenant Admin
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'anita@sch.local',
@@ -50,7 +50,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- Doctor
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'rajesh@sch.local',
@@ -61,7 +61,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- Nurse
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'priya@sch.local',
@@ -72,7 +72,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- Front Office
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'suresh@sch.local',
@@ -83,7 +83,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- Billing
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'lakshmi@sch.local',
@@ -98,7 +98,7 @@ VALUES (
 -- =====================================================
 
 -- Create Patient Record
-INSERT INTO emr.patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact, insurance, medical_history)
+INSERT INTO patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email, address, blood_group, emergency_contact, insurance, medical_history)
 VALUES (
   '20000000-0000-0000-0000-000000000001'::uuid,
   '10000000-0000-0000-0000-000000000001'::uuid,
@@ -122,7 +122,7 @@ VALUES (
 ) ON CONFLICT (tenant_id, mrn) DO NOTHING;
 
 -- Create Patient User Account
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, patient_id, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, patient_id, is_active)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
   'meena@sch.local',
@@ -137,7 +137,7 @@ VALUES (
 -- SAMPLE EMPLOYEE RECORDS
 -- =====================================================
 
-INSERT INTO emr.employees (tenant_id, code, name, department, designation, join_date, shift, salary, leave_balance)
+INSERT INTO employees (tenant_id, code, name, department, designation, join_date, shift, salary, leave_balance)
 VALUES
   (
     '10000000-0000-0000-0000-000000000001'::uuid,
@@ -178,7 +178,7 @@ ON CONFLICT (tenant_id, code) DO NOTHING;
 -- SAMPLE INVENTORY ITEMS
 -- =====================================================
 
-INSERT INTO emr.inventory_items (tenant_id, item_code, name, category, current_stock, reorder_level, unit)
+INSERT INTO inventory_items (tenant_id, item_code, name, category, current_stock, reorder_level, unit)
 VALUES
   (
     '10000000-0000-0000-0000-000000000001'::uuid,
@@ -231,10 +231,10 @@ ON CONFLICT (tenant_id, item_code) DO NOTHING;
 -- SAMPLE AUDIT LOG ENTRY
 -- =====================================================
 
-INSERT INTO emr.audit_logs (tenant_id, user_id, user_name, action, details)
+INSERT INTO audit_logs (tenant_id, user_id, user_name, action, details)
 VALUES (
   '10000000-0000-0000-0000-000000000001'::uuid,
-  (SELECT id FROM emr.users WHERE email = 'anita@sch.local' LIMIT 1),
+  (SELECT id FROM users WHERE email = 'anita@sch.local' LIMIT 1),
   'Dr. Anita Sharma',
   'system.initialization',
   '{"message": "Initial data setup completed"}'::jsonb
@@ -243,7 +243,7 @@ VALUES (
 -- =====================================================
 -- TENANT 2: Nila Health Center (NHC)
 -- =====================================================
-INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, status)
+INSERT INTO tenants (id, name, code, subdomain, theme, features, status)
 VALUES (
   '10000000-0000-0000-0000-000000000002'::uuid,
   'Nila Health Center',
@@ -255,21 +255,21 @@ VALUES (
 ) ON CONFLICT (code) DO NOTHING;
 
 -- NHC Admin & Doctor
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES 
   ('10000000-0000-0000-0000-000000000002'::uuid, 'admin@nhc.local', '$2b$10$RQ/2010sUHDLNH2k.sE25.fJLK23MzLmvcFV6O9kc7Ip1krJkSQtG', 'Nila Admin', 'Admin', true),
   ('10000000-0000-0000-0000-000000000002'::uuid, 'doctor@nhc.local', '$2b$10$UF9ctn6umKOAHtEA3I2r7ut4r0Wtbk7ygP0SGfgXTMzAnGy5rLUS.', 'Dr. Balan', 'Doctor', true)
 ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- NHC Patient
-INSERT INTO emr.patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email)
+INSERT INTO patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email)
 VALUES ('20000000-0000-0000-0000-000000000002'::uuid, '10000000-0000-0000-0000-000000000002'::uuid, 'NHC-1001', 'Arjun', 'Das', '1992-05-20', 'Male', '+91-9998887771', 'arjun@example.com')
 ON CONFLICT (tenant_id, mrn) DO NOTHING;
 
 -- =====================================================
 -- TENANT 3: Riverway Community Clinic (RCC)
 -- =====================================================
-INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, status)
+INSERT INTO tenants (id, name, code, subdomain, theme, features, status)
 VALUES (
   '10000000-0000-0000-0000-000000000003'::uuid,
   'Riverway Community Clinic',
@@ -281,21 +281,21 @@ VALUES (
 ) ON CONFLICT (code) DO NOTHING;
 
 -- RCC Admin & Nurse
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES 
   ('10000000-0000-0000-0000-000000000003'::uuid, 'admin@rcc.local', '$2b$10$RQ/2010sUHDLNH2k.sE25.fJLK23MzLmvcFV6O9kc7Ip1krJkSQtG', 'Riverway Admin', 'Admin', true),
   ('10000000-0000-0000-0000-000000000003'::uuid, 'nurse@rcc.local', '$2b$10$4x0lLYEnSvkLpDR52zACVOQfi1DdxfP8tYDVMt83N9xhkvvc65ES6', 'Nurse Sarah', 'Nurse', true)
 ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- RCC Patient
-INSERT INTO emr.patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email)
+INSERT INTO patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email)
 VALUES ('20000000-0000-0000-0000-000000000003'::uuid, '10000000-0000-0000-0000-000000000003'::uuid, 'RCC-1001', 'Priya', 'Sundar', '1988-11-12', 'Female', '+91-9998887772', 'priya.s@example.com')
 ON CONFLICT (tenant_id, mrn) DO NOTHING;
 
 -- =====================================================
 -- TENANT 4: Omega Hospitals (OH)
 -- =====================================================
-INSERT INTO emr.tenants (id, name, code, subdomain, theme, features, status)
+INSERT INTO tenants (id, name, code, subdomain, theme, features, status)
 VALUES (
   '10000000-0000-0000-0000-000000000004'::uuid,
   'Omega Hospitals',
@@ -307,14 +307,14 @@ VALUES (
 ) ON CONFLICT (code) DO NOTHING;
 
 -- OH Admin & Doctor
-INSERT INTO emr.users (tenant_id, email, password_hash, name, role, is_active)
+INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
 VALUES 
   ('10000000-0000-0000-0000-000000000004'::uuid, 'admin@omega.local', '$2b$10$RQ/2010sUHDLNH2k.sE25.fJLK23MzLmvcFV6O9kc7Ip1krJkSQtG', 'Omega Admin', 'Admin', true),
   ('10000000-0000-0000-0000-000000000004'::uuid, 'doctor@omega.local', '$2b$10$UF9ctn6umKOAHtEA3I2r7ut4r0Wtbk7ygP0SGfgXTMzAnGy5rLUS.', 'Dr. Vikram', 'Doctor', true)
 ON CONFLICT (tenant_id, email) DO NOTHING;
 
 -- OH Patient
-INSERT INTO emr.patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email)
+INSERT INTO patients (id, tenant_id, mrn, first_name, last_name, date_of_birth, gender, phone, email)
 VALUES ('20000000-0000-0000-0000-000000000004'::uuid, '10000000-0000-0000-0000-000000000004'::uuid, 'OH-1001', 'Kiran', 'Varma', '1975-08-30', 'Male', '+91-9998887773', 'kiran.v@example.com')
 ON CONFLICT (tenant_id, mrn) DO NOTHING;
 
@@ -325,19 +325,19 @@ COMMIT;
 -- =====================================================
 
 -- Show created tenants
-SELECT 'Tenants:' as section, id, name, code, subdomain FROM emr.tenants;
+SELECT 'Tenants:' as section, id, name, code, subdomain FROM tenants;
 
 -- Show created users
-SELECT 'Users:' as section, name, email, role FROM emr.users ORDER BY role, name;
+SELECT 'Users:' as section, name, email, role FROM users ORDER BY role, name;
 
 -- Show created patients
-SELECT 'Patients:' as section, mrn, first_name, last_name, blood_group FROM emr.patients;
+SELECT 'Patients:' as section, mrn, first_name, last_name, blood_group FROM patients;
 
 -- Show created employees
-SELECT 'Employees:' as section, code, name, department, designation FROM emr.employees;
+SELECT 'Employees:' as section, code, name, department, designation FROM employees;
 
 -- Show created inventory items
-SELECT 'Inventory:' as section, item_code, name, category, current_stock FROM emr.inventory_items;
+SELECT 'Inventory:' as section, item_code, name, category, current_stock FROM inventory_items;
 
 -- =====================================================
 -- TEST CREDENTIALS SUMMARY
@@ -350,7 +350,7 @@ BEGIN
   RAISE NOTICE '';
   RAISE NOTICE 'SUPERADMIN:';
   RAISE NOTICE '  Tenant: superadmin';
-  RAISE NOTICE '  Email: superadmin@emr.local';
+  RAISE NOTICE '  Email: superadmin@local';
   RAISE NOTICE '  Password: Admin@123';
   RAISE NOTICE '';
   RAISE NOTICE 'TENANT ADMIN (Selva Care Hospital):';

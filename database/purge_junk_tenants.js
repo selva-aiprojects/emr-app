@@ -23,7 +23,7 @@ async function purgeJunk() {
 
     // 1. Identify junk tenants from the central registry
     const junkTenants = (await client.query(
-      `SELECT subdomain FROM emr.management_tenants WHERE subdomain NOT IN ($1, $2)`, 
+      `SELECT subdomain FROM management_tenants WHERE subdomain NOT IN ($1, $2)`, 
       PROTECTED_SUBDOMAINS
     )).rows;
 
@@ -39,13 +39,13 @@ async function purgeJunk() {
 
     // 2. Clean Central Registries
     console.log('🧹 Purging Registry Records (management_tenants & tenants)...');
-    await client.query(`DELETE FROM emr.management_tenants WHERE subdomain NOT IN ($1, $2)`, PROTECTED_SUBDOMAINS);
-    await client.query(`DELETE FROM emr.tenants WHERE subdomain NOT IN ($1, $2)`, PROTECTED_SUBDOMAINS);
+    await client.query(`DELETE FROM management_tenants WHERE subdomain NOT IN ($1, $2)`, PROTECTED_SUBDOMAINS);
+    await client.query(`DELETE FROM tenants WHERE subdomain NOT IN ($1, $2)`, PROTECTED_SUBDOMAINS);
 
     // 3. Clean Global Users
     console.log('🧹 Purging Ghost User Accounts...');
-    await client.query(`DELETE FROM emr.users 
-      WHERE tenant_id NOT IN (SELECT id FROM emr.management_tenants)
+    await client.query(`DELETE FROM users 
+      WHERE tenant_id NOT IN (SELECT id FROM management_tenants)
       AND email NOT LIKE '%admin%'`);
 
     console.log('\n✨ Safe Purge Complete. Dropdown cleaned. System schemas preserved.');

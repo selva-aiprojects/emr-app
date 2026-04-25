@@ -36,7 +36,7 @@ export class ClinicalService {
       await client.query('BEGIN');
       
      const insertSql = `
-        INSERT INTO emr.conditions(
+        INSERT INTO conditions(
           tenant_id, patient_id, encounter_id, recorder_id,
          clinical_status, verification_status, category,
          code_snomed, code_icd10, display_name, severity,
@@ -66,7 +66,7 @@ export class ClinicalService {
       
       // Update FHIR reference
       await client.query(`
-        UPDATE emr.conditions
+        UPDATE conditions
         SET fhir_condition_ref = $1
         WHERE condition_id = $2
       `, [condition.condition_id, condition.condition_id]);
@@ -118,7 +118,7 @@ export class ClinicalService {
          c.display_name,
           c.created_at,
           c.updated_at
-        FROM emr.conditions c
+        FROM conditions c
         WHERE c.patient_id = $1
           AND c.clinical_status IN ('active', 'recurrence', 'relapse')
         ORDER BY c.recorded_date DESC
@@ -145,7 +145,7 @@ export class ClinicalService {
     
    try {
      const updateSql = `
-        UPDATE emr.conditions
+        UPDATE conditions
         SET 
          clinical_status = $1,
           abatement_datetime = NOW(),
@@ -185,7 +185,7 @@ export class ClinicalService {
       
       for (const vital of vitalSigns) {
        const insertSql = `
-          INSERT INTO emr.observations(
+          INSERT INTO observations(
             tenant_id, patient_id, encounter_id, status, category,
            code_loinc, code_snomed, display_name,
            value_quantity, value_quantity_unit,
@@ -219,7 +219,7 @@ export class ClinicalService {
         
         // Update FHIR reference
         await client.query(`
-          UPDATE emr.observations
+          UPDATE observations
           SET fhir_observation_ref = $1
           WHERE observation_id = $2
         `, [observation.observation_id, observation.observation_id]);
@@ -276,7 +276,7 @@ export class ClinicalService {
             o.reference_range_high,
             o.reference_range_text,
             o.created_at
-          FROM emr.observations o
+          FROM observations o
           WHERE o.patient_id = $1
             AND o.encounter_id= $2
             AND o.category = 'vital-signs'
@@ -305,7 +305,7 @@ export class ClinicalService {
             o.reference_range_high,
             o.reference_range_text,
            o.created_at
-          FROM emr.observations o
+          FROM observations o
           WHERE o.patient_id = $1
             AND o.category = 'vital-signs'
           ORDER BY o.code_loinc, o.effective_datetime DESC
@@ -342,7 +342,7 @@ export class ClinicalService {
       await client.query('BEGIN');
       
      const insertSql = `
-        INSERT INTO emr.procedures(
+        INSERT INTO procedures(
           tenant_id, patient_id, encounter_id, status, category,
          code_snomed, code_cpt, body_site, performed_datetime,
          performer_id, outcome, complication, follow_up_required,
@@ -374,7 +374,7 @@ export class ClinicalService {
       
       // Update FHIR reference
       await client.query(`
-        UPDATE emr.procedures
+        UPDATE procedures
         SET fhir_procedure_ref = $1
         WHERE procedure_id= $2
       `, [procedure.procedure_id, procedure.procedure_id]);
@@ -421,7 +421,7 @@ export class ClinicalService {
           p.note,
           p.created_at,
           p.updated_at
-        FROM emr.procedures p
+        FROM procedures p
         WHERE p.patient_id = $1
         ORDER BY p.performed_datetime DESC
         LIMIT $2
@@ -453,7 +453,7 @@ export class ClinicalService {
    try {
       // Get active problems
      const problemsQuery = `
-        SELECT * FROM emr.conditions
+        SELECT * FROM conditions
         WHERE patient_id = $1
           AND clinical_status IN ('active', 'recurrence', 'relapse')
         ORDER BY recorded_date DESC
@@ -463,7 +463,7 @@ export class ClinicalService {
       // Get latest vitals
      const vitalsQuery = `
         SELECT DISTINCT ON (code_loinc) *
-        FROM emr.observations
+        FROM observations
         WHERE patient_id = $1 AND category = 'vital-signs'
         ORDER BY code_loinc, effective_datetime DESC
       `;
@@ -471,7 +471,7 @@ export class ClinicalService {
       
       // Get recent procedures
      const proceduresQuery = `
-        SELECT * FROM emr.procedures
+        SELECT * FROM procedures
         WHERE patient_id = $1
         ORDER BY performed_datetime DESC
         LIMIT 20

@@ -13,7 +13,7 @@ import {
 import { currency } from '../utils/format.js';
 import { api } from '../api.js';
 import { exportToCSV } from '../utils/export.js';
-import '../styles/critical-care.css'; // Importing the Life-Saving Design System
+import '../styles/design-system.css';
 import { 
   Users,
   Calendar,

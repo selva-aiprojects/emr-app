@@ -72,7 +72,7 @@ async function seed() {
     await client.connect();
     console.log('🔗 Connected to DB for Resilient NHGL Workflow Seeding...');
 
-    const tenantRes = await client.query("SELECT id FROM emr.management_tenants WHERE code = 'NHGL'");
+    const tenantRes = await client.query("SELECT id FROM management_tenants WHERE code = 'NHGL'");
     if (tenantRes.rows.length === 0) throw new Error('NHGL tenant record not found in registry!');
     const tenantId = tenantRes.rows[0].id;
     const schema = 'nhgl';
@@ -120,7 +120,7 @@ async function seed() {
       const encounterId = enc?.id;
 
       if (encounterId) {
-        // 4. Lab Order (via emr.service_requests if nhgl.service_requests fails)
+        // 4. Lab Order (via service_requests if nhgl.service_requests fails)
         console.log('   - Seeding Lab Order...');
         await safeInsert(schema, 'service_requests', {
           tenant_id: tenantId,

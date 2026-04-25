@@ -4,16 +4,25 @@
  */
 
 import { query } from './connection.js';
+import fs from 'fs';
+import path from 'path';
+import { tenantContext } from '../lib/tenantContext.js';
 
 // =====================================================
 // TENANT MANAGEMENT
 // =====================================================
 
 export async function getTenantTier(tenantId) {
-  const sql = 'SELECT subscription_tier FROM management_tenants WHERE id::text = $1::text';
-  const result = await query(sql, [tenantId]);
-  return result.rows[0]?.subscription_tier || 'Basic';
+  // Primary: check management_tenants (modern control plane)
+  const mgmtRes = await query('SELECT subscription_tier FROM management_tenants WHERE id::text = $1::text', [tenantId]);
+  if (mgmtRes.rows[0]?.subscription_tier) {
+    return mgmtRes.rows[0].subscription_tier;
+  }
+  // Fallback: check nexus.tenants (legacy / direct-seeded tenants like NAH)
+  const legacyRes = await query('SELECT subscription_tier FROM tenants WHERE id::text = $1::text', [tenantId]);
+  return legacyRes.rows[0]?.subscription_tier || 'Professional'; // default to Professional, not Basic
 }
+
 
 export async function getTenantCustomFeatures(tenantId) {
   const sql = 'SELECT feature_flag, enabled FROM tenant_features WHERE tenant_id::uuid = $1::uuid';
@@ -342,29 +351,38 @@ export async function provisionTenantSchema(tenantId, schemaName) {
   const log = [`🚀 Provisioning schema [${schemaName}] for tenant [${tenantId}]`];
   
   try {
+    // 1. Create Schema
     await query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
     log.push(`✅ Created schema: ${schemaName}`);
 
-    const tableRes = await query(`
-      SELECT table_name 
-      FROM information_schema.tables 
-      WHERE table_schema = 'nexus' AND table_type = 'BASE TABLE'
-    `);
-    
-    const controlPlaneTables = [
-      'tenants', 'users', 'audit_logs', 'tenant_resources', 
-      'tenant_features', 'global_kill_switches', 'tenant_feature_status',
-      'mrn_sequences', 'invoice_sequences', 'roles', 'role_permissions',
-      'management_tenants', 'management_tenant_metrics', 'migrations_log'
-    ];
-    
-    const candidates = tableRes.rows
-      .map(r => r.table_name)
-      .filter(t => !controlPlaneTables.includes(t));
+    // 2. Load and Execute Baseline DDL
+    const baselinePath = path.join(process.cwd(), 'database', 'SHARD_MASTER_BASELINE.sql');
+    if (fs.existsSync(baselinePath)) {
+      log.push(`📦 Executing SHARD_MASTER_BASELINE.sql...`);
+      const ddl = fs.readFileSync(baselinePath, 'utf8');
+      
+      // CRITICAL FIX: Wrap execution in tenantContext.run so that connection.js 
+      // resolves schemaName correctly for ALL subsequent queries
+      await tenantContext.run(tenantId, async () => {
+        // Robust SQL splitting that respects block structures ($$)
+        const statements = ddl.split(/;\s*(?=(?:[^'$]*'[^'$]*')*[^'$]*$)/)
+          .map(s => s.trim())
+          .filter(s => s.length > 0);
 
-    for (const table of candidates) {
-      await query(`CREATE TABLE IF NOT EXISTS "${schemaName}"."${table}" (LIKE nexus."${table}" INCLUDING ALL)`);
-      log.push(`   📦 Cloned clinical table: ${table}`);
+        for (const stmt of statements) {
+          try {
+            await query(stmt);
+          } catch (stmtErr) {
+            // Log but continue for "already exists" errors
+            if (!stmtErr.message.includes('already exists') && !stmtErr.message.includes('already a trigger')) {
+              console.warn(`[BASELINE_STMT_WARN] ${stmtErr.message}`);
+            }
+          }
+        }
+      });
+      log.push(`✅ Baseline schema applied successfully`);
+    } else {
+      log.push(`⚠️ WARNING: SHARD_MASTER_BASELINE.sql not found at ${baselinePath}`);
     }
 
     log.push(`✨ Schema provisioning complete for ${schemaName}`);

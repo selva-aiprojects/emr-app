@@ -18,19 +18,19 @@ async function cleanupOrphanTenants() {
     console.log(`📊 [CLEANUP] Physical schemas detected: ${existingSchemas.size}`);
 
     // 2. Scan Management Plane
-    const { rows: managementTenants } = await pool.query('SELECT id, code, schema_name FROM emr.management_tenants');
+    const { rows: managementTenants } = await pool.query('SELECT id, code, schema_name FROM management_tenants');
     const managementOrphans = managementTenants.filter(t => !existingSchemas.has(t.schema_name));
     
     console.log(`📊 [CLEANUP] Management Plane Orphans: ${managementOrphans.length}`);
 
     if (managementOrphans.length > 0) {
       const orphanIds = managementOrphans.map(t => t.id);
-      await pool.query('DELETE FROM emr.management_tenants WHERE id = ANY($1)', [orphanIds]);
+      await pool.query('DELETE FROM management_tenants WHERE id = ANY($1)', [orphanIds]);
       console.log(`✅ [CLEANUP] Purged ${managementOrphans.length} records from management_tenants.`);
     }
 
     // 3. Scan Legacy Plane
-    const { rows: legacyTenants } = await pool.query('SELECT id, code FROM emr.tenants');
+    const { rows: legacyTenants } = await pool.query('SELECT id, code FROM tenants');
     // Legacy mapping: code.toLowerCase()
     const legacyOrphans = legacyTenants.filter(t => !existingSchemas.has(t.code.toLowerCase()));
     
@@ -38,7 +38,7 @@ async function cleanupOrphanTenants() {
 
     if (legacyOrphans.length > 0) {
       const legacyOrphanIds = legacyOrphans.map(t => t.id);
-      await pool.query('DELETE FROM emr.tenants WHERE id = ANY($1)', [legacyOrphanIds]);
+      await pool.query('DELETE FROM tenants WHERE id = ANY($1)', [legacyOrphanIds]);
       console.log(`✅ [CLEANUP] Purged ${legacyOrphans.length} records from legacy tenants.`);
     }
 

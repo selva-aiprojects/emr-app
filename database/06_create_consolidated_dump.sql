@@ -64,8 +64,8 @@ SELECT
 After creating dump, verify it contains:
 
 1. Schema creation: CREATE SCHEMA emr;
-2. All tables: CREATE TABLE emr.table_name (...);
-3. All data: INSERT INTO emr.table_name VALUES (...);
+2. All tables: CREATE TABLE table_name (...);
+3. All data: INSERT INTO table_name VALUES (...);
 4. All constraints: FOREIGN KEY, CHECK, UNIQUE
 5. All indexes: CREATE INDEX
 6. All sequences: CREATE SEQUENCE

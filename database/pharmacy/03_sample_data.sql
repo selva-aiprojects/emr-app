@@ -6,7 +6,7 @@
 BEGIN;
 
 -- Common Medications (US Market)
-INSERT INTO emr.drug_master 
+INSERT INTO drug_master 
 (tenant_id, generic_name, brand_names, strength, dosage_form, route,
  ndc_code, rxnorm_code, snomed_code, schedule_type, high_alert_flag, pregnancy_category)
 VALUES
@@ -93,24 +93,24 @@ COMMIT;
 -- Drug Interactions (separate transaction to avoid rollback issues)
 BEGIN;
 
-INSERT INTO emr.drug_interactions
+INSERT INTO drug_interactions
 (drug_a, drug_b, severity, description, mechanism, management)
 SELECT 
   da.drug_id, db.drug_id, 'major',
   'Increased risk of bleeding when warfarin is combined with NSAIDs',
   'NSAIDs inhibit platelet aggregation and may damage GI mucosa, potentiating warfarin anticoagulation',
   'Monitor INR closely. Consider alternative analgesic. Educate patient on bleeding signs.'
-FROM emr.drug_master da, emr.drug_master db
+FROM drug_master da, drug_master db
 WHERE da.generic_name = 'Warfarin' AND db.generic_name IN ('Ibuprofen', 'Naproxen');
 
-INSERT INTO emr.drug_interactions
+INSERT INTO drug_interactions
 (drug_a, drug_b, severity, description, mechanism, management)
 SELECT 
   da.drug_id, db.drug_id, 'major',
   'Increased risk of hypoglycemia when insulin is combined with beta-blockers',
   'Beta-blockers may mask hypoglycemia symptoms and prolong insulin effect',
   'Monitor blood glucose closely. Adjust insulin dose as needed.'
-FROM emr.drug_master da, emr.drug_master db
+FROM drug_master da, drug_master db
 WHERE da.generic_name = 'Insulin Glargine' AND db.generic_name = 'Metoprolol';
 
 COMMIT;
@@ -118,7 +118,7 @@ COMMIT;
 -- Sample Drug Batches (final transaction)
 BEGIN;
 
-INSERT INTO emr.drug_batches
+INSERT INTO drug_batches
 (drug_id, batch_number, quantity_received, quantity_remaining, expiry_date, purchase_price, location, status)
 SELECT 
   dm.drug_id, 
@@ -133,22 +133,22 @@ SELECT
     WHEN 2 THEN 'Refrigerator R-1'
   END,
   'active'
-FROM emr.drug_master dm
+FROM drug_master dm
 WHERE dm.status = 'active'
 LIMIT 50;
 
 COMMIT;
 
 -- Final verification
-SELECT '✅ Drugs Loaded' as status, COUNT(*) as count FROM emr.drug_master WHERE tenant_id IS NULL
+SELECT '✅ Drugs Loaded' as status, COUNT(*) as count FROM drug_master WHERE tenant_id IS NULL
 UNION ALL
-SELECT '✅ Interactions Created', COUNT(*) FROM emr.drug_interactions
+SELECT '✅ Interactions Created', COUNT(*) FROM drug_interactions
 UNION ALL
-SELECT '✅ Batches Created', COUNT(*) FROM emr.drug_batches;
+SELECT '✅ Batches Created', COUNT(*) FROM drug_batches;
 
 -- Show sample drugs
 SELECT generic_name, brand_names[1] as brand_name, dosage_form, schedule_type
-FROM emr.drug_master
+FROM drug_master
 WHERE tenant_id IS NULL
 ORDER BY generic_name
 LIMIT 10;

@@ -94,31 +94,49 @@ async function executeTenantBaseSchema(schemaName) {
 
 
 const DEFAULT_ROLE_DEFINITIONS = [
-  {
-    name: 'Admin',
-    description: 'Institutional Administrator with governance access',
-    is_system: true
-  },
-  {
-    name: 'Doctor',
-    description: 'Clinical Practitioner with patient care access',
-    is_system: true
-  },
-  {
-    name: 'Nurse',
-    description: 'Nursing Staff with operational care access',
-    is_system: true
-  },
-  {
-    name: 'Lab',
-    description: 'Laboratory Technician with diagnostic access',
-    is_system: true
-  },
-  {
-    name: 'Pharmacy',
-    description: 'Pharmacist with inventory management access',
-    is_system: true
-  }
+  { id: 'Admin', name: 'Administrator', description: 'Institutional Administrator with governance access', is_system: true },
+  { id: 'Doctor', name: 'Medical Doctor', description: 'Clinical Practitioner with patient care access', is_system: true },
+  { id: 'Nurse', name: 'Nursing Staff', description: 'Nursing Staff with operational care access', is_system: true },
+  { id: 'Lab', name: 'Lab Technician', description: 'Laboratory Technician with diagnostic access', is_system: true },
+  { id: 'Pharmacy', name: 'Pharmacist', description: 'Pharmacist with inventory management access', is_system: true },
+  { id: 'Frontdesk', name: 'Front Desk', description: 'Front Desk with operational access', is_system: true }
+];
+
+const MASTER_DEPARTMENTS = [
+  { code: 'OPD-01', name: 'Outpatient Department' },
+  { code: 'IPD-01', name: 'Inpatient Department' },
+  { code: 'ER-01', name: 'Emergency & Trauma' },
+  { code: 'PHARM-01', name: 'Pharmacy' },
+  { code: 'LAB-01', name: 'Laboratory' }
+];
+
+const MASTER_SPECIALITIES = [
+  { name: 'Cardiology', description: 'Heart and vascular care' },
+  { name: 'Neurology', description: 'Brain and nervous system' },
+  { name: 'Pediatrics', description: 'Child and adolescent care' },
+  { name: 'Orthopedics', description: 'Musculoskeletal system' },
+  { name: 'General Medicine', description: 'Primary and internal care' },
+  { name: 'Dermatology', description: 'Skin and related tissue care' },
+  { name: 'Gynecology', description: 'Female reproductive health' },
+  { name: 'Oncology', description: 'Cancer diagnosis and treatment' },
+  { name: 'Psychiatry', description: 'Mental health and behavior' }
+];
+
+const MASTER_DISEASES = [
+  { code: 'ICD10-I10', name: 'Essential (primary) hypertension', category: 'Circulatory' },
+  { code: 'ICD10-E11', name: 'Type 2 diabetes mellitus', category: 'Endocrine' },
+  { code: 'ICD10-J45', name: 'Asthma', category: 'Respiratory' },
+  { code: 'ICD10-M54', name: 'Dorsalgia (Back pain)', category: 'Musculoskeletal' },
+  { code: 'ICD10-N39', name: 'Urinary tract infection', category: 'Genitourinary' }
+];
+
+const MASTER_TREATMENTS = [
+  { code: 'PROC-001', name: 'General Consultation', category: 'Consultation', cost: 500 },
+  { code: 'PROC-002', name: 'Specialist Consultation', category: 'Consultation', cost: 1000 },
+  { code: 'PROC-003', name: 'Blood Glucose Test', category: 'Laboratory', cost: 150 },
+  { code: 'PROC-004', name: 'Complete Blood Count (CBC)', category: 'Laboratory', cost: 450 },
+  { code: 'PROC-005', name: 'X-Ray Chest', category: 'Radiology', cost: 800 },
+  { code: 'PROC-006', name: 'ECG/EKG', category: 'Cardiology', cost: 600 }
 ];
 
 function buildTenantSchemaName(code) {
@@ -134,16 +152,6 @@ function buildTenantSchemaName(code) {
 /**
  * Provisions a new tenant with its own dedicated PostgreSQL schema.
  * Handles metadata creation, schema creation, migrations, and initial seeding.
- *
- * @param {Object} tenantData
- * @param {string} tenantData.name
- * @param {string} tenantData.code
- * @param {string} tenantData.subdomain
- * @param {Object} adminData
- * @param {string} adminData.email
- * @param {string} adminData.password
- * @param {string} adminData.name
- * @returns {Promise<Object>} The newly created tenant record
  */
 export async function provisionNewTenant(tenantData, adminData) {
   // Always enforce the default setup credential for new Tenant Admins
@@ -155,7 +163,7 @@ export async function provisionNewTenant(tenantData, adminData) {
   try {
     // 1. Create in legacy tenants table (for full platform visibility)
     const legacySql = `
-      INSERT INTO emr.tenants (name, code, subdomain, contact_email, subscription_tier, status, logo_url, theme, features, billing_config, created_at, updated_at)
+      INSERT INTO tenants (name, code, subdomain, contact_email, subscription_tier, status, logo_url, theme, features, billing_config, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, 'active', $6, $7, $8, $9, NOW(), NOW())
       ON CONFLICT (code) DO UPDATE SET 
         name = EXCLUDED.name,
@@ -180,7 +188,7 @@ export async function provisionNewTenant(tenantData, adminData) {
 
     // 2. Map entry in the management database (Control Plane)
     const insertSql = `
-      INSERT INTO emr.management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier, logo_url, theme, features, billing_config, created_at, updated_at)
+      INSERT INTO management_tenants (id, name, code, subdomain, schema_name, status, contact_email, subscription_tier, logo_url, theme, features, billing_config, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
       ON CONFLICT (code) DO UPDATE SET 
         name = EXCLUDED.name,
@@ -218,31 +226,64 @@ export async function provisionNewTenant(tenantData, adminData) {
     await executeTenantBaseSchema(schemaName);
     console.log(`✅ [PROVISIONING] Full tenant schema initialized for ${schemaName}`);
 
-    // 4. Seed the initial Admin User and default Roles into the new schema
-    console.log(`Seeding initial data into ${schemaName}...`);
+    // 4. Seed the initial Master Data into the new schema
+    console.log(`Seeding initial master data into ${schemaName}...`);
 
+    // Roles
     const createdRoles = [];
     for (const roleDef of DEFAULT_ROLE_DEFINITIONS) {
       const roleResult = await query(`
-        INSERT INTO "${schemaName}"."roles" (tenant_id, name, description, is_system)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (name) DO UPDATE SET 
-          description = EXCLUDED.description,
-          is_system = EXCLUDED.is_system
+        INSERT INTO "${schemaName}"."roles" (id, name, permissions)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (id) DO UPDATE SET 
+          name = EXCLUDED.name,
+          permissions = EXCLUDED.permissions
         RETURNING id, name
-      `, [tenant.id, roleDef.name, roleDef.description, roleDef.is_system]);
+      `, [roleDef.id, roleDef.name, JSON.stringify(roleDef.permissions || [])]);
       
       createdRoles.push(roleResult.rows[0]);
     }
 
-    const adminRole = createdRoles.find((role) => role.name === 'Admin');
+    // Departments
+    for (const dept of MASTER_DEPARTMENTS) {
+      await query(`
+        INSERT INTO "${schemaName}"."departments" (tenant_id, code, name)
+        VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+      `, [tenant.id, dept.code, dept.name]);
+    }
+
+    // Specialities
+    for (const spec of MASTER_SPECIALITIES) {
+      await query(`
+        INSERT INTO "${schemaName}"."specialities" (tenant_id, name, description)
+        VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+      `, [tenant.id, spec.name, spec.description]);
+    }
+
+    // Diseases
+    for (const d of MASTER_DISEASES) {
+      await query(`
+        INSERT INTO "${schemaName}"."diseases" (tenant_id, code, name, category)
+        VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING
+      `, [tenant.id, d.code, d.name, d.category]);
+    }
+
+    // Treatments
+    for (const t of MASTER_TREATMENTS) {
+      await query(`
+        INSERT INTO "${schemaName}"."treatments" (tenant_id, code, name, category, base_cost)
+        VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING
+      `, [tenant.id, t.code, t.name, t.category, t.cost]);
+    }
+
+    const adminRole = createdRoles.find((role) => role.id === 'Admin');
     if (!adminRole) {
       throw new Error('Admin role was not created during tenant provisioning.');
     }
 
     const hashedPassword = await bcrypt.hash(adminData.password, 10);
     const userResult = await query(`
-      INSERT INTO "${schemaName}"."users" (tenant_id, email, password_hash, name, role_id)
+      INSERT INTO "${schemaName}"."users" (tenant_id, email, password_hash, name, role)
       VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (email) DO UPDATE SET name = EXCLUDED.name, tenant_id = EXCLUDED.tenant_id
       RETURNING id, email
@@ -250,11 +291,9 @@ export async function provisionNewTenant(tenantData, adminData) {
 
     const user = userResult.rows[0];
 
-    // CRITICAL: Also register the admin in emr.users (global control plane).
-    // The auth system (getUserByEmail in user.service.js) queries emr.users for ALL tenant
-    // logins. Without this, the admin exists in the shard but is invisible to the login flow.
+    // CRITICAL: Also register the admin in users (global control plane).
     await query(`
-      INSERT INTO emr.users (id, tenant_id, email, password_hash, name, role, is_active)
+      INSERT INTO users (id, tenant_id, email, password_hash, name, role, is_active)
       VALUES ($1, $2, $3, $4, $5, 'Admin', true)
       ON CONFLICT (email) DO UPDATE SET 
         tenant_id = EXCLUDED.tenant_id,
@@ -279,7 +318,7 @@ export async function provisionNewTenant(tenantData, adminData) {
         
         try {
           await query(`
-            INSERT INTO emr.audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
+            INSERT INTO audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
             VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, NULL, NULL, NOW())
           `, [tenant.id, user.id, user.name, 'tenant.provision', 'tenant', tenant.id, JSON.stringify({
             schemaName,
@@ -325,7 +364,7 @@ export async function provisionNewTenant(tenantData, adminData) {
       // 1. Log failure BEFORE purging metadata (prevents FK violation)
       if (tenant?.id) {
         await query(`
-          INSERT INTO emr.audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
+          INSERT INTO audit_logs (id, tenant_id, user_id, user_name, action, entity_name, entity_id, details, ip_address, user_agent, timestamp)
           VALUES (gen_random_uuid(), $1, NULL, NULL, $2, $3, $4, $5, NULL, NULL, NOW())
         `, [tenant.id, 'tenant.provision.failed', 'tenant', tenant.id, JSON.stringify({
           schemaName,
@@ -339,7 +378,7 @@ export async function provisionNewTenant(tenantData, adminData) {
       
       // 3. Purge orphaned metadata
       if (tenant?.id) {
-        await query('DELETE FROM emr.management_tenants WHERE id::text = $1::text', [tenant.id])
+        await query('DELETE FROM management_tenants WHERE id::text = $1::text', [tenant.id])
           .catch(err => console.error('Orphaned tenant metadata purge failed:', err.message));
       }
     } catch (rollbackError) {
