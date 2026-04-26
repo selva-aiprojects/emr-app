@@ -191,7 +191,7 @@ export async function provisionTenantUser(req, res) {
         recipient,
         tenant.name || tenant.code,
         (tenant.subdomain || tenant.code || '').toLowerCase(),
-        { email: normalizedEmail, password }
+        { email: normalizedEmail, password, tenantId: tenant.id }
       );
       emailDelivery = 'sent';
     } catch (mailErr) {
@@ -269,7 +269,7 @@ export async function globalPasswordReset(req, res) {
         normalizedEmail,
         tenant.name || tenant.code,
         (tenant.subdomain || tenant.code || '').toLowerCase(),
-        { email: normalizedEmail, password: newPassword }
+        { email: normalizedEmail, password: newPassword, tenantId: tenant.id }
       );
       emailDelivery = 'sent';
     } catch (mailErr) {
@@ -301,6 +301,93 @@ export async function createNewTenant(req, res) {
     const result = await provisionNewTenant(tenantData, adminData);
     res.json(result);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+/**
+ * Decommission/Delete a Tenant
+ */
+export async function deleteTenant(req, res) {
+  const { id: tenantId } = req.params;
+  try {
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+    const tenant = await resolveTenantNode(tenantId);
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+    
+    const schemaName = assertSafeSchemaName(tenant.schema_name || String(tenant.code || '').toLowerCase());
+    
+    // Drop the tenant schema
+    await query(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`);
+    
+    // Delete from global users
+    await query(`DELETE FROM nexus.users WHERE tenant_id::text = $1::text`, [tenant.id]);
+    
+    // Delete from tenants
+    await query(`DELETE FROM nexus.tenants WHERE id::text = $1::text`, [tenant.id]);
+    await query(`DELETE FROM nexus.management_tenants WHERE id::text = $1::text`, [tenant.id]);
+    
+    res.json({ success: true, message: `Tenant ${tenant.code} decommissioned successfully.` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+
+/**
+ * Platform Communication History (Signal History)
+ */
+export async function getCommunications(req, res) {
+  const { tenantId, status, type } = req.query;
+  try {
+    let sql = `
+      SELECT c.*, t.name as tenant_name 
+      FROM nexus.communications c
+      LEFT JOIN nexus.management_tenants t ON c.tenant_id = t.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (tenantId) {
+      params.push(tenantId);
+      sql += ` AND c.tenant_id = $${params.length}`;
+    }
+    if (status) {
+      params.push(status);
+      sql += ` AND c.status = $${params.length}`;
+    }
+    if (type) {
+      params.push(type);
+      sql += ` AND c.type = $${params.length}`;
+    }
+
+    sql += ` ORDER BY c.created_at DESC LIMIT 100`;
+
+    const result = await query(sql, params);
+    
+    // Map to camelCase for frontend
+    const rows = result.rows.map(row => ({
+      id: row.id,
+      tenantId: row.tenant_id,
+      tenantName: row.tenant_name,
+      type: row.type,
+      direction: row.direction,
+      sender: row.sender,
+      recipient: row.recipient,
+      subject: row.subject,
+      content: row.content,
+      status: row.status,
+      errorMessage: row.error_message,
+      createdAt: row.created_at
+    }));
+
+    res.json(rows);
+  } catch (error) {
+    console.error('[COMM_FETCH_ERROR]', error);
     res.status(500).json({ error: error.message });
   }
 }

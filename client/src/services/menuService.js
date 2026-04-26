@@ -10,7 +10,7 @@ class MenuService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         }
       });
 
@@ -36,7 +36,7 @@ class MenuService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         }
       });
 
@@ -62,7 +62,7 @@ class MenuService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         }
       });
 
@@ -88,7 +88,7 @@ class MenuService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         }
       });
 
@@ -114,7 +114,7 @@ class MenuService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         }
       });
 
@@ -139,7 +139,7 @@ class MenuService {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         }
       });
 
@@ -164,7 +164,7 @@ class MenuService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         },
         body: JSON.stringify(headerData)
       });
@@ -190,7 +190,7 @@ class MenuService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         },
         body: JSON.stringify(itemData)
       });
@@ -216,7 +216,7 @@ class MenuService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         },
         body: JSON.stringify({ roleName, menuItemId, isVisible })
       });
@@ -242,7 +242,7 @@ class MenuService {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         }
       });
 
@@ -267,7 +267,7 @@ class MenuService {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('emr_auth_token')}`
         }
       });
 

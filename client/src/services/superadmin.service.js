@@ -1,15 +1,28 @@
-import { storeAuth, getStoredSession, getStoredUser, getToken } from '../api.js';
+import { storeAuth, getStoredSession, getStoredUser } from '../api.js';
 
 // Internal helper for superadmin specifically, though api.js could be extended.
 async function superadminRequest(endpoint, options = {}) {
-  const token = getToken();
-  const response = await fetch(`/api/superadmin${endpoint}`, {
+  const token = localStorage.getItem('emr_auth_token');
+  console.log(`[SUPERADMIN_REQUEST] Fetching ${endpoint} with token prefix:`, token ? token.substring(0, 10) : 'MISSING');
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+  
+  if (token && token !== 'null') {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Handle both /superadmin prefixed routes and global routes
+  // We only use /api for the public tenant list and specific communication logs
+  const baseUrl = (endpoint === '/tenants' && (!options.method || options.method === 'GET'))
+    ? '/api' 
+    : '/api/superadmin';
+
+  const response = await fetch(`${baseUrl}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
-      ...options.headers
-    }
+    headers
   });
 
   if (!response.ok) {
@@ -29,6 +42,21 @@ export const superadminService = {
       method: 'POST',
       body: JSON.stringify({ tenantData, adminData }),
     });
+  },
+
+  /**
+   * Fetch all tenants
+   */
+  getTenants: async () => {
+    return superadminRequest('/tenants');
+  },
+
+  /**
+   * Fetch communication history
+   */
+  getCommunications: async (filters = {}) => {
+    const params = new URLSearchParams(filters);
+    return superadminRequest(`/communication?${params.toString()}`);
   },
 
   /**
@@ -104,4 +132,3 @@ export const superadminService = {
     return superadminRequest('/overview-fixed');
   }
 };
-

@@ -496,13 +496,21 @@ export default function AppLayout({
 
   return (
     <div className="flex h-screen bg-[#EFF5FA] overflow-hidden">
-      <aside className={`fixed lg:static inset-y-0 left-0 z-[100] bg-[var(--medical-navy-light)] flex-shrink-0 transition-all duration-300 ease-in-out h-full ${sidebarCollapsed ? "w-[60px]" : "w-[260px]"} ${mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+      <aside className={`static inset-y-0 left-0 z-[100] bg-[var(--medical-navy-light)] flex-shrink-0 transition-all duration-300 ease-in-out h-full ${sidebarCollapsed ? "w-[60px]" : "w-[260px]"}`}>
         {SidebarContent}
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="flex-shrink-0 bg-white border-b border-[rgba(0,119,182,0.12)] px-6 h-20 flex items-center justify-between shadow-sm shadow-[rgba(0,119,182,0.04)]">
           <div className="flex items-center gap-6 min-w-0 flex-shrink-0">
+            {/* Mobile Toggle */}
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="lg:hidden p-3 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all"
+            >
+              <Menu size={22} />
+            </button>
+
             <button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="p-3 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all hidden lg:flex flex-shrink-0">
               <Menu size={22} />
             </button>
@@ -555,9 +563,7 @@ export default function AppLayout({
         </main>
       </div>
 
-      {mobileOpen && (
-        <div onClick={() => setMobileOpen(false)} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[90] lg:hidden" />
-      )}
+      {/* Interaction block removed */}
     </div>
   );
 }

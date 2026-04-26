@@ -10,18 +10,22 @@ const router = express.Router();
  * @route   GET /api/bootstrap
  * @desc    Get initial application state (Config, User context, etc.)
  */
-router.get('/bootstrap', async (req, res) => {
+router.get('/bootstrap', authenticate, async (req, res) => {
   try {
-    const { tenantId, userId } = req.query;
-    const targetTenantId = req.tenantId || tenantId;
-    console.log(`[BOOTSTRAP_TRACE] Request for Tenant: ${targetTenantId}`);
-    const targetUserId = req.user?.id || userId;
+    let { tenantId, userId } = req.query;
+    
+    // Sanitize string "undefined" or "null" from query params
+    if (tenantId === 'undefined' || tenantId === 'null') tenantId = null;
+    if (userId === 'undefined' || userId === 'null') userId = null;
 
-    if (!targetTenantId) {
+    const targetTenantId = req.tenantId || tenantId;
+    const targetUserId = req.user?.id || userId;
+    const isSuperadmin = (req.user?.role || '').toLowerCase() === 'superadmin';
+    if (!targetTenantId && !isSuperadmin) {
       return res.status(400).json({ error: 'Tenant context required' });
     }
 
-    const data = await repo.getBootstrapData(targetTenantId, targetUserId);
+    const data = await repo.getBootstrapData(targetTenantId, targetUserId, req.user?.role);
 
     // --- CLINICAL STATE INGRESS (E2E STABILIZATION) ---
     try {

@@ -154,8 +154,8 @@ function buildTenantSchemaName(code) {
  * Handles metadata creation, schema creation, migrations, and initial seeding.
  */
 export async function provisionNewTenant(tenantData, adminData) {
-  // Always enforce the default setup credential for new Tenant Admins
-  adminData.password = "Admin@123";
+  // Use provided password or fallback to institutional standard
+  adminData.password = adminData.password || "Admin@123";
 
   const schemaName = buildTenantSchemaName(tenantData.code);
   let tenant;
@@ -338,7 +338,7 @@ export async function provisionNewTenant(tenantData, adminData) {
             communicationRecipient,
             tenantData.name,
             tenantData.subdomain,
-            { email: adminData.email, password: adminData.password }
+            { email: adminData.email, password: adminData.password, tenantId: tenant.id }
           );
           console.log(`[PROVISIONING_BG] Welcome email dispatched for ${tenantData.code}`);
         } catch (mailErr) {
