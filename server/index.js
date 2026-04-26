@@ -34,6 +34,7 @@ import aiRoutes          from './routes/ai.routes.js';
 import rolesRoutes        from './routes/roles.routes.js';
 import clinicalMastersRoutes from './routes/clinical-masters.routes.js';
 import masterRoutes      from './routes/master.routes.js';  // /api/bootstrap
+import expensesRoutes    from './routes/expenses.routes.js';
 
 const app = express();
 const PORT = 4055;
@@ -84,6 +85,7 @@ app.use('/api/ambulance',    ambulanceRoutes);
 app.use('/api/ai',           aiRoutes);
 app.use('/api/roles',           rolesRoutes);
 app.use('/api/clinical-masters', clinicalMastersRoutes);
+app.use('/api/expenses',       expensesRoutes);
 app.use('/api',              masterRoutes);  // GET /api/bootstrap — must be last /api mount
 
 // ── 404 Fallback ─────────────────────────────────────────────
@@ -101,7 +103,14 @@ app.use((err, _req, res, _next) => {
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`🚀 [STABLE_BACKEND] Listening on port ${PORT}`);
   const ok = await testConnection();
-  if (!ok) {
+  if (ok) {
+    try {
+      const { runMigrations } = await import('./db/bootstrap.service.js');
+      await runMigrations();
+    } catch (e) {
+      console.warn('[BOOTSTRAP_MIGRATION_WARN] Delayed migration failed:', e.message);
+    }
+  } else {
     console.error('❌ DB connection failed on startup — check DATABASE_URL in .env');
   }
 });

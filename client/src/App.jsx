@@ -53,6 +53,8 @@ const FinancialLedgerPage = lazy(() => import('./pages/FinancialLedgerPage.jsx')
 const EmployeeMasterPage = lazy(() => import('./pages/EmployeeMasterPage.jsx'));
 
 export default function App() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const suspenseFallback = (
     <div className="p-8 animate-pulse space-y-4">
       <div className="h-8 w-64 bg-slate-100 rounded-xl" />
@@ -170,9 +172,11 @@ export default function App() {
       return [];
     }
 
-    // Superadmin bypasses all tenant/tier restrictions — they have no tenant
+    // Superadmin bypasses all tenant/tier restrictions — handled by bootstrap/permissions
     if (activeUser.role.toLowerCase() === 'superadmin') {
-      return ['superadmin', 'tenant_management', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'reports', 'support', 'admin'];
+      // If permissions provides it, use it. Otherwise fallback to core management set.
+      const superViews = permissions['Superadmin'] || ['superadmin', 'tenant_management', 'tenant_creation', 'infra_health', 'financial_control', 'subscription_mgmt', 'communication', 'comm_history', 'reports', 'support', 'admin'];
+      return superViews;
     }
 
     const roleKey = activeUser.role.charAt(0).toUpperCase() + activeUser.role.slice(1).toLowerCase();
@@ -336,7 +340,8 @@ export default function App() {
     userRole = session?.user?.role,
     options = {}
   ) {
-    if (!tenantId) {
+    const isSuperadmin = (session?.user?.role || '').toLowerCase() === 'superadmin';
+    if (!tenantId && !isSuperadmin) {
       return;
     }
 
@@ -465,13 +470,21 @@ export default function App() {
   async function refreshSuperadmin() {
     console.log('DEBUG: refreshSuperadmin started');
     try {
-      const [overview, allUsers, allTenants, allTickets] = await Promise.all([
-        api.getSuperadminOverview(),
-        api.getUsers(),
-        api.getTenants(),
-        api.getSupportTickets()
+      const [overview, allUsers, allTenants, allTickets, bootstrap] = await Promise.all([
+        api.getSuperadminOverview().catch(() => ({ totals: {} })),
+        api.getUsers().catch(() => []),
+        api.getTenants().catch(() => []),
+        api.getSupportTickets().catch(() => []),
+        api.getBootstrapData(null, session?.user?.id).catch(() => ({}))
       ]);
-      console.log('DEBUG: Superadmin data fetched', { overview, allUsers, allTenants, allTickets });
+      console.log('DEBUG: Superadmin data fetched', { overview, allUsers, allTenants, allTickets, bootstrap });
+
+      if (bootstrap?.menuStructure) {
+        setMenuData(bootstrap.menuStructure);
+      }
+      if (bootstrap?.permissions) {
+        setPermissions(mergePermissions(bootstrap.permissions));
+      }
 
       const overviewTenantMap = new Map((overview?.tenants || []).map((t) => [t.id, t]));
       const normalizeTenant = (tenant = {}) => {
@@ -670,6 +683,10 @@ export default function App() {
         appointments={scopedAppointments}
         menuData={menuData}
         onEmrWorkflowChange={setEmrWorkflow}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+        sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
       >
         <ErrorBoundary>
           <Suspense fallback={suspenseFallback}>
@@ -741,7 +758,33 @@ export default function App() {
                   return newPatient;
                 }
               } catch (err) {
-                showToast({ message: 'Registration failed: ' + err.message, type: 'error' });
+                // Handle specific error types
+                let errorMessage = 'Patient registration failed';
+                
+                if (err.message.includes('firstName and lastName are required')) {
+                  errorMessage = 'First name and last name are required';
+                } else if (err.message.includes('Unauthorized') || err.message.includes('401')) {
+                  errorMessage = 'You do not have permission to create patients';
+                } else if (err.message.includes('Forbidden') || err.message.includes('403')) {
+                  errorMessage = 'Access denied. Please contact your administrator';
+                } else if (err.message.includes('tenant') || err.message.includes('tenantId')) {
+                  errorMessage = 'Session expired. Please log in again';
+                } else if (err.message.includes('network') || err.message.includes('fetch') || err.message.includes('connection')) {
+                  errorMessage = 'Network error. Please check your connection';
+                } else if (err.message.includes('duplicate') || err.message.includes('unique')) {
+                  errorMessage = 'A patient with this information already exists';
+                } else if (err.message.includes('validation') || err.message.includes('invalid')) {
+                  errorMessage = 'Please check all required fields and try again';
+                } else if (err.message) {
+                  errorMessage = `Registration failed: ${err.message}`;
+                }
+                
+                showToast({ 
+                  title: 'Registration Failed',
+                  message: errorMessage, 
+                  type: 'error',
+                  duration: 5000
+                });
                 throw err;
               }
             }}
@@ -780,17 +823,48 @@ export default function App() {
               }));
             }}
             onCreatePatient={async (data) => {
-              const res = await api.addPatient({
-                tenantId: session.tenantId, userId: activeUser.id,
-                ...data
-              });
-              if (res && res.id) {
-                identityService.updateRegistry([res]);
-                setPatients(prev => [res, ...prev]);
-                await refreshTenantData();
-                return res;
+              try {
+                const res = await api.addPatient({
+                  tenantId: session.tenantId, userId: activeUser.id,
+                  ...data
+                });
+                if (res && res.id) {
+                  identityService.updateRegistry([res]);
+                  setPatients(prev => [res, ...prev]);
+                  await refreshTenantData();
+                  return res;
+                }
+                throw new Error("Patient creation failed");
+              } catch (err) {
+                // Handle specific error types
+                let errorMessage = 'Patient registration failed';
+                
+                if (err.message.includes('firstName and lastName are required')) {
+                  errorMessage = 'First name and last name are required';
+                } else if (err.message.includes('Unauthorized') || err.message.includes('401')) {
+                  errorMessage = 'You do not have permission to create patients';
+                } else if (err.message.includes('Forbidden') || err.message.includes('403')) {
+                  errorMessage = 'Access denied. Please contact your administrator';
+                } else if (err.message.includes('tenant') || err.message.includes('tenantId')) {
+                  errorMessage = 'Session expired. Please log in again';
+                } else if (err.message.includes('network') || err.message.includes('fetch') || err.message.includes('connection')) {
+                  errorMessage = 'Network error. Please check your connection';
+                } else if (err.message.includes('duplicate') || err.message.includes('unique')) {
+                  errorMessage = 'A patient with this information already exists';
+                } else if (err.message.includes('validation') || err.message.includes('invalid')) {
+                  errorMessage = 'Please check all required fields and try again';
+                } else if (err.message) {
+                  errorMessage = `Registration failed: ${err.message}`;
+                }
+                
+                showToast({ 
+                  title: 'Registration Failed',
+                  message: errorMessage, 
+                  type: 'error',
+                  duration: 5000
+                });
+                throw err;
               }
-              throw new Error("Patient creation failed");
             }}
             onCreateWalkin={(e) => {
               e.preventDefault();

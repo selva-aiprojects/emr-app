@@ -10,6 +10,20 @@ const router = express.Router();
 // router.use(requireTenant);
 
 /**
+ * @route   GET /api/tenants/public/subscription-catalog
+ * @desc    Get public subscription catalog (no auth required)
+ */
+router.get('/public/subscription-catalog', async (req, res) => {
+  try {
+    const catalog = await getSubscriptionCatalog();
+    res.json({ plans: catalog, modules: ALL_MODULES });
+  } catch (error) {
+    console.error('Error fetching subscription catalog:', error);
+    res.status(500).json({ error: 'Failed' });
+  }
+});
+
+/**
  * @route   GET /api/tenants/subscription-catalog
  * @desc    Get the public subscription feature matrix for tenant upgrades
  */

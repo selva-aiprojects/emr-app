@@ -10,15 +10,15 @@ import { api } from '../../api.js';
 import { useToast } from '../../hooks/useToast.jsx';
 
 // ─── Icon map by plan id ─────────────────────────────────────────────────────
-const PLAN_ICONS = { free: Box, basic: ShieldCheck, professional: Zap, enterprise: Crown };
-const PLAN_COLORS = { free: 'slate', basic: 'blue', professional: 'indigo', enterprise: 'emerald' };
+const PLAN_ICONS = { basic: Box, standard: ShieldCheck, professional: Zap, enterprise: Crown };
+const PLAN_COLORS = { basic: 'slate', standard: 'blue', professional: 'indigo', enterprise: 'emerald' };
 
 // ─── Fallback catalog when API is unavailable ────────────────────────────────
 const FALLBACK_PLANS = [
-  { id: 'free',         name: 'Starter',      cost: '0',    period: 'Forever', color: 'slate',   moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','hospital_settings'], features: ['Community Support','Standard Reports','Up to 5 Users'] },
-  { id: 'basic',        name: 'Basic',        cost: '199',  period: 'per mo',  color: 'blue',    moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','hospital_settings','departments'], features: ['Email Support','Advanced Analytics','Up to 25 Users'] },
-  { id: 'professional', name: 'Professional', cost: '499',   period: 'per mo',  color: 'indigo',   moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','insurance','service_catalog','hospital_settings','departments','bed_management'], features: ['24/7 Support','Custom Branding','Unlimited Users'] },
-  { id: 'enterprise',   name: 'Enterprise',   cost: '1299', period: 'per mo',  color: 'emerald', moduleKeys: ['dashboard','patients','appointments','emr','reports','admin','users','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','accounts_receivable','accounts_payable','insurance','service_catalog','hospital_settings','departments','bed_management','employees','hr','payroll','donor','ai_analysis','document_vault'], features: ['Dedicated Server','AI Assistance Matrix','99.9% SLA Guarantee'] },
+  { id: 'basic',        name: 'Basic',        cost: '1999', period: 'per mo', color: 'slate',   moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','hospital_settings'], features: ['Community Support','Standard Reports','Up to 5 Users'] },
+  { id: 'standard',     name: 'Standard',     cost: '4999', period: 'per mo', color: 'blue',    moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','hospital_settings','departments'], features: ['Email Support','Advanced Analytics','Up to 25 Users'] },
+  { id: 'professional', name: 'Professional', cost: '7999', period: 'per mo', color: 'indigo',  moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','insurance','service_catalog','hospital_settings','departments','bed_management'], features: ['24/7 Support','Custom Branding','Unlimited Users'] },
+  { id: 'enterprise',   name: 'Enterprise',   cost: '14999', period: 'per mo', color: 'emerald', moduleKeys: ['dashboard','patients','appointments','emr','reports','admin','users','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','accounts_receivable','accounts_payable','insurance','service_catalog','hospital_settings','departments','bed_management','employees','hr','payroll','donor','ai_analysis','document_vault'], features: ['Dedicated Server','AI Assistance Matrix','99.9% SLA Guarantee'] },
 ];
 
 const FALLBACK_MODULES = [
@@ -57,7 +57,8 @@ export default function SubscriptionEngine({ tenants = [] }) {
   const loadCatalog = useCallback(async () => {
     setFetching(true);
     try {
-      const data = await api.get('/admin/subscription-catalog');
+      // Try public endpoint first (no auth required)
+      const data = await api.get('/tenants/public/subscription-catalog');
       if (data?.plans?.length > 0) {
         setPlans(data.plans.map(p => ({ ...p, icon: PLAN_ICONS[p.id] || Box })));
       }
@@ -65,7 +66,22 @@ export default function SubscriptionEngine({ tenants = [] }) {
         setModules(data.modules);
       }
     } catch (e) {
-      console.warn('[SubscriptionEngine] Catalog API unavailable, using defaults:', e.message);
+      console.warn('[SubscriptionEngine] Public catalog API unavailable, trying admin endpoint:', e.message);
+      try {
+        // Fallback to admin endpoint (requires auth)
+        const data = await api.get('/admin/subscription-catalog');
+        if (data?.plans?.length > 0) {
+          setPlans(data.plans.map(p => ({ ...p, icon: PLAN_ICONS[p.id] || Box })));
+        }
+        if (data?.modules?.length > 0) {
+          setModules(data.modules);
+        }
+      } catch (adminError) {
+        console.warn('[SubscriptionEngine] Admin catalog API unavailable, using defaults:', adminError.message);
+        // Final fallback to defaults
+        setPlans(FALLBACK_PLANS.map(p => ({ ...p, icon: PLAN_ICONS[p.id] || Box })));
+        setModules(FALLBACK_MODULES);
+      }
     } finally {
       setFetching(false);
     }
@@ -195,7 +211,7 @@ export default function SubscriptionEngine({ tenants = [] }) {
   );
 
   const totalRevenue = tenants.reduce((acc, t) => {
-    const plan = plans.find(p => p.id === (t.subscription_tier?.toLowerCase() || 'free')) || plans[0];
+    const plan = plans.find(p => p.id === (t.subscription_tier?.toLowerCase() || 'basic')) || plans[0];
     return acc + Number(plan?.cost || 0);
   }, 0);
 
@@ -618,7 +634,7 @@ export default function SubscriptionEngine({ tenants = [] }) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredTenants.map(t => {
-              const plan = plans.find(p => p.id === (t.subscription_tier?.toLowerCase() || 'free')) || plans[0];
+              const plan = plans.find(p => p.id === (t.subscription_tier?.toLowerCase() || 'basic')) || plans[0];
               const PI = PLAN_ICONS[plan.id] || Box;
               return (
                 <div key={t.id} className="bg-white border border-slate-200 shadow-sm p-8 rounded-[2.5rem] flex items-center justify-between hover:border-indigo-200 hover:shadow-md hover:-translate-y-1 transition-all group">
@@ -635,7 +651,7 @@ export default function SubscriptionEngine({ tenants = [] }) {
                       {/* Tier changer */}
                       <select
                         className="mt-2 text-[9px] font-black uppercase tracking-widest bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-600 outline-none hover:border-indigo-300 transition-all cursor-pointer"
-                        defaultValue={t.subscription_tier?.toLowerCase() || 'free'}
+                        defaultValue={t.subscription_tier?.toLowerCase() || 'basic'}
                         onChange={(e) => updateTenantTier(t.id, e.target.value)}
                       >
                         {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -690,7 +706,7 @@ export default function SubscriptionEngine({ tenants = [] }) {
               </thead>
               <tbody>
                 {tenants.map(t => {
-                  const plan = plans.find(p => p.id === (t.subscription_tier?.toLowerCase() || 'free')) || plans[0];
+                  const plan = plans.find(p => p.id === (t.subscription_tier?.toLowerCase() || 'basic')) || plans[0];
                   return (
                     <tr key={t.id} className="group hover:bg-slate-50 transition-all">
                       <td className="px-10 py-6 bg-white group-hover:bg-transparent first:rounded-l-[2rem] border-y border-l border-slate-100">

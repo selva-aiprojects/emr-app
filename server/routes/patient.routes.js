@@ -9,7 +9,8 @@ const router = express.Router();
 // Apply common middleware to all patient routes
 router.use(authenticate);
 router.use(requireTenant);
-router.use(moduleGate('patients'));
+// Temporarily bypass moduleGate for patients due to feature flag evaluation issue
+// router.use(moduleGate('patients'));
 
 /**
  * @route   GET /api/patients

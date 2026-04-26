@@ -47,42 +47,10 @@ export { ALL_MODULES };
 
 // ─── Default Catalog (in-memory fallback) ────────────────────────────────────
 export const DEFAULT_CATALOG = [
-  {
-    id: 'free',
-    name: 'Starter',
-    cost: '0',
-    period: 'Forever',
-    color: 'slate',
-    features: ['Community Support', 'Standard Reports', 'Up to 5 Users'],
-    moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','hospital_settings'],
-  },
-  {
-    id: 'basic',
-    name: 'Basic',
-    cost: '199',
-    period: 'per mo',
-    color: 'blue',
-    features: ['Email Support', 'Advanced Analytics', 'Up to 25 Users'],
-    moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','hospital_settings','departments'],
-  },
-  {
-    id: 'professional',
-    name: 'Professional',
-    cost: '499',
-    period: 'per mo',
-    color: 'indigo',
-    features: ['24/7 Support', 'Custom Branding', 'Unlimited Users'],
-    moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','insurance','service_catalog','hospital_settings','departments','bed_management', 'feature_flags', 'system_settings'],
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    cost: '1299',
-    period: 'per mo',
-    color: 'emerald',
-    features: ['Dedicated Server', 'AI Assistance Matrix', '99.9% SLM Guarantee'],
-    moduleKeys: ['dashboard','patients','appointments','emr','reports','admin','users','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','accounts_receivable','accounts_payable','insurance','service_catalog','hospital_settings','departments','bed_management','employees','hr','payroll','donor','ai_analysis','document_vault', 'feature_flags', 'system_settings'],
-  },
+  { id: 'basic', name: 'Basic', cost: '1999', period: 'per mo', color: 'slate', features: ['Community Support', 'Standard Reports', 'Up to 5 Users'], moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','hospital_settings'] },
+  { id: 'standard', name: 'Standard', cost: '4999', period: 'per mo', color: 'blue', features: ['Email Support', 'Advanced Analytics', 'Up to 25 Users'], moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','hospital_settings','departments'] },
+  { id: 'professional', name: 'Professional', cost: '7999', period: 'per mo', color: 'indigo', features: ['24/7 Support', 'Custom Branding', 'Unlimited Users'], moduleKeys: ['dashboard','patients','appointments','emr','reports','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','insurance','service_catalog','hospital_settings','departments','bed_management', 'feature_flags', 'system_settings'] },
+  { id: 'enterprise', name: 'Enterprise', cost: '14999', period: 'per mo', color: 'emerald', features: ['Dedicated Server', 'AI Assistance Matrix', '99.9% SLM Guarantee'], moduleKeys: ['dashboard','patients','appointments','emr','reports','admin','users','support','communication','documents','inventory','pharmacy','ambulance','lab','inpatient','billing','accounts','accounts_receivable','accounts_payable','insurance','service_catalog','hospital_settings','departments','bed_management','employees','hr','payroll','donor','ai_analysis','document_vault', 'feature_flags', 'system_settings'] },
 ];
 
 // ─── In-memory cache (survives restarts if DB table missing) ─────────────────
@@ -98,8 +66,8 @@ export async function getSubscriptionCatalog() {
              updated_at
       FROM subscription_catalog
       ORDER BY CASE plan_id
-        WHEN 'free'         THEN 0
-        WHEN 'basic'        THEN 1
+        WHEN 'basic'        THEN 0
+        WHEN 'standard'     THEN 1
         WHEN 'professional' THEN 2
         WHEN 'enterprise'   THEN 3
         ELSE 4
