@@ -43,8 +43,8 @@ export async function ensureManagementPlaneInfrastructure() {
     console.log('🔍 [INFRA] Institutional Auto-Discovery is now dormant (Clean State Enabled).');
 
     await pool.query(`
-      INSERT INTO users (email, password_hash, role_id, name, is_active)
-      VALUES ('admin@healthezee.com', $1, 'superadmin', 'Healthezee Governance', true)
+      INSERT INTO nexus.users (email, password_hash, role, name, is_active)
+      VALUES ('admin@healthezee.com', $1, 'Superadmin', 'Healthezee Governance', true)
       ON CONFLICT (email) DO UPDATE SET is_active = true
     `, [adminHash]);
 

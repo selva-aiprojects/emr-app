@@ -79,7 +79,7 @@ export default function TenantCreationPage({ setView }) {
       }, {
         email: form.adminLoginEmail || `admin@${form.subdomain}.com`,
         name: `${form.name} Admin`,
-        password: "Medflow@2026"
+        password: "Admin@123"
       });
       setProvisionedData(result);
       setStatus('success');
@@ -318,7 +318,7 @@ export default function TenantCreationPage({ setView }) {
                       </div>
                       <div className="space-y-4">
                         <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Credential Token</p>
-                        <code className="text-[14px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">MedFlow@2024</code>
+                        <code className="text-[14px] font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">{provisionedData.defaultPassword || "Admin@123"}</code>
                       </div>
                     </div>
                     <div className="flex gap-4">

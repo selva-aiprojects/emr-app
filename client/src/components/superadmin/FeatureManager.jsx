@@ -17,10 +17,10 @@ export default function FeatureManager({ tenant, onClose, onRefresh }) {
   const [tenantStatus, setTenantStatus] = useState(tenant.status || 'active');
 
   const Tiers = [
-    { name: 'Free', price: '₹0', icon: Gift, color: 'slate' },
-    { name: 'Basic', price: '₹199', icon: Shield, color: 'blue' },
-    { name: 'Professional', price: '₹499', icon: Zap, color: 'indigo' },
-    { name: 'Enterprise', price: '₹1299', icon: Crown, color: 'rose' }
+    { name: 'Basic', price: '₹1999', icon: Box, color: 'slate' },
+    { name: 'Standard', price: '₹4999', icon: ShieldCheck, color: 'blue' },
+    { name: 'Professional', price: '₹7999', icon: Zap, color: 'indigo' },
+    { name: 'Enterprise', price: '₹14999', icon: Crown, color: 'rose' }
   ];
   
   const featureLabels = {

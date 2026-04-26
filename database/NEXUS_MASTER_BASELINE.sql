@@ -11,16 +11,14 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE SCHEMA IF NOT EXISTS nexus;
 
 -- 0. Migration Log (Master Tracker)
-DROP TABLE IF EXISTS nexus.migrations_log CASCADE;
-CREATE TABLE nexus.migrations_log (
+CREATE TABLE IF NOT EXISTS nexus.migrations_log (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   filename text NOT NULL UNIQUE,
   executed_at timestamptz DEFAULT now()
 );
 
 -- 1. Management Subscriptions
-DROP TABLE IF EXISTS nexus.management_subscriptions CASCADE;
-CREATE TABLE nexus.management_subscriptions (
+CREATE TABLE IF NOT EXISTS nexus.management_subscriptions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   tier varchar(50) NOT NULL UNIQUE,
   plan_name text NOT NULL DEFAULT 'Enterprise Plan',
@@ -33,8 +31,7 @@ CREATE TABLE nexus.management_subscriptions (
 );
 
 -- 2. Management Registry (The Nexus)
-DROP TABLE IF EXISTS nexus.management_tenants CASCADE;
-CREATE TABLE nexus.management_tenants (
+CREATE TABLE IF NOT EXISTS nexus.management_tenants (
   id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
   name text NOT NULL,
   code varchar(32) NOT NULL UNIQUE,
@@ -53,8 +50,7 @@ CREATE TABLE nexus.management_tenants (
 );
 
 -- 3. Legacy Bridge (Compatibility Shard)
-DROP TABLE IF EXISTS nexus.tenants CASCADE;
-CREATE TABLE nexus.tenants (
+CREATE TABLE IF NOT EXISTS nexus.tenants (
   id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
   name text NOT NULL,
   code varchar(64) UNIQUE,
@@ -70,8 +66,7 @@ CREATE TABLE nexus.tenants (
 );
 
 -- 4. Global Identity Shards
-DROP TABLE IF EXISTS nexus.roles CASCADE;
-CREATE TABLE nexus.roles (
+CREATE TABLE IF NOT EXISTS nexus.roles (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     tenant_id VARCHAR(255),
     name text NOT NULL UNIQUE,
@@ -81,8 +76,7 @@ CREATE TABLE nexus.roles (
     updated_at timestamp with time zone DEFAULT now()
 );
 
-DROP TABLE IF EXISTS nexus.users CASCADE;
-CREATE TABLE nexus.users (
+CREATE TABLE IF NOT EXISTS nexus.users (
     id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     tenant_id VARCHAR(255) REFERENCES nexus.management_tenants(id) ON DELETE CASCADE,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -131,8 +125,7 @@ CREATE TABLE IF NOT EXISTS nexus.audit_logs (
 );
 
 -- 5. Precision Telemetry Matrix
-DROP TABLE IF EXISTS nexus.management_tenant_metrics CASCADE;
-CREATE TABLE nexus.management_tenant_metrics (
+CREATE TABLE IF NOT EXISTS nexus.management_tenant_metrics (
   tenant_id VARCHAR(255) PRIMARY KEY REFERENCES nexus.management_tenants(id) ON DELETE CASCADE,
   tenant_code varchar(32) NOT NULL,
   tenant_name text NOT NULL,
@@ -146,8 +139,7 @@ CREATE TABLE nexus.management_tenant_metrics (
 );
 
 -- 6. Global Control Summary
-DROP TABLE IF EXISTS nexus.management_dashboard_summary CASCADE;
-CREATE TABLE nexus.management_dashboard_summary (
+CREATE TABLE IF NOT EXISTS nexus.management_dashboard_summary (
   summary_key text PRIMARY KEY,
   total_tenants integer NOT NULL DEFAULT 0,
   total_doctors integer NOT NULL DEFAULT 0,
@@ -159,19 +151,37 @@ CREATE TABLE nexus.management_dashboard_summary (
 );
 
 -- 7. Audit & Support Shards
-DROP TABLE IF EXISTS nexus.support_tickets CASCADE;
-CREATE TABLE nexus.support_tickets (
+CREATE TABLE IF NOT EXISTS nexus.support_tickets (
   id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
   tenant_id VARCHAR(255) REFERENCES nexus.management_tenants(id) ON DELETE CASCADE,
   subject text NOT NULL,
   description text,
   status varchar(32) DEFAULT 'open',
   priority varchar(32) DEFAULT 'normal',
+  created_by VARCHAR(255),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 8. Infrastructure Safety Functions
+-- 8. Communications Audit Log
+CREATE TABLE IF NOT EXISTS nexus.communications (
+  id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  tenant_id VARCHAR(255) REFERENCES nexus.management_tenants(id) ON DELETE SET NULL,
+  type VARCHAR(50) DEFAULT 'email',
+  direction VARCHAR(10) DEFAULT 'outbound',
+  sender TEXT,
+  recipient TEXT,
+  subject TEXT,
+  content TEXT,
+  status VARCHAR(20) DEFAULT 'sent',
+  error_message TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_communications_tenant_id ON nexus.communications(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_communications_created_at ON nexus.communications(created_at DESC);
+
+-- 9. Infrastructure Safety Functions
 CREATE OR REPLACE FUNCTION nexus.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN

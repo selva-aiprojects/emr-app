@@ -3,7 +3,7 @@ import {
   Server, Shield, Box, CreditCard, Activity, 
   MessageSquare, HelpCircle, ChevronRight, 
   Search, Bell, Plus, Users, Globe, Database,
-  DollarSign, Ticket, Tag
+  DollarSign, Ticket, Tag, History
 } from 'lucide-react';
 
 // New Core Modules
@@ -13,6 +13,7 @@ import TenantControlCenter from '../components/superadmin/TenantControlCenter.js
 import InfraOpsManager from '../components/superadmin/InfraOpsManager.jsx';
 import FiscalGovernance from '../components/superadmin/FiscalGovernance.jsx';
 import CommunicationCenter from '../components/superadmin/CommunicationCenter.jsx';
+import CommunicationHub from './CommunicationHub.jsx';
 import OfferManagement from '../components/superadmin/OfferManagement.jsx';
 
 import '../styles/superadmin.css';
@@ -42,6 +43,7 @@ export default function EnhancedSuperadminPage({
     { id: 'financial_control', label: 'Fiscal',         icon: DollarSign },
     { id: 'infra_health',      label: 'Infrastructure', icon: Activity },
     { id: 'communication',     label: 'Directives',     icon: MessageSquare },
+    { id: 'comm_history',      label: 'Signal History', icon: History },
     { id: 'offers',            label: 'Offers',         icon: Tag },
     { id: 'support',           label: 'Support',        icon: HelpCircle },
   ];
@@ -73,6 +75,8 @@ export default function EnhancedSuperadminPage({
         return <FiscalGovernance tenants={tenants} />;
       case 'communication':
         return <CommunicationCenter tenants={tenants} apiClient={apiClient} />;
+      case 'comm_history':
+        return <CommunicationHub />;
       case 'offers':
         return <OfferManagement tenants={tenants} />;
       case 'support':
@@ -91,9 +95,7 @@ export default function EnhancedSuperadminPage({
 
         {/* DYNAMIC VIEW ZONE */}
         <section className="flex-1 overflow-y-auto px-6 lg:px-10 py-8 scroll-smooth relative bg-[#f1f5f9]/30 custom-scrollbar">
-           {/* Ambient Glows */}
-           <div className="absolute top-[-200px] left-[-200px] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-           <div className="absolute bottom-[-100px] right-[-100px] w-[400px] h-[400px] bg-emerald-600/10 rounded-full blur-[100px] pointer-events-none" />
+           {/* Decorative glows disabled for stability */}
            
            <div className="relative z-10 transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
               {renderContent()}

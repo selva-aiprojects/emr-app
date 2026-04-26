@@ -14,7 +14,7 @@ export async function getUsers(tenantId = null) {
   let users = [];
   if (tenantId) {
     const result = await query(
-      'SELECT id, tenant_id, email, name, role, is_active, created_at, last_login FROM users WHERE tenant_id::text = $1::text ORDER BY name',
+      'SELECT id, tenant_id, email, name, role, is_active, created_at, last_login FROM nexus.users WHERE tenant_id::text = $1::text ORDER BY name',
       [tenantId]
     );
     users = result.rows;
@@ -23,7 +23,7 @@ export async function getUsers(tenantId = null) {
   }
 
   const result = await query(
-    'SELECT id, tenant_id, email, name, role, is_active, created_at, last_login FROM users ORDER BY name'
+    'SELECT id, tenant_id, email, name, role, is_active, created_at, last_login FROM nexus.users ORDER BY name'
   );
   return result.rows;
 }
@@ -35,7 +35,7 @@ export async function getUsers(tenantId = null) {
  */
 export async function getUserById(id) {
   const result = await query(
-    'SELECT id, tenant_id, email, name, role, is_active, created_at, last_login FROM users WHERE id::text = $1::text',
+    'SELECT id, tenant_id, email, name, role, is_active, created_at, last_login FROM nexus.users WHERE id::text = $1::text',
     [id]
   );
   return result.rows[0];
@@ -52,11 +52,11 @@ export async function getUserByEmail(email, tenantId = null) {
 
   if (tenantId === null) {
     // Superadmin login (no tenant_id)
-    sql = 'SELECT * FROM users WHERE LOWER(email) = LOWER($1) AND tenant_id IS NULL';
+    sql = 'SELECT * FROM nexus.users WHERE LOWER(email) = LOWER($1) AND tenant_id IS NULL';
     params = [email];
   } else {
     // Tenant user login
-    sql = 'SELECT * FROM users WHERE LOWER(email) = LOWER($1) AND tenant_id::text = $2::text';
+    sql = 'SELECT * FROM nexus.users WHERE LOWER(email) = LOWER($1) AND tenant_id::text = $2::text';
     params = [email, tenantId];
   }
 
@@ -71,7 +71,7 @@ export async function getUserByEmail(email, tenantId = null) {
  */
 export async function createUser({ tenantId, email, passwordHash, name, role }) {
   const sql = `
-    INSERT INTO users (tenant_id, email, password_hash, name, role, is_active)
+    INSERT INTO nexus.users (tenant_id, email, password_hash, name, role, is_active)
     VALUES ($1, $2, $3, $4, $5, true)
     RETURNING id, tenant_id, email, name, role, is_active, created_at
   `;
@@ -93,7 +93,7 @@ export async function createUser({ tenantId, email, passwordHash, name, role }) 
  * @returns {Promise<void>}
  */
 export async function updateUserLastLogin(userId) {
-  await query('UPDATE users SET last_login = NOW() WHERE id::text = $1::text', [userId]);
+  await query('UPDATE nexus.users SET last_login = NOW() WHERE id::text = $1::text', [userId]);
 }
 
 /**
@@ -104,7 +104,7 @@ export async function updateUserLastLogin(userId) {
  */
 export async function updateUserStatus(userId, isActive) {
   const result = await query(
-    'UPDATE users SET is_active = $1, updated_at = NOW() WHERE id::text = $2::text RETURNING id, is_active',
+    'UPDATE nexus.users SET is_active = $1, updated_at = NOW() WHERE id::text = $2::text RETURNING id, is_active',
     [isActive, userId]
   );
   return result.rows[0];

@@ -3,6 +3,7 @@ import nodemailer from 'nodemailer';
 import fetch from 'node-fetch';
 import fs from 'fs';
 import path from 'path';
+import { query } from '../db/connection.js';
 
 dotenv.config();
 
@@ -13,9 +14,9 @@ dotenv.config();
 export async function sendTenantWelcomeEmail(email, tenantName, subdomain, credentials) {
   const loginEmail = credentials?.email || email;
   const loginPassword = credentials?.password || '';
+  const tenantId = credentials?.tenantId || null;
   const fromName = "Healthezee Platform";
-  // Explicitly force the verified domain instead of relying on .env file fallback
-  const fromEmail = "Healthezee Platform <care@cognivectra.com>";
+  const fromEmail = process.env.EMAIL_FROM || "Healthezee Platform <onboarding@resend.dev>";
   const subject = `Welcome to Healthezee: ${tenantName} Workspace Initialized`;
 
   const htmlContent = `
@@ -218,6 +219,18 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
     console.warn('⚠️ [MAIL_PREVIEW_ERR] Failed to save local copy:', err.message);
   }
 
+  // Helper to log communication
+  const logCommunication = async (status, error = null) => {
+    try {
+      await query(`
+        INSERT INTO nexus.communications (tenant_id, sender, recipient, subject, content, status, error_message)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `, [tenantId, fromEmail, email, subject, htmlContent, status, error]);
+    } catch (logErr) {
+      console.warn('⚠️ [MAIL_LOG_ERR] Failed to log communication:', logErr.message);
+    }
+  };
+
   // --- STRATEGY 1: RESEND API (High Reliability) ---
   if (process.env.RESEND_API_KEY) {
     try {
@@ -231,7 +244,7 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
           'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
         },
         body: JSON.stringify({
-          from: "onboarding@resend.dev",
+          from: fromEmail,
           to: [recipientEmail],
           subject: subject,
           html: htmlContent
@@ -241,13 +254,16 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
       if (response.ok) {
         const data = await response.json();
         console.log(`✉️ [RESEND_SUCCESS] Email dispatched via API to ${recipientEmail}:`, data.id);
+        await logCommunication('sent');
         return { success: true, messageId: data.id };
       } else {
         const error = await response.text();
         console.warn('⚠️ [RESEND_API_FAIL] status:', response.status, error);
+        await logCommunication('failed', `Resend Error: ${error}`);
       }
     } catch (e) {
       console.warn('⚠️ [RESEND_BRIDGE_ERROR]', e.message);
+      await logCommunication('failed', `Bridge Error: ${e.message}`);
     }
   }
 
@@ -255,7 +271,7 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
   if (process.env.EMAIL_USER && process.env.EMAIL_APP_PASSWORD) {
     try {
       const transporter = nodemailer.createTransport({
-        service: 'gmail', // or use host/port if provided
+        service: 'gmail',
         auth: {
           user: process.env.EMAIL_USER,
           pass: process.env.EMAIL_APP_PASSWORD
@@ -270,13 +286,16 @@ export async function sendTenantWelcomeEmail(email, tenantName, subdomain, crede
       });
 
       console.log('✉️ [SMTP_SUCCESS] Email dispatched:', info.messageId);
+      await logCommunication('sent');
       return { success: true, messageId: info.messageId };
     } catch (smtpErr) {
       console.warn('⚠️ [SMTP_ERROR] Failed to send via SMTP:', smtpErr.message);
+      await logCommunication('failed', `SMTP Error: ${smtpErr.message}`);
     }
   }
 
   // --- MOCK FAIL-SAFE ---
   console.log('✉️ [MAIL_MOCK] Reverting to mock log. Resend/SMTP failed or not configured.');
+  await logCommunication('mocked');
   return { success: true, mocked: true };
 }

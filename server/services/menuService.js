@@ -9,7 +9,7 @@ class MenuService {
       SELECT DISTINCT ON (code) id, name, code, description, sort_order, icon_name, is_active
       FROM nexus.menu_header 
       WHERE is_active = true 
-        AND (tenant_id = $1 OR tenant_id IS NULL)
+        AND (tenant_id IS NOT DISTINCT FROM $1 OR tenant_id IS NULL)
       ORDER BY code, (tenant_id IS NOT NULL) DESC, sort_order ASC
     `;
     
@@ -37,11 +37,10 @@ class MenuService {
       FROM nexus.menu_item mi
       LEFT JOIN nexus.role_menu_access rma ON mi.id = rma.menu_item_id 
         AND LOWER(rma.role_name) = LOWER($2) 
-
-        AND (rma.tenant_id = $3 OR rma.tenant_id IS NULL)
+        AND (rma.tenant_id IS NOT DISTINCT FROM $3 OR rma.tenant_id IS NULL)
       WHERE mi.header_id = $1 
         AND mi.is_active = true 
-        AND (mi.tenant_id = $3 OR mi.tenant_id IS NULL)
+        AND (mi.tenant_id IS NOT DISTINCT FROM $3 OR mi.tenant_id IS NULL)
         AND (rma.is_visible = true OR rma.is_visible IS NULL)
     `;
     
@@ -118,10 +117,10 @@ class MenuService {
       LEFT JOIN nexus.role_menu_access rma ON mi.id = rma.menu_item_id 
         AND LOWER(rma.role_name) = LOWER($2) 
 
-        AND (rma.tenant_id = $3 OR rma.tenant_id IS NULL)
+        AND (rma.tenant_id IS NOT DISTINCT FROM $3 OR rma.tenant_id IS NULL)
       WHERE mi.code = $1 
         AND mi.is_active = true 
-        AND (mi.tenant_id = $3 OR mi.tenant_id IS NULL)
+        AND (mi.tenant_id IS NOT DISTINCT FROM $3 OR mi.tenant_id IS NULL)
         AND (rma.is_visible = true OR rma.is_visible IS NULL)
         AND (
           NOT mi.requires_subscription 

@@ -1,15 +1,29 @@
-import { query } from '../server/db/connection.js';
+import pg from 'pg';
+import dotenv from 'dotenv';
+dotenv.config();
 
-async function checkSchema() {
-    try {
-        console.log('🔍 Checking if nhgl schema exists...');
-        const res = await query("SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'nhgl'");
-        console.log('Result:', res.rows);
-    } catch (err) {
-        console.error('❌ Check failed:', err.message);
-    } finally {
-        process.exit();
-    }
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+
+async function run() {
+  try {
+    const res = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'nexus' AND table_name = 'support_tickets'
+    `);
+    console.log('Columns in nexus.support_tickets:', res.rows.map(r => r.column_name));
+
+    const res2 = await pool.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_schema = 'nexus' AND table_name = 'users'
+    `);
+    console.log('Columns in nexus.users:', res2.rows.map(r => r.column_name));
+    
+    await pool.end();
+  } catch (err) {
+    console.error(err);
+    process.exit(1);
+  }
 }
-
-checkSchema();
+run();

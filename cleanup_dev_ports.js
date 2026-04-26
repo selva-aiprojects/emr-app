@@ -3,7 +3,7 @@ import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 const REPO_PATH = process.cwd().toLowerCase();
-const DEV_PORTS = [4000, 4005, 5175];
+const DEV_PORTS = [4000, 4005, 4011, 4055, 5175];
 const DEV_PROCESS_HINTS = ['server/index.js', 'vite', 'concurrently'];
 
 function matchesRepoProcess(commandLine = '') {

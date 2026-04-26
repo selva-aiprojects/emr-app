@@ -1,19 +1,18 @@
-import { query } from './server/db/connection.js';
+import pool from '../server/db/connection.js';
 
 async function checkTenants() {
   try {
-    const t = await query('SELECT * FROM nexus.tenants');
-    console.log('--- nexus.tenants ---');
-    console.table(t.rows);
-
-    const m = await query('SELECT * FROM nexus.management_tenants');
-    console.log('\n--- nexus.management_tenants ---');
-    console.table(m.rows);
-
-    process.exit(0);
+    const res = await pool.query('SELECT id, name, code, subdomain, status FROM nexus.tenants');
+    console.log('--- NEXUS.TENANTS ---');
+    console.table(res.rows);
+    
+    const res2 = await pool.query('SELECT id, name, code, subdomain, status FROM nexus.management_tenants');
+    console.log('--- NEXUS.MANAGEMENT_TENANTS ---');
+    console.table(res2.rows);
   } catch (err) {
-    console.error(err);
-    process.exit(1);
+    console.error('Error checking tenants:', err.message);
+  } finally {
+    process.exit();
   }
 }
 

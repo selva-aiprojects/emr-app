@@ -6,6 +6,8 @@
 -- Description: Canonical DDL for clinical shards (nhgl, magnum, etc.)
 -- ============================================================
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- Ensure core utility function exists in shard
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
@@ -29,7 +31,7 @@ CREATE TABLE IF NOT EXISTS roles (
 );
 
 CREATE TABLE IF NOT EXISTS users (
-    id VARCHAR(255) PRIMARY KEY, -- References nexus.users(id) or email
+    id VARCHAR(255) PRIMARY KEY DEFAULT gen_random_uuid()::text, -- References nexus.users(id) or email
     tenant_id VARCHAR(255) NOT NULL REFERENCES nexus.tenants(id),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255),

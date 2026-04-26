@@ -28,8 +28,15 @@ router.get('/tickets', getGlobalSupportTickets);
 /**
  * Dashboard Overview Aggregator
  */
-router.get('/overview', async (req, res) => {
-  return getManagementOverview(req, res);
+router.get('/overview', getManagementOverview);
+router.get('/overview-fixed', getManagementOverview);
+
+/**
+ * Signal History / Communications Audit
+ */
+router.get('/communication', async (req, res) => {
+  const { getCommunications } = await import('../controllers/superadmin.controller.js');
+  return getCommunications(req, res);
 });
 
 /**
