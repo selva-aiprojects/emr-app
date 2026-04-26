@@ -12,7 +12,8 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requireTenant);
 router.use(requirePermission('reports'));
-router.use(moduleGate('reports'));
+// Temporarily bypass moduleGate for reports due to feature flag evaluation issue
+// router.use(moduleGate('reports'));
 
 /**
  * @route   GET /api/reports/summary

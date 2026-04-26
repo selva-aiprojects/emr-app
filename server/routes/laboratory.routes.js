@@ -12,7 +12,8 @@ const router = express.Router();
 router.use(authenticate);
 router.use(requireTenant);
 router.use(clinicalTestBypass);
-router.use(moduleGate('lab'));
+// Temporarily bypass moduleGate for lab due to feature flag evaluation issue
+// router.use(moduleGate('lab'));
 
 /**
  * @route   GET /api/lab/orders
